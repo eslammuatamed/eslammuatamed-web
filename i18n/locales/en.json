@@ -1,7 +1,7 @@
 {
   "brand": {
     "name": "Eslam Muatamed",
-    "role": "Full-Stack Engineer"
+    "role": "Frontend Engineer"
   },
   "nav": {
     "projects": "Projects",
@@ -36,11 +36,6 @@
     "retry": "Try again",
     "viewAll": "View all",
     "readMore": "Read more"
-  },
-  "availability": {
-    "available": "Available for work",
-    "open": "Open to opportunities",
-    "unavailable": "Not available"
   },
   "home": {
     "hero": {
@@ -98,10 +93,10 @@
     "goBlog": "Browse the blog"
   },
   "seo": {
-    "siteDescription": "The portfolio and writing of Eslam Muatamed, a full-stack engineer.",
+    "siteDescription": "The portfolio and writing of Eslam Muatamed, a frontend engineer specializing in Vue.js and Nuxt.js.",
     "home": {
-      "title": "Full-Stack Engineer",
-      "description": "The portfolio and writing of Eslam Muatamed, a full-stack engineer building for the web."
+      "title": "Frontend Engineer",
+      "description": "Frontend engineer specializing in Vue.js and Nuxt.js, building fast, accessible, SEO-focused web interfaces."
     },
     "blog": {
       "title": "Blog",

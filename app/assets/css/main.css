@@ -136,10 +136,13 @@
     color: var(--ui-text);
   }
 
-  /* Per-locale switch (D14-5): one root reassignment flips every descendant to the Arabic
-     stack and drops Latin tracking, which breaks connected script (doc 03 §3). */
+  /* Per-locale switch (D14-5): set `font-family` directly on the Arabic root; body and headings
+     inherit it. Reassigning the `--font-sans` @theme token here does NOT win Tailwind v4's cascade
+     — the theme-layer `:root` value keeps resolving, so `<html>` stayed Inter-first on /ar — hence
+     we override the inherited property itself, at higher specificity than the base `html` rule
+     above. Latin tracking is reset below (connected script — doc 03 §3). */
   html[lang="ar"] {
-    --font-sans: var(--font-sans-arabic);
+    font-family: var(--font-sans-arabic);
   }
 
   html[lang="ar"] :is(h1, h2, h3),
