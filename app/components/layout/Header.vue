@@ -26,6 +26,12 @@ const menuSide = computed<'left' | 'right'>(() =>
 
 const mobileOpen = ref(false)
 
+// A statement, not an inline `mobileOpen = true` expression — click handlers must return void
+// (enforced by vue-tsc 3's template typing; an assignment expression returns the boolean).
+function openMenu(): void {
+  mobileOpen.value = true
+}
+
 // Close the mobile menu whenever navigation completes.
 watch(() => route.fullPath, () => {
   mobileOpen.value = false
@@ -63,7 +69,7 @@ watch(() => route.fullPath, () => {
           variant="ghost"
           class="md:hidden"
           :aria-label="t('a11y.openMenu')"
-          @click="mobileOpen = true"
+          @click="openMenu"
         />
       </div>
     </UContainer>

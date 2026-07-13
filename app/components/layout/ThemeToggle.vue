@@ -11,6 +11,12 @@ const isDark = computed({
     colorMode.preference = value ? 'dark' : 'light'
   }
 })
+
+// A statement, not an inline `isDark = !isDark` expression — click handlers must return void
+// (enforced by vue-tsc 3's template typing; an assignment expression returns the boolean).
+function toggleTheme(): void {
+  isDark.value = !isDark.value
+}
 </script>
 
 <template>
@@ -20,7 +26,7 @@ const isDark = computed({
       color="neutral"
       variant="ghost"
       :aria-label="t('a11y.toggleTheme')"
-      @click="isDark = !isDark"
+      @click="toggleTheme"
     />
     <template #fallback>
       <div class="size-8" />
