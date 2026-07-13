@@ -1,4 +1,4 @@
-import type { AuthUser, AuthSession, Envelope, LoginCredentials } from '~/types/models'
+import type { AuthUser, AuthSession, RefreshSession, Envelope, LoginCredentials } from '~/types/models'
 
 /**
  * Session state for the client-only dashboard (doc 11 §1). The access token lives in memory
@@ -30,11 +30,13 @@ export const useAuthStore = defineStore('auth', () => {
     setSession(data)
   }
 
-  /** Silent refresh (flow F-D1). Resolves to whether a session is now active — never throws. */
+  /** Silent refresh (flow F-D1). The contract's refresh response rotates the access token only and
+   *  carries no user (unlike login), so we set just the token and leave any existing `user` intact.
+   *  Resolves to whether a session is now active — never throws. */
   async function refresh(): Promise<boolean> {
     try {
-      const { data } = await useApi()<Envelope<AuthSession>>('/auth/refresh', { method: 'POST' })
-      setSession(data)
+      const { data } = await useApi()<Envelope<RefreshSession>>('/auth/refresh', { method: 'POST' })
+      accessToken.value = data.accessToken
       return true
     } catch {
       clearSession()

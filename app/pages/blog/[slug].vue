@@ -24,7 +24,7 @@ if (!article.value) {
 }
 
 const publishedLabel = computed(() =>
-  article.value ? formatDate(article.value.publishedAt, locale.value) : ''
+  article.value?.publishAt ? formatDate(article.value.publishAt, locale.value) : ''
 )
 
 useSeoMeta({
@@ -48,7 +48,7 @@ useSeoMeta({
         <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-caption text-muted">
           <span class="font-medium text-default">{{ article.category.name }}</span>
           <span aria-hidden="true">·</span>
-          <time :datetime="article.publishedAt">{{ publishedLabel }}</time>
+          <time :datetime="article.publishAt ?? undefined">{{ publishedLabel }}</time>
           <span aria-hidden="true">·</span>
           <span>{{ t('blog.minRead', { count: article.readingTimeMin }) }}</span>
         </div>

@@ -1,102 +1,37 @@
 /**
- * PRE-CONTRACT PLACEHOLDER TYPES.
+ * View-model aliases over the generated API contract (D06-2). Every shape below points at a schema
+ * in `app/types/api.d.ts`, which `npm run api:types` generates from the committed
+ * `openapi/openapi.json` — the contract is the single source of truth, so nothing here is
+ * hand-maintained. The app imports these stable names; the underlying contract schema can be
+ * renamed without touching call sites.
  *
- * These view-model shapes exist only so the M1 slice compiles and renders before the API
- * contract is exported. They are NOT the source of truth. In T10 (contract adoption, D06-2)
- * `openapi/openapi.json` lands, `npm run api:types` generates `app/types/api.d.ts`, and the
- * bodies below shrink to aliases of the generated types. Do not hand-extend them as if they
- * were the contract — that is exactly the drift D06-2 forbids.
+ * `Envelope`/`Paginated` are the only generics: the contract inlines its response envelope
+ * (`{ data }` for reads, `{ data, meta }` for lists) per response rather than exposing a named
+ * schema, so these thin wrappers mirror that envelope over the contract entities.
  */
+import type { components } from './api'
 
-/** RFC 7807 problem detail (doc 10 §3). The `errors[]` extension appears on 422 only. */
-export interface ProblemDetail {
-  readonly type: string
-  readonly title: string
-  readonly status: number
-  readonly detail?: string
-  readonly instance?: string
-  readonly errors?: readonly FieldError[]
-}
+type Schemas = components['schemas']
 
-export interface FieldError {
-  readonly field: string
-  readonly message: string
-}
+/** RFC 7807 problem detail (doc 10 §3). `errors[]` is present on 422 responses only. */
+export type ProblemDetail = Schemas['ProblemDetailsDto']
+export type FieldError = Schemas['FieldErrorDto']
 
-/** Every 2xx body is `{ data }`; list bodies add `meta` (envelope D10-3). */
-export interface Envelope<T> {
-  readonly data: T
-}
+/** Response envelopes (D10-3): single reads resolve to `{ data }`, list reads add `meta`. */
+export type Envelope<T> = { readonly data: T }
+export type PaginationMeta = Schemas['PageMeta']
+export type Paginated<T> = { readonly data: readonly T[], readonly meta: PaginationMeta }
 
-export interface Paginated<T> {
-  readonly data: readonly T[]
-  readonly meta: PaginationMeta
-}
+/** `GET /settings/site` — resolved single-locale public settings (D10-6). */
+export type SiteSettings = Schemas['PublicSiteSettingsEntity']
+export type ProfileLink = Schemas['ProfileLinkEntity']
 
-export interface PaginationMeta {
-  readonly page: number
-  readonly perPage: number
-  readonly total: number
-  readonly totalPages: number
-}
+/** `GET /articles` list item + `GET /articles/{slug}` detail (detail adds the opaque Markdown `body`). */
+export type ArticleListItem = Schemas['PublicArticleListItemEntity']
+export type Article = Schemas['PublicArticleDetailEntity']
 
-export type AvailabilityStatus = 'available' | 'open' | 'unavailable'
-
-export interface SocialLink {
-  readonly platform: string
-  readonly url: string
-}
-
-/** `GET /settings/site` — resolved single-locale shape (D10-6). Feeds the hero + footer. */
-export interface SiteSettings {
-  readonly name: string
-  readonly role: string
-  readonly headline?: string
-  readonly availability: AvailabilityStatus
-  readonly email: string
-  readonly resumeUrl?: string
-  readonly socialLinks: readonly SocialLink[]
-  readonly availableLocales: readonly string[]
-}
-
-export interface CategoryRef {
-  readonly slug: string
-  readonly name: string
-}
-
-/** `GET /articles` list item — resolved, flat, ready to render (D10-6). */
-export interface ArticleListItem {
-  readonly id: string
-  readonly slug: string
-  readonly title: string
-  readonly excerpt: string
-  readonly publishedAt: string
-  readonly readingTimeMin: number
-  readonly category: CategoryRef
-  readonly availableLocales: readonly string[]
-}
-
-/** `GET /articles/{slug}` — list item plus the opaque Markdown body (D01-5). */
-export interface Article extends ArticleListItem {
-  readonly body: string
-}
-
-export type UserRole = 'OWNER' | 'EDITOR'
-
-export interface AuthUser {
-  readonly id: string
-  readonly email: string
-  readonly role: UserRole
-  readonly name?: string
-}
-
-/** `POST /auth/login` / `POST /auth/refresh` payload — access token is memory-only (D11-1). */
-export interface AuthSession {
-  readonly accessToken: string
-  readonly user: AuthUser
-}
-
-export interface LoginCredentials {
-  readonly email: string
-  readonly password: string
-}
+/** Auth (D11-1): login returns the access token + user; refresh rotates only the access token. */
+export type AuthUser = Schemas['AuthUserEntity']
+export type AuthSession = Schemas['LoginResponse']
+export type RefreshSession = Schemas['RefreshResponse']
+export type LoginCredentials = Schemas['LoginDto']

@@ -11,7 +11,9 @@ interface Props {
 const props = defineProps<Props>()
 const { t, locale } = useI18n()
 
-const publishedLabel = computed(() => formatDate(props.article.publishedAt, locale.value))
+const publishedLabel = computed(() =>
+  props.article.publishAt ? formatDate(props.article.publishAt, locale.value) : ''
+)
 const readingLabel = computed(() => t('blog.minRead', { count: props.article.readingTimeMin }))
 </script>
 
@@ -22,7 +24,7 @@ const readingLabel = computed(() => t('blog.minRead', { count: props.article.rea
     <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-caption text-muted">
       <span class="font-medium text-default">{{ article.category.name }}</span>
       <span aria-hidden="true">·</span>
-      <time :datetime="article.publishedAt">{{ publishedLabel }}</time>
+      <time :datetime="article.publishAt ?? undefined">{{ publishedLabel }}</time>
       <span aria-hidden="true">·</span>
       <span>{{ readingLabel }}</span>
     </div>
