@@ -1,0 +1,111 @@
+{
+  "brand": {
+    "name": "Eslam Muatamed",
+    "role": "Full-Stack Engineer"
+  },
+  "nav": {
+    "projects": "Projects",
+    "blog": "Blog",
+    "experience": "Experience",
+    "about": "About",
+    "resume": "Résumé",
+    "contact": "Contact"
+  },
+  "a11y": {
+    "skipToContent": "Skip to content",
+    "primaryNav": "Primary navigation",
+    "footerNav": "Footer navigation",
+    "toggleTheme": "Toggle theme",
+    "switchLanguage": "Switch language",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu",
+    "homeLink": "Go to homepage"
+  },
+  "theme": {
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
+  },
+  "locale": {
+    "label": "Language",
+    "en": "English",
+    "ar": "العربية"
+  },
+  "common": {
+    "loading": "Loading…",
+    "retry": "Try again",
+    "viewAll": "View all",
+    "readMore": "Read more"
+  },
+  "availability": {
+    "available": "Available for work",
+    "open": "Open to opportunities",
+    "unavailable": "Not available"
+  },
+  "home": {
+    "hero": {
+      "viewWork": "View work",
+      "contact": "Get in touch",
+      "unavailableTitle": "Content unavailable",
+      "unavailableBody": "The profile couldn't be loaded right now. Please try again shortly."
+    }
+  },
+  "blog": {
+    "title": "Blog",
+    "description": "Notes on engineering, architecture, and building for the web.",
+    "minRead": "{count} min read",
+    "emptyTitle": "No articles yet",
+    "emptyBody": "New writing will appear here soon.",
+    "errorTitle": "Couldn't load articles",
+    "errorBody": "Something went wrong while fetching the list.",
+    "previous": "Previous",
+    "next": "Next"
+  },
+  "article": {
+    "back": "Back to blog",
+    "publishedOn": "Published {date}",
+    "errorTitle": "Couldn't load this article",
+    "errorBody": "Something went wrong while fetching the article."
+  },
+  "auth": {
+    "title": "Sign in",
+    "subtitle": "Access the dashboard.",
+    "email": "Email",
+    "password": "Password",
+    "submit": "Sign in",
+    "submitting": "Signing in…",
+    "errorEmail": "Enter a valid email address.",
+    "errorPassword": "Password must be at least 12 characters.",
+    "errorInvalid": "Incorrect email or password.",
+    "errorGeneric": "Couldn't sign in. Please try again."
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "welcome": "Signed in as {email}",
+    "signOut": "Sign out",
+    "placeholder": "Modules arrive in the next milestone."
+  },
+  "footer": {
+    "rights": "© {year} {name}. All rights reserved.",
+    "builtWith": "Designed and built with care."
+  },
+  "error": {
+    "notFoundTitle": "Page not found",
+    "notFoundBody": "The page you're looking for doesn't exist or has moved.",
+    "serverTitle": "Something went wrong",
+    "serverBody": "An unexpected error occurred. Please try again.",
+    "goHome": "Go home",
+    "goBlog": "Browse the blog"
+  },
+  "seo": {
+    "siteDescription": "The portfolio and writing of Eslam Muatamed, a full-stack engineer.",
+    "home": {
+      "title": "Full-Stack Engineer",
+      "description": "The portfolio and writing of Eslam Muatamed, a full-stack engineer building for the web."
+    },
+    "blog": {
+      "title": "Blog",
+      "description": "Notes on engineering, architecture, and building for the web."
+    }
+  }
+}

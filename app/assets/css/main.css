@@ -1,0 +1,274 @@
+/* Design tokens — the single source of truth (docs 03, 14). All raw hex lives in this
+   file only (D14-6); components consume semantic tokens (D14-2). */
+
+@import "tailwindcss";
+@import "@nuxt/ui";
+
+/* Self-hosted brand typography (D03-1, D20-4). Inter ships as one weight-axis variable
+   file; Arabic and mono load the two weights the brand uses. */
+@import "@fontsource-variable/inter/wght.css";
+@import "@fontsource/ibm-plex-sans-arabic/400.css";
+@import "@fontsource/ibm-plex-sans-arabic/600.css";
+@import "@fontsource/jetbrains-mono/400.css";
+
+/* ---------------------------------------------------------------------------------------
+   Theme tokens — names generate Tailwind utilities and CSS variables (Tailwind v4 @theme).
+   ------------------------------------------------------------------------------------- */
+@theme {
+  /* Families (doc 03 §3). The Arabic stack is swapped in at the html[lang="ar"] root — the
+     per-locale switch lives in exactly one place (D14-5). */
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-sans-arabic: "IBM Plex Sans Arabic", "Inter Variable", ui-sans-serif, system-ui,
+    sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", monospace;
+
+  /* Fluid type scale (doc 03 §3), clamp(mobile → desktop). Tracking on display/h1 is a
+     Latin-only refinement, reset for Arabic below (connected script — doc 03 §3). */
+  --text-display: clamp(2.5rem, 1.3rem + 5vw, 4rem);
+  --text-display--line-height: 1.05;
+  --text-display--font-weight: 600;
+  --text-display--letter-spacing: -0.02em;
+  --text-h1: clamp(2rem, 1.5rem + 2vw, 2.5rem);
+  --text-h1--line-height: 1.1;
+  --text-h1--font-weight: 600;
+  --text-h1--letter-spacing: -0.01em;
+  --text-h2: clamp(1.625rem, 1.35rem + 1vw, 1.875rem);
+  --text-h2--line-height: 1.2;
+  --text-h2--font-weight: 600;
+  --text-h3: clamp(1.25rem, 1.15rem + 0.4vw, 1.375rem);
+  --text-h3--line-height: 1.3;
+  --text-h3--font-weight: 600;
+  --text-body-lg: 1.125rem;
+  --text-body-lg--line-height: 1.7;
+  --text-body: 1rem;
+  --text-body--line-height: 1.5;
+  --text-body-sm: 0.875rem;
+  --text-body-sm--line-height: 1.5;
+  --text-caption: 0.78125rem;
+  --text-caption--line-height: 1.4;
+  --text-caption--font-weight: 500;
+
+  /* Radii (doc 03 §4). */
+  --radius-control: 6px;
+  --radius-card: 10px;
+  --radius-overlay: 16px;
+
+  /* Motion easing (doc 03 §5). Durations are plain vars below (Tailwind has no duration
+     token slot). */
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-exit: ease-in;
+}
+
+/* ---------------------------------------------------------------------------------------
+   Semantic color overrides — Nuxt UI's --ui-* namespace carries the doc 03 §2 values per
+   theme (D14-3). Values map to the zinc/blue scales set in app.config.ts, so a re-brand is
+   a token-layer change, not a codebase sweep (D14-2). Ordered after @nuxt/ui so equal-
+   specificity overrides win.
+   ------------------------------------------------------------------------------------- */
+:root,
+.light {
+  --ui-bg: var(--ui-color-neutral-50); /* #FAFAFA */
+  --ui-bg-elevated: #ffffff; /* surface sits brighter than the page in light */
+  --ui-bg-accented: var(--ui-color-neutral-100); /* #F4F4F5 */
+  --ui-text: var(--ui-color-neutral-900); /* #18181B */
+  --ui-text-highlighted: var(--ui-color-neutral-900);
+  --ui-text-muted: var(--ui-color-neutral-600); /* #52525B */
+  --ui-border: var(--ui-color-neutral-200); /* #E4E4E7 */
+  /* Accent split (D03-2): fill is always blue-600 (white text passes AA); link text is
+     blue-600 in light. */
+  --ui-primary: var(--ui-color-primary-600);
+  --ui-link: var(--ui-color-primary-600);
+}
+
+.dark {
+  --ui-bg: var(--ui-color-neutral-950); /* #09090B */
+  --ui-bg-elevated: var(--ui-color-neutral-900); /* #18181B */
+  --ui-bg-accented: var(--ui-color-neutral-800); /* #27272A */
+  --ui-text: var(--ui-color-neutral-50); /* #FAFAFA */
+  --ui-text-highlighted: var(--ui-color-neutral-50);
+  --ui-text-muted: var(--ui-color-neutral-400); /* #A1A1AA */
+  --ui-border: var(--ui-color-neutral-700); /* #3F3F46 */
+  /* Fill stays blue-600; link text lifts to blue-400 so it clears 4.5:1 on the near-black
+     background where blue-600 fails (D03-2). */
+  --ui-primary: var(--ui-color-primary-600);
+  --ui-link: var(--ui-color-primary-400);
+}
+
+/* Non-color role tokens and technology identity colors (doc 14 §2/§4/§5). Technology
+   colors are consumed only by technology components (doc 03 usage rules). */
+:root {
+  --brand-js: #f7df1e;
+  --brand-ts: #3178c6;
+  --brand-vue: #42b883;
+  --brand-nuxt: #00dc82;
+  --brand-nest: #e0234e;
+  --brand-node: #5fa04e;
+
+  --leading-prose: 1.7;
+  --leading-prose-arabic: 1.9;
+
+  --duration-micro: 120ms;
+  --duration-standard: 200ms;
+  --duration-structural: 320ms;
+
+  --space-section: clamp(6rem, 4rem + 8vw, 8rem); /* 96 → 128px */
+  --space-card: 1.5rem;
+
+  /* Nuxt UI derives component radii from this base; 6px aligns controls to doc 03 §4. */
+  --ui-radius: 0.375rem;
+}
+
+/* Accent-text utility for links — kept distinct from Nuxt UI's fill-driven `text-primary`
+   so the D03-2 split holds. */
+@utility text-link {
+  color: var(--ui-link);
+}
+
+@layer base {
+  html {
+    font-family: var(--font-sans);
+    -webkit-text-size-adjust: 100%;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    background-color: var(--ui-bg);
+    color: var(--ui-text);
+  }
+
+  /* Per-locale switch (D14-5): one root reassignment flips every descendant to the Arabic
+     stack and drops Latin tracking, which breaks connected script (doc 03 §3). */
+  html[lang="ar"] {
+    --font-sans: var(--font-sans-arabic);
+  }
+
+  html[lang="ar"] :is(h1, h2, h3),
+  html[lang="ar"] .text-display,
+  html[lang="ar"] .text-h1 {
+    letter-spacing: normal;
+  }
+
+  /* Reduced motion collapses non-essential motion to short fades (doc 03 §5, doc 21 §5). */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    ::before,
+    ::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: var(--duration-micro) !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+/* ---------------------------------------------------------------------------------------
+   Prose — the rendered-Markdown surface owned by ContentProse (doc 12 §5, doc 13 §9). Logical
+   properties throughout so it mirrors in RTL; code is isolated LTR (doc 21 §4).
+   ------------------------------------------------------------------------------------- */
+@layer components {
+  .content-prose {
+    max-width: 68ch;
+    line-height: var(--leading-prose);
+    color: var(--ui-text);
+  }
+
+  html[lang="ar"] .content-prose {
+    line-height: var(--leading-prose-arabic);
+  }
+
+  .content-prose :is(h1, h2, h3, h4) {
+    color: var(--ui-text-highlighted);
+    font-weight: 600;
+    scroll-margin-top: 5rem; /* clears the sticky header when jumping to an anchor */
+  }
+
+  .content-prose h1 {
+    font-size: var(--text-h1);
+    margin-block: 2rem 1rem;
+  }
+
+  .content-prose h2 {
+    font-size: var(--text-h2);
+    margin-block: 2rem 0.75rem;
+  }
+
+  .content-prose h3 {
+    font-size: var(--text-h3);
+    margin-block: 1.5rem 0.5rem;
+  }
+
+  .content-prose p,
+  .content-prose ul,
+  .content-prose ol,
+  .content-prose blockquote {
+    margin-block: 1rem;
+  }
+
+  .content-prose :is(ul, ol) {
+    padding-inline-start: 1.5rem;
+  }
+
+  .content-prose ul {
+    list-style: disc;
+  }
+
+  .content-prose ol {
+    list-style: decimal;
+  }
+
+  .content-prose li {
+    margin-block: 0.25rem;
+  }
+
+  .content-prose a {
+    color: var(--ui-link);
+    text-decoration-line: underline;
+    text-underline-offset: 2px;
+  }
+
+  .content-prose blockquote {
+    border-inline-start: 3px solid var(--ui-border);
+    padding-inline-start: 1rem;
+    color: var(--ui-text-muted);
+  }
+
+  .content-prose hr {
+    border: 0;
+    border-block-start: 1px solid var(--ui-border);
+    margin-block: 2rem;
+  }
+
+  .content-prose :not(pre) > code {
+    font-family: var(--font-mono);
+    font-size: 0.875em;
+    background-color: var(--ui-bg-accented);
+    padding: 0.125rem 0.375rem;
+    border-radius: var(--radius-control);
+    direction: ltr;
+    unicode-bidi: isolate;
+  }
+
+  .content-prose pre {
+    font-family: var(--font-mono);
+    border: 1px solid var(--ui-border);
+    border-radius: var(--radius-card);
+    padding: 1rem;
+    margin-block: 1.5rem;
+    overflow-x: auto;
+    direction: ltr;
+    unicode-bidi: isolate;
+  }
+
+  .content-prose img {
+    max-width: 100%;
+    height: auto;
+    border-radius: var(--radius-card);
+  }
+
+  /* Shiki dual-theme: light colors render inline; swap to the dark set under .dark (D20-3). */
+  .dark .content-prose .shiki,
+  .dark .content-prose .shiki span {
+    color: var(--shiki-dark) !important;
+    background-color: var(--shiki-dark-bg) !important;
+  }
+}
