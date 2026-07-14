@@ -8,6 +8,9 @@ import type { Article, Envelope } from '~/types/models'
 const { t, locale } = useI18n()
 const route = useRoute()
 const api = useApi()
+// Call this composable before the await so it runs in a valid Nuxt context (auto-import context
+// caution) — the returned setter is invoked once the article resolves.
+const setI18nParams = useSetI18nParams()
 
 const slug = computed(() => String(route.params.slug))
 
@@ -22,6 +25,18 @@ if (error.value) {
 if (!article.value) {
   throw createError({ status: 404, statusText: 'Article not found', fatal: true })
 }
+
+// Register each locale's own slug as its route param (F-P5): the EN and AR slugs differ, so without
+// this the switcher and hreflang alternates reuse THIS locale's slug and 404. `setI18nParams` (the
+// current @nuxtjs/i18n API) is what `switchLocalePath` reads to resolve the counterpart path.
+setI18nParams(
+  Object.fromEntries(
+    Object.entries(article.value.slugs).map(([code, value]): [string, { slug: string }] => [
+      code,
+      { slug: value }
+    ])
+  )
+)
 
 const publishedLabel = computed(() =>
   article.value?.publishAt ? formatDate(article.value.publishAt, locale.value) : ''

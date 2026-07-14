@@ -861,6 +861,16 @@ export interface components {
              */
             availableLocales: string[];
             /**
+             * @description Locale code → that locale’s slug, for locale switching.
+             * @example {
+             *       "en": "building-x",
+             *       "ar": "binaa-x"
+             *     }
+             */
+            slugs: {
+                [key: string]: string;
+            };
+            /**
              * @description Opaque Markdown (D01-5).
              * @example # Heading
              *
