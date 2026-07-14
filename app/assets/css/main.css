@@ -4,9 +4,9 @@
 @import "tailwindcss";
 @import "@nuxt/ui";
 
-/* Self-hosted brand typography (D03-1, D20-4). Inter ships as one weight-axis variable
+/* Self-hosted brand typography (D03-1, D20-4). Geist ships as one weight-axis variable
    file; Arabic and mono load the two weights the brand uses. */
-@import "@fontsource-variable/inter/wght.css";
+@import "@fontsource-variable/geist/wght.css";
 @import "@fontsource/ibm-plex-sans-arabic/400.css";
 @import "@fontsource/ibm-plex-sans-arabic/600.css";
 @import "@fontsource/jetbrains-mono/400.css";
@@ -17,8 +17,8 @@
 @theme {
   /* Families (doc 03 §3). The Arabic stack is swapped in at the html[lang="ar"] root — the
      per-locale switch lives in exactly one place (D14-5). */
-  --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
-  --font-sans-arabic: "IBM Plex Sans Arabic", "Inter Variable", ui-sans-serif, system-ui,
+  --font-sans: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-sans-arabic: "IBM Plex Sans Arabic", "Geist Variable", ui-sans-serif, system-ui,
     sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", monospace;
 
@@ -138,7 +138,7 @@
 
   /* Per-locale switch (D14-5): set `font-family` directly on the Arabic root; body and headings
      inherit it. Reassigning the `--font-sans` @theme token here does NOT win Tailwind v4's cascade
-     — the theme-layer `:root` value keeps resolving, so `<html>` stayed Inter-first on /ar — hence
+     — the theme-layer `:root` value keeps resolving, so `<html>` stayed Geist-first on /ar — hence
      we override the inherited property itself, at higher specificity than the base `html` rule
      above. Latin tracking is reset below (connected script — doc 03 §3). */
   html[lang="ar"] {
