@@ -52,7 +52,7 @@ done. `[P]` = parallelizable with siblings.
   - Pass 2 (F-P5): adopted api@0e93d71 adding `slugs` to the article detail; article page
     registers per-locale slugs via `useSetI18nParams` so locale switch resolves the
     translated URL. Atomic commit `4d87701`.
-- [ ] T11 — Walking-skeleton browser verification (coordinator, with API running)
+- [x] T11 — Walking-skeleton browser verification (coordinator, with API running)
   - `/`, `/ar`, `/blog`, article page, login flow, session reload — both locales.
 - [x] T12 — Geist brand-face migration (post-hoc owner directive D03-6)
   - Doc 03 v1.1.0 supersedes Inter with Geist as the Latin sans face. Swap
