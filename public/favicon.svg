@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
+  <style>
+    .form-b { fill: #18181B }
+    @media (prefers-color-scheme: dark) { .form-b { fill: #FAFAFA } }
+  </style>
+  <path fill="#2563EB" d="M2,2 H9 V5 H5 V14 H2 Z"/>
+  <path class="form-b" d="M14,14 H7 V11 H11 V2 H14 Z"/>
+</svg>

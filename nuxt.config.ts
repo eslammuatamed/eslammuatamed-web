@@ -14,6 +14,21 @@ export default defineNuxtConfig({
 
   css: ['~/assets/css/main.css'],
 
+  // Brand favicons, generated from the mark's normative geometry (brand-identity.md §3/§11)
+  // and copied from ../eslammuatamed-docs/content/brand/assets — never edited here.
+  // favicon.svg carries the prefers-color-scheme treatment; favicon.ico is the monochrome
+  // accent fallback, which is the only palette-legal treatment that reads on both light and
+  // dark chrome (asset-production.md AP-1). The .ico is listed first so chrome without SVG
+  // support resolves it.
+  app: {
+    head: {
+      link: [
+        { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico', sizes: '32x32' },
+        { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' }
+      ]
+    }
+  },
+
   // Env-driven at runtime (D23-8): NUXT_PUBLIC_SITE_URL / NUXT_PUBLIC_API_BASE map here.
   // Hosts never live in code — the values come from .env (doc 16 §1).
   runtimeConfig: {
