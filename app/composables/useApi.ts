@@ -4,9 +4,9 @@ import type { NitroFetchOptions } from 'nitropack'
  * The single API door (doc 06 §2, principle 12). Every call to the NestJS API goes through
  * here — base URL from env, bearer from the memory store (D11-1), locale on public reads
  * (D10-6), one RFC 7807 error shape, and a single silent-refresh retry on 401 (flow F-D1).
- * Raw `$fetch` against the API anywhere else is a defect, enforced by convention and review (a
- * blanket lint ban would flag the legitimate internal `/api/prose` call — a targeted rule is
- * deferred to feature 004, doc 15 §2).
+ * Raw `$fetch` against the API anywhere else is a defect, enforced by the `no-restricted-syntax`
+ * ban in eslint.config.mjs (doc 15 §2); the one legitimate internal `/api/prose` Nitro call carries
+ * a targeted disable citing the internal-route exemption.
  */
 export function useApi() {
   const config = useRuntimeConfig()

@@ -12,6 +12,7 @@ interface Props {
 const props = defineProps<Props>()
 
 const { data } = await useAsyncData(`prose:${props.cacheKey}`, () =>
+  // eslint-disable-next-line no-restricted-syntax -- internal Nitro route /api/prose, not the backend API (doc 15 §2 internal-route exemption)
   $fetch<{ html: string }>('/api/prose', { method: 'POST', body: { source: props.source } })
 )
 </script>
