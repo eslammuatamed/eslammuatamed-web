@@ -15,8 +15,9 @@ constitution so every later feature lands on rails.
 
 1. **Design tokens (doc 14)** — `@theme` + `--ui-*` overrides in `main.css`, both
    themes (doc 03 values incl. D03-2 accent split), brand tokens, radius/motion tokens;
-   fonts self-hosted via `@fontsource-variable/inter`, `@fontsource/ibm-plex-sans-arabic`
-   (400/600), `@fontsource/jetbrains-mono`; `html[lang="ar"]` family/tracking switch
+   fonts self-hosted via `@fontsource-variable/geist` (Geist supersedes Inter — D03-6,
+   doc 14 v1.0.1), `@fontsource/ibm-plex-sans-arabic` (400/600), `@fontsource/jetbrains-mono`;
+   `html[lang="ar"]` family/tracking switch
    (D14-5); theme switching via color-mode, system default, no FOUC.
 2. **Nuxt config** — routeRules (`/dashboard/**` ssr:false — D06-1; SWR for public),
    i18n `prefix_except_default` en/ar with `dir`, lazy locale JSONs, runtimeConfig

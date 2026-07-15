@@ -40,7 +40,8 @@ done. `[P]` = parallelizable with siblings.
     silent refresh. **Verify:** logged-out redirect works in dev.
 - [x] T8 — Lint boundaries + CI (docs 15, 17)
   - `@nuxt/eslint` flat config + no-restricted-imports (dashboard boundary), physical-
-    utility ban, raw-`$fetch`/axios ban; GitHub Actions (lint→typecheck→test).
+    utility ban, raw-`$fetch`/axios ban (raw-`$fetch` `no-restricted-syntax` rule added
+    2026-07-15 post-audit, doc 15 §2); GitHub Actions (lint→typecheck→test).
   - **Verify:** a deliberate boundary violation fails lint, then remove it.
 - [x] T9 — Bundle isolation check (D06-1/D06-5, doc 20 §5)
   - `nuxt build` + script asserting no tiptap/prosemirror identifiers in public chunks
@@ -61,3 +62,10 @@ done. `[P]` = parallelizable with siblings.
     the D14-5 `html[lang="ar"]` direct-set mechanism preserved exactly.
   - **Verify:** lint, typecheck, test, build green; build bundles the Geist woff2 subsets
     with no Inter leftovers. Commit `a77feb7`.
+
+## Deferred (recorded 2026-07-15, convergence audit)
+
+- Prettier + `prettier-plugin-tailwindcss` (doc 15 §2) — adopt at feature 004 start to
+  isolate the reformat diff from feature work.
+- The sibling `LocaleSwitcher.spec.ts` still mocks `switchLocalePath` — superseded by the
+  real-wiring `LocaleSwitcher.i18n.spec.ts`; consider retiring the mock at feature 004.

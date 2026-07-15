@@ -20,12 +20,14 @@ Technology and architecture are decided in the governing docs; this plan binds t
 
 ## New dependencies (doc 16 §4, one-line justifications)
 
-`@fontsource-variable/inter` + `@fontsource/ibm-plex-sans-arabic` +
-`@fontsource/jetbrains-mono` (self-hosted brand typography — D03-1/D20-4) ·
-`markdown-it` + `@shikijs/markdown-it` (single renderer, SSR highlighting — D12-4/
-D20-3) · `zod` (form validation — brief mandate) · dev: `@nuxt/eslint`,
+`@fontsource-variable/geist` (Geist supersedes Inter — D03-6, doc 14 v1.0.1) +
+`@fontsource/ibm-plex-sans-arabic` + `@fontsource/jetbrains-mono` (self-hosted brand
+typography — D03-1/D20-4) · `markdown-it` + `@shikijs/markdown-it` (single renderer, SSR
+highlighting — D12-4/D20-3) · `@nuxtjs/seo` (canonical + hreflang alternates, sitemap/
+robots — doc 16 §4) · `zod` (form validation — brief mandate) · dev: `@nuxt/eslint`,
 `@nuxt/test-utils`, `vitest`, `@vue/test-utils`, `happy-dom`, `openapi-typescript`
-(D06-2), `@stoplight/prism-cli` (D06-3), `lint-staged`. Nothing else without written
+(D06-2), `@stoplight/prism-cli` (D06-3), `husky` + `lint-staged` (pre-commit lint-staged
+— D15-1). Nothing else without written
 justification. `motion` and Tiptap packages stay installed but MUST NOT be imported in
 this feature (Tiptap enters in feature 002 via lazy dashboard components only — D06-5).
 
