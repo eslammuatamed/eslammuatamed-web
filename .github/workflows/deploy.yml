@@ -1,0 +1,189 @@
+# Production deploy — Nuxt/Nitro web → Contabo VPS (doc 23 §3 "Web release", D23-9).
+#
+# TRIGGER: workflow_dispatch ONLY for now. The server is not provisioned yet; an
+# auto-trigger would paint the repo red on every push. Per doc 23 §3 the web's eventual
+# trigger is push to `main` (NOT tags — that is the API's trigger). After the doc 23 §4
+# restore drill passes, switch the trigger — a one-line change, documented in the runbook:
+#
+#     on:
+#       push:
+#         branches: [main]
+#
+# DEVIATIONS from doc 23 §3 (reported to the team lead, justified):
+#   - "post-deploy smoke suite" (~6 Playwright checks, D18-3) is not wired here yet — it
+#     lands with the push-to-main trigger switch once the server is live to smoke against.
+#     The single `/` health gate stands in until then.
+#   - The build injects the real public hosts at build time. A Nuxt build must be given
+#     NUXT_PUBLIC_* values (CI does the same with placeholders); for a production artifact
+#     the values are the normative public hosts (D23-13), not a throwaway `example.com`,
+#     so build-frozen references (e.g. i18n baseUrl) are correct. These are public URLs,
+#     not secrets — the release still carries no .env. shared/.env re-provides them at
+#     runtime so Nitro's runtimeConfig.public override lands too.
+#
+# ROLLBACK (no rebuild — doc 23 §3): on the VPS, repoint `current` at the previous
+# release and restart:
+#     ln -sfn /srv/eslammuatamed-web/releases/<previous> /srv/eslammuatamed-web/current.new
+#     mv -Tf  /srv/eslammuatamed-web/current.new /srv/eslammuatamed-web/current
+#     sudo systemctl restart eslammuatamed-web
+#
+# SERVER LAYOUT this workflow deploys into (full contract in the deploy runbook):
+#   /srv/eslammuatamed-web/releases/<id>   extracted release (.output, package.json)
+#   /srv/eslammuatamed-web/shared/.env     runtime env, server-side only — never in a release
+#   /srv/eslammuatamed-web/current         symlink → the live release
+#   systemd unit: eslammuatamed-web  (EnvironmentFile=…/shared/.env, ExecStart=node .output/server/index.mjs)
+#   deploy user needs: authorized_keys (DEPLOY_SSH_KEY public half) + a scoped sudoers
+#   rule for exactly `systemctl restart eslammuatamed-web`.
+
+name: Deploy
+
+on:
+  workflow_dispatch:
+
+# Never let two deploys race; a deploy in flight must finish (do not cancel mid-cutover).
+concurrency:
+  group: deploy-web
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  # Release gate — mirrors the CI fast lane (ci.yml `verify`). ci.yml is not
+  # `workflow_call`-able, so the minimal gates are duplicated here rather than reused, so a
+  # main build (which carries no PR checks) still proves lint/typecheck/test + the two-worlds
+  # bundle isolation (D06-1/D06-5) and RTL logical-property checks (doc 14).
+  gate:
+    name: Lint · Typecheck · Test · Build · Isolation
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      # Build-time placeholders (mirrors CI): a non-localhost origin keeps @nuxtjs/seo's
+      # site-config quiet. The isolation checks scan the build output, not the host values.
+      NUXT_PUBLIC_SITE_URL: https://example.com
+      NUXT_PUBLIC_API_BASE: https://example.com/api/v1
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      # `npm ci` runs postinstall (`nuxt prepare`), which generates .nuxt/ — the ESLint flat
+      # config and typed auto-imports that lint and typecheck depend on.
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+      - name: Assert bundle isolation
+        run: npm run check:bundle
+
+      - name: Assert logical properties (RTL)
+        run: npm run check:logical
+
+  deploy:
+    name: Build · Ship · Cut over
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: gate
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Compute release id (UTC timestamp + short SHA)
+        run: echo "RELEASE=$(date -u +%Y%m%dT%H%M%SZ)-${GITHUB_SHA::7}" >> "$GITHUB_ENV"
+
+      - run: npm ci
+
+      # Production build. Real public hosts are baked here (D23-13, public — not secrets)
+      # so any build-frozen reference (i18n baseUrl, SEO canonicals) is correct; shared/.env
+      # re-provides them at runtime for Nitro's runtimeConfig.public override.
+      - name: Build (Nitro node-server → .output)
+        env:
+          NUXT_PUBLIC_SITE_URL: https://eslammuatamed.com
+          NUXT_PUBLIC_API_BASE: https://api.eslammuatamed.com/api/v1
+        run: npm run build
+
+      # Release tarball — the self-contained Nitro bundle (.output carries its own bundled
+      # node_modules) plus package.json for reference. No .env: runtime env is server-side.
+      - name: Package release tarball
+        run: tar -czf "eslammuatamed-web-${RELEASE}.tar.gz" .output package.json
+
+      - name: Write deploy key and pin the host key
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME/.ssh"
+          chmod 700 "$HOME/.ssh"
+          printf '%s\n' "$DEPLOY_SSH_KEY" > "$HOME/.ssh/deploy_key"
+          chmod 600 "$HOME/.ssh/deploy_key"
+          # Trust-on-first-use: no DEPLOY_KNOWN_HOSTS secret is provisioned. Pin the host
+          # key via a DEPLOY_KNOWN_HOSTS secret (runbook prerequisite) to close the MITM gap.
+          ssh-keyscan -H "$DEPLOY_HOST" > "$HOME/.ssh/known_hosts" 2>/dev/null
+          chmod 600 "$HOME/.ssh/known_hosts"
+
+      - name: Ship the tarball
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          set -euo pipefail
+          TARBALL="eslammuatamed-web-${RELEASE}.tar.gz"
+          scp -i "$HOME/.ssh/deploy_key" -o UserKnownHostsFile="$HOME/.ssh/known_hosts" \
+            "$TARBALL" "${DEPLOY_USER}@${DEPLOY_HOST}:/tmp/${TARBALL}"
+
+      - name: Extract, cut over, health-gate, prune
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          set -euo pipefail
+          # RELEASE has no shell-special characters (timestamp + hex SHA), so it is safe
+          # to pass as a positional arg into the quoted (non-expanding) remote heredoc.
+          ssh -i "$HOME/.ssh/deploy_key" -o UserKnownHostsFile="$HOME/.ssh/known_hosts" \
+            "${DEPLOY_USER}@${DEPLOY_HOST}" bash -s -- "$RELEASE" <<'REMOTE'
+          set -euo pipefail
+          RELEASE="$1"
+          BASE=/srv/eslammuatamed-web
+          REL_DIR="$BASE/releases/$RELEASE"
+          TARBALL="/tmp/eslammuatamed-web-${RELEASE}.tar.gz"
+
+          # 1. Extract the release (self-contained; carries no secrets).
+          mkdir -p "$REL_DIR"
+          tar -xzf "$TARBALL" -C "$REL_DIR"
+          rm -f "$TARBALL"
+
+          # 2. Atomic cut over: build the new symlink beside `current`, then rename over it
+          #    (mv -T is atomic; a bare `ln -sfn` is unlink-then-symlink, briefly dangling).
+          ln -sfn "$REL_DIR" "$BASE/current.new"
+          mv -Tf "$BASE/current.new" "$BASE/current"
+
+          # 3. Restart via the scoped sudoers rule (systemctl restart eslammuatamed-web only).
+          sudo systemctl restart eslammuatamed-web
+
+          # 4. Health gate — Nitro serves `/`. --retry-connrefused rides out the boot window
+          #    when the socket is not yet accepting connections.
+          curl --fail --retry 5 --retry-delay 3 --retry-connrefused --max-time 10 \
+            http://127.0.0.1:3000/
+
+          # 5. Keep the last 5 releases (the live one is newest, so always retained).
+          cd "$BASE/releases"
+          ls -1dt */ | tail -n +6 | xargs -r rm -rf
+          REMOTE
