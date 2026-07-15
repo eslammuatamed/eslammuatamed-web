@@ -10,6 +10,10 @@ const items = computed<DropdownMenuItem[]>(() =>
   locales.value.map(item => ({
     label: item.name ?? item.code,
     to: switchLocalePath(item.code),
+    // `to` is already the fully resolved target-locale path. Nuxt UI's ULink otherwise re-localizes
+    // a prefix-less `to` to the CURRENT locale, so the default-locale target (`/blog`) would get the
+    // active `/ar` prefix re-applied — the AR→EN switch then 404s. `locale: false` opts out.
+    locale: false,
     icon: item.code === locale.value ? 'i-lucide-check' : undefined
   }))
 )
