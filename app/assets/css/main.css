@@ -74,8 +74,8 @@
   --ui-text-highlighted: var(--ui-color-neutral-900);
   --ui-text-muted: var(--ui-color-neutral-600); /* #52525B */
   --ui-border: var(--ui-color-neutral-200); /* #E4E4E7 */
-  /* Accent split (D03-2): fill is always blue-600 (white text passes AA); link text is
-     blue-600 in light. */
+  /* Accent split (D03-2, values per D03-7): fill is always violet-600 (white text passes
+     AA at 5.7:1); link text is violet-600 in light. */
   --ui-primary: var(--ui-color-primary-600);
   --ui-link: var(--ui-color-primary-600);
 }
@@ -88,8 +88,8 @@
   --ui-text-highlighted: var(--ui-color-neutral-50);
   --ui-text-muted: var(--ui-color-neutral-400); /* #A1A1AA */
   --ui-border: var(--ui-color-neutral-700); /* #3F3F46 */
-  /* Fill stays blue-600; link text lifts to blue-400 so it clears 4.5:1 on the near-black
-     background where blue-600 fails (D03-2). */
+  /* Fill stays violet-600; link text lifts to violet-400 so it clears 4.5:1 on the
+     near-black background where violet-600 fails (D03-2, values per D03-7). */
   --ui-primary: var(--ui-color-primary-600);
   --ui-link: var(--ui-color-primary-400);
 }

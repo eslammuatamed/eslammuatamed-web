@@ -14,12 +14,11 @@ export default defineNuxtConfig({
 
   css: ['~/assets/css/main.css'],
 
-  // Brand favicons, generated from the mark's normative geometry (brand-identity.md §3/§11)
-  // and copied from ../eslammuatamed-docs/content/brand/assets — never edited here.
-  // favicon.svg carries the prefers-color-scheme treatment; favicon.ico is the monochrome
-  // accent fallback, which is the only palette-legal treatment that reads on both light and
-  // dark chrome (asset-production.md AP-1). The .ico is listed first so chrome without SVG
-  // support resolves it.
+  // Brand favicons, generated from the mark's normative geometry (brand-identity.md §3/§11,
+  // v2.0.0) and copied from ../eslammuatamed-docs/content/brand/assets — never edited here.
+  // One violet mark serves both themes — the accent clears the 3:1 non-text floor on light
+  // and dark chrome alike (asset-production.md AP-7). The .ico is listed first so chrome
+  // without SVG support resolves it.
   app: {
     head: {
       link: [
