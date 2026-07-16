@@ -264,6 +264,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/articles/{slug}/related": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List up to three published articles related to the source article. */
+        get: operations["ArticlesController_getRelated_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/articles/{slug}": {
         parameters: {
             query?: never;
@@ -405,6 +422,226 @@ export interface paths {
         head?: never;
         /** Assign a role or activate/deactivate an account. */
         patch: operations["UsersAdminController_update_v1"];
+        trace?: never;
+    };
+    "/api/v1/skills": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List skills resolved to a locale. */
+        get: operations["SkillsController_list_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/skills": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List skills with full translations. */
+        get: operations["SkillsAdminController_list_v1"];
+        put?: never;
+        post: operations["SkillsAdminController_create_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/skills/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SkillsAdminController_get_v1"];
+        put?: never;
+        post?: never;
+        delete: operations["SkillsAdminController_remove_v1"];
+        options?: never;
+        head?: never;
+        patch: operations["SkillsAdminController_update_v1"];
+        trace?: never;
+    };
+    "/api/v1/experiences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List experiences resolved to a locale. */
+        get: operations["ExperiencesController_list_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/experiences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List experiences with full translations. */
+        get: operations["ExperiencesAdminController_list_v1"];
+        put?: never;
+        post: operations["ExperiencesAdminController_create_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/experiences/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ExperiencesAdminController_get_v1"];
+        put?: never;
+        post?: never;
+        delete: operations["ExperiencesAdminController_remove_v1"];
+        options?: never;
+        head?: never;
+        patch: operations["ExperiencesAdminController_update_v1"];
+        trace?: never;
+    };
+    "/api/v1/testimonials": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List visible testimonials resolved to a locale. */
+        get: operations["TestimonialsController_list_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/testimonials": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List testimonials including hidden entries. */
+        get: operations["TestimonialsAdminController_list_v1"];
+        put?: never;
+        post: operations["TestimonialsAdminController_create_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/testimonials/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["TestimonialsAdminController_get_v1"];
+        put?: never;
+        post?: never;
+        delete: operations["TestimonialsAdminController_remove_v1"];
+        options?: never;
+        head?: never;
+        patch: operations["TestimonialsAdminController_update_v1"];
+        trace?: never;
+    };
+    "/api/v1/projects": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List published projects, resolved and filtered by locale. */
+        get: operations["ProjectsController_list_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/projects/{slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a published project by its per-locale slug. */
+        get: operations["ProjectsController_getBySlug_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/projects": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List all projects, including unpublished entries. */
+        get: operations["ProjectsAdminController_list_v1"];
+        put?: never;
+        /** Create a project, gallery, and technology links. */
+        post: operations["ProjectsAdminController_create_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/projects/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get one project with its full translation map. */
+        get: operations["ProjectsAdminController_get_v1"];
+        put?: never;
+        post?: never;
+        delete: operations["ProjectsAdminController_remove_v1"];
+        options?: never;
+        head?: never;
+        /** Update a project and replace provided relation sets. */
+        patch: operations["ProjectsAdminController_update_v1"];
         trace?: never;
     };
 }
@@ -556,6 +793,10 @@ export interface components {
             profileLinks: components["schemas"]["ProfileLinkEntity"][];
             /** @example Open to select consulting engagements */
             availabilityStatus: string | null;
+            /** @example 2023 */
+            careerStartYear: number | null;
+            /** @example 11 */
+            careerStartMonth: number | null;
             /**
              * @description Google Search Console token.
              * @example google-abc123
@@ -601,6 +842,10 @@ export interface components {
             availabilityStatus: string | null;
             /** Format: uuid */
             resumeAssetId: string | null;
+            /** @example 2023 */
+            careerStartYear: number | null;
+            /** @example 11 */
+            careerStartMonth: number | null;
             googleSiteVerification: string | null;
             bingSiteVerification: string | null;
             /** @enum {string|null} */
@@ -647,6 +892,16 @@ export interface components {
             profileLinks?: components["schemas"]["ProfileLinkDto"][];
             /** @example Open to select consulting engagements */
             availabilityStatus?: string;
+            /**
+             * @description Career start year; set together with careerStartMonth.
+             * @example 2023
+             */
+            careerStartYear?: number | null;
+            /**
+             * @description Career start month; set together with careerStartYear.
+             * @example 11
+             */
+            careerStartMonth?: number | null;
             /** @example google-abc123 */
             googleSiteVerification?: string;
             /** @example bing-def456 */
@@ -1096,6 +1351,637 @@ export interface components {
             /** @description Deactivating blocks login and denies all grants at once. */
             isActive?: boolean;
         };
+        PublicSkillEntity: {
+            /** Format: uuid */
+            id: string;
+            /** @example TypeScript */
+            label: string;
+            /** @enum {string} */
+            group: "LANGUAGE" | "FRAMEWORK" | "TOOLING" | "PRACTICE";
+            /** @example 1 */
+            order: number;
+            /** @example #3178C6 */
+            brandColor: string | null;
+            /**
+             * @example [
+             *       "en",
+             *       "ar"
+             *     ]
+             */
+            availableLocales: string[];
+        };
+        SkillTranslationEntity: {
+            /** @example TypeScript */
+            label: string;
+        };
+        AdminSkillEntity: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            group: "LANGUAGE" | "FRAMEWORK" | "TOOLING" | "PRACTICE";
+            /** @example 1 */
+            order: number;
+            brandColor: string | null;
+            translations: {
+                [key: string]: components["schemas"]["SkillTranslationEntity"];
+            };
+        };
+        SkillTranslationDto: {
+            /** @example en */
+            locale: string;
+            /** @example TypeScript */
+            label: string;
+        };
+        CreateSkillDto: {
+            /**
+             * @example LANGUAGE
+             * @enum {string}
+             */
+            group: "LANGUAGE" | "FRAMEWORK" | "TOOLING" | "PRACTICE";
+            /** @example 1 */
+            order: number;
+            /** @example #3178C6 */
+            brandColor?: Record<string, never> | null;
+            /**
+             * @example [
+             *       {
+             *         "locale": "en",
+             *         "label": "TypeScript"
+             *       }
+             *     ]
+             */
+            translations: components["schemas"]["SkillTranslationDto"][];
+        };
+        UpdateSkillDto: {
+            /**
+             * @example LANGUAGE
+             * @enum {string}
+             */
+            group?: "LANGUAGE" | "FRAMEWORK" | "TOOLING" | "PRACTICE";
+            /** @example 1 */
+            order?: number;
+            /** @example #3178C6 */
+            brandColor?: Record<string, never> | null;
+            /**
+             * @example [
+             *       {
+             *         "locale": "en",
+             *         "label": "TypeScript"
+             *       }
+             *     ]
+             */
+            translations?: components["schemas"]["SkillTranslationDto"][];
+        };
+        PublicExperienceEntity: {
+            /** Format: uuid */
+            id: string;
+            role: string;
+            company: string;
+            location: string;
+            impact: string;
+            /** @enum {string} */
+            employmentType: "FULL_TIME" | "PART_TIME" | "CONTRACT" | "FREELANCE";
+            isCurrent: boolean;
+            /** Format: date-time */
+            startDate: string;
+            /** Format: date-time */
+            endDate: string | null;
+            /** @example 1 */
+            order: number;
+            /**
+             * @example [
+             *       "en",
+             *       "ar"
+             *     ]
+             */
+            availableLocales: string[];
+        };
+        ExperienceTranslationEntity: {
+            role: string;
+            company: string;
+            location: string;
+            impact: string;
+        };
+        AdminExperienceEntity: {
+            /** Format: uuid */
+            id: string;
+            /** Format: date-time */
+            startDate: string;
+            /** Format: date-time */
+            endDate: string | null;
+            isCurrent: boolean;
+            /** @enum {string} */
+            employmentType: "FULL_TIME" | "PART_TIME" | "CONTRACT" | "FREELANCE";
+            order: number;
+            translations: {
+                [key: string]: components["schemas"]["ExperienceTranslationEntity"];
+            };
+        };
+        ExperienceTranslationDto: {
+            /** @example en */
+            locale: string;
+            /** @example Senior Software Engineer */
+            role: string;
+            /** @example Acme Corp */
+            company: string;
+            /** @example Cairo, Egypt */
+            location: string;
+            /** @example - Reduced deployment time by 60%. */
+            impact: string;
+        };
+        CreateExperienceDto: {
+            /**
+             * Format: date
+             * @example 2022-01-01
+             */
+            startDate: string;
+            /**
+             * Format: date
+             * @example 2024-06-30
+             */
+            endDate?: Record<string, never> | null;
+            /** @example true */
+            isCurrent: boolean;
+            /**
+             * @example FULL_TIME
+             * @enum {string}
+             */
+            employmentType: "FULL_TIME" | "PART_TIME" | "CONTRACT" | "FREELANCE";
+            /** @example 1 */
+            order: number;
+            /**
+             * @example [
+             *       {
+             *         "locale": "en",
+             *         "role": "Engineer",
+             *         "company": "Acme",
+             *         "location": "Remote",
+             *         "impact": "Improved reliability."
+             *       }
+             *     ]
+             */
+            translations: components["schemas"]["ExperienceTranslationDto"][];
+        };
+        UpdateExperienceDto: {
+            /**
+             * Format: date
+             * @example 2022-01-01
+             */
+            startDate?: string;
+            /**
+             * Format: date
+             * @example 2024-06-30
+             */
+            endDate?: Record<string, never> | null;
+            /** @example true */
+            isCurrent?: boolean;
+            /**
+             * @example FULL_TIME
+             * @enum {string}
+             */
+            employmentType?: "FULL_TIME" | "PART_TIME" | "CONTRACT" | "FREELANCE";
+            /** @example 1 */
+            order?: number;
+            /**
+             * @example [
+             *       {
+             *         "locale": "en",
+             *         "role": "Engineer",
+             *         "company": "Acme",
+             *         "location": "Remote",
+             *         "impact": "Improved reliability."
+             *       }
+             *     ]
+             */
+            translations?: components["schemas"]["ExperienceTranslationDto"][];
+        };
+        PublicTestimonialEntity: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            avatarId: string | null;
+            order: number;
+            quote: string;
+            authorName: string;
+            authorRole: string;
+            /**
+             * @example [
+             *       "en",
+             *       "ar"
+             *     ]
+             */
+            availableLocales: string[];
+        };
+        TestimonialTranslationEntity: {
+            quote: string;
+            authorName: string;
+            authorRole: string;
+        };
+        AdminTestimonialEntity: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            avatarId: string | null;
+            order: number;
+            isVisible: boolean;
+            translations: {
+                [key: string]: components["schemas"]["TestimonialTranslationEntity"];
+            };
+        };
+        TestimonialTranslationDto: {
+            /** @example en */
+            locale: string;
+            /** @example This team delivered beyond expectations. */
+            quote: string;
+            /** @example Alex Morgan */
+            authorName: string;
+            /** @example CTO, Acme */
+            authorRole: string;
+        };
+        CreateTestimonialDto: {
+            /**
+             * Format: uuid
+             * @example 8b4d...
+             */
+            avatarId?: Record<string, never> | null;
+            /** @example 1 */
+            order: number;
+            /** @example true */
+            isVisible: boolean;
+            /**
+             * @example [
+             *       {
+             *         "locale": "en",
+             *         "quote": "Excellent work.",
+             *         "authorName": "Alex",
+             *         "authorRole": "CTO"
+             *       }
+             *     ]
+             */
+            translations: components["schemas"]["TestimonialTranslationDto"][];
+        };
+        UpdateTestimonialDto: {
+            /**
+             * Format: uuid
+             * @example 8b4d...
+             */
+            avatarId?: Record<string, never> | null;
+            /** @example 1 */
+            order?: number;
+            /** @example true */
+            isVisible?: boolean;
+            /**
+             * @example [
+             *       {
+             *         "locale": "en",
+             *         "quote": "Excellent work.",
+             *         "authorName": "Alex",
+             *         "authorRole": "CTO"
+             *       }
+             *     ]
+             */
+            translations?: components["schemas"]["TestimonialTranslationDto"][];
+        };
+        ProjectTechnologyEntity: {
+            /** Format: uuid */
+            id: string;
+            /** @example NestJS */
+            label: string;
+        };
+        PublicProjectListItemEntity: {
+            /** Format: uuid */
+            id: string;
+            /** @example content-platform-api */
+            slug: string;
+            /** @example Content platform API */
+            title: string;
+            /** @example A multilingual publishing platform. */
+            summary: string;
+            /** @example true */
+            featured: boolean;
+            /** @example 2026 */
+            year: number | null;
+            technologies: components["schemas"]["ProjectTechnologyEntity"][];
+            /**
+             * @example [
+             *       "en",
+             *       "ar"
+             *     ]
+             */
+            availableLocales: string[];
+        };
+        PublicProjectGalleryItemEntity: {
+            /** Format: uuid */
+            mediaAssetId: string;
+            /** @example 0 */
+            order: number;
+            /** @example Dashboard overview. */
+            caption: string | null;
+        };
+        PublicProjectDetailEntity: {
+            /** Format: uuid */
+            id: string;
+            /** @example content-platform-api */
+            slug: string;
+            /** @example Content platform API */
+            title: string;
+            /** @example A multilingual publishing platform. */
+            summary: string;
+            /** @example true */
+            featured: boolean;
+            /** @example 2026 */
+            year: number | null;
+            technologies: components["schemas"]["ProjectTechnologyEntity"][];
+            /**
+             * @example [
+             *       "en",
+             *       "ar"
+             *     ]
+             */
+            availableLocales: string[];
+            /**
+             * @description Locale code to that locale’s project slug.
+             * @example {
+             *       "en": "content-platform-api",
+             *       "ar": "content-platform-api-ar"
+             *     }
+             */
+            slugs: {
+                [key: string]: string;
+            };
+            /** Format: uri */
+            liveUrl: string | null;
+            /** Format: uri */
+            repoUrl: string | null;
+            /** @description Opaque Markdown. */
+            overview: string;
+            /** @description Opaque Markdown. */
+            businessProblem: string;
+            /** @description Opaque Markdown. */
+            solution: string;
+            /** @description Opaque Markdown. */
+            role: string;
+            /** @description Opaque Markdown. */
+            architecture: string;
+            /** @description Opaque Markdown. */
+            challenges: string;
+            /** @description Opaque Markdown. */
+            features: string;
+            /** @description Opaque Markdown. */
+            lessonsLearned: string;
+            gallery: components["schemas"]["PublicProjectGalleryItemEntity"][];
+            metaTitle: string | null;
+            metaDescription: string | null;
+            /** Format: uuid */
+            ogImageId: string | null;
+            /** Format: uri */
+            canonicalUrl: string | null;
+        };
+        AdminProjectTranslationEntity: {
+            title: string;
+            slug: string;
+            /** @description Opaque Markdown. */
+            summary: string;
+            /** @description Opaque Markdown. */
+            overview: string;
+            /** @description Opaque Markdown. */
+            businessProblem: string;
+            /** @description Opaque Markdown. */
+            solution: string;
+            /** @description Opaque Markdown. */
+            role: string;
+            /** @description Opaque Markdown. */
+            architecture: string;
+            /** @description Opaque Markdown. */
+            challenges: string;
+            /** @description Opaque Markdown. */
+            features: string;
+            /** @description Opaque Markdown. */
+            lessonsLearned: string;
+            metaTitle: string | null;
+            metaDescription: string | null;
+            /** Format: uuid */
+            ogImageId: string | null;
+            /** Format: uri */
+            canonicalUrl: string | null;
+        };
+        AdminProjectGalleryTranslationEntity: {
+            caption: string | null;
+        };
+        AdminProjectGalleryItemEntity: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            mediaAssetId: string;
+            /** @example 0 */
+            order: number;
+            translations: {
+                [key: string]: components["schemas"]["AdminProjectGalleryTranslationEntity"];
+            };
+        };
+        AdminProjectEntity: {
+            /** Format: uuid */
+            id: string;
+            /** @example true */
+            featured: boolean;
+            /** @example false */
+            isPublished: boolean;
+            /** @example 0 */
+            order: number;
+            /** Format: uri */
+            liveUrl: string | null;
+            /** Format: uri */
+            repoUrl: string | null;
+            /** @example 2026 */
+            year: number | null;
+            technologyIds: string[];
+            gallery: components["schemas"]["AdminProjectGalleryItemEntity"][];
+            translations: {
+                [key: string]: components["schemas"]["AdminProjectTranslationEntity"];
+            };
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        ProjectTranslationDto: {
+            /**
+             * @description Enabled two-letter locale.
+             * @example en
+             */
+            locale: string;
+            /** @example Content platform API */
+            title: string;
+            /** @example content-platform-api */
+            slug: string;
+            /**
+             * @description Opaque Markdown.
+             * @example A multilingual content platform built for reliable publishing.
+             */
+            summary: string;
+            /**
+             * @description Opaque Markdown.
+             * @example ## Overview
+             *
+             *     The platform…
+             */
+            overview: string;
+            /**
+             * @description Opaque Markdown.
+             * @example ## Problem
+             *
+             *     Publishing was fragmented.
+             */
+            businessProblem: string;
+            /**
+             * @description Opaque Markdown.
+             * @example ## Solution
+             *
+             *     A modular monolith.
+             */
+            solution: string;
+            /**
+             * @description Opaque Markdown.
+             * @example ## Role
+             *
+             *     Backend lead.
+             */
+            role: string;
+            /**
+             * @description Opaque Markdown.
+             * @example ## Architecture
+             *
+             *     NestJS and PostgreSQL.
+             */
+            architecture: string;
+            /**
+             * @description Opaque Markdown.
+             * @example ## Challenges
+             *
+             *     Locale-aware routing.
+             */
+            challenges: string;
+            /**
+             * @description Opaque Markdown.
+             * @example ## Features
+             *
+             *     - Publishing
+             *     - RBAC
+             */
+            features: string;
+            /**
+             * @description Opaque Markdown.
+             * @example ## Lessons
+             *
+             *     Keep module seams explicit.
+             */
+            lessonsLearned: string;
+            /** @example Content platform API case study */
+            metaTitle?: string;
+            /** @example How the multilingual platform was built. */
+            metaDescription?: string;
+            /**
+             * Format: uuid
+             * @example 0194f9a2-ef2a-7a31-8cb7-369c87f7933a
+             */
+            ogImageId?: string;
+            /**
+             * Format: uri
+             * @example https://eslammuatamed.com/projects/content-platform-api
+             */
+            canonicalUrl?: string;
+        };
+        ProjectGalleryCaptionDto: {
+            /** @example Admin dashboard overview. */
+            caption?: Record<string, never> | null;
+        };
+        ProjectGalleryItemDto: {
+            /**
+             * Format: uuid
+             * @example 0194f9a2-ef2a-7a31-8cb7-369c87f7933a
+             */
+            mediaAssetId: string;
+            /** @example 0 */
+            order: number;
+            /**
+             * @example {
+             *       "en": {
+             *         "caption": "Dashboard overview."
+             *       }
+             *     }
+             */
+            translations: {
+                [key: string]: components["schemas"]["ProjectGalleryCaptionDto"];
+            };
+        };
+        CreateProjectDto: {
+            /** @example true */
+            featured: boolean;
+            /**
+             * @default false
+             * @example false
+             */
+            isPublished: boolean;
+            /** @example 0 */
+            order: number;
+            /**
+             * Format: uri
+             * @example https://example.com
+             */
+            liveUrl?: Record<string, never> | null;
+            /**
+             * Format: uri
+             * @example https://github.com/eslammuatamed/example
+             */
+            repoUrl?: Record<string, never> | null;
+            /** @example 2026 */
+            year?: Record<string, never> | null;
+            /** @description At least one complete project translation. */
+            translations: components["schemas"]["ProjectTranslationDto"][];
+            /**
+             * @description Skill ids; the project technology set is replaced on update.
+             * @example [
+             *       "0194f9a2-ef2a-7a31-8cb7-369c87f7933a"
+             *     ]
+             */
+            technologyIds: string[];
+            /** @description Ordered gallery; the set is replaced on update. */
+            gallery: components["schemas"]["ProjectGalleryItemDto"][];
+        };
+        UpdateProjectDto: {
+            /** @example true */
+            featured?: boolean;
+            /**
+             * @default false
+             * @example false
+             */
+            isPublished: boolean;
+            /** @example 0 */
+            order?: number;
+            /**
+             * Format: uri
+             * @example https://example.com
+             */
+            liveUrl?: Record<string, never> | null;
+            /**
+             * Format: uri
+             * @example https://github.com/eslammuatamed/example
+             */
+            repoUrl?: Record<string, never> | null;
+            /** @example 2026 */
+            year?: Record<string, never> | null;
+            /** @description At least one complete project translation. */
+            translations?: components["schemas"]["ProjectTranslationDto"][];
+            /**
+             * @description Skill ids; the project technology set is replaced on update.
+             * @example [
+             *       "0194f9a2-ef2a-7a31-8cb7-369c87f7933a"
+             *     ]
+             */
+            technologyIds?: string[];
+            /** @description Ordered gallery; the set is replaced on update. */
+            gallery?: components["schemas"]["ProjectGalleryItemDto"][];
+        };
     };
     responses: never;
     parameters: never;
@@ -1172,7 +2058,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        data: components["schemas"]["LocaleEntity"];
+                        data: components["schemas"]["LocaleEntity"][];
                     };
                 };
             };
@@ -1462,7 +2348,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        data: components["schemas"]["PublicCategoryEntity"];
+                        data: components["schemas"]["PublicCategoryEntity"][];
                     };
                 };
             };
@@ -1751,7 +2637,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        data: components["schemas"]["PublicTagEntity"];
+                        data: components["schemas"]["PublicTagEntity"][];
                     };
                 };
             };
@@ -2045,6 +2931,61 @@ export interface operations {
             };
             /** @description Unknown or disabled locale. */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Malformed query parameters. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    ArticlesController_getRelated_v1: {
+        parameters: {
+            query?: {
+                /** @description Two-letter locale code, validated against enabled locales. */
+                locale?: string;
+            };
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Related published articles resolved to ?locale=. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["PublicArticleListItemEntity"][];
+                        meta: components["schemas"]["PageMeta"];
+                    };
+                };
+            };
+            /** @description Unknown or disabled locale. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description No published article with this slug in the locale. */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2932,6 +3873,1428 @@ export interface operations {
                 };
             };
             /** @description Unknown role. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Admin rate limit exceeded (300 / min). */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    SkillsController_list_v1: {
+        parameters: {
+            query?: {
+                locale?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["PublicSkillEntity"][];
+                    };
+                };
+            };
+            /** @description Unknown or disabled locale. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Malformed query parameters. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    SkillsAdminController_list_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["AdminSkillEntity"][];
+                    };
+                };
+            };
+            /** @description Missing or invalid access token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Missing the required permission. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Admin rate limit exceeded (300 / min). */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    SkillsAdminController_create_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateSkillDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["AdminSkillEntity"];
+                    };
+                };
+            };
+            /** @description Missing or invalid access token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Missing the required permission. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Validation error or invalid locale. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Admin rate limit exceeded (300 / min). */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    SkillsAdminController_get_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["AdminSkillEntity"];
+                    };
+                };
+            };
+            /** @description Missing or invalid access token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Missing the required permission. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Skill not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Admin rate limit exceeded (300 / min). */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    SkillsAdminController_remove_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Skill deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid access token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Missing the required permission. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Skill not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Skill is linked to a project. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Admin rate limit exceeded (300 / min). */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    SkillsAdminController_update_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateSkillDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["AdminSkillEntity"];
+                    };
+                };
+            };
+            /** @description Missing or invalid access token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Missing the required permission. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Skill not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Validation error or invalid locale. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Admin rate limit exceeded (300 / min). */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    ExperiencesController_list_v1: {
+        parameters: {
+            query?: {
+                locale?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["PublicExperienceEntity"][];
+                    };
+                };
+            };
+            /** @description Unknown or disabled locale. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Malformed query parameters. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    ExperiencesAdminController_list_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["AdminExperienceEntity"][];
+                    };
+                };
+            };
+            /** @description Missing or invalid access token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Missing the required permission. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Admin rate limit exceeded (300 / min). */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    ExperiencesAdminController_create_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateExperienceDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["AdminExperienceEntity"];
+                    };
+                };
+            };
+            /** @description Missing or invalid access token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Missing the required permission. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Validation error or invalid employment type. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Admin rate limit exceeded (300 / min). */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    ExperiencesAdminController_get_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["AdminExperienceEntity"];
+                    };
+                };
+            };
+            /** @description Missing or invalid access token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Missing the required permission. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Experience not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Admin rate limit exceeded (300 / min). */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    ExperiencesAdminController_remove_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Experience deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid access token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Missing the required permission. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Experience not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Admin rate limit exceeded (300 / min). */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    ExperiencesAdminController_update_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateExperienceDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["AdminExperienceEntity"];
+                    };
+                };
+            };
+            /** @description Missing or invalid access token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Missing the required permission. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Experience not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Validation error or invalid employment type. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Admin rate limit exceeded (300 / min). */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    TestimonialsController_list_v1: {
+        parameters: {
+            query?: {
+                /** @description Two-letter locale code, validated against enabled locales. */
+                locale?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["PublicTestimonialEntity"][];
+                    };
+                };
+            };
+            /** @description Unknown or disabled locale. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Malformed query parameters. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    TestimonialsAdminController_list_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["AdminTestimonialEntity"][];
+                    };
+                };
+            };
+            /** @description Missing or invalid access token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Missing the required permission. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Admin rate limit exceeded (300 / min). */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    TestimonialsAdminController_create_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateTestimonialDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["AdminTestimonialEntity"];
+                    };
+                };
+            };
+            /** @description Missing or invalid access token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Missing the required permission. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Validation error or invalid locale. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Admin rate limit exceeded (300 / min). */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    TestimonialsAdminController_get_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["AdminTestimonialEntity"];
+                    };
+                };
+            };
+            /** @description Missing or invalid access token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Missing the required permission. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Testimonial not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Admin rate limit exceeded (300 / min). */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    TestimonialsAdminController_remove_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Testimonial deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid access token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Missing the required permission. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Testimonial not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Admin rate limit exceeded (300 / min). */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    TestimonialsAdminController_update_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateTestimonialDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["AdminTestimonialEntity"];
+                    };
+                };
+            };
+            /** @description Missing or invalid access token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Missing the required permission. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Testimonial not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Validation error or invalid locale. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Admin rate limit exceeded (300 / min). */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    ProjectsController_list_v1: {
+        parameters: {
+            query?: {
+                page?: number;
+                perPage?: number;
+                /** @description Two-letter locale code, validated against enabled locales. */
+                locale?: string;
+                /** @description Filter to projects linked to this Skill id. */
+                technology?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Featured-first paginated published projects. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["PublicProjectListItemEntity"][];
+                        meta: components["schemas"]["PageMeta"];
+                    };
+                };
+            };
+            /** @description Unknown or disabled locale. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Malformed query parameters. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    ProjectsController_getBySlug_v1: {
+        parameters: {
+            query?: {
+                /** @description Two-letter locale code, validated against enabled locales. */
+                locale?: string;
+            };
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["PublicProjectDetailEntity"];
+                    };
+                };
+            };
+            /** @description Unknown or disabled locale. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description No published project with this slug in the locale. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Malformed query parameters. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    ProjectsAdminController_list_v1: {
+        parameters: {
+            query?: {
+                page?: number;
+                perPage?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["AdminProjectEntity"][];
+                        meta: components["schemas"]["PageMeta"];
+                    };
+                };
+            };
+            /** @description Missing or invalid access token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Missing the required permission. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Admin rate limit exceeded (300 / min). */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    ProjectsAdminController_create_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateProjectDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["AdminProjectEntity"];
+                    };
+                };
+            };
+            /** @description Missing or invalid access token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Missing the required permission. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Validation error, invalid locale, or slug collision. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Admin rate limit exceeded (300 / min). */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    ProjectsAdminController_get_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["AdminProjectEntity"];
+                    };
+                };
+            };
+            /** @description Missing or invalid access token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Missing the required permission. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Project not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Admin rate limit exceeded (300 / min). */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    ProjectsAdminController_remove_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Project deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid access token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Missing the required permission. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Project not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Admin rate limit exceeded (300 / min). */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    ProjectsAdminController_update_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateProjectDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["AdminProjectEntity"];
+                    };
+                };
+            };
+            /** @description Missing or invalid access token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Missing the required permission. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Project not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Validation error, invalid locale, or slug collision. */
             422: {
                 headers: {
                     [name: string]: unknown;
