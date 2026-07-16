@@ -61,7 +61,7 @@
 
 /* ---------------------------------------------------------------------------------------
    Semantic color overrides — Nuxt UI's --ui-* namespace carries the doc 03 §2 values per
-   theme (D14-3). Values map to the zinc/blue scales set in app.config.ts, so a re-brand is
+   theme (D14-3). Values map to the zinc/violet scales set in app.config.ts, so a re-brand is
    a token-layer change, not a codebase sweep (D14-2). Ordered after @nuxt/ui so equal-
    specificity overrides win.
    ------------------------------------------------------------------------------------- */
