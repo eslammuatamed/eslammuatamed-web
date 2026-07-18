@@ -1,75 +1,45 @@
-# Nuxt Minimal Starter
+# eslammuatamed-web
 
-Look at the [Nuxt documentation](https://nuxt.com/docs/getting-started/introduction) to learn more.
+تطبيق `Nuxt 4` + `Nuxt UI 4` + `Tailwind v4`: الموقع العام (SSR) + لوحة تحكّم `/dashboard` (SPA عميل-فقط) لمنصّة `eslammuatamed`.
 
-## Setup
+هذا الملف مرجع تشغيل سريع فقط. **لفهم المعمارية والتدفّقات ومراجعة التوافق ابدأ من [`PROJECT_GUIDE.md`](PROJECT_GUIDE.md)**، ثم ملفات `README.md` داخل مجلدات `app/` و`server/`.
 
-Make sure to install dependencies:
+الوثائق الحاكمة في `../eslammuatamed-docs/docs/` — خاصّةً `00` (الدستور) و`03`/`06`/`11–14` (معمارية هذا المستودع). ملزِم أيضًا: `.specify/memory/constitution.md`.
 
-```bash
-# npm
-npm install
+## المتطلّبات
 
-# pnpm
-pnpm install
+- `Node 24` (مثبّت في `.nvmrc`).
+- الـ API متاحًا على `NUXT_PUBLIC_API_BASE`، **أو** خادم mock عبر `npm run mock` (يعمل على العقد المُلتزَم بلا API حيّ).
 
-# yarn
-yarn install
-
-# bun
-bun install
-```
-
-## Development Server
-
-Start the development server on `http://localhost:3000`:
+## التشغيل السريع
 
 ```bash
-# npm
-npm run dev
-
-# pnpm
-pnpm dev
-
-# yarn
-yarn dev
-
-# bun
-bun run dev
+npm ci
+cp .env.example .env          # NUXT_PUBLIC_SITE_URL / NUXT_PUBLIC_API_BASE (مُتحقَّق عند الإقلاع)
+npm run dev                   # http://localhost:3000
 ```
 
-## Production
-
-Build the application for production:
+للتطوير بلا API حيّ، في نافذة ثانية:
 
 ```bash
-# npm
-npm run build
-
-# pnpm
-pnpm build
-
-# yarn
-yarn build
-
-# bun
-bun run build
+npm run mock                  # خادم Prism على openapi/openapi.json (المنفذ 3001)
 ```
 
-Locally preview production build:
+## البوابات وأوامر الجودة
 
 ```bash
-# npm
-npm run preview
-
-# pnpm
-pnpm preview
-
-# yarn
-yarn preview
-
-# bun
-bun run preview
+npm run lint                  # eslint (حدود العالمين + منع Axios/$fetch الخام للـ API)
+npm run typecheck             # nuxt typecheck (vue-tsc)
+npm test                      # vitest
+npm run api:types             # إعادة توليد app/types/api.d.ts من العقد (لا يُحرَّر يدويًّا)
+npm run build && npm run check:bundle    # يمنع تسرّب Tiptap/Shiki إلى حزم العميل العامّة
+npm run check:logical                     # يمنع الأنماط الفيزيائية (خصائص منطقية فقط — RTL)
 ```
 
-Check out the [deployment documentation](https://nuxt.com/docs/getting-started/deployment) for more information.
+## انضباط التغيير
+
+Doc-first: عمل يناقض وثيقة معتمدة ← نقّح الوثيقة في `../eslammuatamed-docs` أولًا. Conventional Commits عبر PR. تبنّي العقد = commit ذرّي واحد (العقد + الأنواع المولّدة + التكيّف، [الوثيقة 16 §3](../eslammuatamed-docs/docs/16-development-conventions.md)). كل تغيير واجهة يُتحقَّق في **اللغتين** (en/ar) وسلوك a11y.
+
+## النشر
+
+`.github/workflows/deploy.yml` على `Contabo VPS`. التفاصيل في [الوثيقة 23](../eslammuatamed-docs/docs/23-deployment.md) و[توثيق نشر Nuxt](https://nuxt.com/docs/getting-started/deployment).

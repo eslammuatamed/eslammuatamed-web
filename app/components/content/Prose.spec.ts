@@ -36,7 +36,7 @@ describe('ContentProse', () => {
     expect(prose.exists()).toBe(true)
 
     // Heading anchor (drives the future TOC) is a real element id.
-    expect(prose.find('h1#hello-world').exists()).toBe(true)
+    expect(prose.find('h1#user-content-hello-world').exists()).toBe(true)
 
     // Fenced code was highlighted during SSR — Shiki markup is present as static DOM.
     expect(prose.find('.shiki').exists()).toBe(true)

@@ -30,8 +30,16 @@ function slugify(text: string): string {
     .replace(/^-|-$/g, '')
 }
 
-/** Give every heading a stable id (drives the future TOC, FR-PUB-043) plus a keyboard-reachable
-    permalink. Slugs are de-duplicated within a document. */
+// Stable prefix for generated heading ids (D19-5, markdown-it safety guide). Anchor ids derive
+// from user-controlled heading text; prefixing them with GitHub's `user-content-` convention
+// prevents DOM clobbering — a heading titled e.g. "children" or "querySelector" cannot shadow a
+// same-named DOM/global property. `html:false` already blocks HTML/attribute-injection XSS on this
+// path; the prefix closes the one residual gap a rendered-output allowlist sanitizer would otherwise
+// cover, without adding a sanitizer dependency (owner decision, 2026-07-18).
+const ANCHOR_ID_PREFIX = 'user-content-'
+
+/** Give every heading a stable, prefixed id (drives the future TOC, FR-PUB-043) plus a
+    keyboard-reachable permalink. Slugs are de-duplicated within a document, then prefixed. */
 function headingAnchors(md: MarkdownIt): void {
   const seen = new Map<string, number>()
 
@@ -49,7 +57,7 @@ function headingAnchors(md: MarkdownIt): void {
       seen.set(slug, count + 1)
       if (count > 0) slug = `${slug}-${count}`
 
-      open.attrSet('id', slug)
+      open.attrSet('id', `${ANCHOR_ID_PREFIX}${slug}`)
     }
   })
 }
