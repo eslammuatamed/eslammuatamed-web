@@ -4,10 +4,30 @@ import { renderMarkdown } from './markdown'
 // The renderer is the engine ContentProse wraps (D12-4); these assert its three contracts:
 // heading anchors, SSR-highlighted fences, and structural sanitization of hostile input.
 describe('renderMarkdown', () => {
-  it('gives headings slugified, de-duplicated ids', async () => {
+  it('gives headings slugified, de-duplicated ids with the user-content- prefix (D19-5, DOM clobbering)', async () => {
     const html = await renderMarkdown('# Hello World\n\n## Hello World')
-    expect(html).toContain('<h1 id="hello-world">')
-    expect(html).toContain('<h2 id="hello-world-1">')
+    expect(html).toContain('<h1 id="user-content-hello-world">')
+    expect(html).toContain('<h2 id="user-content-hello-world-1">')
+  })
+
+  it('prefixes every generated heading id with user-content- (no un-prefixed id escapes)', async () => {
+    // "children"/"querySelector" are exactly the names a DOM-clobbering attack would target; the
+    // prefix guarantees a generated id can never equal a bare DOM/global property name.
+    const html = await renderMarkdown('# Introduction\n\n## Children\n\n### querySelector')
+    expect(html).toContain('id="user-content-introduction"')
+    expect(html).toContain('id="user-content-children"')
+    expect(html).toContain('id="user-content-queryselector"')
+    // Fail if ANY heading carries an id that is not user-content--prefixed.
+    expect(html).not.toMatch(/<h[1-6][^>]*\sid="(?!user-content-)/)
+  })
+
+  it('generates deterministic ids for identical input (same render twice)', async () => {
+    const source = '# Repeatable Heading\n\n## Repeatable Heading'
+    const first = await renderMarkdown(source)
+    const second = await renderMarkdown(source)
+    expect(first).toBe(second)
+    expect(first).toContain('id="user-content-repeatable-heading"')
+    expect(first).toContain('id="user-content-repeatable-heading-1"')
   })
 
   it('highlights fenced code blocks during render (Shiki, no client JS)', async () => {
