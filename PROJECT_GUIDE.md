@@ -190,7 +190,7 @@ npm run check:logical                    # يمنع الأنماط الفيزي�
 | `runtimeConfig` مدفوع بالبيئة | `nuxt.config.ts` | `Compatible` | [Nuxt runtimeConfig](https://nuxt.com/docs/guide/going-further/runtime-config) |
 | أنواع مولّدة من العقد | `app/types/*` | `Compatible` | [openapi-typescript](https://openapi-ts.dev/) |
 
-**ملاحظة أمنية للمالك (للمراجعة):** يصف [الوثيقة 19 §5 (D19-5)](../eslammuatamed-docs/docs/19-security.md) عرض Markdown بأنه «مُعقِّم بقائمة سماح (allowlist sanitizer)»، بينما تنفيذ M1 يحقّق منع XSS عبر `html: false` (تهريب لا تعقيم بمكتبة) — الآلية الآمنة الافتراضية في `markdown-it`. **بفارق واحد:** `html:false` لا يوفّر حماية **DOM clobbering** التي يوفّرها مُعقِّم الخرج، ومراسي العناوين تُولَّد بلا بادئة (استغلالها الآن ≈ صفر). التفصيل والتوصيتان (بادئة `user-content-` للمراسي + مصالحة doc-first للوثيقة 19) في [`server/README.md`](server/README.md).
+**ملاحظة أمنية للمالك:** يصف [الوثيقة 19 §5 (D19-5)](../eslammuatamed-docs/docs/19-security.md) عرض Markdown بأنه «مُعقِّم بقائمة سماح (allowlist sanitizer)»، بينما تنفيذ M1 يحقّق الخصائص الأمنية عبر `html: false` (منع XSS) + **بادئة `user-content-` الثابتة على مراسي العناوين** (منع DOM clobbering، مطبَّقة في `markdown.ts`) — **دون** مكتبة تعقيم. الآلية تختلف عن صياغة الوثيقة 19 §5 فتستحقّ مصالحة doc-first لتلك الصياغة (القرار للمالك). **القاعدة المستقبلية:** إن سُمِح يومًا بـ HTML خام (`html: true`)، فمُعقِّم بقائمة سماح يصبح إلزاميًّا. التفصيل في [`server/README.md`](server/README.md).
 
 ## 12. مخاطر معلومة وعمل مؤجَّل
 
