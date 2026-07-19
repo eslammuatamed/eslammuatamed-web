@@ -1,30 +1,28 @@
 # Production deploy — Nuxt/Nitro web → Contabo VPS (doc 23 §3 "Web release", D23-9).
 #
-# TRIGGER: workflow_dispatch ONLY for now. The server is not provisioned yet; an
-# auto-trigger would paint the repo red on every push. Per doc 23 §3 the web's eventual
-# trigger is push to `main` (NOT tags — that is the API's trigger). After the doc 23 §4
-# restore drill passes, switch the trigger — a one-line change, documented in the runbook:
+# TRIGGER (owner policy): automatic deployment from `main`.
+#   on: push -> main      : a merged dev->main promotion (or authorized push) is
+#                           re-verified at the EXACT merged SHA, then deployed.
+#   on: workflow_dispatch : recovery / manual redeploy (must run on main; see guard).
+# No tag trigger (tags were never the web's trigger); no manual approval gate (GitHub
+# environment required reviewers are unavailable on the Free/private plan).
 #
-#     on:
-#       push:
-#         branches: [main]
+# EXACT-SHA GATING: the `deploy` job `needs: verify` from THIS run, so it cannot start
+# unless lint/typecheck/test/build + bundle-isolation + RTL + API-types idempotence pass
+# for the same `github.sha` — not only the pre-merge PR checks. Before any server mutation
+# it asserts `github.ref == refs/heads/main` and that HEAD equals `github.sha`, and it
+# verifies the production API origin is healthy first (API-before-Web, doc 23 §? / owner
+# policy). No path filters; a `[skip ci]` message on a main commit must never be used
+# (recover with workflow_dispatch on main — see the runbook).
 #
-# DEVIATIONS from doc 23 §3 (reported to the team lead, justified):
-#   - "post-deploy smoke suite" (~6 Playwright checks, D18-3) is not wired here yet — it
-#     lands with the push-to-main trigger switch once the server is live to smoke against.
-#     The single `/` health gate stands in until then.
-#   - The build injects the real public hosts at build time. A Nuxt build must be given
-#     NUXT_PUBLIC_* values (CI does the same with placeholders); for a production artifact
-#     the values are the normative public hosts (D23-13), not a throwaway `example.com`,
-#     so build-frozen references (e.g. i18n baseUrl) are correct. These are public URLs,
-#     not secrets — the release still carries no .env. shared/.env re-provides them at
-#     runtime so Nitro's runtimeConfig.public override lands too.
-#
-# ROLLBACK (no rebuild — doc 23 §3): on the VPS, repoint `current` at the previous
-# release and restart:
+# ROLLBACK (no rebuild — doc 23 §3): the deploy auto-rolls-back (repoints `current` at the
+# previous release + restart) if the post-cutover health gate fails. Manual form:
 #     ln -sfn /srv/eslammuatamed-web/releases/<previous> /srv/eslammuatamed-web/current.new
 #     mv -Tf  /srv/eslammuatamed-web/current.new /srv/eslammuatamed-web/current
 #     sudo systemctl restart eslammuatamed-web
+#
+# DEVIATION from doc 23 §3: the full Playwright post-deploy smoke suite (D18-3) is not
+# wired here yet — the `/` + `/ar` health gate stands in. A deliberate follow-up.
 #
 # SERVER LAYOUT this workflow deploys into (full contract in the deploy runbook):
 #   /srv/eslammuatamed-web/releases/<id>   extracted release (.output, package.json)
@@ -37,22 +35,24 @@
 name: Deploy
 
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
 
-# Never let two deploys race; a deploy in flight must finish (do not cancel mid-cutover).
+# One production deployment at a time; an in-flight deploy must finish (never cancel a
+# cutover). Scoped to this repo's production pipeline.
 concurrency:
-  group: deploy-web
+  group: deploy-web-production
   cancel-in-progress: false
 
 permissions:
   contents: read
 
 jobs:
-  # Release gate — mirrors the CI fast lane (ci.yml `verify`). ci.yml is not
-  # `workflow_call`-able, so the minimal gates are duplicated here rather than reused, so a
-  # main build (which carries no PR checks) still proves lint/typecheck/test + the two-worlds
-  # bundle isolation (D06-1/D06-5) and RTL logical-property checks (doc 14).
-  gate:
+  # Release gate — mirrors ci.yml `verify`. ci.yml is not `workflow_call`-able, so the
+  # gates are duplicated here so the deploy is gated on THIS run's verification of the exact
+  # main SHA (lint/typecheck/test/build + two-worlds isolation + RTL + API-types idempotence).
+  verify:
     name: Lint · Typecheck · Test · Build · Isolation
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -73,6 +73,18 @@ jobs:
       # config and typed auto-imports that lint and typecheck depend on.
       - name: Install dependencies
         run: npm ci
+
+      - name: Enforce API types idempotence
+        # app/types/api.d.ts must be a fixed point of `api:types` over the committed
+        # openapi/openapi.json (doc 16 §3). Content-level compare (stat-cache safe).
+        run: |
+          npm run api:types
+          if git show HEAD:app/types/api.d.ts | diff -u - app/types/api.d.ts; then
+            echo "app/types/api.d.ts is a fixed point of api:types."
+          else
+            echo "::error::app/types/api.d.ts is stale vs openapi/openapi.json — run 'npm run api:types' and commit the result." >&2
+            exit 1
+          fi
 
       - name: Lint
         run: npm run lint
@@ -96,9 +108,45 @@ jobs:
     name: Build · Ship · Cut over
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    needs: gate
+    # Gate: cannot start unless verification of THIS run (same github.sha) passes.
+    needs: verify
+    # Production is main only. A workflow_dispatch on any other ref skips deploy (verify
+    # still runs harmlessly); a push only ever carries refs/heads/main.
+    if: github.ref == 'refs/heads/main'
     steps:
       - uses: actions/checkout@v4
+
+      # Exact-SHA guard (owner policy): prove we are on main and exactly github.sha before
+      # any server mutation. Fails loudly otherwise.
+      - name: Verify production ref and pin the exact SHA
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          REF: ${{ github.ref }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          echo "event=$EVENT_NAME ref=$REF github.sha=$SHA"
+          if [ "$REF" != "refs/heads/main" ]; then
+            echo "::error::Refusing to deploy: ref '$REF' is not refs/heads/main." >&2
+            exit 1
+          fi
+          HEAD_SHA="$(git rev-parse HEAD)"
+          if [ "$HEAD_SHA" != "$SHA" ]; then
+            echo "::error::Checked-out HEAD ($HEAD_SHA) != github.sha ($SHA); aborting." >&2
+            exit 1
+          fi
+          echo "Deploying main at exact SHA $SHA (HEAD verified)."
+          echo "✅ Deploying \`main\` at exact SHA \`$SHA\`." >> "$GITHUB_STEP_SUMMARY"
+
+      # API-before-Web: the web is built against the production API origin, so confirm that
+      # origin is healthy before we cut over. A dead API blocks the web deploy.
+      - name: Verify production API origin is healthy
+        run: |
+          set -euo pipefail
+          echo "Checking production API origin before deploying web..."
+          curl --fail --retry 3 --retry-delay 5 --max-time 10 \
+            https://api.eslammuatamed.com/api/v1/health
+          echo "Production API origin is healthy."
 
       - uses: actions/setup-node@v4
         with:
@@ -152,7 +200,7 @@ jobs:
           scp -i "$HOME/.ssh/deploy_key" -o UserKnownHostsFile="$HOME/.ssh/known_hosts" \
             "$TARBALL" "${DEPLOY_USER}@${DEPLOY_HOST}:/tmp/${TARBALL}"
 
-      - name: Extract, cut over, health-gate, prune
+      - name: Extract, cut over, health-gate (/ and /ar), auto-rollback, prune
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
@@ -168,6 +216,10 @@ jobs:
           REL_DIR="$BASE/releases/$RELEASE"
           TARBALL="/tmp/eslammuatamed-web-${RELEASE}.tar.gz"
 
+          # Capture the currently-live release up front so an unhealthy new release can be
+          # auto-rolled-back (symlink only; no rebuild — doc 23 §3).
+          PREV="$(readlink -f "$BASE/current" 2>/dev/null || true)"
+
           # 1. Extract the release (self-contained; carries no secrets).
           mkdir -p "$REL_DIR"
           tar -xzf "$TARBALL" -C "$REL_DIR"
@@ -181,12 +233,30 @@ jobs:
           # 3. Restart via the scoped sudoers rule (systemctl restart eslammuatamed-web only).
           sudo systemctl restart eslammuatamed-web
 
-          # 4. Health gate — Nitro serves `/`. --retry-connrefused rides out the boot window
-          #    when the socket is not yet accepting connections.
-          curl --fail --retry 5 --retry-delay 3 --retry-connrefused --max-time 10 \
-            http://127.0.0.1:3000/
+          # 4. Health gate (both locales: / LTR and /ar RTL) with AUTOMATIC rollback on
+          #    failure. --retry-connrefused rides out the boot window.
+          if curl --fail --retry 5 --retry-delay 3 --retry-connrefused --max-time 10 http://127.0.0.1:3000/ \
+             && curl --fail --retry 5 --retry-delay 3 --retry-connrefused --max-time 10 http://127.0.0.1:3000/ar; then
+            echo "Health gate passed (/ and /ar) for release $RELEASE."
+          else
+            echo "Health gate FAILED for $RELEASE — rolling the web back." >&2
+            if [ -n "$PREV" ] && [ -d "$PREV" ] && [ "$PREV" != "$REL_DIR" ]; then
+              ln -sfn "$PREV" "$BASE/current.new"
+              mv -Tf "$BASE/current.new" "$BASE/current"
+              sudo systemctl restart eslammuatamed-web
+              if curl --fail --retry 5 --retry-delay 3 --retry-connrefused --max-time 10 http://127.0.0.1:3000/; then
+                echo "Rolled back to previous release ($PREV); it is healthy." >&2
+              else
+                echo "Rolled back to $PREV but health still failing — MANUAL INTERVENTION REQUIRED." >&2
+              fi
+            else
+              echo "No previous healthy release to roll back to — MANUAL INTERVENTION REQUIRED." >&2
+            fi
+            exit 1
+          fi
 
           # 5. Keep the last 5 releases (the live one is newest, so always retained).
+          #    Only reached on a healthy deploy — a rolled-back run exits above.
           cd "$BASE/releases"
           ls -1dt */ | tail -n +6 | xargs -r rm -rf
           REMOTE
