@@ -1,14 +1,74 @@
 name: CI
 
-# M1 quality gate (doc 17, task T8/T9). Runs with no API dependency — Vitest passes without a
-# backend, and the build + bundle-isolation check assert the two-worlds boundary (D06-1/D06-5).
+# Verification only — never deploys (production deploy lives in deploy.yml, on push to main).
+# Events (branch policy: dev = integration, main = production):
+#   - pull_request -> dev or main : full verification of the proposed merge
+#   - push         -> dev         : verification of the integration branch
+# main is deliberately NOT a push trigger here: a push to main is handled by deploy.yml,
+# which re-runs the same verification against the exact merged SHA before deploying. No
+# path filters — every change to these branches is fully verified (no accidental skips).
 on:
-  push:
-    branches: [main]
   pull_request:
+    branches: [dev, main]
+  push:
+    branches: [dev]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
 
 jobs:
+  # Advisory branch-policy guard (Free plan). GitHub branch protection / rulesets are
+  # unavailable on this plan, so this cannot be made unbypassable — it only REPORTS an
+  # unexpected promotion path. Enforcement is procedural (see the deployment runbook).
+  policy:
+    name: Branch-policy guard (advisory)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check promotion path
+        env:
+          BASE: ${{ github.base_ref }}
+          HEAD: ${{ github.head_ref }}
+        run: |
+          set -euo pipefail
+          echo "PR promotion path: '$HEAD' -> '$BASE'"
+          ok=1
+          case "$BASE" in
+            dev)
+              case "$HEAD" in
+                feature/*|fix/*|chore/*|hotfix/*|dependabot/*|renovate/*) ok=0 ;;
+              esac ;;
+            main)
+              case "$HEAD" in
+                dev|hotfix/*) ok=0 ;;
+              esac ;;
+          esac
+          if [ "$ok" -eq 0 ]; then
+            echo "✅ Allowed promotion path: '$HEAD' -> '$BASE'." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "::warning title=Branch policy::Unexpected promotion path '$HEAD' -> '$BASE'. Expected feature/*|fix/*|chore/* -> dev, and dev|hotfix/* -> main. ADVISORY only (branch protection is unavailable on the Free plan)."
+            {
+              echo "### ⚠️ Branch-policy advisory"
+              echo "Unexpected promotion path: \`$HEAD\` -> \`$BASE\`."
+              echo ""
+              echo "- PRs to \`dev\` should originate from \`feature/*\`, \`fix/*\`, \`chore/*\` (or \`hotfix/*\` back-merges / bot branches)."
+              echo "- PRs to \`main\` should originate from \`dev\` or \`hotfix/*\`."
+              echo ""
+              echo "_Advisory only — GitHub cannot enforce branch protection on this plan, so this does not block the merge._"
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+          # Advisory: never fail the build on a policy mismatch.
+          exit 0
+
+  # M1 quality gate (doc 17). Runs with no API dependency — Vitest passes without a backend,
+  # and the build + bundle-isolation check assert the two-worlds boundary (D06-1/D06-5).
   verify:
+    name: Lint · Typecheck · Test · Build · Isolation
     runs-on: ubuntu-latest
     env:
       # Build-time placeholders; the real hosts are injected per environment at runtime (D23-8).
@@ -27,6 +87,19 @@ jobs:
       # the ESLint flat config and typed auto-imports that lint and typecheck rely on.
       - name: Install dependencies
         run: npm ci
+
+      - name: Enforce API types idempotence
+        # app/types/api.d.ts must be a fixed point of `api:types` over the committed
+        # openapi/openapi.json (doc 16 §3, contract adoption is one atomic commit). Compare
+        # at the content level (git's --exit-status stat cache false-positives after regen).
+        run: |
+          npm run api:types
+          if git show HEAD:app/types/api.d.ts | diff -u - app/types/api.d.ts; then
+            echo "app/types/api.d.ts is a fixed point of api:types."
+          else
+            echo "::error::app/types/api.d.ts is stale vs openapi/openapi.json — run 'npm run api:types' and commit the result (doc 16 §3)." >&2
+            exit 1
+          fi
 
       - name: Lint
         run: npm run lint
