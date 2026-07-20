@@ -1,7 +1,7 @@
 // @vitest-environment nuxt
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { createError } from 'h3'
-import { mountSuspended, registerEndpoint } from '@nuxt/test-utils/runtime'
+import { mockNuxtImport, mountSuspended, registerEndpoint } from '@nuxt/test-utils/runtime'
 import PreviewArticle from './[id].vue'
 
 // The article preview page loads a DRAFT via the public preview route and renders it through the
@@ -9,26 +9,39 @@ import PreviewArticle from './[id].vue'
 //   - a valid token → the draft renders (title + body);
 //   - a bad/expired/absent token → the API answers 404 (draft concealment), and the page shows the
 //     opaque "unavailable" state rather than leaking why or throwing to the error page.
-// `useApi`'s baseURL is `config.public.apiBase`, which is '' in the test runtime, so these relative
-// endpoints intercept the real call. `id: 'ok'` resolves via the `/preview/articles/[id]` route.
+// `usePreview` reaches the API through `useApi`, whose baseURL is `config.public.apiBase` — '' locally
+// but SET in CI (NUXT_PUBLIC_API_BASE). A relative `registerEndpoint('/preview/…')` only intercepts
+// when the baseURL is '', so under CI it stops matching `${apiBase}/preview/…` and the success case
+// flakes to the unavailable state. Stub the single API door instead (`usePreview` is the only `useApi`
+// consumer in this mounted tree): a valid token resolves the Envelope, `id: 'expired'` throws the
+// API's 404, and both states stay deterministic regardless of `apiBase`.
 
-const DRAFT = {
-  id: 'article-draft-1',
-  title: 'Unpublished Draft Title',
-  body: '# Draft heading\n\nDraft body.',
-  excerpt: 'Draft excerpt',
-  readingTimeMin: 4,
-  publishAt: null,
-  category: { id: 'cat-1', name: 'Engineering', slug: 'engineering' }
-}
+const { DRAFT } = vi.hoisted(() => ({
+  DRAFT: {
+    id: 'article-draft-1',
+    title: 'Unpublished Draft Title',
+    body: '# Draft heading\n\nDraft body.',
+    excerpt: 'Draft excerpt',
+    readingTimeMin: 4,
+    publishAt: null,
+    category: { id: 'cat-1', name: 'Engineering', slug: 'engineering' }
+  }
+}))
 
-registerEndpoint('/preview/articles/ok', () => ({ data: DRAFT }))
-registerEndpoint('/preview/articles/expired', () => {
-  // Mirrors the API's concealment contract: any bad/expired/absent token is a 404, never 401/403.
-  throw createError({ statusCode: 404, statusMessage: 'Not Found' })
+mockNuxtImport('useApi', () => {
+  // Returns the apiFetch closure `useApi()` yields. `usePreview` swallows any throw into the opaque
+  // `unavailable` state, so the expired id mirrors the API's 404 concealment (never 401/403).
+  return () => async (request: string) => {
+    if (request.endsWith('/expired')) {
+      throw createError({ statusCode: 404, statusMessage: 'Not Found' })
+    }
+    return { data: DRAFT }
+  }
 })
-// ContentProse renders the body through the internal /api/prose Nitro route; stub it so the success
-// case has markup without pulling in the real Shiki pipeline (covered by Prose.spec).
+
+// ContentProse renders the body through the internal /api/prose Nitro route (a raw $fetch, not
+// useApi); stub it so the success case has markup without pulling in the real Shiki pipeline
+// (covered by Prose.spec).
 registerEndpoint('/api/prose', { method: 'POST', handler: () => ({ html: '<p>Draft body.</p>' }) })
 
 describe('preview/articles/[id]', () => {
