@@ -47,7 +47,19 @@ export default defineNuxtConfig({
     '/': { swr: 60 },
     '/blog/**': { swr: 60 },
     '/ar': { swr: 60 },
-    '/ar/blog/**': { swr: 60 }
+    '/ar/blog/**': { swr: 60 },
+    // Draft-preview surface (D10-11): never index, never cache, never leak the token-bearing URL via
+    // the Referer of any subresource. `robots` drives @nuxtjs/robots (noindex meta + X-Robots-Tag);
+    // the explicit headers add no-store + no-referrer. Both locale paths need the header rule — Nitro
+    // header rules are not i18n-prefix aware (unlike the robots module).
+    '/preview/**': {
+      robots: 'noindex, nofollow',
+      headers: { 'cache-control': 'no-store', 'referrer-policy': 'no-referrer' }
+    },
+    '/ar/preview/**': {
+      robots: 'noindex, nofollow',
+      headers: { 'cache-control': 'no-store', 'referrer-policy': 'no-referrer' }
+    }
   },
 
   i18n: {

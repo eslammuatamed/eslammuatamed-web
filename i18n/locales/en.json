@@ -92,6 +92,26 @@
     "goHome": "Go home",
     "goBlog": "Browse the blog"
   },
+  "preview": {
+    "banner": "Draft preview — not published",
+    "unavailableTitle": "Preview unavailable",
+    "unavailableBody": "This preview link is unavailable or has expired. Ask for a fresh link.",
+    "project": {
+      "year": "Year",
+      "technologies": "Technologies",
+      "liveUrl": "Live site",
+      "repoUrl": "Repository",
+      "gallery": "Gallery",
+      "overview": "Overview",
+      "businessProblem": "Business problem",
+      "solution": "Solution",
+      "role": "Role",
+      "architecture": "Architecture",
+      "challenges": "Challenges",
+      "features": "Features",
+      "lessonsLearned": "Lessons learned"
+    }
+  },
   "seo": {
     "siteDescription": "The portfolio and writing of Eslam Muatamed, a frontend engineer specializing in Vue.js and Nuxt.js.",
     "home": {
