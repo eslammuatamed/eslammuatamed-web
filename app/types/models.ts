@@ -30,6 +30,14 @@ export type ProfileLink = Schemas['ProfileLinkEntity']
 export type ArticleListItem = Schemas['PublicArticleListItemEntity']
 export type Article = Schemas['PublicArticleDetailEntity']
 
+/**
+ * `GET /projects/{slug}` detail — also the shape returned by the draft-preview route
+ * `GET /preview/projects/{id}` (D10-11). Its long-form sections are opaque Markdown rendered
+ * through the single `ContentProse` surface, like an article `body`.
+ */
+export type ProjectDetail = Schemas['PublicProjectDetailEntity']
+export type ProjectGalleryItem = Schemas['PublicProjectGalleryItemEntity']
+
 /** Auth (D11-1): login returns the access token + user; refresh rotates only the access token. */
 export type AuthUser = Schemas['AuthUserEntity']
 export type AuthSession = Schemas['LoginResponse']

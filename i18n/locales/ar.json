@@ -92,6 +92,26 @@
     "goHome": "العودة إلى الرئيسية",
     "goBlog": "تصفّح المدوّنة"
   },
+  "preview": {
+    "banner": "معاينة مسودّة — غير منشورة",
+    "unavailableTitle": "المعاينة غير متاحة",
+    "unavailableBody": "رابط المعاينة غير متاح أو انتهت صلاحيته. اطلب رابطًا جديدًا.",
+    "project": {
+      "year": "السنة",
+      "technologies": "التقنيات",
+      "liveUrl": "الموقع المباشر",
+      "repoUrl": "المستودع",
+      "gallery": "معرض الصور",
+      "overview": "نظرة عامة",
+      "businessProblem": "المشكلة التجارية",
+      "solution": "الحل",
+      "role": "الدور",
+      "architecture": "البنية",
+      "challenges": "التحدّيات",
+      "features": "الميزات",
+      "lessonsLearned": "الدروس المستفادة"
+    }
+  },
   "seo": {
     "siteDescription": "أعمال وكتابات إسلام معتمد، مهندس واجهات أمامية متخصص في Vue.js و Nuxt.js.",
     "home": {
