@@ -19,17 +19,17 @@ const readingLabel = computed(() => t('blog.minRead', { count: props.article.rea
 
 <template>
   <article
-    class="group relative rounded-card border border-default p-6 transition-colors hover:bg-elevated"
+    class="group relative flex h-full flex-col rounded-card border border-default p-6 transition-colors hover:bg-elevated"
   >
     <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-caption text-muted">
       <span class="font-medium text-default">{{ article.category.name }}</span>
-      <span aria-hidden="true">·</span>
+      <span class="text-muted" aria-hidden="true">/</span>
       <time :datetime="article.publishAt ?? undefined">{{ publishedLabel }}</time>
-      <span aria-hidden="true">·</span>
+      <span class="text-muted" aria-hidden="true">/</span>
       <span>{{ readingLabel }}</span>
     </div>
 
-    <h3 class="mt-3 text-h3 text-highlighted">
+    <h3 class="mt-4 text-h3 text-highlighted">
       <AppLink
         :to="`/blog/${article.slug}`"
         class="after:absolute after:inset-0 group-hover:text-link"
@@ -38,6 +38,6 @@ const readingLabel = computed(() => t('blog.minRead', { count: props.article.rea
       </AppLink>
     </h3>
 
-    <p class="mt-2 line-clamp-2 text-muted">{{ article.excerpt }}</p>
+    <p class="mt-2 line-clamp-2 flex-1 text-muted">{{ article.excerpt }}</p>
   </article>
 </template>

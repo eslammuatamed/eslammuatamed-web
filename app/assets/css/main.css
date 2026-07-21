@@ -111,7 +111,9 @@
   --duration-standard: 200ms;
   --duration-structural: 320ms;
 
-  --space-section: clamp(6rem, 4rem + 8vw, 8rem); /* 96 → 128px */
+  /* Per-side section padding. Adjacent sections stack their padding, so this is ~half the intended
+     inter-section rhythm (doc 03 §4: 96/128 between sections). Kept generous but not cavernous. */
+  --space-section: clamp(3.5rem, 2.5rem + 4vw, 5rem); /* 56 → 80px per side → ~112–160px between */
   --space-card: 1.5rem;
 
   /* Nuxt UI derives component radii from this base; 6px aligns controls to doc 03 §4. */
@@ -122,6 +124,28 @@
    so the D03-2 split holds. */
 @utility text-link {
   color: var(--ui-link);
+}
+
+/* Hero / first-view entrance (doc 03 §5, doc 13 §9): one opacity+transform rise, compositor-only.
+   Longhand (no `animation-delay`) so an arbitrary `[animation-delay:*]` utility can stagger a second
+   element. The @layer base `prefers-reduced-motion` rule forces the duration to ~0, collapsing it to an
+   instant reveal — no non-essential motion for reduced-motion visitors (doc 21 §5). */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@utility animate-rise {
+  animation-name: rise;
+  animation-duration: var(--duration-structural);
+  animation-timing-function: var(--ease-standard);
+  animation-fill-mode: both;
 }
 
 @layer base {

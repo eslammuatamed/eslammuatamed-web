@@ -41,6 +41,8 @@
     "hero": {
       "viewWork": "View work",
       "contact": "Get in touch",
+      "valueProp": "I build fast, accessible web interfaces with Vue and Nuxt — and I document the engineering decisions behind them.",
+      "stackLabel": "Working across",
       "unavailableTitle": "Content unavailable",
       "unavailableBody": "The profile couldn't be loaded right now. Please try again shortly."
     },

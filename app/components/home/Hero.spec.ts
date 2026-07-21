@@ -49,4 +49,16 @@ describe('HomeHero', () => {
     expect(wrapper.find('h1').text()).toBe('brand.name')
     expect(wrapper.text()).toContain('brand.role')
   })
+
+  it('states the value proposition and the identity stack, anchored by the brand mark', async () => {
+    const wrapper = await mountSuspended(Hero, { props: { settings: base }, global: { stubs } })
+    expect(wrapper.text()).toContain('home.hero.valueProp')
+    expect(wrapper.text()).toContain('home.hero.stackLabel')
+    // The six-technology identity stack (owner-profile §8), Latin proper nouns.
+    for (const tech of ['JavaScript', 'TypeScript', 'Vue', 'Nuxt', 'Node.js', 'Nest.js']) {
+      expect(wrapper.text()).toContain(tech)
+    }
+    // The Monolith mark renders as inline SVG (decorative — the h1 carries the identity).
+    expect(wrapper.find('svg[aria-hidden="true"]').exists()).toBe(true)
+  })
 })

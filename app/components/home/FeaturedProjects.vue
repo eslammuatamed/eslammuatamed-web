@@ -19,20 +19,18 @@ const show = computed(() => props.pending || props.error || items.value.length >
 </script>
 
 <template>
-  <section v-if="show" class="py-[var(--space-section)]">
-    <UContainer>
-      <UiSectionHeader :eyebrow="t('home.featured.eyebrow')" :title="t('home.featured.title')">
-        <template #action>
-          <AppLink to="/projects" class="text-body-sm text-link">{{ t('common.viewAll') }}</AppLink>
-        </template>
-      </UiSectionHeader>
+  <UiSection v-if="show">
+    <UiDatumLabel :eyebrow="t('home.featured.eyebrow')" :title="t('home.featured.title')">
+      <template #action>
+        <AppLink to="/projects" class="text-body-sm text-link">{{ t('common.viewAll') }}</AppLink>
+      </template>
+    </UiDatumLabel>
 
-      <UiStateError v-if="error" class="mt-8" @retry="$emit('retry')" />
-      <UiSectionSkeleton v-else-if="pending" class="mt-8" :count="3" />
+    <UiStateError v-if="error" class="mt-10" @retry="$emit('retry')" />
+    <UiSectionSkeleton v-else-if="pending" class="mt-10" :count="3" />
 
-      <div v-else class="mt-8 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        <ContentProjectCard v-for="project in items" :key="project.id" :project="project" />
-      </div>
-    </UContainer>
-  </section>
+    <div v-else class="mt-10 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <ContentProjectCard v-for="project in items" :key="project.id" :project="project" />
+    </div>
+  </UiSection>
 </template>
