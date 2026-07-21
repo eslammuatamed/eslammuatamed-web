@@ -12,8 +12,7 @@ mockNuxtImport('useI18n', () => () => ({ t: (key: string) => key, locale: ref('e
 
 const stubs = {
   UiSpread: { template: '<div><slot /></div>' },
-  UiStateError: { template: '<div class="state-error"><button @click="$emit(\'retry\')">retry</button></div>' },
-  UiSectionSkeleton: { template: '<div class="section-skeleton" />', props: ['count'] }
+  UiStateError: { template: '<div class="state-error"><button @click="$emit(\'retry\')">retry</button></div>' }
 }
 
 const skill = (overrides: Partial<Skill>): Skill => ({
@@ -71,7 +70,7 @@ describe('HomeCapabilities', () => {
       props: { skills: null, pending: true },
       global: { stubs }
     })
-    expect(wrapper.find('.section-skeleton').exists()).toBe(true)
+    expect(wrapper.find('[role="status"]').exists()).toBe(true)
     expect(wrapper.find('section').exists()).toBe(false)
   })
 })

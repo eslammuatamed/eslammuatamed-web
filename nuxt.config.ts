@@ -20,6 +20,11 @@ export default defineNuxtConfig({
   // and dark chrome alike (asset-production.md AP-7). The .ico is listed first so chrome
   // without SVG support resolves it.
   app: {
+    // Branded public route transition (007): a "spread" turn — the page leaves toward the inline-start and
+    // the next arrives from the inline-end (direction mirrors in RTL via CSS). `out-in` so only one page
+    // is ever in flow (no overlap jump / cumulative layout shift); compositor-only opacity+transform; the
+    // CSS collapses it to a ≤120ms opacity fade under prefers-reduced-motion (main.css). SSR-safe.
+    pageTransition: { name: 'page-spread', mode: 'out-in' },
     head: {
       link: [
         { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico', sizes: '32x32' },

@@ -61,16 +61,16 @@ const isHttp = (url: string) => /^https?:\/\//.test(url)
           <span class="size-2 shrink-0 rounded-full bg-primary" aria-hidden="true" />
           <bdi>{{ settings.availabilityStatus }}</bdi>
         </p>
-        <ul v-if="socialLinks.length" class="flex flex-wrap items-center gap-x-5 gap-y-2">
+        <ul v-if="socialLinks.length" class="flex flex-wrap items-center gap-3">
           <li v-for="link in socialLinks" :key="link.url">
             <a
               :href="link.url"
+              :aria-label="link.label"
               :target="isHttp(link.url) ? '_blank' : undefined"
               :rel="isHttp(link.url) ? 'me noopener noreferrer' : 'me'"
-              class="inline-flex items-center gap-2 text-body-sm text-muted transition-colors hover:text-highlighted"
+              class="grid size-10 place-items-center rounded-full border border-default text-muted transition-colors hover:border-primary hover:text-highlighted"
             >
-              <UIcon v-if="link.icon" :name="link.icon" class="size-4" aria-hidden="true" />
-              {{ link.label }}
+              <UIcon :name="link.icon || 'i-lucide-link'" class="size-5" aria-hidden="true" />
             </a>
           </li>
         </ul>

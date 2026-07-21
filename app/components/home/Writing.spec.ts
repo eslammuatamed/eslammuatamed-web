@@ -17,7 +17,6 @@ const stubs = {
     template: '<div><h2 :id="titleId">{{ title }}</h2><slot name="action" /></div>'
   },
   UiStateError: { template: '<div class="state-error"><button @click="$emit(\'retry\')">retry</button></div>' },
-  UiSectionSkeleton: { template: '<div class="section-skeleton" />', props: ['count'] },
   ContentArticleRow: { template: '<div class="article-row">{{ article.slug }}</div>', props: ['article'] },
   AppLink: { template: '<a :href="to"><slot /></a>', props: ['to', 'external'] },
   UIcon: { template: '<i />', props: ['name'] }
@@ -65,7 +64,7 @@ describe('HomeWriting', () => {
       global: { stubs }
     })
     expect(wrapper.find('#writing-title').exists()).toBe(true)
-    expect(wrapper.find('.section-skeleton').exists()).toBe(true)
+    expect(wrapper.find('[role="status"]').exists()).toBe(true)
   })
 
   it('renders an inline error and emits retry', async () => {

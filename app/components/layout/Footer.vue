@@ -34,8 +34,11 @@ const isHttp = (url: string) => /^https?:\/\//.test(url)
   <footer class="border-t border-default">
     <UContainer class="grid gap-x-12 gap-y-12 py-16 md:grid-cols-[1.5fr_1fr]">
       <div class="max-w-sm">
-        <AppLink to="/" class="font-display text-lg font-semibold tracking-tight text-highlighted">
-          {{ t('brand.name') }}
+        <AppLink to="/" class="inline-flex items-center gap-2.5">
+          <UiBrandMark :size="20" class="text-primary" />
+          <span class="font-display text-lg font-semibold tracking-tight text-highlighted">
+            {{ t('brand.name') }}
+          </span>
         </AppLink>
         <p class="mt-4 text-body-sm text-muted text-pretty">{{ t('footer.colophon') }}</p>
 
@@ -47,22 +50,25 @@ const isHttp = (url: string) => /^https?:\/\//.test(url)
           <bdi>{{ availability }}</bdi>
         </p>
 
-        <ul v-if="socialLinks.length" class="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2">
+        <!-- Icon-only social (007): the platform icon is the affordance; the visible name is dropped but
+             the accessible name is carried on the link via aria-label. Padded icon buttons keep a
+             comfortable target even without visible text. -->
+        <ul v-if="socialLinks.length" class="mt-6 flex flex-wrap items-center gap-3">
           <li v-for="link in socialLinks" :key="link.url">
             <a
               :href="link.url"
+              :aria-label="link.label"
               :target="isHttp(link.url) ? '_blank' : undefined"
               :rel="isHttp(link.url) ? 'me noopener noreferrer' : 'me'"
-              class="inline-flex items-center gap-2 text-body-sm text-muted transition-colors hover:text-highlighted"
+              class="grid size-10 place-items-center rounded-full border border-default text-muted transition-colors hover:border-primary hover:text-primary"
             >
-              <UIcon v-if="link.icon" :name="link.icon" class="size-4" aria-hidden="true" />
-              {{ link.label }}
+              <UIcon :name="link.icon || 'i-lucide-link'" class="size-5" aria-hidden="true" />
             </a>
           </li>
         </ul>
 
-        <div class="mt-8 flex items-center gap-1">
-          <LayoutLocaleSwitcher />
+        <div class="mt-8 flex items-center gap-2">
+          <LayoutLangToggle />
           <LayoutThemeToggle />
         </div>
       </div>

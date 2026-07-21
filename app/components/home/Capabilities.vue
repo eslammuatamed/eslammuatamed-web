@@ -27,7 +27,11 @@ const groups = computed(() => {
   })).filter(entry => entry.items.length > 0)
 })
 
-const show = computed(() => props.pending || props.error || (props.skills ?? []).length > 0)
+const hasData = computed(() => (props.skills ?? []).length > 0)
+// Split pending into initial-load (skeleton) vs revalidation with content on screen (overlay).
+const initialPending = computed(() => props.pending && !hasData.value)
+const refreshing = computed(() => props.pending && hasData.value)
+const show = computed(() => props.pending || props.error || hasData.value)
 </script>
 
 <template>
@@ -43,31 +47,37 @@ const show = computed(() => props.pending || props.error || (props.skills ?? [])
       </div>
     </div>
 
-    <UiStateError v-if="error" class="mt-10" @retry="$emit('retry')" />
-    <UiSectionSkeleton v-else-if="pending" class="mt-10" :count="4" />
-
-    <!-- Four capability columns; each technology prefixed by its own brand-colour datum. On the ink
-         ground the colour dots carry the accent while the type stays quiet — a spec read, not a pile. -->
-    <div v-else class="mt-12 grid gap-x-8 gap-y-10 sm:grid-cols-2 lg:grid-cols-4">
-      <section v-for="entry in groups" :key="entry.group" class="border-t border-default pt-5">
-        <h3 class="kicker text-muted">
-          {{ t(`home.techStack.group.${entry.group}`) }}
-        </h3>
-        <ul class="mt-4 flex flex-col gap-y-2.5">
-          <li
-            v-for="skill in entry.items"
-            :key="skill.id"
-            class="flex items-center gap-3 text-body text-default"
-          >
-            <span
-              class="size-1.5 shrink-0 rounded-full"
-              :style="{ backgroundColor: skill.brandColor ?? 'var(--ui-text-dimmed)' }"
-              aria-hidden="true"
-            />
-            <bdi>{{ skill.label }}</bdi>
-          </li>
-        </ul>
-      </section>
-    </div>
+    <UiRequestState
+      class="mt-12 block"
+      :pending="initialPending"
+      :refreshing="refreshing"
+      :error="error"
+      skeleton="capabilities"
+      @retry="$emit('retry')"
+    >
+      <!-- Four capability columns; each technology prefixed by its own brand-colour datum. On the ink
+           ground the colour dots carry the accent while the type stays quiet — a spec read, not a pile. -->
+      <div class="grid gap-x-8 gap-y-10 sm:grid-cols-2 lg:grid-cols-4">
+        <section v-for="entry in groups" :key="entry.group" class="border-t border-default pt-5">
+          <h3 class="kicker text-muted">
+            {{ t(`home.techStack.group.${entry.group}`) }}
+          </h3>
+          <ul class="mt-4 flex flex-col gap-y-2.5">
+            <li
+              v-for="skill in entry.items"
+              :key="skill.id"
+              class="flex items-center gap-3 text-body text-default"
+            >
+              <span
+                class="size-1.5 shrink-0 rounded-full"
+                :style="{ backgroundColor: skill.brandColor ?? 'var(--ui-text-dimmed)' }"
+                aria-hidden="true"
+              />
+              <bdi>{{ skill.label }}</bdi>
+            </li>
+          </ul>
+        </section>
+      </div>
+    </UiRequestState>
   </UiSpread>
 </template>

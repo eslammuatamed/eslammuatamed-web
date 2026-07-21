@@ -15,6 +15,12 @@ const { data, status, error, refresh } = await useAsyncData(
   { watch: [page] }
 )
 
+// Split pending into initial-load (skeleton) vs a page change with content already on screen
+// (branded overlay, not a skeleton) — useAsyncData keeps the previous `data` while refetching.
+const hasData = computed(() => !!data.value)
+const initialPending = computed(() => status.value === 'pending' && !hasData.value)
+const refreshing = computed(() => status.value === 'pending' && hasData.value)
+
 useSeoMeta({
   title: () => t('seo.blog.title'),
   description: () => t('seo.blog.description'),
@@ -31,11 +37,9 @@ useSeoMeta({
       <p class="mt-5 text-body-lg text-muted text-pretty">{{ t('blog.description') }}</p>
     </header>
 
-    <!-- Skeletons cover client-side page changes; SSR first paint is already content-complete
-         (D13-2). -->
-    <div v-if="status === 'pending'" class="mt-12 flex flex-col gap-6">
-      <USkeleton v-for="n in 4" :key="n" class="h-24 w-full rounded-card" />
-    </div>
+    <!-- Initial load only; page changes keep the previous list on screen under a branded overlay
+         instead (SSR first paint is already content-complete — D13-2). -->
+    <UiContentSkeleton v-if="initialPending" class="mt-12" variant="articles" :count="6" />
 
     <div v-else-if="error" class="mt-12 rounded-card border border-default bg-elevated p-8" role="alert">
       <p class="font-display text-h3 text-highlighted">{{ t('blog.errorTitle') }}</p>
@@ -51,8 +55,9 @@ useSeoMeta({
     </div>
 
     <template v-else>
-      <div class="mt-12">
+      <div class="relative mt-12">
         <ContentArticleRow v-for="article in data.data" :key="article.id" :article="article" />
+        <UiDataLoadingOverlay :show="refreshing" />
       </div>
 
       <div v-if="data.meta.totalPages > 1" class="mt-12 flex justify-center">

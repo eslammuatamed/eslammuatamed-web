@@ -41,9 +41,11 @@ const stack = ['JavaScript', 'TypeScript', 'Vue', 'Nuxt', 'Node.js', 'Nest.js']
           <bdi>{{ settings.availabilityStatus }}</bdi>
         </p>
 
-        <h1 class="mt-8 font-display text-mega text-highlighted text-balance">{{ name }}</h1>
+        <h1 class="mt-8 font-nameplate text-mega text-highlighted text-balance">{{ name }}</h1>
 
-        <p class="mt-6 kicker text-muted">
+        <!-- Deliberate block gap below the name (bigger in Arabic, where the Reem Kufi name has taller
+             verticals): responsive margin only — no spacer element / <br> / nbsp / locale hack. -->
+        <p class="mt-7 kicker text-muted sm:mt-9">
           <bdi>{{ tagline }}</bdi>
         </p>
         <p class="mt-6 max-w-2xl text-body-lg text-default text-pretty">{{ t('home.hero.valueProp') }}</p>

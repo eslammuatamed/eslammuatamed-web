@@ -26,10 +26,13 @@ if (import.meta.client) {
 
     <LayoutHeader />
 
-    <main id="main-content" ref="main" tabindex="-1" class="flex-1 outline-none">
+    <!-- overflow-x-clip contains the page-spread transition's inline translate so it never spawns a
+         transient horizontal scrollbar; clip (not hidden) keeps position:sticky working inside. -->
+    <main id="main-content" ref="main" tabindex="-1" class="flex-1 overflow-x-clip outline-none">
       <slot />
     </main>
 
     <LayoutFooter />
+    <UiBackToTop />
   </div>
 </template>

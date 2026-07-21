@@ -15,7 +15,11 @@ defineEmits<{ retry: [] }>()
 const { t } = useI18n()
 
 const items = computed(() => (props.projects ?? []).filter(project => project.featured).slice(0, 3))
-const show = computed(() => props.pending || props.error || items.value.length > 0)
+const hasData = computed(() => items.value.length > 0)
+// Split pending into initial-load (skeleton) vs revalidation with content on screen (overlay).
+const initialPending = computed(() => props.pending && !hasData.value)
+const refreshing = computed(() => props.pending && hasData.value)
+const show = computed(() => props.pending || props.error || hasData.value)
 </script>
 
 <template>
@@ -29,11 +33,15 @@ const show = computed(() => props.pending || props.error || items.value.length >
       </template>
     </UiSectionHead>
 
-    <UiStateError v-if="error" class="mt-10" @retry="$emit('retry')" />
-    <UiSectionSkeleton v-else-if="pending" class="mt-10" :count="3" />
-
-    <div v-else class="mt-12">
+    <UiRequestState
+      class="mt-12 block"
+      :pending="initialPending"
+      :refreshing="refreshing"
+      :error="error"
+      skeleton="work"
+      @retry="$emit('retry')"
+    >
       <ContentWorkEntry v-for="project in items" :key="project.id" :project="project" />
-    </div>
+    </UiRequestState>
   </UiSpread>
 </template>

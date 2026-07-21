@@ -11,6 +11,10 @@
    All variable (one weight-axis file each) to hold the perf budget. */
 @import "@fontsource-variable/space-grotesk/wght.css";
 @import "@fontsource-variable/cairo/wght.css";
+/* Reem Kufi — the Arabic NAMEPLATE face only (D03-12). A modern geometric Kufi with real presence and a
+   premium, distinctive character that stands beside the heavy Space Grotesk Latin name; used solely on the
+   hero name, not on body/section titles (which stay Cairo). Self-hosted variable (wght 400–700). */
+@import "@fontsource-variable/reem-kufi/wght.css";
 @import "@fontsource-variable/geist/wght.css";
 @import "@fontsource/ibm-plex-sans-arabic/400.css";
 @import "@fontsource/ibm-plex-sans-arabic/600.css";
@@ -28,6 +32,9 @@
     sans-serif;
   --font-display-arabic: "Cairo Variable", "IBM Plex Sans Arabic", ui-sans-serif, system-ui,
     sans-serif;
+  /* Nameplate face: Latin reuses the display face; Arabic upgrades to Reem Kufi for the hero name (D03-12). */
+  --font-nameplate: "Space Grotesk Variable", "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-nameplate-arabic: "Reem Kufi Variable", "Cairo Variable", ui-sans-serif, system-ui, sans-serif;
   --font-sans: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
   --font-sans-arabic: "IBM Plex Sans Arabic", "Geist Variable", ui-sans-serif, system-ui,
     sans-serif;
@@ -232,6 +239,115 @@ html[lang="ar"] [class*="tracking-"] {
   animation-fill-mode: both;
 }
 
+/* ---------------------------------------------------------------------------------------
+   Branded scrollbar (007) — restrained, token-driven, both themes. Firefox uses the two-property
+   `scrollbar-*`; Chromium/WebKit use the `::-webkit-scrollbar` pseudos. Kept a usable width (not hidden,
+   not hairline). forced-colors: hand back to the UA so high-contrast users get the system scrollbar.
+   ------------------------------------------------------------------------------------- */
+@media (pointer: fine) {
+  html {
+    scrollbar-width: thin;
+    scrollbar-color: var(--ui-bg-accented) transparent;
+  }
+  ::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background-color: var(--ui-bg-accented);
+    border: 3px solid var(--ui-bg);
+    border-radius: 999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: var(--ui-color-primary-500);
+  }
+  ::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+}
+@media (forced-colors: active) {
+  html {
+    scrollbar-color: auto;
+  }
+}
+
+/* ---------------------------------------------------------------------------------------
+   Branded public route transition (007) — a "spread" turn, not a generic fade: the outgoing page slides a
+   short distance toward the inline-start and fades while the incoming page arrives from the inline-end.
+   Compositor-only (opacity + transform), 320ms structural, standard easing. Directional sign flips under
+   [dir="rtl"] so EN and AR mirror. Reduced motion collapses it to a ≤120ms opacity fade with no transform.
+   ------------------------------------------------------------------------------------- */
+.page-spread-enter-active {
+  transition:
+    opacity var(--duration-structural) var(--ease-standard),
+    transform var(--duration-structural) var(--ease-standard);
+}
+.page-spread-leave-active {
+  transition:
+    opacity var(--duration-standard) var(--ease-exit),
+    transform var(--duration-standard) var(--ease-exit);
+}
+.page-spread-enter-from {
+  opacity: 0;
+  transform: translateX(1.25rem);
+}
+.page-spread-leave-to {
+  opacity: 0;
+  transform: translateX(-1.25rem);
+}
+[dir="rtl"] .page-spread-enter-from {
+  transform: translateX(-1.25rem);
+}
+[dir="rtl"] .page-spread-leave-to {
+  transform: translateX(1.25rem);
+}
+@media (prefers-reduced-motion: reduce) {
+  .page-spread-enter-active,
+  .page-spread-leave-active {
+    transition-duration: var(--duration-micro);
+  }
+  .page-spread-enter-from,
+  .page-spread-leave-to {
+    transform: none;
+  }
+}
+
+/* Loading-system motion (007): a skeleton sweep that matches content geometry, and a violet data-sweep
+   for the revalidation overlay. Both collapse to a static state under reduced motion (handled in @layer
+   base's global rule + the components' own guards). */
+@keyframes skeleton-sweep {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+@keyframes data-sweep {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@utility skeleton {
+  background-color: var(--ui-bg-accented);
+  border-radius: var(--radius-control);
+  background-image: linear-gradient(
+    90deg,
+    transparent 20%,
+    color-mix(in oklab, var(--ui-bg-elevated) 65%, transparent) 50%,
+    transparent 80%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-sweep 1.6s var(--ease-standard) infinite;
+}
+
 @layer base {
   html {
     font-family: var(--font-sans);
@@ -276,6 +392,15 @@ html[lang="ar"] [class*="tracking-"] {
      utility, so it wins the cascade. Arabic display is first-class, not a body fallback. */
   html[lang="ar"] .font-display {
     font-family: var(--font-display-arabic);
+  }
+
+  /* Arabic nameplate (D03-12): the hero name swaps to Reem Kufi. Pushed to the top of its weight axis so
+     the geometric Kufi carries the same visual mass as the heavy Space Grotesk Latin name, and given a
+     touch more line-height because Kufi's tall verticals need vertical air at display scale. */
+  html[lang="ar"] .font-nameplate {
+    font-family: var(--font-nameplate-arabic);
+    font-weight: 700;
+    line-height: 1.12;
   }
 
   /* Reduced motion collapses non-essential motion to short fades (doc 03 §5, doc 21 §5). */

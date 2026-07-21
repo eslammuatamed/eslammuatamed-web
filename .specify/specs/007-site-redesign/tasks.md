@@ -51,3 +51,19 @@ All tasks complete on `dev` (pending owner review). `[X]` = done.
 - [X] T080 **Seed (D16-9 §5.2 / D09-15):** no data change — the existing owner-grounded dev seed is reused and re-verified; governance rule preserved (HR-6).
 - [X] T081 Docs: D03-8/9/10 (design), D14-6/7 (tokens); feature-map row 007; Arabic component README; SpecKit spec/plan/tasks; handoff + MEMORY.
 - [X] T082 Freeze upheld: Web/API `main` unchanged; no deploy/promotion/dispatch/prod-config/DB/R2/secrets.
+
+## Phase 9 — Owner acceptance pass (2026-07-21, web-007 directionally approved)
+- [X] T090 **Availability copy + localization** (D10-12): API-side — `availabilityStatus` moved to `SiteSettingsTranslation` (per-locale, data-safe migration), seed EN "Open to frontend opportunities" / AR localized, "senior" self-claim removed (historical titles kept). API branch `007-availability-localization` (off API dev `b7e26fe`); public contract shape unchanged. Web renders it verbatim → both locales correct. Seniority audit: no other self-presentation "senior" claim (JSON-LD/SEO clean).
+- [X] T091 **Arabic hero spacing** (#2): responsive block gap (name→role), layout spacing only; verified AR desktop/tablet/mobile.
+- [X] T092 **Arabic nameplate face** (#3, D03-12): Reem Kufi (`.font-nameplate` under ar, wght 700); chosen by screenshot comparison vs Cairo. Self-hosted variable; nameplate only.
+- [X] T093 **Language toggle** (#4): `LayoutLangToggle` segmented EN/AR (both visible, active = filled surface + aria-current, switchLocalePath links); replaces the dropdown. Desktop header + mobile drawer.
+- [X] T094 **Scrollbar** (#5, D03-13): token-driven, Firefox + WebKit, `pointer:fine`, forced-colors safe.
+- [X] T095 **Brand mark** (#6, D03-11): canonical `UiBrandMark` reintroduced beside the header + footer wordmark (violet, aria-hidden).
+- [X] T096 **Icon-only social** (#7): footer + contact — icons only, `aria-label` accessible names, comfortable targets.
+- [X] T097 **Mobile drawer** (#8): ~70vw trailing-edge drawer over a dimmed overlay (page visible beneath); Reka dialog focus-trap/Escape/scroll-lock; `aria-expanded`/`haspopup` on the trigger. Both locales.
+- [X] T098 **Back to top** (#9): `UiBackToTop` — appears after scroll, smooth (instant under reduced-motion), logical position + safe-area, localized label.
+- [X] T099 **Button system** (#10, D03-13): authored via `app.config` — weight, compositor-only press, solid-violet-always-white; restrained (no gradients/pill-everywhere).
+- [X] T0100 **Branded route transition** (#11, D13-5): `page-spread` (inline-mirrored opacity+transform, out-in, 320/200ms, ≤120ms reduced-motion), overflow-clipped, zero CLS.
+- [X] T0101 **Branded data-state system** (#12/#13, D13-5): `UiContentSkeleton` / `UiDataLoadingOverlay` / `UiRequestState` + `state.*` i18n; applied to home sections + blog; documented contract (doc 13 §9.1).
+- [X] T0102 Tests: LangToggle, BackToTop, ContentSkeleton, DataLoadingOverlay, RequestState + updated section/footer specs → **95 tests / 27 files**.
+- [X] T0103 Verify: EN/AR × light/dark × desktop/tablet/mobile + drawer + toggle + back-to-top + dark; **Lighthouse a11y/BP/SEO 100** (EN desktop + AR mobile) + **perf LCP 345ms / CLS 0.00**; 0 hydration/console errors; gates (typecheck/lint/build/bundle/logical) green.
