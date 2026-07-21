@@ -27,20 +27,18 @@ const show = computed(() => props.pending || props.error || items.value.length >
 </script>
 
 <template>
-  <section v-if="show" class="py-[var(--space-section)]">
-    <UContainer>
-      <UiSectionHeader :eyebrow="t('home.experience.eyebrow')" :title="t('home.experience.title')">
-        <template #action>
-          <AppLink to="/experience" class="text-body-sm text-link">{{ t('common.viewAll') }}</AppLink>
-        </template>
-      </UiSectionHeader>
+  <UiSection v-if="show" variant="elevated">
+    <UiDatumLabel :eyebrow="t('home.experience.eyebrow')" :title="t('home.experience.title')">
+      <template #action>
+        <AppLink to="/experience" class="text-body-sm text-link">{{ t('common.viewAll') }}</AppLink>
+      </template>
+    </UiDatumLabel>
 
-      <UiStateError v-if="error" class="mt-8" @retry="$emit('retry')" />
-      <UiSectionSkeleton v-else-if="pending" class="mt-8" :count="3" />
+    <UiStateError v-if="error" class="mt-10" @retry="$emit('retry')" />
+    <UiSectionSkeleton v-else-if="pending" class="mt-10" :count="3" />
 
-      <ol v-else class="mt-8 max-w-2xl">
-        <ContentExperienceItem v-for="experience in items" :key="experience.id" :experience="experience" />
-      </ol>
-    </UContainer>
-  </section>
+    <ol v-else class="mt-10 max-w-2xl">
+      <ContentExperienceItem v-for="experience in items" :key="experience.id" :experience="experience" />
+    </ol>
+  </UiSection>
 </template>

@@ -36,6 +36,9 @@ hotfix/<slug>   (branch from main)
 ## Documentation & Handoff Gate (required before delivery)
 Every feature's **final task** is the mandatory **Documentation & Handoff Gate** — canonical rule **doc 16 §5.1 / D16-8** ([`16-development-conventions.md`](../eslammuatamed-docs/docs/16-development-conventions.md)). Until it passes, the feature must **not** be pushed, PR'd, merged to `dev`, promoted to `main`, or deployed — "not requested" is never a reason to skip it. The Arabic module docs and SpecKit closeout are always required; other doc changes may be justified. The full rule lives in doc 16 and is **not restated here**.
 
+## Development/demo seed data (required for data-backed flows)
+Every feature that adds or changes a data-backed flow ships **deterministic development/demo seed data** before it is complete — canonical rule **doc 16 §5.2 / D16-9**, mechanics in **doc 09 §6 / D09-15**. For the web, the feature's backend + frontend integration is verified against the API development/demo seed (`npm run db:seed:dev` in `eslammuatamed-api`, run on top of `npm run db:seed`), on a **throwaway development/test database with an external temporary environment** — the real local `.env` is **never** read, overwritten, deleted, printed, or regenerated. Seed content is bilingual (`en` + `ar`), idempotent, and invents no facts or metrics. The full rule lives in doc 16 and is **not restated here**.
+
 ## Promotion cases — when `dev` → `main` is allowed
 Code may be promoted from `dev` to `main` in **exactly two cases**:
 

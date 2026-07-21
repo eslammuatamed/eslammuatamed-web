@@ -14,11 +14,18 @@ defineProps<Props>()
 
 <template>
   <article
-    class="group relative flex flex-col rounded-card border border-default p-6 transition-colors hover:bg-elevated"
+    class="group relative flex h-full flex-col rounded-card border border-default p-6 transition-colors hover:bg-elevated"
   >
-    <p v-if="project.year" class="text-caption text-muted">{{ project.year }}</p>
+    <div class="flex items-center justify-between gap-3">
+      <p v-if="project.year" class="font-mono text-caption text-muted">{{ project.year }}</p>
+      <UIcon
+        name="i-lucide-arrow-up-right"
+        class="size-4 text-muted transition-colors group-hover:text-link rtl:-scale-x-100"
+        aria-hidden="true"
+      />
+    </div>
 
-    <h3 class="mt-2 text-h3 text-highlighted">
+    <h3 class="mt-4 text-h3 text-highlighted">
       <AppLink
         :to="`/projects/${project.slug}`"
         class="after:absolute after:inset-0 group-hover:text-link"
@@ -27,11 +34,11 @@ defineProps<Props>()
       </AppLink>
     </h3>
 
-    <p class="mt-2 line-clamp-3 text-muted">{{ project.summary }}</p>
+    <p class="mt-2 line-clamp-3 flex-1 text-muted">{{ project.summary }}</p>
 
     <ul
       v-if="project.technologies.length"
-      class="mt-4 flex flex-wrap gap-x-3 gap-y-1 text-caption text-muted"
+      class="mt-5 flex flex-wrap gap-x-3 gap-y-1 border-t border-default pt-4 font-mono text-caption text-muted"
     >
       <li v-for="tech in project.technologies" :key="tech.id">
         <bdi>{{ tech.label }}</bdi>

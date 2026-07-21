@@ -6,6 +6,8 @@
 
 المكوّنات المرئيّة للموقع العام، مبنيّة فوق `Nuxt UI` ورموز التصميم الدلالية (doc 14). **لا يوجد مجلد `dashboard/` على هذا الأساس** — مكوّنات لوحة التحكّم `Planned` (Feature web-002).
 
+**إعادة تصميم الصفحة الرئيسية (Feature web-006).** أعيد تصميم الطبقة البصرية للصفحة الرئيسية لتنفيذ لغة العلامة التجارية «Mirror» (`content/brand/brand-identity.md`) تنفيذًا أقوى على مستوى التركيب: علامة **Monolith** بوصفها مرتكزًا معماريًّا (`UiBrandMark`)، وخطوط **datum** رفيعة يتصدّرها شاهد بنفسجي واحد لكل قسم (`UiDatumLabel`)، وإيقاع أقسام موحّد مع تمرير سطح واحد للتباين (`UiSection`)، وطباعة أوّلًا مع لون تمييز بنفسجي وحيد. لا تبعية جديدة، والحركة CSS أولًا وآمنة مع `prefers-reduced-motion`. القرارات موثّقة بأرقام `HR-n` في `.specify/specs/006-home-redesign/spec.md`.
+
 ## خريطة الملفّات
 
 | المجلد/الملف | الدور |
@@ -15,27 +17,30 @@
 | `layout/Footer.vue` | التذييل: تنقّل + **روابط تواصل اجتماعي (`profileLinks`) + حالة التوفّر + تنزيل السيرة الذاتية** (من `SiteSettings` عبر `useSiteSettings`) + حقوق السنة (`FR-PUB-003`) |
 | `layout/LocaleSwitcher.vue` | تبديل اللغة مع حفظ المسار (`useSwitchLocalePath` + `locale:false`) |
 | `layout/ThemeToggle.vue` | تبديل السمة (`useColorMode`) داخل `ClientOnly` (بلا وميض) |
-| `home/Hero.vue` | قسم البطل (`FR-PUB-010`): اسم/شعار/توفّر + زرّا CTA (من `SiteSettings`؛ يرجع للاسم/الشعار من الـ i18n عند غيابهما) |
-| `home/TechStack.vue` | قسم التقنيات (`FR-PUB-011`): مهارات مُجمّعة حسب `group` عبر `UiTechBadge` (من `GET /skills`) |
-| `home/FeaturedProjects.vue` | مشاريع مميّزة (`FR-PUB-012`): أعلى 3 `featured` منشورة، بطاقات `ContentProjectCard` (من `GET /projects`) |
-| `home/ExperienceSummary.vue` | ملخّص الخبرة (`FR-PUB-013`): جدول زمني عكسي، `ContentExperienceItem` (من `GET /experiences`) |
-| `home/LatestArticles.vue` | أحدث 3 مقالات (`FR-PUB-014`): `ContentArticleCard` → `/blog/{slug}` (من `GET /articles`) |
-| `home/Testimonials.vue` | التوصيات (`FR-PUB-016`): تخطيط خطّي بلا carousel، `ContentTestimonialCard` (من `GET /testimonials`) |
-| `home/ContactCta.vue` | قسم التواصل (`FR-PUB-017`): رابط نموذج + بريد مباشر (رابط `mailto:` من `profileLinks`، `D05-4`) |
-| `content/ProjectCard.vue` | بطاقة مشروع: سنة + عنوان + ملخّص + تقنيات (رابط ممتدّ واحد → `/projects/{slug}`) |
+| `home/Hero.vue` | قسم البطل (`FR-PUB-010`): تركيب هويّة — علامة `UiBrandMark` + شارة توفّر + اسم بمقاس `display` + سطر الدور + سطر قيمة (`home.hero.valueProp`) + زرّا CTA + شريط الهويّة التقنيّة الستّة (owner-profile §8، أحادي اللون، بخطّ `mono` للأسماء اللاتينية) + لوحة العلامة (`Monolith`). سطح LCP نصّي + SVG مضمّن. دخول CSS واحد آمن مع reduced-motion |
+| `home/TechStack.vue` | قسم التقنيات (`FR-PUB-011`): مهارات مُجمّعة في تخطيط **datasheet** (`<dl>`: مجموعة \| تقنيات) مفصولة بخطوط رفيعة عبر `UiTechBadge` (من `GET /skills`) |
+| `home/FeaturedProjects.vue` | مشاريع مميّزة (`FR-PUB-012`): `UiSection` + `UiDatumLabel`، أعلى 3 `featured` منشورة، بطاقات `ContentProjectCard` (من `GET /projects`) |
+| `home/ExperienceSummary.vue` | ملخّص الخبرة (`FR-PUB-013`): `UiSection variant="elevated"` (شريط سطح مرتفع للإيقاع)، جدول زمني عكسي، `ContentExperienceItem` (من `GET /experiences`) |
+| `home/LatestArticles.vue` | أحدث 3 مقالات (`FR-PUB-014`): `UiSection` + `UiDatumLabel`، بطاقات `ContentArticleCard` → `/blog/{slug}` (من `GET /articles`) |
+| `home/Testimonials.vue` | التوصيات (`FR-PUB-016`): `UiSection` + `UiDatumLabel`، تخطيط خطّي بلا carousel، `ContentTestimonialCard` (من `GET /testimonials`) |
+| `home/ContactCta.vue` | قسم التواصل (`FR-PUB-017`): **لوحة ختامية** بحدود + صدى لعلامة `UiBrandMark` + رابط نموذج + بريد مباشر (رابط `mailto:` من `profileLinks`، `D05-4`) |
+| `content/ProjectCard.vue` | بطاقة مشروع: سنة بخطّ `mono` + سهم + عنوان + ملخّص + شريط تقنيات بخطّ `mono` أعلاه خطّ رفيع (رابط ممتدّ واحد → `/projects/{slug}`) |
 | `content/ExperienceItem.vue` | عنصر جدول زمني: دور@شركة + فترة (`Intl`) + نوع التوظيف؛ القضيب على الحافّة المنطقية (ينعكس RTL) |
 | `content/TestimonialCard.vue` | بطاقة توصية: اقتباس + مؤلّف + صورة اختيارية (`<NuxtImg>` أو حرف بديل) |
-| `content/ArticleCard.vue` | بطاقة مقال: صفّ meta + عنوان + مقتطف (رابط ممتدّ واحد) |
+| `content/ArticleCard.vue` | بطاقة مقال: صفّ meta (فئة / تاريخ / زمن قراءة بفواصل `/`) + عنوان + مقتطف (رابط ممتدّ واحد). التاريخ/زمن القراءة يبقى بالخطّ الأساسي لا `mono` (لا محارف عربية في `JetBrains Mono`، HR-3) |
 | `content/Prose.vue` | `ContentProse` — سطح عرض Markdown الوحيد (يفوّض إلى `/api/prose`) |
-| `ui/SectionHeader.vue` | نمط ترويسة قسم واحد (eyebrow + عنوان + إجراء "عرض الكل" اختياري) |
+| `ui/BrandMark.vue` | **جديد (006):** علامة `Monolith` (brand §3) — SVG مضمّن من المسار المعياري `M2,6 H6 V2 H14 V10 H10 V14 H2 Z`، `currentColor`، مخفيّة عن قارئات الشاشة (`aria-hidden` — الهويّة الوصولة هي النصّ المجاور، AP-9). متطابقة في LTR/RTL بالبناء |
+| `ui/DatumLabel.vue` | **جديد (006):** نمط ترويسة القسم (brand §5): eyebrow + عنوان بمستوى يتحكّم به المُستدعي فوق خطّ datum رفيع يتصدّره شاهد بنفسجي واحد. الـ eyebrow اللاتيني بأحرف كبيرة متباعدة، والعربي بلا تباعد (يكسر الخطّ المتّصل، doc 03 §3). يحلّ محلّ `SectionHeader` للصفحة الرئيسية |
+| `ui/Section.vue` | **جديد (006):** غلاف إيقاع القسم (`<section>` + `<UContainer>`): `variant='base'\|'elevated'` (خطوة سطح + خطوط رفيعة للعمق بدل الظلال، `D03-3`) |
+| `ui/SectionHeader.vue` | نمط ترويسة قسم قديم (eyebrow + عنوان + إجراء اختياري) — **مُستبدَل بـ `UiDatumLabel` في الصفحة الرئيسية**، مُبقى للتوافق |
 | `ui/TechBadge.vue` | شارة تقنية: نقطة لون هوية (من `brandColor` بيانات الـ API، `D03-2` — لا خلفية نصّ)؛ الاسم اللاتيني LTR عبر `bdi` |
 | `ui/StateError.vue` | حالة فشل تحميل قسم: رسالة + إعادة محاولة (`emit retry`) — عزل الخطأ لكل قسم |
 | `ui/SectionSkeleton.vue` | هيكل تحميل (يطابق أبعاد الشبكة، CLS 0) — يظهر فقط عند إعادة جلب على العميل |
 
 ## خريطة الاتصال
 
-- **وارد:** التخطيطات (`LayoutHeader`/`LayoutFooter` في `default.vue`)، الصفحات (`HomeHero`, `ContentArticleCard`, `ContentProse`, `UiSectionHeader`).
-- **صادر:** مكوّنات `Nuxt UI`، `useI18n`/`useLocalePath`/`useSwitchLocalePath`/`useColorMode`، ومركّبات البيانات (`useSiteSettings`/`useHomeData`/`useSiteSchema`)، و`utils` (`formatDate`/`formatMonthYear`/`formatExperiencePeriod`).
+- **وارد:** التخطيطات (`LayoutHeader`/`LayoutFooter` في `default.vue`)، الصفحات (`HomeHero`, `ContentArticleCard`, `ContentProse`, `UiSection`, `UiDatumLabel`, `UiBrandMark`).
+- **صادر:** مكوّنات `Nuxt UI`، `useI18n`/`useLocalePath`/`useSwitchLocalePath`/`useColorMode`، ومركّبات البيانات (`useSiteSettings`/`useHomeData`/`useSiteSchema`)، و`utils` (`formatDate`/`formatMonthYear`/`formatExperiencePeriod`)، وبدائيّات الواجهة الجديدة (`UiSection`/`UiDatumLabel`/`UiBrandMark`).
 
 ## قرارات جوهرية (شرح لمطوّر مبتدئ)
 

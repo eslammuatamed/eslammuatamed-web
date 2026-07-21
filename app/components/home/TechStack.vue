@@ -28,25 +28,31 @@ const show = computed(() => props.pending || props.error || (props.skills ?? [])
 </script>
 
 <template>
-  <section v-if="show" class="py-[var(--space-section)]">
-    <UContainer>
-      <UiSectionHeader :eyebrow="t('home.techStack.eyebrow')" :title="t('home.techStack.title')" />
+  <UiSection v-if="show">
+    <UiDatumLabel :eyebrow="t('home.techStack.eyebrow')" :title="t('home.techStack.title')" />
 
-      <UiStateError v-if="error" class="mt-8" @retry="$emit('retry')" />
-      <UiSectionSkeleton v-else-if="pending" class="mt-8" :count="4" />
+    <UiStateError v-if="error" class="mt-8" @retry="$emit('retry')" />
+    <UiSectionSkeleton v-else-if="pending" class="mt-8" :count="4" />
 
-      <div v-else class="mt-8 flex flex-col gap-6">
-        <div v-for="entry in groups" :key="entry.group">
-          <p class="text-caption font-medium uppercase tracking-wide text-muted">
-            {{ t(`home.techStack.group.${entry.group}`) }}
-          </p>
-          <ul class="mt-3 flex flex-wrap gap-2">
+    <!-- Datasheet layout: each group is a labelled row (group | technologies), hairline-separated —
+         the technical-spec register (brand §5), not a loose pile of pills. -->
+    <dl v-else class="mt-10 divide-y divide-default border-t border-default">
+      <div
+        v-for="entry in groups"
+        :key="entry.group"
+        class="grid gap-x-6 gap-y-3 py-6 sm:grid-cols-[minmax(8rem,10rem)_1fr]"
+      >
+        <dt class="text-caption font-medium text-muted">
+          {{ t(`home.techStack.group.${entry.group}`) }}
+        </dt>
+        <dd>
+          <ul class="flex flex-wrap gap-2">
             <li v-for="skill in entry.items" :key="skill.id">
               <UiTechBadge :label="skill.label" :brand-color="skill.brandColor" />
             </li>
           </ul>
-        </div>
+        </dd>
       </div>
-    </UContainer>
-  </section>
+    </dl>
+  </UiSection>
 </template>

@@ -67,7 +67,8 @@ useSeoMeta({
   <!-- Designed API-unavailable state (D13-1): the shell renders sensibly without the API. -->
   <section v-else-if="settingsError" class="py-[var(--space-section)]">
     <UContainer>
-      <h1 class="text-h1 text-highlighted">{{ t('home.hero.unavailableTitle') }}</h1>
+      <UiBrandMark :size="40" class="text-muted" />
+      <h1 class="mt-6 text-h1 text-highlighted">{{ t('home.hero.unavailableTitle') }}</h1>
       <p class="mt-3 max-w-md text-muted">{{ t('home.hero.unavailableBody') }}</p>
       <UButton class="mt-6" variant="subtle" color="neutral" @click="refreshSettings()">
         {{ t('common.retry') }}

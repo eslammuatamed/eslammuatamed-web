@@ -24,16 +24,14 @@ const show = computed(() => props.pending || props.error || items.value.length >
 </script>
 
 <template>
-  <section v-if="show" class="py-[var(--space-section)]">
-    <UContainer>
-      <UiSectionHeader :eyebrow="t('home.testimonials.eyebrow')" :title="t('home.testimonials.title')" />
+  <UiSection v-if="show">
+    <UiDatumLabel :eyebrow="t('home.testimonials.eyebrow')" :title="t('home.testimonials.title')" />
 
-      <UiStateError v-if="error" class="mt-8" @retry="$emit('retry')" />
-      <UiSectionSkeleton v-else-if="pending" class="mt-8" :count="2" />
+    <UiStateError v-if="error" class="mt-10" @retry="$emit('retry')" />
+    <UiSectionSkeleton v-else-if="pending" class="mt-10" :count="2" />
 
-      <div v-else class="mt-8 grid gap-6 md:grid-cols-2">
-        <ContentTestimonialCard v-for="testimonial in items" :key="testimonial.id" :testimonial="testimonial" />
-      </div>
-    </UContainer>
-  </section>
+    <div v-else class="mt-10 grid gap-6 md:grid-cols-2">
+      <ContentTestimonialCard v-for="testimonial in items" :key="testimonial.id" :testimonial="testimonial" />
+    </div>
+  </UiSection>
 </template>
