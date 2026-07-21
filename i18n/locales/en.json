@@ -43,6 +43,46 @@
       "contact": "Get in touch",
       "unavailableTitle": "Content unavailable",
       "unavailableBody": "The profile couldn't be loaded right now. Please try again shortly."
+    },
+    "sectionError": "This section couldn't be loaded.",
+    "techStack": {
+      "eyebrow": "Toolkit",
+      "title": "Technologies I work with",
+      "group": {
+        "LANGUAGE": "Languages",
+        "FRAMEWORK": "Frameworks",
+        "TOOLING": "Tooling",
+        "PRACTICE": "Practices"
+      }
+    },
+    "featured": {
+      "eyebrow": "Selected work",
+      "title": "Featured projects"
+    },
+    "experience": {
+      "eyebrow": "Experience",
+      "title": "Where I've worked",
+      "present": "Present",
+      "employmentType": {
+        "FULL_TIME": "Full-time",
+        "PART_TIME": "Part-time",
+        "CONTRACT": "Contract",
+        "FREELANCE": "Freelance"
+      }
+    },
+    "articles": {
+      "eyebrow": "Writing",
+      "title": "Latest articles"
+    },
+    "testimonials": {
+      "eyebrow": "Endorsements",
+      "title": "What people say"
+    },
+    "contact": {
+      "eyebrow": "Contact",
+      "title": "Let's work together",
+      "body": "Have a role, a project, or a question? I'd love to hear about it.",
+      "form": "Get in touch"
     }
   },
   "blog": {
@@ -82,7 +122,8 @@
   },
   "footer": {
     "rights": "© {year} {name}. All rights reserved.",
-    "builtWith": "Designed and built with care."
+    "builtWith": "Designed and built with care.",
+    "downloadResume": "Download résumé"
   },
   "error": {
     "notFoundTitle": "Page not found",
@@ -116,6 +157,7 @@
     "siteDescription": "The portfolio and writing of Eslam Muatamed, a frontend engineer specializing in Vue.js and Nuxt.js.",
     "home": {
       "title": "Frontend Engineer",
+      "titleFull": "Eslam Muatamed — Frontend Engineer",
       "description": "Frontend engineer specializing in Vue.js and Nuxt.js, building fast, accessible, SEO-focused web interfaces."
     },
     "blog": {
