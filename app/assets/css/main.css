@@ -4,26 +4,42 @@
 @import "tailwindcss";
 @import "@nuxt/ui";
 
-/* Self-hosted brand typography (D03-1, D20-4). Geist ships as one weight-axis variable
-   file; Arabic and mono load the two weights the brand uses. */
+/* Self-hosted typography (D03-1, D20-4, revised for 007). Two type registers:
+   DISPLAY carries the personality — Space Grotesk (Latin) + Cairo (Arabic), each a first-class
+   display face set at monumental scale (the redesign is type-led; there are no hero images).
+   BODY is the quiet workhorse — Geist (Latin) + IBM Plex Sans Arabic. Mono is data only.
+   All variable (one weight-axis file each) to hold the perf budget. */
+@import "@fontsource-variable/space-grotesk/wght.css";
+@import "@fontsource-variable/cairo/wght.css";
 @import "@fontsource-variable/geist/wght.css";
 @import "@fontsource/ibm-plex-sans-arabic/400.css";
 @import "@fontsource/ibm-plex-sans-arabic/600.css";
+@import "@fontsource/ibm-plex-sans-arabic/700.css";
 @import "@fontsource/jetbrains-mono/400.css";
 
 /* ---------------------------------------------------------------------------------------
    Theme tokens — names generate Tailwind utilities and CSS variables (Tailwind v4 @theme).
    ------------------------------------------------------------------------------------- */
 @theme {
-  /* Families (doc 03 §3). The Arabic stack is swapped in at the html[lang="ar"] root — the
-     per-locale switch lives in exactly one place (D14-5). */
+  /* Families (doc 03 §3, revised 007). The Arabic stacks are swapped in at html[lang="ar"] —
+     the per-locale switch lives in exactly one place (D14-5). `--font-display` / `-arabic`
+     generate the `.font-display` utility; the Arabic swap is one rule in @layer base. */
+  --font-display: "Space Grotesk Variable", "Geist Variable", ui-sans-serif, system-ui,
+    sans-serif;
+  --font-display-arabic: "Cairo Variable", "IBM Plex Sans Arabic", ui-sans-serif, system-ui,
+    sans-serif;
   --font-sans: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
   --font-sans-arabic: "IBM Plex Sans Arabic", "Geist Variable", ui-sans-serif, system-ui,
     sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", monospace;
 
-  /* Fluid type scale (doc 03 §3), clamp(mobile → desktop). Tracking on display/h1 is a
-     Latin-only refinement, reset for Arabic below (connected script — doc 03 §3). */
+  /* Fluid type scale (doc 03 §3, extended 007). `--text-mega` is the nameplate register — the
+     monumental bilingual name that is the hero (type-as-thesis). Tracking on the display sizes is
+     a Latin-only refinement, reset for Arabic below (connected script — doc 03 §3). */
+  --text-mega: clamp(3.25rem, 1.2rem + 8.5vw, 6.75rem);
+  --text-mega--line-height: 0.9;
+  --text-mega--font-weight: 600;
+  --text-mega--letter-spacing: -0.035em;
   --text-display: clamp(2.5rem, 1.3rem + 5vw, 4rem);
   --text-display--line-height: 1.05;
   --text-display--font-weight: 600;
@@ -73,6 +89,10 @@
   --ui-text: var(--ui-color-neutral-900); /* #18181B */
   --ui-text-highlighted: var(--ui-color-neutral-900);
   --ui-text-muted: var(--ui-color-neutral-600); /* #52525B */
+  /* Dimmed is the quietest readable tier — must still clear AA on paper (doc 21). Nuxt UI's default
+     light dimmed (neutral-400) fails at ~2.3:1 on #FAFAFA; neutral-600 clears 7:1 and stays a step below
+     muted only in name, so 500 (~4.6:1 on paper) is the readable floor for dates/labels/meta. */
+  --ui-text-dimmed: var(--ui-color-neutral-500); /* #71717A ≈ 4.6:1 on paper */
   --ui-border: var(--ui-color-neutral-200); /* #E4E4E7 */
   /* Accent split (D03-2, values per D03-7): fill is always violet-600 (white text passes
      AA at 5.7:1); link text is violet-600 in light. */
@@ -87,11 +107,48 @@
   --ui-text: var(--ui-color-neutral-50); /* #FAFAFA */
   --ui-text-highlighted: var(--ui-color-neutral-50);
   --ui-text-muted: var(--ui-color-neutral-400); /* #A1A1AA */
+  /* Dark moves the opposite way to light: neutral-500 dimmed fails (~4.1:1) on the near-black page, so
+     dimmed lifts to neutral-400 (~7.5:1). Distinct from muted by usage, not hue, at the dark end. */
+  --ui-text-dimmed: var(--ui-color-neutral-400);
   --ui-border: var(--ui-color-neutral-700); /* #3F3F46 */
   /* Fill stays violet-600; link text lifts to violet-400 so it clears 4.5:1 on the
      near-black background where violet-600 fails (D03-2, values per D03-7). */
   --ui-primary: var(--ui-color-primary-600);
   --ui-link: var(--ui-color-primary-400);
+}
+
+/* Ink/paper surface strategy (007) — the page is composed as a sequence of spreads that
+   alternate a light "paper" ground with dark "ink" feature spreads, giving real surface
+   hierarchy instead of one flat background. `.on-ink` re-points the semantic --ui-* tokens to
+   an ink palette for its whole subtree, so components inside stay theme-agnostic (they still
+   read text-default / bg-elevated / border-default). In light theme an ink spread is a true
+   near-black island (#09090B). In dark theme the page is already near-black, so the spread
+   lifts one step to graphite (#18181B) — the figure/ground contrast survives the theme flip.
+   The accent link lifts to violet-400 on ink (clears 4.5:1 on near-black, D03-2). */
+.on-ink {
+  --ui-bg: var(--ui-color-neutral-950);
+  --ui-bg-elevated: var(--ui-color-neutral-900);
+  --ui-bg-accented: var(--ui-color-neutral-800);
+  --ui-text: var(--ui-color-neutral-50);
+  --ui-text-highlighted: #ffffff;
+  --ui-text-muted: var(--ui-color-neutral-400);
+  --ui-text-dimmed: var(--ui-color-neutral-400); /* on ink, dimmed must clear AA on near-black (~7.5:1) */
+  --ui-border: var(--ui-color-neutral-800);
+  --ui-border-accented: var(--ui-color-neutral-700);
+  --ui-link: var(--ui-color-primary-400);
+  background-color: var(--ui-bg);
+  color: var(--ui-text);
+}
+
+.dark .on-ink {
+  /* Dark theme has little range at the dark end, so keep three distinct levels: page 950 < lift 900 <
+     ink 800. The ink feature spread becomes the brightest panel (it stands out most, as it does in light
+     where it is the darkest) rather than colliding with the lift surface at 900. */
+  --ui-bg: var(--ui-color-neutral-800);
+  --ui-bg-elevated: var(--ui-color-neutral-700);
+  --ui-bg-accented: var(--ui-color-neutral-600);
+  --ui-border: var(--ui-color-neutral-700);
+  --ui-border-accented: var(--ui-color-neutral-600);
 }
 
 /* Non-color role tokens and technology identity colors (doc 14 §2/§4/§5). Technology
@@ -126,6 +183,33 @@
   color: var(--ui-link);
 }
 
+/* Kicker — the small section label / eyebrow, the one recurring structural device (007). In Latin it is
+   the engineer's register: mono, uppercase, tracked. Arabic has no case, no monospace, and is a connected
+   script where letter-spacing is actively harmful — so under the Arabic root it becomes the Plex Arabic
+   label instead. The per-locale switch is one place (D14-5); size/colour are applied by the consumer. */
+@utility kicker {
+  font-family: var(--font-mono);
+  font-size: var(--text-caption);
+  line-height: 1.3;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+}
+
+/* Unlayered so it beats Tailwind's `utilities` layer without !important (element+attr specificity).
+   Neutralises the Latin-only kicker treatment for Arabic, and — defensively — cancels any `tracking-*`
+   utility anywhere under the Arabic root, since letter-spacing must never apply to connected Arabic. */
+html[lang="ar"] .kicker {
+  font-family: var(--font-sans-arabic);
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+html[lang="ar"] [class*="tracking-"] {
+  letter-spacing: normal;
+}
+
 /* Hero / first-view entrance (doc 03 §5, doc 13 §9): one opacity+transform rise, compositor-only.
    Longhand (no `animation-delay`) so an arbitrary `[animation-delay:*]` utility can stagger a second
    element. The @layer base `prefers-reduced-motion` rule forces the duration to ~0, collapsing it to an
@@ -155,6 +239,17 @@
     text-rendering: optimizeLegibility;
   }
 
+  /* Keyboard focus is release-blocking (WCAG 2.2 AA 2.4.7, doc 21). A zero-specificity default ring on
+     every custom link/button — the ones the design styles by hand (header nav, index rows, view-all,
+     footer/social) — so keyboard focus is always visible, including on ink spreads where the violet ring
+     clears the dark ground. `:where()` keeps specificity 0, so Nuxt UI's own focus-visible rings win on
+     its components. Mouse/touch focus stays quiet (`:focus-visible` only). */
+  :where(a, button, [tabindex]):focus-visible {
+    outline: 2px solid var(--ui-primary);
+    outline-offset: 2px;
+    border-radius: var(--radius-control);
+  }
+
   body {
     background-color: var(--ui-bg);
     color: var(--ui-text);
@@ -170,9 +265,17 @@
   }
 
   html[lang="ar"] :is(h1, h2, h3),
+  html[lang="ar"] .text-mega,
   html[lang="ar"] .text-display,
   html[lang="ar"] .text-h1 {
     letter-spacing: normal;
+  }
+
+  /* Display-face Arabic swap (D14-5, one place): elements set in the Latin display face render
+     in Cairo under the Arabic root. Higher specificity than the single-class `.font-display`
+     utility, so it wins the cascade. Arabic display is first-class, not a body fallback. */
+  html[lang="ar"] .font-display {
+    font-family: var(--font-display-arabic);
   }
 
   /* Reduced motion collapses non-essential motion to short fades (doc 03 §5, doc 21 §5). */

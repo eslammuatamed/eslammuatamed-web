@@ -24,35 +24,38 @@ useSeoMeta({
 </script>
 
 <template>
-  <UContainer class="py-16">
-    <UiSectionHeader as="h1" :eyebrow="t('nav.blog')" :title="t('blog.title')" />
-    <p class="mt-3 max-w-2xl text-muted">{{ t('blog.description') }}</p>
+  <UContainer class="py-[var(--space-section)]">
+    <header class="max-w-2xl">
+      <p class="kicker text-dimmed">{{ t('nav.blog') }}</p>
+      <h1 class="mt-4 font-display text-display text-highlighted text-balance">{{ t('blog.title') }}</h1>
+      <p class="mt-5 text-body-lg text-muted text-pretty">{{ t('blog.description') }}</p>
+    </header>
 
     <!-- Skeletons cover client-side page changes; SSR first paint is already content-complete
          (D13-2). -->
-    <div v-if="status === 'pending'" class="mt-10 grid gap-4 sm:grid-cols-2">
-      <USkeleton v-for="n in 4" :key="n" class="h-40 w-full rounded-card" />
+    <div v-if="status === 'pending'" class="mt-12 flex flex-col gap-6">
+      <USkeleton v-for="n in 4" :key="n" class="h-24 w-full rounded-card" />
     </div>
 
-    <div v-else-if="error" class="mt-10 rounded-card border border-default p-8 text-center">
-      <p class="text-h3 text-highlighted">{{ t('blog.errorTitle') }}</p>
+    <div v-else-if="error" class="mt-12 rounded-card border border-default bg-elevated p-8" role="alert">
+      <p class="font-display text-h3 text-highlighted">{{ t('blog.errorTitle') }}</p>
       <p class="mt-2 text-muted">{{ t('blog.errorBody') }}</p>
       <UButton class="mt-4" variant="subtle" color="neutral" @click="refresh()">
         {{ t('common.retry') }}
       </UButton>
     </div>
 
-    <div v-else-if="!data || data.data.length === 0" class="mt-10 rounded-card border border-default p-8 text-center">
-      <p class="text-h3 text-highlighted">{{ t('blog.emptyTitle') }}</p>
+    <div v-else-if="!data || data.data.length === 0" class="mt-12 rounded-card border border-default bg-elevated p-8">
+      <p class="font-display text-h3 text-highlighted">{{ t('blog.emptyTitle') }}</p>
       <p class="mt-2 text-muted">{{ t('blog.emptyBody') }}</p>
     </div>
 
     <template v-else>
-      <div class="mt-10 grid gap-4 sm:grid-cols-2">
-        <ContentArticleCard v-for="article in data.data" :key="article.id" :article="article" />
+      <div class="mt-12">
+        <ContentArticleRow v-for="article in data.data" :key="article.id" :article="article" />
       </div>
 
-      <div v-if="data.meta.totalPages > 1" class="mt-10 flex justify-center">
+      <div v-if="data.meta.totalPages > 1" class="mt-12 flex justify-center">
         <UPagination
           :page="page"
           :total="data.meta.total"

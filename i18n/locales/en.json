@@ -43,6 +43,7 @@
       "contact": "Get in touch",
       "valueProp": "I build fast, accessible web interfaces with Vue and Nuxt — and I document the engineering decisions behind them.",
       "stackLabel": "Working across",
+      "since": "Shipping to production since {year}",
       "unavailableTitle": "Content unavailable",
       "unavailableBody": "The profile couldn't be loaded right now. Please try again shortly."
     },
@@ -125,6 +126,7 @@
   "footer": {
     "rights": "© {year} {name}. All rights reserved.",
     "builtWith": "Designed and built with care.",
+    "colophon": "Built with Nuxt, Vue, TypeScript and Tailwind — bilingual and RTL-first.",
     "downloadResume": "Download résumé"
   },
   "error": {

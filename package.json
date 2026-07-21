@@ -26,7 +26,9 @@
     "*.{ts,vue,mjs,js}": "eslint --fix"
   },
   "dependencies": {
+    "@fontsource-variable/cairo": "^5.3.0",
     "@fontsource-variable/geist": "^5.2.9",
+    "@fontsource-variable/space-grotesk": "^5.3.0",
     "@fontsource/ibm-plex-sans-arabic": "^5.2.9",
     "@fontsource/jetbrains-mono": "^5.2.8",
     "@iconify-json/lucide": "^1.2.117",
@@ -62,6 +64,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@iconify-json/simple-icons": "^1.2.91",
     "@nuxt/eslint": "^1.16.0",
     "@nuxt/test-utils": "^4.0.3",
     "@stoplight/prism-cli": "^5.15.11",
