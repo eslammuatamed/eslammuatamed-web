@@ -43,6 +43,46 @@
       "contact": "تواصل معي",
       "unavailableTitle": "المحتوى غير متاح",
       "unavailableBody": "تعذّر تحميل الملف الشخصي في الوقت الحالي. يُرجى المحاولة بعد قليل."
+    },
+    "sectionError": "تعذّر تحميل هذا القسم.",
+    "techStack": {
+      "eyebrow": "أدواتي",
+      "title": "التقنيات التي أعمل بها",
+      "group": {
+        "LANGUAGE": "اللغات",
+        "FRAMEWORK": "أُطُر العمل",
+        "TOOLING": "الأدوات",
+        "PRACTICE": "الممارسات"
+      }
+    },
+    "featured": {
+      "eyebrow": "أعمال مختارة",
+      "title": "مشاريع مميّزة"
+    },
+    "experience": {
+      "eyebrow": "الخبرة",
+      "title": "أماكن عملي",
+      "present": "حتى الآن",
+      "employmentType": {
+        "FULL_TIME": "دوام كامل",
+        "PART_TIME": "دوام جزئي",
+        "CONTRACT": "عقد",
+        "FREELANCE": "عمل حر"
+      }
+    },
+    "articles": {
+      "eyebrow": "الكتابة",
+      "title": "أحدث المقالات"
+    },
+    "testimonials": {
+      "eyebrow": "توصيات",
+      "title": "ماذا قالوا"
+    },
+    "contact": {
+      "eyebrow": "تواصل",
+      "title": "لنعمل معًا",
+      "body": "لديك وظيفة أو مشروع أو سؤال؟ يسعدني أن أسمع عنه.",
+      "form": "تواصل معي"
     }
   },
   "blog": {
@@ -82,7 +122,8 @@
   },
   "footer": {
     "rights": "© {year} {name}. جميع الحقوق محفوظة.",
-    "builtWith": "مُصمّم ومبنيّ بعناية."
+    "builtWith": "مُصمّم ومبنيّ بعناية.",
+    "downloadResume": "تنزيل السيرة الذاتية"
   },
   "error": {
     "notFoundTitle": "الصفحة غير موجودة",
@@ -116,6 +157,7 @@
     "siteDescription": "أعمال وكتابات إسلام معتمد، مهندس واجهات أمامية متخصص في Vue.js و Nuxt.js.",
     "home": {
       "title": "مهندس واجهات أمامية",
+      "titleFull": "إسلام معتمد — مهندس واجهات أمامية",
       "description": "مهندس واجهات أمامية متخصص في Vue.js و Nuxt.js، يبني واجهات ويب سريعة وسهلة الوصول ومهيأة لمحركات البحث."
     },
     "blog": {

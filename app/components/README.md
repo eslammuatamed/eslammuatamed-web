@@ -12,18 +12,30 @@
 |---|---|
 | `AppLink.vue` | رابط واعٍ باللغة: داخلي عبر `useLocalePath`، خارجي بـ `target=_blank` + `rel=noopener` |
 | `layout/Header.vue` | الترويسة: تنقّل + Résumé + CTA تواصل + مُبدِّل لغة/سمة + قائمة جوّال (`USlideover`) |
-| `layout/Footer.vue` | التذييل: يكرّر أهداف التنقّل + حقوق السنة |
+| `layout/Footer.vue` | التذييل: تنقّل + **روابط تواصل اجتماعي (`profileLinks`) + حالة التوفّر + تنزيل السيرة الذاتية** (من `SiteSettings` عبر `useSiteSettings`) + حقوق السنة (`FR-PUB-003`) |
 | `layout/LocaleSwitcher.vue` | تبديل اللغة مع حفظ المسار (`useSwitchLocalePath` + `locale:false`) |
 | `layout/ThemeToggle.vue` | تبديل السمة (`useColorMode`) داخل `ClientOnly` (بلا وميض) |
-| `home/Hero.vue` | قسم البطل: اسم/شعار/توفّر + أزرار (من `SiteSettings`) |
+| `home/Hero.vue` | قسم البطل (`FR-PUB-010`): اسم/شعار/توفّر + زرّا CTA (من `SiteSettings`؛ يرجع للاسم/الشعار من الـ i18n عند غيابهما) |
+| `home/TechStack.vue` | قسم التقنيات (`FR-PUB-011`): مهارات مُجمّعة حسب `group` عبر `UiTechBadge` (من `GET /skills`) |
+| `home/FeaturedProjects.vue` | مشاريع مميّزة (`FR-PUB-012`): أعلى 3 `featured` منشورة، بطاقات `ContentProjectCard` (من `GET /projects`) |
+| `home/ExperienceSummary.vue` | ملخّص الخبرة (`FR-PUB-013`): جدول زمني عكسي، `ContentExperienceItem` (من `GET /experiences`) |
+| `home/LatestArticles.vue` | أحدث 3 مقالات (`FR-PUB-014`): `ContentArticleCard` → `/blog/{slug}` (من `GET /articles`) |
+| `home/Testimonials.vue` | التوصيات (`FR-PUB-016`): تخطيط خطّي بلا carousel، `ContentTestimonialCard` (من `GET /testimonials`) |
+| `home/ContactCta.vue` | قسم التواصل (`FR-PUB-017`): رابط نموذج + بريد مباشر (رابط `mailto:` من `profileLinks`، `D05-4`) |
+| `content/ProjectCard.vue` | بطاقة مشروع: سنة + عنوان + ملخّص + تقنيات (رابط ممتدّ واحد → `/projects/{slug}`) |
+| `content/ExperienceItem.vue` | عنصر جدول زمني: دور@شركة + فترة (`Intl`) + نوع التوظيف؛ القضيب على الحافّة المنطقية (ينعكس RTL) |
+| `content/TestimonialCard.vue` | بطاقة توصية: اقتباس + مؤلّف + صورة اختيارية (`<NuxtImg>` أو حرف بديل) |
 | `content/ArticleCard.vue` | بطاقة مقال: صفّ meta + عنوان + مقتطف (رابط ممتدّ واحد) |
 | `content/Prose.vue` | `ContentProse` — سطح عرض Markdown الوحيد (يفوّض إلى `/api/prose`) |
-| `ui/SectionHeader.vue` | نمط ترويسة قسم واحد (eyebrow + عنوان + إجراء اختياري) |
+| `ui/SectionHeader.vue` | نمط ترويسة قسم واحد (eyebrow + عنوان + إجراء "عرض الكل" اختياري) |
+| `ui/TechBadge.vue` | شارة تقنية: نقطة لون هوية (من `brandColor` بيانات الـ API، `D03-2` — لا خلفية نصّ)؛ الاسم اللاتيني LTR عبر `bdi` |
+| `ui/StateError.vue` | حالة فشل تحميل قسم: رسالة + إعادة محاولة (`emit retry`) — عزل الخطأ لكل قسم |
+| `ui/SectionSkeleton.vue` | هيكل تحميل (يطابق أبعاد الشبكة، CLS 0) — يظهر فقط عند إعادة جلب على العميل |
 
 ## خريطة الاتصال
 
 - **وارد:** التخطيطات (`LayoutHeader`/`LayoutFooter` في `default.vue`)، الصفحات (`HomeHero`, `ContentArticleCard`, `ContentProse`, `UiSectionHeader`).
-- **صادر:** مكوّنات `Nuxt UI`، `useI18n`/`useLocalePath`/`useSwitchLocalePath`/`useColorMode`، و`utils` (`formatDate`).
+- **صادر:** مكوّنات `Nuxt UI`، `useI18n`/`useLocalePath`/`useSwitchLocalePath`/`useColorMode`، ومركّبات البيانات (`useSiteSettings`/`useHomeData`/`useSiteSchema`)، و`utils` (`formatDate`/`formatMonthYear`/`formatExperiencePeriod`).
 
 ## قرارات جوهرية (شرح لمطوّر مبتدئ)
 
@@ -31,7 +43,12 @@
 - **`LocaleSwitcher` و`locale:false`:** `to` هو المسار المُحلّل للّغة الهدف مسبقًا؛ و`ULink` في `Nuxt UI` يُعيد توطين `to` بلا بادئة للّغة **الحالية**، فتُعاد بادئة `/ar` النشطة على هدف اللغة الافتراضية (`/blog`) ويعطّل تبديل ar→en. `locale:false` يوقف ذلك (سلوك مُوثّق).
 - **`ThemeToggle` داخل `ClientOnly`:** الوضع المُحلّل يُعرَف بعد الـ hydration فقط؛ رسمه على الخادم يُومِض الأيقونة الخطأ.
 - **الاتجاه المنطقي (RTL):** قائمة الجوّال تحسب `menuSide` من اتجاه اللغة؛ والأيقونات الاتجاهية تنعكس بـ `rtl:-scale-x-100`. لا يسار/يمين فيزيائي (`D15-3`).
-- **إمكانية الوصول (a11y):** بطاقة المقال رابط ممتدّ واحد (يُعلَن رابطًا واحدًا لا عشًّا)؛ `SectionHeader` يترك مستوى العنوان للمستدعي (لا تخطّي مستويات).
+- **إمكانية الوصول (a11y):** بطاقات المقال/المشروع/التوصية روابط ممتدّة واحدة (تُعلَن رابطًا واحدًا لا عشًّا)؛ `SectionHeader` يترك مستوى العنوان للمستدعي (لا تخطّي مستويات؛ `<h1>` وحيد = البطل).
+- **أقسام الصفحة الرئيسية مكوّنات عرض بحتة:** تتلقّى `data`/`error`/`pending` عبر props وتُصدِر `retry`؛ الجلب يعيش في `useHomeData`/`useSiteSettings` (لا يجلب مكوّن عند الاستيراد، `doc 12`). قابلة للاختبار بالعزل.
+- **التدهور الرشيق (graceful degradation, `NFR-DEGRADE`):** كل قسم يُخفي نفسه عند فراغ نتيجته، ويُظهر `UiStateError` مع إعادة محاولة عند الفشل؛ الأقسام تُجلَب بالتوازي وكلٌّ يعزل خطأه (`useAsyncData` لكل مفتاح) فلا يُفرِّغ قسمٌ ساقط الصفحةَ. `GET /settings/site` هو التبعية الصلبة الوحيدة (فشلها = حالة "المحتوى غير متاح").
+- **ألوان التقنية (`UiTechBadge`, `WD-4`):** لون الهوية يأتي بيانات من الـ API (`brandColor`) — يُطبَّق كنقطة عبر `:style` (استثناء doc 03 §2 لقاعدة عدم التلوين المضمّن في doc 14)، لا كخلفية نصّ.
+- **قائمة سماح المخطّطات (`WD-5`, مراجعة أمنية):** روابط `profileLinks` في التذييل و`AppLink` الخارجي المُجبَر تُرشَّح لـ `https?:`/`mailto:` فقط — لأن `Vue` لا يُعقّم `:href`، فرابط `javascript:` (يُكتَب من سطح الإدارة فقط) لن يُعرَض.
+- **بلا carousel (`D13-10`):** التوصيات تخطيط خطّي؛ المحتوى الخطّي يستحقّ تخطيطًا خطّيًّا.
 
 ## العقود والثوابت
 
@@ -40,7 +57,7 @@
 
 ## الاختبارات
 
-`content/Prose.spec.ts`، `layout/LocaleSwitcher.spec.ts` + `LocaleSwitcher.i18n.spec.ts`.
+`content/Prose.spec.ts`، `content/ProjectCard.spec.ts`، `content/ExperienceItem.spec.ts`، `home/Hero.spec.ts`، `home/TechStack.spec.ts`، `home/FeaturedProjects.spec.ts`، `home/Testimonials.spec.ts`، `home/ContactCta.spec.ts`، `layout/Footer.spec.ts` (يشمل إسقاط المخطّط غير الآمن `WD-5`)، `layout/LocaleSwitcher.spec.ts` + `LocaleSwitcher.i18n.spec.ts`. تُغطّى الحالات الثلاث (مملوء/فارغ/خطأ) وكلا اللغتين.
 
 ## أخطاء شائعة
 
