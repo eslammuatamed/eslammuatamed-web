@@ -16,33 +16,42 @@ import type {
 export function useHomeData() {
   const api = useApi()
   const { locale } = useI18n()
-  const suffix = locale.value
+
+  // Reactive per-locale keys + `watch:[locale]` re-run each fetch on a client-side locale switch,
+  // matching the blog/index idiom (code-review WD-6). The home page already remounts per locale, so
+  // this is belt-and-suspenders here, but it keeps the sections robust if the page ever becomes
+  // persistent and consistent with useSiteSettings.
 
   // perPage 6 gives headroom to pick the top 3 featured from the featured-first order (D09-8);
   // the section filters `featured` and slices client-side.
   const projects = useAsyncData(
-    `home:projects:${suffix}`,
-    () => api<Paginated<ProjectListItem>>('/projects', { query: { perPage: 6 } }).then(r => r.data)
+    () => `home:projects:${locale.value}`,
+    () => api<Paginated<ProjectListItem>>('/projects', { query: { perPage: 6 } }).then(r => r.data),
+    { watch: [locale] }
   )
 
   const skills = useAsyncData(
-    `home:skills:${suffix}`,
-    () => api<Envelope<Skill[]>>('/skills').then(r => r.data)
+    () => `home:skills:${locale.value}`,
+    () => api<Envelope<Skill[]>>('/skills').then(r => r.data),
+    { watch: [locale] }
   )
 
   const experiences = useAsyncData(
-    `home:experiences:${suffix}`,
-    () => api<Envelope<Experience[]>>('/experiences').then(r => r.data)
+    () => `home:experiences:${locale.value}`,
+    () => api<Envelope<Experience[]>>('/experiences').then(r => r.data),
+    { watch: [locale] }
   )
 
   const articles = useAsyncData(
-    `home:articles:${suffix}`,
-    () => api<Paginated<ArticleListItem>>('/articles', { query: { perPage: 3 } }).then(r => r.data)
+    () => `home:articles:${locale.value}`,
+    () => api<Paginated<ArticleListItem>>('/articles', { query: { perPage: 3 } }).then(r => r.data),
+    { watch: [locale] }
   )
 
   const testimonials = useAsyncData(
-    `home:testimonials:${suffix}`,
-    () => api<Envelope<Testimonial[]>>('/testimonials').then(r => r.data)
+    () => `home:testimonials:${locale.value}`,
+    () => api<Envelope<Testimonial[]>>('/testimonials').then(r => r.data),
+    { watch: [locale] }
   )
 
   return { projects, skills, experiences, articles, testimonials }

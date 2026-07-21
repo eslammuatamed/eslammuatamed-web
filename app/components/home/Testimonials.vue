@@ -13,7 +13,13 @@ const props = withDefaults(defineProps<Props>(), { error: false, pending: false 
 defineEmits<{ retry: [] }>()
 const { t } = useI18n()
 
-const items = computed(() => (props.testimonials ?? []).slice().sort((a, b) => a.order - b.order))
+// The owner curates which testimonials are visible (dashboard); the home page shows the top few by
+// `order` and bounds the count so the section stays restrained even if many are marked visible
+// (code-review WD-8). Deeper curation lives on a future dedicated surface, not here.
+const MAX_TESTIMONIALS = 6
+const items = computed(() =>
+  (props.testimonials ?? []).slice().sort((a, b) => a.order - b.order).slice(0, MAX_TESTIMONIALS)
+)
 const show = computed(() => props.pending || props.error || items.value.length > 0)
 </script>
 
