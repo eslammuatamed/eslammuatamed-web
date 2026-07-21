@@ -32,7 +32,7 @@ const options = computed(() =>
       :to="opt.to"
       :aria-current="opt.active ? 'true' : undefined"
       :title="opt.name"
-      class="rounded-full px-2.5 py-1.5 text-caption font-semibold leading-none transition-colors"
+      class="rounded-full px-3 py-2 text-caption font-semibold leading-none transition-colors"
       :class="
         opt.active
           ? 'bg-primary text-white'

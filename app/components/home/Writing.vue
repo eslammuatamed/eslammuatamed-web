@@ -25,7 +25,7 @@ const show = computed(() => props.pending || props.error || hasData.value)
   <UiSpread v-if="show" aria-labelledby="writing-title">
     <UiSectionHead :eyebrow="t('home.articles.eyebrow')" :title="t('home.articles.title')" title-id="writing-title">
       <template #action>
-        <AppLink to="/blog" class="group inline-flex items-center gap-2 text-body-sm text-link">
+        <AppLink to="/blog" class="group -my-1 inline-flex items-center gap-2 py-1 text-body-sm text-link">
           {{ t('common.viewAll') }}
           <UIcon name="i-lucide-arrow-right" class="size-4 transition-transform group-hover:translate-x-0.5 rtl:-scale-x-100" aria-hidden="true" />
         </AppLink>

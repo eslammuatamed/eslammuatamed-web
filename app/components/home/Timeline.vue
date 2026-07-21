@@ -37,7 +37,7 @@ const show = computed(() => props.pending || props.error || hasData.value)
       title-id="experience-title"
     >
       <template #action>
-        <AppLink to="/experience" class="group inline-flex items-center gap-2 text-body-sm text-link">
+        <AppLink to="/experience" class="group -my-1 inline-flex items-center gap-2 py-1 text-body-sm text-link">
           {{ t('common.viewAll') }}
           <UIcon name="i-lucide-arrow-right" class="size-4 transition-transform group-hover:translate-x-0.5 rtl:-scale-x-100" aria-hidden="true" />
         </AppLink>

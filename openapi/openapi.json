@@ -6632,6 +6632,11 @@
             "nullable": true,
             "example": "Software engineer & architect"
           },
+          "availabilityStatus": {
+            "type": "string",
+            "nullable": true,
+            "example": "Open to select consulting engagements"
+          },
           "defaultMetaTitle": {
             "type": "string",
             "nullable": true
@@ -6644,6 +6649,7 @@
         "required": [
           "siteName",
           "tagline",
+          "availabilityStatus",
           "defaultMetaTitle",
           "defaultMetaDescription"
         ]
@@ -6660,10 +6666,6 @@
             "items": {
               "$ref": "#/components/schemas/ProfileLinkEntity"
             }
-          },
-          "availabilityStatus": {
-            "type": "string",
-            "nullable": true
           },
           "resumeAssetId": {
             "type": "string",
@@ -6721,7 +6723,6 @@
         "required": [
           "id",
           "profileLinks",
-          "availabilityStatus",
           "resumeAssetId",
           "careerStartYear",
           "careerStartMonth",
@@ -6780,6 +6781,10 @@
             "type": "string",
             "example": "Software engineer & architect"
           },
+          "availabilityStatus": {
+            "type": "string",
+            "example": "Open to select consulting engagements"
+          },
           "defaultMetaTitle": {
             "type": "string",
             "example": "Eslam Muatamed"
@@ -6798,10 +6803,6 @@
             "items": {
               "$ref": "#/components/schemas/ProfileLinkDto"
             }
-          },
-          "availabilityStatus": {
-            "type": "string",
-            "example": "Open to select consulting engagements"
           },
           "resumeAssetId": {
             "type": "string",
@@ -9661,6 +9662,13 @@
             "type": "boolean",
             "example": false
           },
+          "archivedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "The archival instant (D09-14): set when the message is archived, cleared when un-archived. Null while the message has never been archived. Basis for the 12-month retention purge (doc 19 §6).",
+            "example": null
+          },
           "meta": {
             "type": "object",
             "additionalProperties": true,
@@ -9687,6 +9695,7 @@
           "body",
           "isRead",
           "isArchived",
+          "archivedAt",
           "meta",
           "createdAt",
           "updatedAt"

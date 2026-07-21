@@ -1044,6 +1044,8 @@ export interface components {
             siteName: string | null;
             /** @example Software engineer & architect */
             tagline: string | null;
+            /** @example Open to select consulting engagements */
+            availabilityStatus: string | null;
             defaultMetaTitle: string | null;
             defaultMetaDescription: string | null;
         };
@@ -1051,7 +1053,6 @@ export interface components {
             /** Format: uuid */
             id: string;
             profileLinks: components["schemas"]["ProfileLinkEntity"][];
-            availabilityStatus: string | null;
             /** Format: uuid */
             resumeAssetId: string | null;
             /** @example 2023 */
@@ -1095,6 +1096,8 @@ export interface components {
             siteName?: string;
             /** @example Software engineer & architect */
             tagline?: string;
+            /** @example Open to select consulting engagements */
+            availabilityStatus?: string;
             /** @example Eslam Muatamed */
             defaultMetaTitle?: string;
             /** @example Portfolio, case studies, and writing. */
@@ -1102,8 +1105,6 @@ export interface components {
         };
         UpdateSettingsDto: {
             profileLinks?: components["schemas"]["ProfileLinkDto"][];
-            /** @example Open to select consulting engagements */
-            availabilityStatus?: string;
             /**
              * Format: uuid
              * @description Resume PDF media asset id (must be a PDF), or null to clear.
@@ -2420,6 +2421,12 @@ export interface components {
             isRead: boolean;
             /** @example false */
             isArchived: boolean;
+            /**
+             * Format: date-time
+             * @description The archival instant (D09-14): set when the message is archived, cleared when un-archived. Null while the message has never been archived. Basis for the 12-month retention purge (doc 19 §6).
+             * @example null
+             */
+            archivedAt: string | null;
             /**
              * @description Spam forensics captured at intake (userAgent / referrer). Empty object when absent.
              * @example {
