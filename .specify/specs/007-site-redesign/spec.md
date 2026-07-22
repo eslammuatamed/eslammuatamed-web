@@ -24,17 +24,19 @@ was the problem: seven near-identical `eyebrow + title + hairline datum rule` bl
 left-aligned throughout, a tiny Monolith glyph — a refined hairline-broadsheet reading as a generic
 dev-portfolio template (fails doc 01 Pillar 4). Decision **D03-8** records the rejection.
 
-This feature **rewrites the public visual layer from scratch** and is **Web-only**: it consumes the same
-contract with **no API code, schema, migration, or contract change**, and preserves the F016 §5.2 /
-D09-15 dev-seed governance rule. It redesigns the **site-wide shell** (global frame, header, mobile nav,
+This feature **rewrites the public visual layer from scratch**; that visual implementation is
+**Web-only** and consumes the same contract as its frontend interface. The owner acceptance pass
+also records the companion API availability-localization change (schema/migration/seed) in the API and
+Docs repositories. It preserves the F016 §5.2 / D09-15 dev-seed governance rule. It redesigns the
+**site-wide shell** (global frame, header, mobile nav,
 active states, language + theme switchers, primary CTA, footer) and the **Home** from first principles,
 and establishes **reusable primitives** for future public pages (web-005). The blog index is migrated to
 the new primitives for site-wide coherence.
 
 **Carried limitations (unchanged):** `/projects`, `/experience`, `/about`, `/contact`, `/resume` ship in
-web-005 — links there 404 until then (accepted, as in 006). `availabilityStatus` remains a non-localized
-scalar (English in `/ar`) — a doc-first schema decision, not fixed here. FR-PUB-015 philosophy stays
-deferred (D24-6).
+web-005 — links there 404 until then (accepted, as in 006). Availability is now localized by the
+companion API change (D10-12); the Web continues to render the API value verbatim. FR-PUB-015
+philosophy stays deferred (D24-6).
 
 ## Design Direction (the new visual concept)
 
@@ -87,18 +89,21 @@ whose own published thesis is *"RTL as Architecture, Not Translation"*; the desi
 
 ## Hard Rules & Decisions
 
-- **HR-1** — Web-only; no API/schema/migration/contract change; contract consumed as-is.
+- **HR-1** — The visual redesign is Web-owned and consumes the versioned contract; the companion API
+  availability-localization change is tracked and verified in the API/Docs repositories.
 - **HR-2** — 006 visual direction is **rejected** (D03-8); Monolith mark, datum rules, `UiSection`,
   `UiSectionHeader`, `UiBrandMark`, `UiDatumLabel`, `UiTechBadge`, and all 006 home/card components are
   **removed**, not restyled.
 - **HR-3** — Violet + zinc DNA kept; composition/type/surface/signature re-conceived (D03-8).
-- **HR-4** — `availabilityStatus` English-in-`/ar` carried (schema decision, not this feature).
-- **HR-5** — Release Freeze holds: `dev` only; no promotion/deploy/dispatch/prod-config/DB/R2/secrets.
+- **HR-4** — `availabilityStatus` is resolved per locale by the companion API implementation (D10-12);
+  Web renders the localized value without a frontend fallback.
+- **HR-5** — Production Release Freeze holds: no promotion/deploy/dispatch or production config/DB/R2
+  mutation; the owner-classified staging host may be reset/redeployed for seed-only verification.
 - **HR-6** — Seed governance (D16-9 §5.2 / D09-15) preserved; verified against the existing dev seed.
 - **HR-7** — Component tests rewritten to the new components (not deleted to green).
 
 ## Non-Goals
 
 - Building `/projects`, `/experience`, `/about`, `/contact`, `/resume` (that is web-005).
-- Any API, schema, seed, or contract change. Any production promotion or deploy.
-- Localizing `availabilityStatus` (doc-first schema decision, separate).
+- Building the remaining public routes. Any production promotion or deploy.
+- Reimplementing API locale resolution in the Web client.

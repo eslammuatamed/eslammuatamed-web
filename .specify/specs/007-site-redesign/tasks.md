@@ -1,7 +1,7 @@
 # Tasks: Site-wide Public Redesign (007)
 
 **Branch**: `007-site-redesign` · **Spec**: `./spec.md` · **Plan**: `./plan.md`
-All tasks complete on `dev` (pending owner review). `[X]` = done.
+All tasks complete on `007-site-redesign` (pending owner review). `[X]` = done.
 
 ## Phase 0 — Direction (pixels before system)
 - [X] T001 Inspect current public routes/components; identify what is structurally inherited from 006.
@@ -48,12 +48,13 @@ All tasks complete on `dev` (pending owner review). `[X]` = done.
 - [X] T072 Gates: `typecheck` 0 errors · `lint` · `test` 78 · `build` · `check:bundle` · `check:logical`.
 
 ## Phase 8 — Governance & docs (D16-8 gate)
-- [X] T080 **Seed (D16-9 §5.2 / D09-15):** no data change — the existing owner-grounded dev seed is reused and re-verified; governance rule preserved (HR-6).
+- [X] T080 **Seed (D16-9 §5.2 / D09-15):** the API base seed and owner-grounded dev/demo overlay both write deterministic bilingual availability values; governance rule preserved (HR-6).
 - [X] T081 Docs: D03-8/9/10 (design), D14-6/7 (tokens); feature-map row 007; Arabic component README; SpecKit spec/plan/tasks; handoff + MEMORY.
-- [X] T082 Freeze upheld: Web/API `main` unchanged; no deploy/promotion/dispatch/prod-config/DB/R2/secrets.
+- [X] T082 Production freeze upheld: Web/API `main` unchanged and no production promotion/config/DB/R2
+  mutation; disposable staging verification is explicitly allowed by D23-19.
 
 ## Phase 9 — Owner acceptance pass (2026-07-21, web-007 directionally approved)
-- [X] T090 **Availability copy + localization** (D10-12): API-side — `availabilityStatus` moved to `SiteSettingsTranslation` (per-locale, data-safe migration), seed EN "Open to frontend opportunities" / AR localized, "senior" self-claim removed (historical titles kept). API branch `007-availability-localization` (off API dev `b7e26fe`); public contract shape unchanged. Web renders it verbatim → both locales correct. Seniority audit: no other self-presentation "senior" claim (JSON-LD/SEO clean).
+- [X] T090 **Availability copy + localization** (D10-12): API-side — `availabilityStatus` moved to `SiteSettingsTranslation` (per-locale, clean final-schema migration), base + dev/demo seeds write EN "Open to frontend opportunities" / AR localized, and the "senior" self-claim is removed (historical titles kept). API branch `007-availability-localization`; public contract shape unchanged. Web renders it verbatim → both locales correct. Seniority audit: no other self-presentation "senior" claim (JSON-LD/SEO clean).
 - [X] T091 **Arabic hero spacing** (#2): responsive block gap (name→role), layout spacing only; verified AR desktop/tablet/mobile.
 - [X] T092 **Arabic nameplate face** (#3, D03-12): Reem Kufi (`.font-nameplate` under ar, wght 700); chosen by screenshot comparison vs Cairo. Self-hosted variable; nameplate only.
 - [X] T093 **Language toggle** (#4): `LayoutLangToggle` segmented EN/AR (both visible, active = filled surface + aria-current, switchLocalePath links); replaces the dropdown. Desktop header + mobile drawer.

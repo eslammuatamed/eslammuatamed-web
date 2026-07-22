@@ -69,5 +69,6 @@ Order and surface rhythm: Nameplate (paper) → Capabilities (**ink**) → Selec
 ## Risks / carried
 
 - `/projects` `/experience` `/about` `/contact` `/resume` 404 until web-005 (accepted).
-- `availabilityStatus` English in `/ar` (schema decision, carried).
+- Availability is localized by the companion API migration and deterministic seed; Web renders the
+  requested locale directly (D10-12).
 - No CSP (carried from prior features).
