@@ -5,13 +5,20 @@
 const { t } = useI18n()
 const main = useTemplateRef<HTMLElement>('main')
 const router = useRouter()
+const nuxtApp = useNuxtApp()
 
 if (import.meta.client) {
-  const stop = router.afterEach((to, from) => {
-    if (to.path === from.path) return
-    void nextTick(() => main.value?.focus())
+  const initialPath = router.currentRoute.value.fullPath
+  let initialPageFinished = false
+  const stop = nuxtApp.hooks.hook('page:finish', () => {
+    const isInitialRender = !initialPageFinished && router.currentRoute.value.fullPath === initialPath
+    initialPageFinished = true
+    if (isInitialRender) return
+    void nextTick(() => main.value?.focus({ preventScroll: true }))
   })
-  onBeforeUnmount(stop)
+  onBeforeUnmount(() => {
+    stop()
+  })
 }
 </script>
 

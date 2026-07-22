@@ -387,22 +387,6 @@ html[lang="ar"] [class*="tracking-"] {
     letter-spacing: normal;
   }
 
-  /* Display-face Arabic swap (D14-5, one place): elements set in the Latin display face render
-     in Cairo under the Arabic root. Higher specificity than the single-class `.font-display`
-     utility, so it wins the cascade. Arabic display is first-class, not a body fallback. */
-  html[lang="ar"] .font-display {
-    font-family: var(--font-display-arabic);
-  }
-
-  /* Arabic nameplate (D03-12): the hero name swaps to Reem Kufi. Pushed to the top of its weight axis so
-     the geometric Kufi carries the same visual mass as the heavy Space Grotesk Latin name, and given a
-     touch more line-height because Kufi's tall verticals need vertical air at display scale. */
-  html[lang="ar"] .font-nameplate {
-    font-family: var(--font-nameplate-arabic);
-    font-weight: 700;
-    line-height: 1.12;
-  }
-
   /* Reduced motion collapses non-essential motion to short fades (doc 03 §5, doc 21 §5). */
   @media (prefers-reduced-motion: reduce) {
     *,
@@ -414,6 +398,23 @@ html[lang="ar"] [class*="tracking-"] {
       scroll-behavior: auto !important;
     }
   }
+}
+
+/* Locale-specific font utilities must remain unlayered. Tailwind generates `.font-display`,
+   `.font-nameplate`, and `.text-mega` in its utilities layer; cascade-layer order is evaluated
+   before selector specificity, so putting these overrides in `@layer base` leaves the Latin
+   utility values in control even under `html[lang="ar"]`. Unlayered author rules outrank every
+   layered rule without resorting to `!important` (D14-5). */
+html[lang="ar"] .font-display {
+  font-family: var(--font-display-arabic);
+}
+
+/* Arabic nameplate (D03-12): Reem Kufi at the top of its weight axis carries the same visual
+   mass as the heavy Space Grotesk Latin name. Its taller Kufi forms receive extra line-height. */
+html[lang="ar"] .font-nameplate {
+  font-family: var(--font-nameplate-arabic);
+  font-weight: 700;
+  line-height: 1.12;
 }
 
 /* ---------------------------------------------------------------------------------------
