@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import {
+  APP_BASELINE_MAX_BYTES,
+  BUDGET,
   KB,
-  appCodeVerdict,
+  approvedAppLimitBytes,
+  attributeRenderedBytes,
   budgetVerdict,
   classifyModuleId,
   collectRouteAssets,
@@ -102,7 +105,12 @@ describe('collectRouteAssets', () => {
   })
 })
 
-describe('classifyModuleId', () => {
+/**
+ * The classification contract (doc 20 §5, D20-12). Under the superseded bounds-based verdict a
+ * misclassified module only widened an interval; under the EXACT renderedLength budget it changes
+ * the enforced number directly, so every rule — and every near-miss — is pinned here.
+ */
+describe('classifyModuleId — ordered allowlist (D20-12)', () => {
   it.each([
     ['node_modules/vue/dist/runtime.mjs'],
     ['/repo/node_modules/@nuxt/ui/dist/index.mjs'],
@@ -112,23 +120,112 @@ describe('classifyModuleId', () => {
   })
 
   it.each([
-    ['app/components/layout/Header.vue'],
     ['app/composables/useSiteSettings.ts'],
-    ['config/site-url.ts'],
-    ['i18n/locales/ar.json']
-  ])('treats project-owned %s as app', (id) => {
+    ['app/utils/format.ts'],
+    ['app/stores/auth.ts'],
+    ['app/middleware/preview-locale.ts']
+  ])('treats srcDir source %s as app', (id) => {
     expect(classifyModuleId(id)).toBe('app')
+  })
+
+  // A Vue SFC yields SEVERAL Rollup modules. Each is a distinct module with distinct bytes, so all
+  // of them must classify as app — and the sum must not be collapsed by stripping the query.
+  it.each([
+    ['app/components/layout/Header.vue'],
+    ['app/components/layout/Header.vue?vue&type=script&setup=true&lang.ts'],
+    ['app/pages/dashboard/login.vue?macro=true&vue&type=script&setup=true&lang.ts']
+  ])('treats SFC output and its query variants %s as app', (id) => {
+    expect(classifyModuleId(id)).toBe('app')
+  })
+
+  it('treats project-authored locale content as app even though i18n/ sits outside srcDir', () => {
+    expect(classifyModuleId('i18n/locales/ar.json')).toBe('app')
+    expect(classifyModuleId('i18n/locales/en.json')).toBe('app')
   })
 
   // Generated glue is reported separately rather than folded into whichever side flatters the
   // number — classification by convenience is exactly what the budget interpretation must avoid.
   it.each([
     ['\0virtual:nuxt:/repo/.nuxt/entry.js'],
+    ['\0vite/preload-helper.js'],
     ['virtual:nuxt:plugins'],
     ['#build/components'],
-    ['.nuxt/components.plugin.mjs']
-  ])('treats generated glue %s as virtual', (id) => {
-    expect(classifyModuleId(id)).toBe('virtual')
+    ['.nuxt/components.plugin.mjs'],
+    ['/repo/.nuxt/dist/client/entry.js']
+  ])('treats generated glue %s as generated', (id) => {
+    expect(classifyModuleId(id)).toBe('generated')
+  })
+
+  // THE ORDERING RULE. Virtual ids routinely embed a srcDir path; matching `app/` first would
+  // hand framework glue to the project's budget.
+  it.each([
+    ['\0virtual:nuxt:/repo/app/router.options.js'],
+    ['virtual:nuxt:/repo/app/app.config.ts'],
+    ['/repo/.nuxt/app/entry.js']
+  ])('classifies %s as generated even though it embeds a srcDir path', (id) => {
+    expect(classifyModuleId(id)).toBe('generated')
+  })
+
+  // Vite extracts CSS to a real asset governed by the separate CSS budget; the JS-graph entry is a
+  // zero-byte stub. Counting it as app would double-govern CSS.
+  it.each([
+    ['app/assets/css/main.css'],
+    ['app/components/Thing.vue?vue&type=style&index=0&lang.css'],
+    ['app/assets/css/x.scss']
+  ])('treats CSS wrapper %s as generated', (id) => {
+    expect(classifyModuleId(id)).toBe('generated')
+  })
+
+  // Nothing becomes app by falling through — this is the rule that keeps the metric exact as the
+  // build evolves. `config/**` is build-time only and verified absent from every client chunk.
+  it.each([
+    ['config/site-url.ts'],
+    ['config/bundle-analysis.ts'],
+    ['server/api/prose.post.ts'],
+    ['some/unknown/shape.js']
+  ])('treats %s as unclassified — never app by fallthrough', (id) => {
+    expect(classifyModuleId(id)).toBe('unclassified')
+  })
+
+  // Substring false positives: a prefix match on `app` would sweep unrelated directories into the
+  // budget. The rule is an exact path SEGMENT.
+  it.each([
+    ['application/legacy.ts'],
+    ['apps/other/index.ts'],
+    ['vendor/app-shim.ts'],
+    ['packages/app/index.ts'],
+    ['i18n/locales-backup/en.json']
+  ])('does not treat lookalike path %s as app', (id) => {
+    expect(classifyModuleId(id)).toBe('unclassified')
+  })
+
+  it('resolves the srcDir root itself, but not a traversal that escapes it', () => {
+    expect(classifyModuleId('app')).toBe('app')
+    expect(classifyModuleId('app/x.ts')).toBe('app')
+    expect(classifyModuleId('../app/x.ts')).toBe('unclassified')
+    expect(classifyModuleId('/abs/app/x.ts')).toBe('unclassified')
+  })
+
+  it('normalises Windows separators before classifying', () => {
+    expect(classifyModuleId('app\\components\\layout\\Header.vue')).toBe('app')
+    expect(classifyModuleId('C:\\repo\\node_modules\\vue\\index.js')).toBe('vendor')
+    expect(classifyModuleId('i18n\\locales\\ar.json')).toBe('app')
+  })
+
+  it('normalises file:// URLs and percent-encoding', () => {
+    expect(classifyModuleId('file://app/pages/index.vue')).toBe('app')
+    expect(classifyModuleId('app/components/My%20Component.vue')).toBe('app')
+    expect(classifyModuleId('file://app/components/My%20Component.vue?vue&type=script')).toBe('app')
+    // A lone `%` is not valid percent-encoding; classification must still resolve, not throw.
+    expect(() => classifyModuleId('app/weird%.ts')).not.toThrow()
+    expect(classifyModuleId('app/weird%.ts')).toBe('app')
+  })
+
+  // The analysis plugin relativises ids under the repo root, so a resolved/symlinked path that
+  // lands OUTSIDE the root stays absolute — and must not be guessed into the app budget.
+  it('does not classify a resolved path outside the repo root as app', () => {
+    expect(classifyModuleId('/elsewhere/linked-pkg/app/index.ts')).toBe('unclassified')
+    expect(classifyModuleId('/elsewhere/linked-pkg/node_modules/vue/index.js')).toBe('vendor')
   })
 })
 
@@ -181,26 +278,156 @@ describe('budgetVerdict — threshold boundaries', () => {
   })
 })
 
-describe('appCodeVerdict — bounds, never a fabricated single number', () => {
-  const BUDGET = 35 * KB
+/** Builds a metadata map of the shape `attributeRenderedBytes` consumes. */
+function meta(chunks) {
+  return new Map(Object.entries(chunks).map(([file, modules]) => [
+    file,
+    { modules: modules.map(([id, renderedLength]) => ({ id, renderedLength })) }
+  ]))
+}
 
-  it('PASSES only when the UPPER bound clears the budget (true for every possible split)', () => {
-    expect(appCodeVerdict({ lower: 1 * KB, upper: BUDGET }, BUDGET)).toBe('PASS')
-    expect(appCodeVerdict({ lower: 1 * KB, upper: BUDGET - 1 }, BUDGET)).toBe('PASS')
+describe('attributeRenderedBytes — exact, never estimated (D20-12)', () => {
+  // THE POINT OF THE WHOLE CHANGE: a chunk mixing app and vendor modules used to make the budget
+  // unprovable, because gzip cannot be divided per module inside one stream. renderedLength can.
+  it('measures a MIXED chunk exactly, with no proportional split anywhere', () => {
+    const m = meta({
+      '/_nuxt/entry.js': [
+        ['app/pages/index.vue?vue&type=script&setup=true&lang.ts', 4754],
+        ['node_modules/vue/dist/runtime.mjs', 189_400],
+        ['\0vite/preload-helper.js', 3303]
+      ]
+    })
+    const { totals } = attributeRenderedBytes(['/_nuxt/entry.js'], m)
+    expect(totals).toEqual({ app: 4754, vendor: 189_400, generated: 3303, unclassified: 0 })
   })
 
-  it('FAILS only when the LOWER bound breaches (true for every possible split)', () => {
-    expect(appCodeVerdict({ lower: BUDGET + 1, upper: 200 * KB }, BUDGET)).toBe('FAIL')
+  it('counts a SHARED chunk in full for every route that downloads it', () => {
+    const m = meta({
+      '/_nuxt/shared.js': [['app/components/layout/Header.vue', 7978]],
+      '/_nuxt/home.js': [['app/pages/index.vue', 4754]],
+      '/_nuxt/blog.js': [['app/pages/blog/index.vue', 2000]]
+    })
+    // The route pays for the whole chunk regardless of who else uses it.
+    expect(attributeRenderedBytes(['/_nuxt/shared.js', '/_nuxt/home.js'], m).totals.app).toBe(12_732)
+    expect(attributeRenderedBytes(['/_nuxt/shared.js', '/_nuxt/blog.js'], m).totals.app).toBe(9978)
   })
 
-  it('is INDETERMINATE when the bounds straddle the budget — and that is not a pass', () => {
-    const verdict = appCodeVerdict({ lower: 4.5 * KB, upper: 221 * KB }, BUDGET)
-    expect(verdict).toBe('INDETERMINATE')
-    expect(verdict).not.toBe('PASS')
+  it('charges a duplicated module id once per route, but REPORTS the duplication', () => {
+    const m = meta({
+      '/_nuxt/a.js': [['app/utils/format.ts', 500]],
+      '/_nuxt/b.js': [['app/utils/format.ts', 500], ['app/utils/api-error.ts', 300]]
+    })
+    const result = attributeRenderedBytes(['/_nuxt/a.js', '/_nuxt/b.js'], m)
+    expect(result.totals.app).toBe(800)
+    expect(result.duplicates).toHaveLength(1)
+    expect(result.duplicates[0].id).toBe('app/utils/format.ts')
   })
 
-  it('treats exactly-at-budget bounds inclusively on both edges', () => {
-    expect(appCodeVerdict({ lower: 0, upper: BUDGET }, BUDGET)).toBe('PASS')
-    expect(appCodeVerdict({ lower: BUDGET, upper: BUDGET }, BUDGET)).toBe('PASS')
+  it('keeps SFC query variants distinct — collapsing them would undercount', () => {
+    const m = meta({
+      '/_nuxt/a.js': [
+        ['app/components/layout/Header.vue', 120],
+        ['app/components/layout/Header.vue?vue&type=script&setup=true&lang.ts', 7978]
+      ]
+    })
+    const result = attributeRenderedBytes(['/_nuxt/a.js'], m)
+    expect(result.totals.app).toBe(8098)
+    expect(result.duplicates).toHaveLength(0)
+  })
+
+  it('excludes chunks the route does not reference (dynamic, dashboard-only, locale)', () => {
+    const m = meta({
+      '/_nuxt/home.js': [['app/pages/index.vue', 4754]],
+      '/_nuxt/dashboard.js': [['app/pages/dashboard/index.vue', 50_000]],
+      '/_nuxt/locale-en.js': [['i18n/locales/en.json', 10_407]]
+    })
+    // Only what this route initially references is measured — that is the whole per-route premise.
+    expect(attributeRenderedBytes(['/_nuxt/home.js'], m).totals.app).toBe(4754)
+  })
+
+  it('counts a dashboard chunk only when a public route actually references it', () => {
+    const m = meta({ '/_nuxt/dashboard.js': [['app/pages/dashboard/index.vue', 50_000]] })
+    expect(attributeRenderedBytes(['/_nuxt/dashboard.js'], m).totals.app).toBe(50_000)
+  })
+
+  it('handles zero-length modules without inventing or losing bytes', () => {
+    const m = meta({
+      '/_nuxt/a.js': [['app/assets/css/main.css', 0], ['app/utils/format.ts', 0], ['app/x.ts', 10]]
+    })
+    const result = attributeRenderedBytes(['/_nuxt/a.js'], m)
+    expect(result.totals.app).toBe(10)
+    expect(result.totals.generated).toBe(0)
+  })
+
+  it('surfaces unclassified modules with bytes, and does not fold them into app', () => {
+    const m = meta({ '/_nuxt/a.js': [['app/x.ts', 100], ['some/unknown/shape.js', 42]] })
+    const result = attributeRenderedBytes(['/_nuxt/a.js'], m)
+    expect(result.totals.app).toBe(100)
+    expect(result.totals.unclassified).toBe(42)
+    expect(result.unclassifiedModules).toEqual([{ id: 'some/unknown/shape.js', bytes: 42 }])
+  })
+
+  it('does not flag a ZERO-byte unclassified module — it cannot affect the budget', () => {
+    const m = meta({ '/_nuxt/a.js': [['some/unknown/shape.js', 0]] })
+    expect(attributeRenderedBytes(['/_nuxt/a.js'], m).unclassifiedModules).toEqual([])
+  })
+
+  it('throws for an asset with no provenance record rather than assuming a category', () => {
+    expect(() => attributeRenderedBytes(['/_nuxt/ghost.js'], meta({}))).toThrow(/no Rollup provenance/)
+  })
+
+  it('ranks app modules largest-first so a failure report is actionable', () => {
+    const m = meta({ '/_nuxt/a.js': [['app/small.ts', 10], ['app/big.ts', 900], ['app/mid.ts', 100]] })
+    expect(attributeRenderedBytes(['/_nuxt/a.js'], m).appModules.map(x => x.id))
+      .toEqual(['app/big.ts', 'app/mid.ts', 'app/small.ts'])
+  })
+})
+
+describe('the frozen app-owned limit (D20-12)', () => {
+  // The limit is a CONSTANT derived once from Web 138cef5 and never recomputed from a build. This
+  // test is what makes changing it a deliberate act rather than a drifting side effect.
+  it('is exactly 101 KiB = 103,424 bytes', () => {
+    expect(BUDGET.appRenderedBytes).toBe(103_424)
+    expect(BUDGET.appRenderedBytes).toBe(101 * KB)
+  })
+
+  it('matches the approved formula applied to the recorded baseline', () => {
+    expect(APP_BASELINE_MAX_BYTES).toBe(89_201)
+    expect(approvedAppLimitBytes(APP_BASELINE_MAX_BYTES)).toBe(BUDGET.appRenderedBytes)
+  })
+
+  // `baselineMax * 1.15` carries float residue (89201 * 1.15 === 102581.15000000001), which would
+  // push an exact-KiB result up a whole KiB. The integer path is required, not stylistic.
+  it('retains an exact KiB boundary instead of rounding past it', () => {
+    const exact = (100 * KB * 100) / 115 // a baseline whose +15 % lands exactly on 100 KiB
+    expect(approvedAppLimitBytes(exact)).toBe(100 * KB)
+    expect(approvedAppLimitBytes(0)).toBe(0)
+  })
+
+  it('rounds a fractional KiB result upward', () => {
+    expect(approvedAppLimitBytes(1)).toBe(KB)
+    expect(approvedAppLimitBytes(89_201)).toBe(101 * KB) // 102581.15 B → 101 KiB
+  })
+
+  it('leaves the other two budgets at their documented, unchanged values', () => {
+    expect(BUDGET.totalJsBytes).toBe(250 * KB)
+    expect(BUDGET.cssBytes).toBe(30 * KB)
+  })
+})
+
+describe('app-owned budget boundaries — inclusive, exact bytes', () => {
+  const LIMIT = BUDGET.appRenderedBytes
+
+  it.each([
+    ['one byte below the limit', LIMIT - 1, 'PASS'],
+    ['exactly at the limit', LIMIT, 'PASS'],
+    ['one byte above the limit', LIMIT + 1, 'FAIL']
+  ])('%s → %s', (_label, bytes, expected) => {
+    expect(budgetVerdict(bytes, LIMIT)).toBe(expected)
+  })
+
+  it('passes the recorded 138cef5 worst route with the approved headroom', () => {
+    expect(budgetVerdict(APP_BASELINE_MAX_BYTES, LIMIT)).toBe('PASS')
+    expect(LIMIT - APP_BASELINE_MAX_BYTES).toBe(14_223)
   })
 })

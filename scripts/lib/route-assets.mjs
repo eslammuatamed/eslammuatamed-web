@@ -70,38 +70,120 @@ function localNuxtAsset(url, kind) {
 }
 
 /**
- * Split module ids into app / vendor / generated (doc 20 §5 classification contract, D20-11).
+ * Normalise a Rollup module id to a comparable form before classifying it.
  *
- * Resolved from build provenance, never filenames. The three categories, with the cases the
- * production client build actually emits:
- *   - vendor    → `node_modules/**` — external dependency code.
- *   - app       → project-owned source in the repo. That means srcDir (`app/**`), INCLUDING Vue SFC
- *                 compiled output (`?vue&type=script…`) and `definePageMeta` route-metadata
- *                 extraction (`?macro=true`), plus project-authored content that Nuxt convention
- *                 places outside srcDir — notably `i18n/locales/*.json`, which is translation
- *                 content this repo authors, not a dependency. Excluding it would let translation
- *                 growth escape the only budget governing project-owned payload.
- *   - generated → Nuxt/Vite/Rollup glue authored by neither side (`\0…`, `virtual:*`, `#build/*`,
- *                 `.nuxt/*`), e.g. `vite/preload-helper`. Reported as its OWN category and never
- *                 folded into app or vendor, because classifying generated glue to suit the
- *                 outcome is precisely the convenience the budget interpretation must avoid.
- * `config/**` is build-time only (nuxt.config inputs) and is verified absent from every client
- * chunk, so it needs no rule here.
- * @param {string} id
- * @returns {'vendor'|'app'|'virtual'}
+ * Rollup ids arrive in more shapes than they look: Windows separators, `file://` URLs, percent
+ * encoding, and a `?query` suffix on every Vue SFC sub-module. Normalising first means one ordered
+ * rule set can decide all of them, instead of each rule re-implementing its own tolerance.
+ *
+ * The query is kept on `id` and stripped only from `path`, because the two answer different
+ * questions: extension tests want the path, while the generated/vendor markers can legitimately
+ * appear inside a query.
+ * @param {string} rawId
  */
-export function classifyModuleId(id) {
-  const normalised = id.replace(/\\/g, '/')
-  if (normalised.includes('node_modules')) return 'vendor'
+export function normaliseModuleId(rawId) {
+  let id = String(rawId).replace(/\\/g, '/')
+  if (id.startsWith('file://')) id = id.slice('file://'.length)
+  try {
+    id = decodeURIComponent(id)
+  } catch {
+    // A lone `%` is not an encoding error worth failing a build over — classify the raw form.
+  }
+  return { id, path: id.split('?')[0] }
+}
+
+/**
+ * Classify a module id as app / vendor / generated / unclassified (doc 20 §5, D20-12).
+ *
+ * ORDERED AND ALLOWLIST-BASED. The previous version ended in `return 'app'`, so any unrecognised id
+ * silently became app-owned. Under a bounds-based verdict that was harmless; under an EXACT budget it
+ * would let an unknown module shape quietly inflate — or, worse, be silently absorbed into — the
+ * number the gate exists to police. Nothing becomes `app` by falling through any more.
+ *
+ *   1. vendor       `node_modules/**` (including nested) — external dependency code.
+ *   2. generated    `\0…` anywhere, `virtual:*`, `#build/*`, `.nuxt/*` — Nuxt/Vite/Rollup glue
+ *                   authored by neither side. Tested BEFORE the srcDir rule because these ids
+ *                   routinely EMBED a srcDir path (`\0virtual:nuxt:/repo/app/…`); matching `app/`
+ *                   first would misattribute framework glue to the project.
+ *   3. generated    `.css`/`.scss`/… by extension, or a Vue `?…type=style…` sub-module (where the
+ *                   style extension lives in the QUERY, e.g. `Foo.vue?vue&type=style&lang.css`, so a
+ *                   path-only extension test would miss it and hand it to the app budget). Vite
+ *                   extracts these to a real CSS asset governed by the separate CSS budget; what
+ *                   remains in the JS graph is a zero-byte stub.
+ *   4. app          srcDir `app/**` — including Vue SFC compiled output (`?vue&type=script…`) and
+ *                   `definePageMeta` extraction (`?macro=true`), which are compiled FROM project
+ *                   source. Query variants are DISTINCT modules with distinct bytes and are counted
+ *                   separately; collapsing them would undercount.
+ *   5. app          `i18n/locales/**` — project-authored translation content, not a dependency.
+ *                   `i18n/` sits outside srcDir because it is the Nuxt i18n restructure dir
+ *                   (doc 08 §1), so the boundary reads as "project-owned source in the repo".
+ *   6. unclassified everything else, including `config/**` (build-time only, verified absent from
+ *                   every client chunk). Reported as its own category; non-zero unclassified bytes
+ *                   in a referenced chunk FAIL the gate rather than being absorbed into a number
+ *                   they may not belong in.
+ * @param {string} rawId
+ * @returns {'vendor'|'app'|'generated'|'unclassified'}
+ */
+export function classifyModuleId(rawId) {
+  const { id, path } = normaliseModuleId(rawId)
+
+  if (id.includes('node_modules/')) return 'vendor'
   if (
-    normalised.startsWith('\0')
-    || normalised.startsWith('virtual:')
-    || normalised.includes('/virtual:')
-    || normalised.startsWith('#build')
-    || normalised.includes('/.nuxt/')
-    || normalised.startsWith('.nuxt/')
-  ) return 'virtual'
-  return 'app'
+    id.includes('\0')
+    || id.includes('virtual:')
+    || id.startsWith('#build/')
+    || id.includes('/.nuxt/')
+    || id.startsWith('.nuxt/')
+  ) return 'generated'
+  if (/\.(css|scss|sass|less|styl)$/i.test(path) || /[?&]type=style(&|$)/.test(id)) return 'generated'
+  if (path === 'app' || path.startsWith('app/')) return 'app'
+  if (path.startsWith('i18n/locales/')) return 'app'
+  return 'unclassified'
+}
+
+/**
+ * Exact app-owned attribution for one route's initially-referenced JS assets (doc 20 §5, D20-12).
+ *
+ * Sums Rollup `renderedLength` over app-classified modules in the chunks the route actually
+ * downloads. Every app module in a downloaded chunk counts even when the chunk is SHARED with
+ * another route — the route pays for the whole chunk either way — but a module id is counted once
+ * per route, because appearing in two of the route's chunks does not mean it was downloaded twice
+ * in a form the budget should double-charge.
+ *
+ * Unlike the gzip form this replaces, nothing here is apportioned, estimated, or divided: each
+ * module contributes an exact integer that Rollup reports directly.
+ *
+ * @param {string[]} assetPaths route-relative `/_nuxt/*.js` paths
+ * @param {Map<string, {modules: {id: string, renderedLength: number}[]}>} metaByAsset
+ */
+export function attributeRenderedBytes(assetPaths, metaByAsset) {
+  const totals = { app: 0, vendor: 0, generated: 0, unclassified: 0 }
+  const appModules = []
+  const unclassifiedModules = []
+  const duplicates = []
+  const seen = new Map()
+
+  for (const asset of assetPaths) {
+    const chunk = metaByAsset.get(asset)
+    if (!chunk) throw new Error(`no Rollup provenance for ${asset}`)
+    for (const mod of chunk.modules) {
+      if (seen.has(mod.id)) {
+        // Recorded rather than silently collapsed: a module landing in two of one route's chunks is
+        // duplicated payload worth surfacing, even though it is charged once.
+        duplicates.push({ id: mod.id, assets: [seen.get(mod.id), asset] })
+        continue
+      }
+      seen.set(mod.id, asset)
+      const category = classifyModuleId(mod.id)
+      const bytes = mod.renderedLength
+      totals[category] += bytes
+      if (category === 'app') appModules.push({ id: mod.id, bytes })
+      if (category === 'unclassified' && bytes > 0) unclassifiedModules.push({ id: mod.id, bytes })
+    }
+  }
+
+  appModules.sort((a, b) => b.bytes - a.bytes)
+  return { totals, appModules, unclassifiedModules, duplicates }
 }
 
 /**
@@ -140,20 +222,42 @@ export function budgetVerdict(actualBytes, budgetBytes) {
 }
 
 /**
- * App-code verdict from attribution BOUNDS, never from a single fabricated number.
+ * doc 20 §1 budgets, 1024-based, INCLUSIVE ("≤", so exactly-at-budget passes).
  *
- * gzip cannot be split byte-exactly inside a chunk that mixes app and vendor modules — compression
- * is shared across the stream — so compliance is only asserted when it holds for every possible
- * split:
- *   PASS          upper ≤ budget  → compliant however the mixed bytes divide
- *   FAIL          lower > budget  → non-compliant however they divide
- *   INDETERMINATE otherwise       → NOT a pass; the gate fails rather than guess
- *
- * @param {{lower: number, upper: number}} bounds
- * @returns {'PASS'|'FAIL'|'INDETERMINATE'}
+ * These are doc 20 §1 VERBATIM. Re-baselining any of them requires an owner decision plus a
+ * decision-log entry in `eslammuatamed-docs/docs/20-performance.md` — never an edit here.
  */
-export function appCodeVerdict({ lower, upper }, budgetBytes) {
-  if (upper <= budgetBytes) return 'PASS'
-  if (lower > budgetBytes) return 'FAIL'
-  return 'INDETERMINATE'
+export const BUDGET = {
+  /** D20-11 re-baseline (was 90 KB — below this stack's measured bilingual floor). */
+  totalJsBytes: 250 * KB,
+  /**
+   * D20-12. App-owned Rollup `renderedLength`, FROZEN — derived once from the Web `138cef5`
+   * baseline and never recomputed from a build:
+   *
+   *   per-route baselines  89,201 / 89,201 / 50,960 / 50,960 / 39,074 / 39,074 B
+   *   baselineMaxBytes     89,201 B  (`/` and `/ar`)
+   *   ceil((89201 × 1.15) / 1024) × 1024  =  ceil(102581.15 / 1024) × 1024
+   *                                       =  101 × 1024  =  103,424 B  =  101 KiB
+   *
+   * Integer arithmetic (× 115 / 100) on purpose: `89201 * 1.15` carries float residue that would
+   * round an exact-KiB result up by a whole KiB.
+   *
+   * A future baseline above this FAILS the gate and needs a new owner decision. CI must never
+   * recalculate or raise it — a budget refitted to each build measures nothing.
+   */
+  appRenderedBytes: 101 * KB,
+  /** Unchanged; also enforced statically by `npm run size`. */
+  cssBytes: 30 * KB
 }
+
+/**
+ * The frozen limit, re-derived from its inputs so the constant above cannot drift from the
+ * documented formula unnoticed. Exported for the test that pins it.
+ * @param {number} baselineMaxBytes
+ */
+export function approvedAppLimitBytes(baselineMaxBytes) {
+  return Math.ceil((baselineMaxBytes * 115) / (100 * KB)) * KB
+}
+
+/** The baseline the frozen limit was derived from (Web commit `138cef5`). */
+export const APP_BASELINE_MAX_BYTES = 89_201

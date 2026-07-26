@@ -1,71 +1,65 @@
 #!/usr/bin/env node
 /**
- * Per-public-route transfer-size gate for BOTH doc 20 §1 JavaScript budgets:
+ * Per-public-route size gate for the doc 20 §1 JavaScript budgets:
  *
- *     JS transferred per public route  ≤ 90 KB gz total,  ≤ 35 KB app-code
+ *     JS transferred per public route   ≤ 250 KB gz total          (D20-11)
+ *     App-owned rendered bytes          ≤ 101 KiB (103,424 B)      (D20-12, frozen)
+ *     CSS                               ≤ 30 KB gz
  *
  * WHY THIS BOOTS A SERVER. §1 budgets "per public route", which no static glob can express: a glob
  * also sums the lazily-loaded dashboard SPA chunks that no public route fetches (measured 260.7 KB
- * gz whole-bundle vs 223.7 KB gz actually referenced by `/`). So the asset set comes from each
+ * gz whole-bundle vs 221.8 KB gz actually referenced by `/`). So the asset set comes from each
  * route's rendered HTML, and only from `<script src>` / `<link rel=modulepreload|stylesheet>` —
  * `rel=prefetch` hints are for OTHER routes and are excluded (see lib/route-assets.mjs).
  *
- * WHY GZIP. §1 states the budgets in `gz`. Cloudflare serves brotli, which is smaller, so gzip is
- * the conservative reading and the only unit comparable to the documented number.
+ * WHY GZIP FOR THE TOTAL. §1 states that budget in `gz`. Cloudflare serves brotli, which is smaller,
+ * so gzip is the conservative reading and the only unit comparable to the documented number.
  *
- * APP-CODE ATTRIBUTION — and its honest limit. "app-code" is used exactly once in doc 20 (the §1
- * table) and is never defined; "vendor" appears nowhere in the docs. The boundary used here follows
- * doc 08 §1 (`app/` is the Nuxt srcDir, project-owned source lives in the repo, packages live in
- * `node_modules`): project source = app, `node_modules` = vendor, Nuxt/Vite generated glue =
- * virtual, reported separately rather than folded into whichever side suits the outcome.
+ * WHY renderedLength FOR THE APP BUDGET (D20-12). The predecessor budget was stated in gzip, and
+ * gzip CANNOT be attributed per module inside a chunk that mixes app and vendor code — compression
+ * is shared across one stream. That budget was therefore unprovable, not merely unmet: this gate
+ * used to report lower/estimate/upper bounds and return INDETERMINATE on all six public routes. An
+ * authorised `manualChunks` experiment to make gzip attributable was built, measured and REVERTED
+ * (+10.3–11.5 % per route, dashboard isolation broken — doc 20 §5), so the metric was replaced
+ * rather than the gate weakened.
+ *
+ * Rollup reports `renderedLength` per module per chunk: an exact integer, no estimation, no
+ * apportioning, no chunking change required. Its honest limitation is stated rather than hidden —
+ * these are POST-tree-shaking, PRE-minification source bytes, so 101 KiB app-owned is NOT 101 KiB
+ * on the wire. It measures what the budget governs: growth in project-owned payload.
  *
  * Module→chunk provenance comes from Rollup (`ANALYZE_BUNDLE=1`, config/bundle-analysis.ts), never
- * from filenames. But a chunk containing BOTH app and vendor modules cannot have its gzip split
- * byte-exactly — compression is shared across the whole stream. So instead of inventing a number,
- * this reports three values and only claims a PASS when it is provable:
+ * from filenames, hashes or naming conventions. Ownership follows doc 08 §1 (`app/` is the Nuxt
+ * srcDir) via an ORDERED ALLOWLIST — see `classifyModuleId`. Nothing becomes app-owned by falling
+ * through, and unrecognised module shapes are reported as `unclassified` and fail the gate rather
+ * than being absorbed into a number they may not belong in.
  *
- *   lower bound  Σ gz of chunks that are 100 % app            (certainly app)
- *   estimate     lower bound + Σ gz(mixed) × app-byte-share   (proportional, LABELLED as such)
- *   upper bound  lower bound + Σ gz(mixed) in full            (if every mixed byte were app)
- *
- *   PASS          upper bound ≤ 35 KB   → compliant no matter how the mixed chunks split
- *   FAIL          lower bound > 35 KB   → non-compliant no matter how they split
- *   INDETERMINATE otherwise             → NOT a pass; exits non-zero and says why
- *
- * Run `npm run size:routes` after a production build. Without bundle metadata the total-JS budget
- * is still enforced and the app-code budget reports as unmeasurable rather than silently passing.
+ * Run `npm run size:routes` after `ANALYZE_BUNDLE=1 npm run build`.
  *
  * BUDGETS ARE doc 20 §1 VERBATIM. Re-baselining requires an owner decision plus a decision-log
- * entry in doc 20 — never an edit here.
+ * entry in doc 20 — never an edit here. The app limit is FROZEN: this gate never recalculates it
+ * from the build it is measuring.
  *
  * Exit codes are distinguishable on purpose:
- *   0 — every enforced budget passed
- *   1 — a genuine budget breach (or an unprovable app-code result)
- *   2 — infrastructure/measurement failure (no build, preview would not start, route not served,
- *       HTML with no assets). Never conflated with a breach: one means "fix the code", the other
- *       means "the gate could not measure".
+ *   0 — every enforceable budget passed and no required classification was indeterminate
+ *   1 — a genuine budget breach (total, app-owned, or material unclassified bytes in a valid build)
+ *   2 — infrastructure/measurement failure (no build, missing/corrupt/empty/stale metadata,
+ *       asset-to-metadata mismatch, preview would not start, route not served, HTML with no assets,
+ *       timeout, internal error). Never conflated with a breach: one means "fix the code", the
+ *       other means "the gate could not measure".
  */
 import { spawn } from 'node:child_process'
-import { readFile, access } from 'node:fs/promises'
+import { readFile, access, readdir } from 'node:fs/promises'
 import { gzipSync } from 'node:zlib'
 import process from 'node:process'
 import {
-  KB,
-  appCodeVerdict,
+  BUDGET,
+  attributeRenderedBytes,
   budgetVerdict,
-  classifyModuleId,
   collectRouteAssets,
   kb,
   vendorPackage
 } from './lib/route-assets.mjs'
-
-// doc 20 §1, 1024-based KB (the convention is stated in §1 because size-limit prints decimal kB).
-// Budgets are INCLUSIVE ("≤"), so exactly-at-budget passes.
-const BUDGET = {
-  totalJsBytes: 250 * KB, // D20-11 re-baseline (was 90 KB — below this stack's measured floor)
-  appJsBytes: 35 * KB, // unchanged
-  cssBytes: 30 * KB // unchanged; also enforced statically by `npm run size`
-}
 
 /** The public surface. `/projects` + `/contact` are the accepted web-005 404s (spec.md:36). */
 const ROUTES = [
@@ -100,15 +94,16 @@ async function requireBuild() {
 class InfraError extends Error {}
 
 /**
- * Rollup chunk→module provenance. REQUIRED — app-code enforcement is not optional, so a missing or
- * corrupt sidecar is an infrastructure failure (exit 2), not a budget verdict. Reporting it as a
- * breach would blame the code for a broken measurement; reporting it as a pass would be worse.
+ * Rollup chunk→module provenance. REQUIRED — app-owned enforcement is not optional, so a missing,
+ * corrupt, malformed or STALE sidecar is an infrastructure failure (exit 2), not a budget verdict.
+ * Reporting it as a breach would blame the code for a broken measurement; reporting it as a pass
+ * would be worse.
  */
 async function loadChunkMeta() {
   const raw = await readFile(META_PATH, 'utf8').catch(() => null)
   if (raw === null) {
     throw new InfraError(
-      `${META_PATH} is missing — the app-code budget cannot be measured without Rollup provenance.\n`
+      `${META_PATH} is missing — the app-owned budget cannot be measured without Rollup provenance.\n`
       + '  Rebuild with: ANALYZE_BUNDLE=1 npm run build'
     )
   }
@@ -121,19 +116,52 @@ async function loadChunkMeta() {
   if (!parsed || !Array.isArray(parsed.chunks) || parsed.chunks.length === 0) {
     throw new InfraError(`${META_PATH} contains no chunk records — regenerate it with ANALYZE_BUNDLE=1 npm run build`)
   }
+
+  // Schema validation. An exact byte sum built from records of the wrong shape would be exactly as
+  // wrong as an estimate, but would LOOK authoritative — so the shape is checked rather than assumed.
   const byAsset = new Map()
   for (const chunk of parsed.chunks) {
-    const share = { app: 0, vendor: 0, virtual: 0 }
-    for (const mod of chunk.modules) share[classifyModuleId(mod.id)] += mod.renderedLength
-    const totalRendered = share.app + share.vendor + share.virtual
-    byAsset.set(`/${chunk.fileName}`, {
-      share,
-      totalRendered,
-      appRatio: totalRendered === 0 ? 0 : share.app / totalRendered,
-      modules: chunk.modules
-    })
+    if (!chunk || typeof chunk.fileName !== 'string' || !Array.isArray(chunk.modules)) {
+      throw new InfraError(`${META_PATH} has a malformed chunk record (expected {fileName: string, modules: []}) — regenerate it with ANALYZE_BUNDLE=1 npm run build`)
+    }
+    for (const mod of chunk.modules) {
+      if (!mod || typeof mod.id !== 'string' || !Number.isFinite(mod.renderedLength) || mod.renderedLength < 0) {
+        throw new InfraError(`${META_PATH}: chunk ${chunk.fileName} has a malformed module record (expected {id: string, renderedLength: number ≥ 0}) — regenerate it with ANALYZE_BUNDLE=1 npm run build`)
+      }
+    }
+    byAsset.set(`/${chunk.fileName}`, { modules: chunk.modules })
   }
   return byAsset
+}
+
+/**
+ * Build provenance: the metadata must describe THE BUILD BEING MEASURED, not a previous one.
+ *
+ * The per-asset lookup in `measureRoute` already catches a referenced chunk with no record, but only
+ * for assets some route happens to reference. Comparing the whole emitted JS set against the whole
+ * metadata set catches the stale sidecar directly — including the case where a rebuild changed
+ * chunks that no measured route loads, which is exactly when a silently-stale file would survive.
+ */
+async function assertMetaMatchesBuild(byAsset) {
+  const emitted = (await readdir(`${PUBLIC_DIR}/_nuxt`).catch(() => {
+    throw new InfraError(`cannot read ${PUBLIC_DIR}/_nuxt — run \`npm run build\` first.`)
+  })).filter(name => name.endsWith('.js')).sort()
+
+  const described = [...byAsset.keys()]
+    .filter(path => path.endsWith('.js'))
+    .map(path => path.replace('/_nuxt/', ''))
+    .sort()
+
+  const onlyEmitted = emitted.filter(name => !described.includes(name))
+  const onlyDescribed = described.filter(name => !emitted.includes(name))
+  if (onlyEmitted.length || onlyDescribed.length) {
+    throw new InfraError(
+      `${META_PATH} does not describe the build in ${PUBLIC_DIR} — it is STALE.\n`
+      + (onlyEmitted.length ? `  built but not described (${onlyEmitted.length}): ${onlyEmitted.slice(0, 5).join(', ')}\n` : '')
+      + (onlyDescribed.length ? `  described but not built (${onlyDescribed.length}): ${onlyDescribed.slice(0, 5).join(', ')}\n` : '')
+      + '  Rebuild both together with: ANALYZE_BUNDLE=1 npm run build'
+    )
+  }
 }
 
 const gzCache = new Map()
@@ -187,36 +215,8 @@ function stopPreview() {
 // ─────────────────────────────────────────────────────────────── measurement
 
 /**
- * The single category a chunk belongs to, or null when it mixes categories.
- * Purity is required for the REPORTED split: a 99.6 %-vendor chunk is still mixed, and rounding it
- * to "vendor" would hide that it carries app bytes the ≤35 KB budget governs.
- */
-function dominantCategory(info) {
-  const { app, vendor, virtual } = info.share
-  const total = app + vendor + virtual
-  if (total === 0) return 'generated' // an empty chunk carries no attributable weight
-  if (app === total) return 'app'
-  if (vendor === total) return 'vendor'
-  if (virtual === total) return 'generated'
-  return null
-}
-
-/**
- * Does this chunk carry ANY project-owned bytes?
- *
- * This — not chunk purity — is what bounds the app budget. A chunk built solely from vendor and
- * generated modules contains no app code, so no amount of shared compression can put app bytes in
- * it and it contributes exactly 0 to the upper bound. Treating such a chunk as "mixed" (because it
- * spans two NON-app categories) would inflate the bound for no reason and could turn a provable
- * PASS into a spurious INDETERMINATE.
- */
-function carriesAppBytes(info) {
-  return info.share.app > 0
-}
-
-/**
  * @param {string} html
- * @param {Map<string, any>|null} meta
+ * @param {Map<string, any>} meta
  */
 async function measureRoute(html, meta) {
   const jsAssets = collectRouteAssets(html, 'js')
@@ -229,33 +229,17 @@ async function measureRoute(html, meta) {
   }
 
   const js = { assets: [], raw: 0, gz: 0 }
-  // Bytes are only attributed to a category when a chunk is PURE. Mixed chunks are held in their
-  // own bucket rather than divided, because gzip cannot be split per-module inside one stream.
-  const pure = { app: { raw: 0, gz: 0 }, vendor: { raw: 0, gz: 0 }, generated: { raw: 0, gz: 0 } }
-  const mixed = { raw: 0, gz: 0, appEstimateGz: 0 }
-
   for (const asset of jsAssets) {
     const sizes = await assetSizes(asset)
     if (!sizes) throw new InfraError(`asset referenced by the route is missing from the build: ${asset}`)
+    if (!meta.has(asset)) {
+      // A route referenced a chunk with no provenance record: the metadata does not describe this
+      // build. Infrastructure, rather than guessing which category the chunk belongs to.
+      throw new InfraError(`no Rollup provenance for ${asset} — ${META_PATH} is stale; rebuild with ANALYZE_BUNDLE=1 npm run build`)
+    }
     js.assets.push({ asset, ...sizes })
     js.raw += sizes.raw
     js.gz += sizes.gz
-
-    const info = meta.get(asset)
-    if (!info) {
-      // A route referenced a chunk with no provenance record: the metadata does not describe this
-      // build. Treat as infrastructure rather than guessing which category it belongs to.
-      throw new InfraError(`no Rollup provenance for ${asset} — ${META_PATH} is stale; rebuild with ANALYZE_BUNDLE=1 npm run build`)
-    }
-    const category = dominantCategory(info)
-    if (category) {
-      pure[category].raw += sizes.raw
-      pure[category].gz += sizes.gz
-    } else {
-      mixed.raw += sizes.raw
-      mixed.gz += sizes.gz
-      mixed.appEstimateGz += sizes.gz * info.appRatio
-    }
   }
 
   let css = { raw: 0, gz: 0, count: cssAssets.length }
@@ -265,20 +249,15 @@ async function measureRoute(html, meta) {
     css = { ...css, raw: css.raw + sizes.raw, gz: css.gz + sizes.gz }
   }
 
-  const bounds = { lower: 0, estimate: 0, upper: 0 }
-  for (const { asset, gz } of js.assets) {
-    const info = meta.get(asset)
-    if (info.appRatio >= 0.9999) bounds.lower += gz // certainly all app
-    if (carriesAppBytes(info)) bounds.upper += gz // could contain app bytes; nothing else can
-    bounds.estimate += gz * info.appRatio
-  }
+  // Exact per-module attribution over the chunks this route actually downloads. No bounds, no
+  // estimate, no proportional split — `renderedLength` is an integer Rollup reports directly.
+  const attribution = attributeRenderedBytes(jsAssets, meta)
 
   return {
     js,
     css,
-    pure,
-    mixed,
-    app: { ...bounds, verdict: appCodeVerdict(bounds, BUDGET.appJsBytes) },
+    ...attribution,
+    appVerdict: budgetVerdict(attribution.totals.app, BUDGET.appRenderedBytes),
     totalVerdict: budgetVerdict(js.gz, BUDGET.totalJsBytes),
     cssVerdict: budgetVerdict(css.gz, BUDGET.cssBytes)
   }
@@ -304,10 +283,13 @@ let breach = false
 async function main() {
   await requireBuild()
   const meta = await loadChunkMeta()
+  await assertMetaMatchesBuild(meta)
   await startPreview()
 
-  console.log('\nPer-route transfer budgets — doc 20 §1 (D20-11), gzip, KB = 1024 B, from the production build')
-  console.log(`Budgets: total ≤ ${kb(BUDGET.totalJsBytes)}  ·  app-code ≤ ${kb(BUDGET.appJsBytes)}  ·  CSS ≤ ${kb(BUDGET.cssBytes)}  (inclusive)\n`)
+  console.log('\nPer-route size budgets — doc 20 §1, KB = 1024 B, from the production build')
+  console.log(`Budgets: total JS ≤ ${kb(BUDGET.totalJsBytes)} gz (D20-11)  ·  app-owned rendered ≤ ${kb(BUDGET.appRenderedBytes)} (D20-12, frozen)  ·  CSS ≤ ${kb(BUDGET.cssBytes)} gz  (inclusive)`)
+  console.log('App-owned bytes are Rollup renderedLength — post-tree-shaking, PRE-minification source')
+  console.log('bytes. Exact per module; NOT gzip transfer bytes and not final chunk bytes.\n')
 
   const rows = []
   for (const route of ROUTES) {
@@ -322,61 +304,68 @@ async function main() {
     rows.push({ route, ...(await measureRoute(html, meta)) })
   }
 
-  const header = `${'route'.padEnd(44)}${'assets'.padStart(7)}${'raw'.padStart(11)}${'gz'.padStart(10)}${'≤250KB'.padStart(9)}${'app gz'.padStart(10)}${'≤35KB'.padStart(16)}`
+  const header = `${'route'.padEnd(44)}${'assets'.padStart(7)}${'raw'.padStart(11)}${'gz'.padStart(10)}${'≤250KB'.padStart(8)}${'app rendered'.padStart(14)}${'≤101KB'.padStart(8)}`
   console.log(header)
   console.log('─'.repeat(header.length))
 
   for (const row of rows) {
     if (row.totalVerdict === 'FAIL') breach = true
     if (row.cssVerdict === 'FAIL') breach = true
-    // INDETERMINATE is a deliberate policy failure: compliance could not be proven, so the gate
-    // must not report a pass.
-    if (row.app.verdict !== 'PASS') breach = true
+    if (row.appVerdict === 'FAIL') breach = true
+    // An unrecognised module shape with real bytes means the classification contract no longer
+    // covers what the build emits, so app ownership cannot be proven. That is a policy failure
+    // (exit 1) on a perfectly valid build — NOT an infrastructure failure, and never a pass.
+    if (row.unclassifiedModules.length) breach = true
 
     console.log(
       row.route.padEnd(44)
       + String(row.js.assets.length).padStart(7)
       + kb(row.js.raw).padStart(11)
       + kb(row.js.gz).padStart(10)
-      + (row.totalVerdict === 'PASS' ? '✓' : '✗').padStart(9)
-      + kb(row.app.estimate).padStart(10)
-      + `  ${row.app.verdict}`.padEnd(16)
+      + (row.totalVerdict === 'PASS' ? '✓' : '✗').padStart(8)
+      + `${row.totals.app} B`.padStart(14)
+      + (row.appVerdict === 'PASS' ? '✓' : '✗').padStart(8)
     )
   }
 
-  console.log('\nProvable category split (only PURE chunks are attributed; mixed chunks cannot have')
-  console.log('their gzip divided per module, so they are held separately rather than guessed):')
+  console.log('\nExact rendered-byte ownership per route (Rollup renderedLength, integer bytes —')
+  console.log('a chunk shared between routes is counted in full for every route that downloads it):')
   console.log(
-    `  ${'route'.padEnd(44)}${'app'.padStart(20)}${'vendor'.padStart(20)}${'generated'.padStart(20)}${'mixed'.padStart(20)}`
+    `  ${'route'.padEnd(44)}${'app'.padStart(12)}${'vendor'.padStart(12)}${'generated'.padStart(12)}${'unclassified'.padStart(14)}`
   )
   for (const row of rows) {
-    const cell = (c) => `${kb(c.raw)}/${kb(c.gz)}`.padStart(20)
     console.log(
-      `  ${row.route.padEnd(44)}${cell(row.pure.app)}${cell(row.pure.vendor)}${cell(row.pure.generated)}${cell(row.mixed)}`
+      `  ${row.route.padEnd(44)}${String(row.totals.app).padStart(12)}${String(row.totals.vendor).padStart(12)}`
+      + `${String(row.totals.generated).padStart(12)}${String(row.totals.unclassified).padStart(14)}`
     )
   }
-  console.log('  (raw/gz per cell)')
+
+  console.log('\nApp-owned budget (frozen at doc 20 §1 / D20-12 — never recalculated from a build):')
+  for (const row of rows) {
+    console.log(
+      `  ${row.appVerdict === 'PASS' ? '✓' : '✗'} ${row.route.padEnd(44)}`
+      + ` ${String(row.totals.app).padStart(7)} B (${kb(row.totals.app).padStart(9)})`
+      + ` / ${BUDGET.appRenderedBytes} B (${kb(BUDGET.appRenderedBytes)})`
+      + `   ${row.duplicates.length ? `· ${row.duplicates.length} duplicate module id(s)` : ''}`
+    )
+  }
 
   console.log('\nCSS per route (one global stylesheet, so this is also the per-route figure):')
   for (const row of rows) {
     console.log(`  ${row.cssVerdict === 'PASS' ? '✓' : '✗'} ${row.route.padEnd(44)} ${kb(row.css.gz).padStart(9)} gz / ${kb(BUDGET.cssBytes)}  (${row.css.count} file)`)
   }
 
-  console.log('\nApp-code attribution bounds:')
-  for (const row of rows) {
-    console.log(
-      `  ${row.route.padEnd(44)} lower ${kb(row.app.lower).padStart(9)}`
-      + `  estimate ${kb(row.app.estimate).padStart(9)}`
-      + `  upper ${kb(row.app.upper).padStart(9)}   → ${row.app.verdict}`
-    )
-  }
-
   const widest = rows[0]
   console.log(`\nLargest referenced JS assets on ${widest.route} :`)
   for (const a of [...widest.js.assets].sort((x, y) => y.gz - x.gz).slice(0, 6)) {
-    const info = meta.get(a.asset)
-    const cat = dominantCategory(info) ?? `MIXED (app≈${(info.appRatio * 100).toFixed(1)}%)`
-    console.log(`  ${kb(a.gz).padStart(9)} gz  ${kb(a.raw).padStart(10)} raw  ${a.asset}  ${cat}`)
+    const { totals } = attributeRenderedBytes([a.asset], meta)
+    const parts = Object.entries(totals).filter(([, b]) => b > 0).map(([c, b]) => `${c} ${b} B`)
+    console.log(`  ${kb(a.gz).padStart(9)} gz  ${kb(a.raw).padStart(10)} raw  ${a.asset}  [${parts.join(', ') || 'empty'}]`)
+  }
+
+  console.log(`\nLargest app-owned modules on ${widest.route} :`)
+  for (const mod of widest.appModules.slice(0, 8)) {
+    console.log(`  ${String(mod.bytes).padStart(7)} B  ${mod.id}`)
   }
 
   const ranking = packageRanking(meta, widest.js.assets.map(a => a.asset))
@@ -395,16 +384,25 @@ async function main() {
       if (row.cssVerdict === 'FAIL') {
         console.error(`  ${row.route}: CSS ${kb(row.css.gz)} gz exceeds ${kb(BUDGET.cssBytes)}`)
       }
-      if (row.app.verdict === 'FAIL') {
-        console.error(`  ${row.route}: app-code at least ${kb(row.app.lower)} gz exceeds ${kb(BUDGET.appJsBytes)} — a real breach however the mixed bytes divide.`)
-      }
-      if (row.app.verdict === 'INDETERMINATE') {
+      if (row.appVerdict === 'FAIL') {
+        const over = row.totals.app - BUDGET.appRenderedBytes
         console.error(
-          `  ${row.route}: app-code ${kb(row.app.lower)}–${kb(row.app.upper)} gz straddles the ${kb(BUDGET.appJsBytes)} budget.`
-          + '\n      Compliance is NOT PROVABLE while app and vendor modules share a chunk, so this is not reported'
-          + '\n      as a pass. The estimate suggests it is comfortably met; proving it needs a deterministic'
-          + '\n      app/vendor chunk split (doc 20 §5, D20-11).'
+          `  ${row.route}: app-owned rendered bytes ${row.totals.app} B exceeds the frozen ${BUDGET.appRenderedBytes} B limit by ${over} B (${kb(over)}).`
+          + '\n      The limit is FROZEN at doc 20 §1 / D20-12 and is never refitted to a build. Either reduce'
+          + '\n      project-owned payload on this route, or take a new owner decision in doc 20. The largest'
+          + '\n      app-owned modules are listed above — start there.'
         )
+      }
+      if (row.unclassifiedModules.length) {
+        console.error(
+          `  ${row.route}: ${row.unclassifiedModules.length} module(s) totalling ${row.totals.unclassified} B do not match any`
+          + '\n      rule in the doc 20 §5 classification contract, so app ownership cannot be proven for this route.'
+          + '\n      This is a VALID build whose module shapes the contract no longer covers — extend the contract'
+          + '\n      in doc 20 §5 and `classifyModuleId`, deliberately, rather than defaulting them to app:'
+        )
+        for (const mod of row.unclassifiedModules.slice(0, 10)) {
+          console.error(`        ${String(mod.bytes).padStart(7)} B  ${mod.id}`)
+        }
       }
     }
     console.error(
