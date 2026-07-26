@@ -29,3 +29,6 @@ logs
 
 # Lighthouse CI report output (uploaded as a CI artifact, never committed)
 .lighthouseci
+
+# Bundle-provenance analysis output (ANALYZE_BUNDLE=1); analysis input, never committed
+.bundle-analysis

@@ -1,4 +1,5 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
+import { bundleAnalysisPlugin } from './config/bundle-analysis'
 import { siteUrlFromEnv } from './config/site-url'
 
 /**
@@ -28,6 +29,15 @@ export default defineNuxtConfig({
   ],
 
   css: ['~/assets/css/main.css'],
+
+  // Opt-in bundle provenance for the doc 20 §1 JS budgets (`ANALYZE_BUNDLE=1` only, so ordinary
+  // builds stay byte-identical — the plugin writes a sidecar file and transforms nothing; verified
+  // by comparing all 27 built asset SHA256s with and without the flag). Emits Rollup's chunk→module
+  // map, the only authoritative basis for splitting app code from framework/vendor code; filenames
+  // are not. The plugin itself skips Nuxt's SSR Vite pass. Consumed by `npm run size:routes`.
+  vite: {
+    plugins: process.env.ANALYZE_BUNDLE === '1' ? [bundleAnalysisPlugin(import.meta.dirname)] : []
+  },
 
   // Brand favicons, generated from the mark's normative geometry (brand-identity.md §3/§11,
   // v2.0.0) and copied from ../eslammuatamed-docs/content/brand/assets — never edited here.
