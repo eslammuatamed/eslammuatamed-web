@@ -1,4 +1,19 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
+import { siteUrlFromEnv } from './config/site-url'
+
+/**
+ * The one validated public origin (D23-8). Resolved ONCE here and fed to every absolute-URL
+ * consumer below — i18n (canonical, og:url, hreflang), nuxt-site-config (sitemap, robots) and
+ * `runtimeConfig.public` — so they can never disagree.
+ *
+ * Production-like builds throw when this is missing, malformed, relative, non-HTTPS or loopback.
+ * The previous `process.env.NUXT_PUBLIC_SITE_URL || 'http://localhost:3000'` fallback shipped a
+ * staging build whose canonical was `http://localhost:3000`, with no error anywhere in the
+ * pipeline; `config/site-url.ts` makes that a build failure instead. Validation lives in that
+ * module rather than inline here because `nuxt.config.ts` cannot be unit-tested.
+ */
+const siteUrl = siteUrlFromEnv()
+
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
@@ -35,12 +50,20 @@ export default defineNuxtConfig({
 
   // Env-driven at runtime (D23-8): NUXT_PUBLIC_SITE_URL / NUXT_PUBLIC_API_BASE map here.
   // Hosts never live in code — the values come from .env (doc 16 §1).
+  // `siteUrl` carries the build-validated origin as its default; Nitro still lets the server's
+  // own NUXT_PUBLIC_SITE_URL override it at runtime, so the deploy keeps a single source of truth
+  // while the baked value is guaranteed valid rather than an empty string.
   runtimeConfig: {
     public: {
-      siteUrl: '',
+      siteUrl,
       apiBase: ''
     }
   },
+
+  // nuxt-site-config (via @nuxtjs/seo) owns the sitemap index, the per-locale sitemaps and the
+  // `Sitemap:` line in robots.txt. Pinning it to the same validated constant stops it inferring
+  // an origin from request headers or a stale env guess.
+  site: { url: siteUrl },
 
   // Two worlds (D06-1): the dashboard is a client-only SPA; public content is SSR + SWR at
   // the Nitro layer (doc 20 §2). `/ar/**` mirrors the public rules (i18n prefixes Arabic).
@@ -71,7 +94,7 @@ export default defineNuxtConfig({
     strategy: 'prefix_except_default', // en at root, ar under /ar (D01-3)
     defaultLocale: 'en',
     langDir: 'locales', // resolved under the i18n/ restructure dir → i18n/locales (v10 default)
-    baseUrl: process.env.NUXT_PUBLIC_SITE_URL || 'http://localhost:3000',
+    baseUrl: siteUrl, // validated above — never a silent localhost fallback (D23-8)
     detectBrowserLanguage: false, // explicit routing only — no Accept-Language heuristic (D10-6)
     locales: [
       { code: 'en', language: 'en-US', dir: 'ltr', name: 'English', file: 'en.json' },
