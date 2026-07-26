@@ -151,13 +151,27 @@ jobs:
       # home + article × EN/AR; `/projects` and `/contact` from doc 20 §5's four-page matrix are
       # the accepted web-005 404s (spec.md:36) and are deferred with it, not silently dropped.
       # ubuntu-latest ships Chrome preinstalled, so no browser download step is needed.
-      - name: Lighthouse CI — mobile profile (doc 20 §5)
+      # COLLECT ONLY — 3 runs per URL per profile, into .lighthouseci/<profile>/. Thresholds are
+      # asserted in the next step, not here: D20-13's semantics (exactly three comparable runs,
+      # grouped by run configuration, where FEWER than three is infrastructure rather than a low
+      # score) cannot be expressed as an LHCI assertion list. Separate output directories keep the
+      # second profile from overwriting the first profile's evidence.
+      - name: Lighthouse CI collect — mobile profile (doc 20 §5)
         run: npm run lhci
 
-      - name: Lighthouse CI — desktop profile (doc 20 §5)
+      - name: Lighthouse CI collect — desktop profile (doc 20 §5)
         run: npm run lhci:desktop
 
+      # Median-of-3 thresholds (doc 20 §1, D20-13): Performance ≥ 95 desktop / ≥ 60 mobile;
+      # Accessibility, Best Practices and SEO 100; LCP, CLS and per-script fonts at their unchanged
+      # §1 limits. Every individual run is printed so a median cannot hide instability. Exit 1 =
+      # a real regression; exit 2 = the collection was incomplete or unreadable.
+      - name: Assert Lighthouse medians (doc 20 §1)
+        run: npm run lhci:assert
+
       # Reports are preserved even when the assertions fail — that is when they are most useful.
+      # Both profile subdirectories are included, so all three runs behind every median remain
+      # inspectable after the fact.
       - name: Upload Lighthouse reports
         if: always()
         uses: actions/upload-artifact@v4

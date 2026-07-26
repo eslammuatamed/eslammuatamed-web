@@ -1,14 +1,19 @@
 /**
  * Lighthouse CI gate — realises the enforcement doc 20 §5 has always specified.
  *
- * THRESHOLDS ARE COPIED FROM doc 20 §1 VERBATIM. They are not tuned to what the site currently
- * scores, and re-baselining any of them requires an owner decision plus a decision-log entry in
- * doc 20 — not a change here.
+ * THIS FILE NOW ONLY COLLECTS. Assertion moved to `scripts/check-lighthouse-medians.mjs`
+ * (`npm run lhci:assert`) when D20-13 replaced the flat "Performance 100" gate with median-based
+ * thresholds. The approved semantics — exactly three comparable runs per configuration, grouped by
+ * run configuration rather than filename, where FEWER than three is an infrastructure failure and
+ * not a low score — are project-specific requirements that a threshold list cannot express. The
+ * thresholds themselves were not loosened to fit the tool; they live in
+ * `scripts/lib/lighthouse-medians.mjs`, copied from doc 20 §1 verbatim:
  *
- *   Lighthouse (all four categories)  100
- *   LCP                               < 1.2 s (lab)
- *   CLS                               < 0.05
- *   Fonts (first view, per script)    ≤ 130 KB woff2
+ *   Performance (median of 3)         ≥ 95 desktop · ≥ 60 mobile   (D20-13)
+ *   A11y / Best Practices / SEO       100                          (unchanged)
+ *   LCP                               < 1.2 s (lab)                (unchanged)
+ *   CLS                               < 0.05                       (unchanged)
+ *   Fonts (first view, per script)    ≤ 130 KB woff2               (unchanged)
  *
  * Deliberate scope notes:
  *
@@ -29,11 +34,12 @@
  *   No TBT threshold is asserted because doc 20 §1 does not state one — inventing budgets is
  *   forbidden.
  */
-const BUDGET = {
-  lcpMs: 1200,
-  cls: 0.05,
-  fontsBytes: 130 * 1024
-}
+// Each profile writes to its OWN directory. A shared directory would let the assertion step read
+// desktop and mobile reports as one pool — and while the medians are grouped by each report's own
+// `configSettings.formFactor` and could never actually be averaged together, a second `autorun`
+// into the same directory would overwrite the first profile's reports and silently halve the
+// evidence. Separate directories make that impossible rather than merely unlikely.
+const profile = process.env.LHCI_PROFILE === 'desktop' ? 'desktop' : 'mobile'
 
 const urls = [
   'http://127.0.0.1:3000/',
@@ -56,7 +62,9 @@ module.exports = {
       settings: {
         chromeFlags: '--no-sandbox --headless=new',
         // Default (mobile) profile. The desktop pass runs the same config with
-        // `--collect.settings.preset=desktop` via `npm run lhci:desktop`.
+        // `--collect.settings.preset=desktop` via `npm run lhci:desktop`. The assertion step reads
+        // the profile back from each report's own `configSettings.formFactor`, so this flag can
+        // never disagree with how the runs are grouped.
         skipAudits: ['uses-http2', 'canonical']
         // `uses-http2`: the local preview is HTTP/1.1; production is HTTP/2 via Cloudflare.
         // `canonical`: the baked canonical is the real public origin, which correctly does not
@@ -64,21 +72,13 @@ module.exports = {
         //  the browser regression pass, not by penalising the gate for being local.
       }
     },
-    assert: {
-      assertions: {
-        'categories:performance': ['error', { minScore: 1 }],
-        'categories:accessibility': ['error', { minScore: 1 }],
-        'categories:best-practices': ['error', { minScore: 1 }],
-        'categories:seo': ['error', { minScore: 1 }],
-        'largest-contentful-paint': ['error', { maxNumericValue: BUDGET.lcpMs }],
-        'cumulative-layout-shift': ['error', { maxNumericValue: BUDGET.cls }],
-        'resource-summary:font:size': ['error', { maxNumericValue: BUDGET.fontsBytes }]
-      }
-    },
+    // No `assert` block: `npm run lhci:assert` owns every threshold (D20-13). Leaving the old
+    // per-run `categories:performance: minScore 1` here would fail `autorun` before the median gate
+    // ever ran — asserting the superseded requirement in a step that only collects evidence.
     upload: {
       // Reports are kept as build artifacts; there is no LHCI server to target.
       target: 'filesystem',
-      outputDir: '.lighthouseci'
+      outputDir: `.lighthouseci/${profile}`
     }
   }
 }

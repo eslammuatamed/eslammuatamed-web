@@ -24,8 +24,9 @@
     "size": "size-limit",
     "size:routes": "node scripts/check-route-size.mjs",
     "ci:preview": "node scripts/ci-preview.mjs",
-    "lhci": "lhci autorun",
-    "lhci:desktop": "lhci autorun --collect.settings.preset=desktop"
+    "lhci": "LHCI_PROFILE=mobile lhci autorun",
+    "lhci:desktop": "LHCI_PROFILE=desktop lhci autorun --collect.settings.preset=desktop",
+    "lhci:assert": "node scripts/check-lighthouse-medians.mjs"
   },
   "lint-staged": {
     "*.{ts,vue,mjs,js}": "eslint --fix"
