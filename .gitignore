@@ -26,3 +26,6 @@ logs
 # ignore AI folders
 .omc
 .claude
+
+# Lighthouse CI report output (uploaded as a CI artifact, never committed)
+.lighthouseci

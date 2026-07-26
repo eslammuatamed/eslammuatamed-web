@@ -113,8 +113,36 @@ jobs:
       - name: Build
         run: npm run build
 
+      # doc 20 §5 order: build → size-limit → forbidden-module check → Lighthouse CI.
+      # Budgets come from doc 20 §1 verbatim (JS ≤ 90 KB gz, CSS ≤ 30 KB gz) — see
+      # .size-limit.cjs. doc 20 §1: budgets "block merges, not aspirations", and are
+      # "re-baselined only by a decision-log entry" in doc 20.
+      - name: Assert bundle size budgets (doc 20 §1)
+        run: npm run size
+
       - name: Assert bundle isolation
         run: npm run check:bundle
 
       - name: Assert logical properties (RTL)
         run: npm run check:logical
+
+      # Lighthouse CI against the built artifact behind a Prism mock of the committed contract
+      # (scripts/ci-preview.mjs) — deterministic, and independent of staging uptime or data.
+      # home + article × EN/AR; `/projects` and `/contact` from doc 20 §5's four-page matrix are
+      # the accepted web-005 404s (spec.md:36) and are deferred with it, not silently dropped.
+      # ubuntu-latest ships Chrome preinstalled, so no browser download step is needed.
+      - name: Lighthouse CI — mobile profile (doc 20 §5)
+        run: npm run lhci
+
+      - name: Lighthouse CI — desktop profile (doc 20 §5)
+        run: npm run lhci:desktop
+
+      # Reports are preserved even when the assertions fail — that is when they are most useful.
+      - name: Upload Lighthouse reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-reports-${{ github.sha }}
+          path: .lighthouseci/
+          retention-days: 14
+          if-no-files-found: warn
