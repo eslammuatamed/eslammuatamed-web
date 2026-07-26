@@ -38,13 +38,5 @@ const text = computed(() => props.label ?? t('state.updating'))
   </Transition>
 </template>
 
-<style scoped>
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity var(--duration-standard) var(--ease-standard);
-}
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-}
-</style>
+<!-- The `fade` transition classes live in app/assets/css/main.css beside `page-spread`: a scoped
+     block here compiles to a separate render-blocking stylesheet request (D20-4). -->

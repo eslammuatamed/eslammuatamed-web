@@ -42,22 +42,6 @@ function toTop(): void {
   </ClientOnly>
 </template>
 
-<style scoped>
-.fab-enter-active,
-.fab-leave-active {
-  transition:
-    opacity var(--duration-standard) var(--ease-standard),
-    transform var(--duration-standard) var(--ease-standard);
-}
-.fab-enter-from,
-.fab-leave-to {
-  opacity: 0;
-  transform: translateY(0.5rem);
-}
-@media (prefers-reduced-motion: reduce) {
-  .fab-enter-from,
-  .fab-leave-to {
-    transform: none;
-  }
-}
-</style>
+<!-- The `fab` transition classes (including the reduced-motion guard) live in
+     app/assets/css/main.css beside `page-spread`: a scoped block here compiles to a separate
+     render-blocking stylesheet request (D20-4). -->

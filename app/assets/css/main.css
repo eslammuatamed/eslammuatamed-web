@@ -16,10 +16,20 @@
    hero name, not on body/section titles (which stay Cairo). Self-hosted variable (wght 400–700). */
 @import "@fontsource-variable/reem-kufi/wght.css";
 @import "@fontsource-variable/geist/wght.css";
-@import "@fontsource/ibm-plex-sans-arabic/400.css";
-@import "@fontsource/ibm-plex-sans-arabic/600.css";
-@import "@fontsource/ibm-plex-sans-arabic/700.css";
-@import "@fontsource/jetbrains-mono/400.css";
+/* Arabic-subset only (D20-4). The full `400.css`/`600.css` entrypoints also declare the Latin
+   subset of IBM Plex Sans Arabic; because the family sits FIRST in `--font-sans-arabic`, its
+   Latin subset used to win for Latin runs inside Arabic copy (measured 38.7 KB of woff2 on
+   every `/ar/**` view). Declaring only the Arabic range lets Latin fall through to the next
+   family in the stack — "Geist Variable", which is the design's Latin body face (doc 03 §3) —
+   so mixed-script Arabic copy renders Latin in the same face the English pages use.
+   Weight 700 is not imported: no rule sets ≥700 on the Arabic body stack (the only 700 is the
+   nameplate, which is Reem Kufi Variable), and the file was never fetched on any route. */
+@import "@fontsource/ibm-plex-sans-arabic/arabic-400.css";
+@import "@fontsource/ibm-plex-sans-arabic/arabic-600.css";
+/* Latin subset only — mono is data/code, and the site ships exactly two scripts (en, ar), so the
+   Cyrillic/Cyrillic-ext/Greek/Vietnamese/Latin-ext @font-face blocks in `400.css` were dead
+   declaration weight in the render-blocking stylesheet. */
+@import "@fontsource/jetbrains-mono/latin-400.css";
 
 /* ---------------------------------------------------------------------------------------
    Theme tokens — names generate Tailwind utilities and CSS variables (Tailwind v4 @theme).
@@ -311,6 +321,43 @@ html[lang="ar"] [class*="tracking-"] {
   }
   .page-spread-enter-from,
   .page-spread-leave-to {
+    transform: none;
+  }
+}
+
+/* Public-shell transition classes live here beside `page-spread`, NOT in the owning components'
+   `<style scoped>` blocks (D20-4). Vite emits every scoped block as its own CSS asset, and Nuxt
+   links each one with `rel="stylesheet"` — so these two short rule sets were shipping as an extra
+   render-blocking request (183 B raw / 115 B brotli) that cost a measured 484 ms on mobile: one
+   extra round trip at 150 ms RTT ahead of first paint, the worst byte-to-cost ratio in the whole
+   critical path. Folding them into the single global stylesheet removes the request outright.
+   `page-spread` above already established this pattern; the names are Vue transition names, unique
+   to their one owner (`fade` → UiDataLoadingOverlay, `fab` → UiBackToTop). */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity var(--duration-standard) var(--ease-standard);
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+.fab-enter-active,
+.fab-leave-active {
+  transition:
+    opacity var(--duration-standard) var(--ease-standard),
+    transform var(--duration-standard) var(--ease-standard);
+}
+.fab-enter-from,
+.fab-leave-to {
+  opacity: 0;
+  transform: translateY(0.5rem);
+}
+/* Explicit guard retained from the component block: the global reduced-motion rule shortens
+   durations, but the entry/leave transform must be removed outright, not merely sped up. */
+@media (prefers-reduced-motion: reduce) {
+  .fab-enter-from,
+  .fab-leave-to {
     transform: none;
   }
 }
