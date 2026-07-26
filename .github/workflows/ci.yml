@@ -110,10 +110,11 @@ jobs:
       - name: Test
         run: npm test
 
-      # `ANALYZE_BUNDLE=1` adds Rollup chunk→module provenance as a SIDECAR file
-      # (.bundle-analysis/), which the per-route gate needs to enforce §1's ≤35 KB app-code budget.
-      # Verified byte-identical to a plain build (27 assets, matching SHA256s), so CI still measures
-      # exactly the artifact the deploy ships.
+      # `ANALYZE_BUNDLE=1` emits Rollup chunk→module provenance as a SIDECAR file
+      # (.bundle-analysis/). This is REQUIRED, not optional: without it the per-route gate cannot
+      # measure §1's ≤35 KB app-code budget at all and exits 2 (infrastructure), so dropping this
+      # flag breaks the gate rather than silently loosening it. Verified byte-identical to a plain
+      # build (27 assets, matching SHA256s), so CI still measures exactly what the deploy ships.
       - name: Build
         run: ANALYZE_BUNDLE=1 npm run build
 
@@ -125,9 +126,13 @@ jobs:
       - name: Assert CSS size budget (doc 20 §1)
         run: npm run size
 
-      # Per-public-route JS/CSS transfer budgets. §1 budgets JS "per public route", which a static
-      # glob cannot express (it would also sum the dashboard SPA chunks no public route fetches),
-      # so this boots the production preview and reads each route's real asset set.
+      # Per-public-route JS transfer budgets: total ≤ 250 KB gz (D20-11) and app-code ≤ 35 KB gz.
+      # §1 budgets JS "per public route", which a static glob cannot express (it would also sum the
+      # dashboard SPA chunks no public route fetches), so this boots the production preview and
+      # reads each route's real first-view asset set.
+      # Exit codes are distinct and must stay that way: 1 = genuine breach OR unprovable app-code
+      # compliance (a deliberate policy failure); 2 = the gate could not measure (missing build,
+      # missing/corrupt provenance, unreachable preview). Never conflate them.
       - name: Assert per-route transfer budgets (doc 20 §1)
         run: npm run size:routes
 

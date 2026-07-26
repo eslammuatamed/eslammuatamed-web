@@ -188,8 +188,8 @@ function stopPreview() {
 
 /**
  * The single category a chunk belongs to, or null when it mixes categories.
- * Purity is required: a 99.6 %-vendor chunk is still mixed, and rounding it to "vendor" would
- * silently absorb the app bytes the ≤35 KB budget exists to govern.
+ * Purity is required for the REPORTED split: a 99.6 %-vendor chunk is still mixed, and rounding it
+ * to "vendor" would hide that it carries app bytes the ≤35 KB budget governs.
  */
 function dominantCategory(info) {
   const { app, vendor, virtual } = info.share
@@ -199,6 +199,19 @@ function dominantCategory(info) {
   if (vendor === total) return 'vendor'
   if (virtual === total) return 'generated'
   return null
+}
+
+/**
+ * Does this chunk carry ANY project-owned bytes?
+ *
+ * This — not chunk purity — is what bounds the app budget. A chunk built solely from vendor and
+ * generated modules contains no app code, so no amount of shared compression can put app bytes in
+ * it and it contributes exactly 0 to the upper bound. Treating such a chunk as "mixed" (because it
+ * spans two NON-app categories) would inflate the bound for no reason and could turn a provable
+ * PASS into a spurious INDETERMINATE.
+ */
+function carriesAppBytes(info) {
+  return info.share.app > 0
 }
 
 /**
@@ -252,10 +265,12 @@ async function measureRoute(html, meta) {
     css = { ...css, raw: css.raw + sizes.raw, gz: css.gz + sizes.gz }
   }
 
-  const bounds = {
-    lower: pure.app.gz,
-    estimate: pure.app.gz + mixed.appEstimateGz,
-    upper: pure.app.gz + mixed.gz
+  const bounds = { lower: 0, estimate: 0, upper: 0 }
+  for (const { asset, gz } of js.assets) {
+    const info = meta.get(asset)
+    if (info.appRatio >= 0.9999) bounds.lower += gz // certainly all app
+    if (carriesAppBytes(info)) bounds.upper += gz // could contain app bytes; nothing else can
+    bounds.estimate += gz * info.appRatio
   }
 
   return {
