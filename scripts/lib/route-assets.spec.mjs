@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { classifyModuleId, collectRouteAssets, kb, vendorPackage } from './route-assets.mjs'
+import {
+  KB,
+  appCodeVerdict,
+  budgetVerdict,
+  classifyModuleId,
+  collectRouteAssets,
+  kb,
+  vendorPackage
+} from './route-assets.mjs'
 
 /**
  * These guard the ways a size gate can silently measure the WRONG set — every one of which is
@@ -144,5 +152,55 @@ describe('kb', () => {
     expect(kb(1024)).toBe('1.0 KB')
     expect(kb(1536)).toBe('1.5 KB')
     expect(kb(0)).toBe('0.0 KB')
+  })
+})
+
+
+describe('budgetVerdict — threshold boundaries', () => {
+  const BUDGET = 250 * KB
+
+  // doc 20 §1 writes "≤", so the budget is INCLUSIVE: exactly-at-budget must pass. Getting this
+  // backwards silently fails a compliant build (or passes a one-byte breach).
+  it.each([
+    ['one byte below', BUDGET - 1, 'PASS'],
+    ['exactly at the budget', BUDGET, 'PASS'],
+    ['one byte above', BUDGET + 1, 'FAIL']
+  ])('%s → %s', (_label, bytes, expected) => {
+    expect(budgetVerdict(bytes, BUDGET)).toBe(expected)
+  })
+
+  it('uses 1024-based KB, matching doc 20 §1 and size-limit thresholds', () => {
+    expect(KB).toBe(1024)
+    expect(250 * KB).toBe(256_000)
+    // 250 decimal kB would be 250_000 — a 6 KB difference, hence the documented convention.
+    expect(budgetVerdict(250_000, 250 * KB)).toBe('PASS')
+  })
+
+  it('formats using the same 1024 base it compares with', () => {
+    expect(kb(250 * KB)).toBe('250.0 KB')
+  })
+})
+
+describe('appCodeVerdict — bounds, never a fabricated single number', () => {
+  const BUDGET = 35 * KB
+
+  it('PASSES only when the UPPER bound clears the budget (true for every possible split)', () => {
+    expect(appCodeVerdict({ lower: 1 * KB, upper: BUDGET }, BUDGET)).toBe('PASS')
+    expect(appCodeVerdict({ lower: 1 * KB, upper: BUDGET - 1 }, BUDGET)).toBe('PASS')
+  })
+
+  it('FAILS only when the LOWER bound breaches (true for every possible split)', () => {
+    expect(appCodeVerdict({ lower: BUDGET + 1, upper: 200 * KB }, BUDGET)).toBe('FAIL')
+  })
+
+  it('is INDETERMINATE when the bounds straddle the budget — and that is not a pass', () => {
+    const verdict = appCodeVerdict({ lower: 4.5 * KB, upper: 221 * KB }, BUDGET)
+    expect(verdict).toBe('INDETERMINATE')
+    expect(verdict).not.toBe('PASS')
+  })
+
+  it('treats exactly-at-budget bounds inclusively on both edges', () => {
+    expect(appCodeVerdict({ lower: 0, upper: BUDGET }, BUDGET)).toBe('PASS')
+    expect(appCodeVerdict({ lower: BUDGET, upper: BUDGET }, BUDGET)).toBe('PASS')
   })
 })

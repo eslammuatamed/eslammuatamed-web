@@ -49,12 +49,22 @@ import { spawn } from 'node:child_process'
 import { readFile, access } from 'node:fs/promises'
 import { gzipSync } from 'node:zlib'
 import process from 'node:process'
-import { classifyModuleId, collectRouteAssets, kb, vendorPackage } from './lib/route-assets.mjs'
+import {
+  KB,
+  appCodeVerdict,
+  budgetVerdict,
+  classifyModuleId,
+  collectRouteAssets,
+  kb,
+  vendorPackage
+} from './lib/route-assets.mjs'
 
+// doc 20 §1, 1024-based KB (the convention is stated in §1 because size-limit prints decimal kB).
+// Budgets are INCLUSIVE ("≤"), so exactly-at-budget passes.
 const BUDGET = {
-  totalJsBytes: 90 * 1024, // doc 20 §1
-  appJsBytes: 35 * 1024, // doc 20 §1
-  cssBytes: 30 * 1024 // doc 20 §1
+  totalJsBytes: 250 * KB, // D20-11 re-baseline (was 90 KB — below this stack's measured floor)
+  appJsBytes: 35 * KB, // unchanged
+  cssBytes: 30 * KB // unchanged; also enforced statically by `npm run size`
 }
 
 /** The public surface. `/projects` + `/contact` are the accepted web-005 404s (spec.md:36). */
@@ -68,8 +78,10 @@ const ROUTES = [
 ]
 
 const BASE = process.env.ROUTE_SIZE_BASE ?? 'http://127.0.0.1:3000'
-const PUBLIC_DIR = '.output/public'
-const META_PATH = '.bundle-analysis/client-chunks.json'
+// Overridable so the failure paths (missing build, missing/corrupt metadata) can be exercised in
+// tests without disturbing the real build output. Defaults are the production locations.
+const PUBLIC_DIR = process.env.ROUTE_SIZE_PUBLIC_DIR ?? '.output/public'
+const META_PATH = process.env.ROUTE_SIZE_META ?? '.bundle-analysis/client-chunks.json'
 
 const EXIT_OK = 0
 const EXIT_BREACH = 1
@@ -87,12 +99,28 @@ async function requireBuild() {
 
 class InfraError extends Error {}
 
-/** Rollup chunk→module provenance, or null when the analysis build has not been run. */
+/**
+ * Rollup chunk→module provenance. REQUIRED — app-code enforcement is not optional, so a missing or
+ * corrupt sidecar is an infrastructure failure (exit 2), not a budget verdict. Reporting it as a
+ * breach would blame the code for a broken measurement; reporting it as a pass would be worse.
+ */
 async function loadChunkMeta() {
   const raw = await readFile(META_PATH, 'utf8').catch(() => null)
-  if (!raw) return null
-  /** @type {{chunks: Array<{fileName: string, modules: Array<{id: string, renderedLength: number}>}>}} */
-  const parsed = JSON.parse(raw)
+  if (raw === null) {
+    throw new InfraError(
+      `${META_PATH} is missing — the app-code budget cannot be measured without Rollup provenance.\n`
+      + '  Rebuild with: ANALYZE_BUNDLE=1 npm run build'
+    )
+  }
+  let parsed
+  try {
+    parsed = JSON.parse(raw)
+  } catch (error) {
+    throw new InfraError(`${META_PATH} is not valid JSON (${error.message}) — regenerate it with ANALYZE_BUNDLE=1 npm run build`)
+  }
+  if (!parsed || !Array.isArray(parsed.chunks) || parsed.chunks.length === 0) {
+    throw new InfraError(`${META_PATH} contains no chunk records — regenerate it with ANALYZE_BUNDLE=1 npm run build`)
+  }
   const byAsset = new Map()
   for (const chunk of parsed.chunks) {
     const share = { app: 0, vendor: 0, virtual: 0 }
@@ -159,6 +187,21 @@ function stopPreview() {
 // ─────────────────────────────────────────────────────────────── measurement
 
 /**
+ * The single category a chunk belongs to, or null when it mixes categories.
+ * Purity is required: a 99.6 %-vendor chunk is still mixed, and rounding it to "vendor" would
+ * silently absorb the app bytes the ≤35 KB budget exists to govern.
+ */
+function dominantCategory(info) {
+  const { app, vendor, virtual } = info.share
+  const total = app + vendor + virtual
+  if (total === 0) return 'generated' // an empty chunk carries no attributable weight
+  if (app === total) return 'app'
+  if (vendor === total) return 'vendor'
+  if (virtual === total) return 'generated'
+  return null
+}
+
+/**
  * @param {string} html
  * @param {Map<string, any>|null} meta
  */
@@ -173,7 +216,10 @@ async function measureRoute(html, meta) {
   }
 
   const js = { assets: [], raw: 0, gz: 0 }
-  const app = { pureGz: 0, mixedGz: 0, estimateGz: 0, unknownGz: 0 }
+  // Bytes are only attributed to a category when a chunk is PURE. Mixed chunks are held in their
+  // own bucket rather than divided, because gzip cannot be split per-module inside one stream.
+  const pure = { app: { raw: 0, gz: 0 }, vendor: { raw: 0, gz: 0 }, generated: { raw: 0, gz: 0 } }
+  const mixed = { raw: 0, gz: 0, appEstimateGz: 0 }
 
   for (const asset of jsAssets) {
     const sizes = await assetSizes(asset)
@@ -182,13 +228,20 @@ async function measureRoute(html, meta) {
     js.raw += sizes.raw
     js.gz += sizes.gz
 
-    const info = meta?.get(asset)
-    if (!info) { app.unknownGz += sizes.gz; continue }
-    if (info.appRatio >= 0.9999) app.pureGz += sizes.gz
-    else if (info.appRatio <= 0.0001) { /* pure vendor/virtual — contributes nothing to app */ }
-    else {
-      app.mixedGz += sizes.gz
-      app.estimateGz += sizes.gz * info.appRatio
+    const info = meta.get(asset)
+    if (!info) {
+      // A route referenced a chunk with no provenance record: the metadata does not describe this
+      // build. Treat as infrastructure rather than guessing which category it belongs to.
+      throw new InfraError(`no Rollup provenance for ${asset} — ${META_PATH} is stale; rebuild with ANALYZE_BUNDLE=1 npm run build`)
+    }
+    const category = dominantCategory(info)
+    if (category) {
+      pure[category].raw += sizes.raw
+      pure[category].gz += sizes.gz
+    } else {
+      mixed.raw += sizes.raw
+      mixed.gz += sizes.gz
+      mixed.appEstimateGz += sizes.gz * info.appRatio
     }
   }
 
@@ -199,23 +252,26 @@ async function measureRoute(html, meta) {
     css = { ...css, raw: css.raw + sizes.raw, gz: css.gz + sizes.gz }
   }
 
-  const appLower = app.pureGz
-  const appEstimate = app.pureGz + app.estimateGz
-  const appUpper = app.pureGz + app.mixedGz + app.unknownGz
+  const bounds = {
+    lower: pure.app.gz,
+    estimate: pure.app.gz + mixed.appEstimateGz,
+    upper: pure.app.gz + mixed.gz
+  }
 
-  let appVerdict
-  if (!meta) appVerdict = 'UNMEASURABLE'
-  else if (appUpper <= BUDGET.appJsBytes) appVerdict = 'PASS'
-  else if (appLower > BUDGET.appJsBytes) appVerdict = 'FAIL'
-  else appVerdict = 'INDETERMINATE'
-
-  return { js, css, app: { lower: appLower, estimate: appEstimate, upper: appUpper, verdict: appVerdict } }
+  return {
+    js,
+    css,
+    pure,
+    mixed,
+    app: { ...bounds, verdict: appCodeVerdict(bounds, BUDGET.appJsBytes) },
+    totalVerdict: budgetVerdict(js.gz, BUDGET.totalJsBytes),
+    cssVerdict: budgetVerdict(css.gz, BUDGET.cssBytes)
+  }
 }
 
 // ─────────────────────────────────────────────────────────────── report
 
 function packageRanking(meta, routeAssets, limit = 12) {
-  if (!meta) return []
   const totals = new Map()
   for (const asset of routeAssets) {
     const info = meta.get(asset)
@@ -235,14 +291,8 @@ async function main() {
   const meta = await loadChunkMeta()
   await startPreview()
 
-  console.log('\nPer-route transfer budgets — doc 20 §1, gzip, from the production build')
-  if (!meta) {
-    console.log(
-      `  ! ${META_PATH} absent: the total-JS and CSS budgets are enforced, but the app-code budget\n`
-      + '    cannot be measured. Regenerate with: ANALYZE_BUNDLE=1 npm run build'
-    )
-  }
-  console.log()
+  console.log('\nPer-route transfer budgets — doc 20 §1 (D20-11), gzip, KB = 1024 B, from the production build')
+  console.log(`Budgets: total ≤ ${kb(BUDGET.totalJsBytes)}  ·  app-code ≤ ${kb(BUDGET.appJsBytes)}  ·  CSS ≤ ${kb(BUDGET.cssBytes)}  (inclusive)\n`)
 
   const rows = []
   for (const route of ROUTES) {
@@ -257,37 +307,50 @@ async function main() {
     rows.push({ route, ...(await measureRoute(html, meta)) })
   }
 
-  const header = `${'route'.padEnd(46)}${'assets'.padStart(7)}${'raw'.padStart(11)}${'gz'.padStart(11)}${'≤90KB'.padStart(8)}${'app gz (est)'.padStart(14)}${'≤35KB'.padStart(15)}`
+  const header = `${'route'.padEnd(44)}${'assets'.padStart(7)}${'raw'.padStart(11)}${'gz'.padStart(10)}${'≤250KB'.padStart(9)}${'app gz'.padStart(10)}${'≤35KB'.padStart(16)}`
   console.log(header)
   console.log('─'.repeat(header.length))
 
   for (const row of rows) {
-    const totalOk = row.js.gz <= BUDGET.totalJsBytes
-    if (!totalOk) breach = true
-    if (row.app.verdict === 'FAIL' || row.app.verdict === 'INDETERMINATE' || row.app.verdict === 'UNMEASURABLE') breach = true
+    if (row.totalVerdict === 'FAIL') breach = true
+    if (row.cssVerdict === 'FAIL') breach = true
+    // INDETERMINATE is a deliberate policy failure: compliance could not be proven, so the gate
+    // must not report a pass.
+    if (row.app.verdict !== 'PASS') breach = true
 
     console.log(
-      row.route.padEnd(46)
+      row.route.padEnd(44)
       + String(row.js.assets.length).padStart(7)
       + kb(row.js.raw).padStart(11)
-      + kb(row.js.gz).padStart(11)
-      + (totalOk ? '✓' : '✗').padStart(8)
-      + kb(row.app.estimate).padStart(14)
-      + `  ${row.app.verdict}`.padEnd(15)
+      + kb(row.js.gz).padStart(10)
+      + (row.totalVerdict === 'PASS' ? '✓' : '✗').padStart(9)
+      + kb(row.app.estimate).padStart(10)
+      + `  ${row.app.verdict}`.padEnd(16)
     )
   }
 
+  console.log('\nProvable category split (only PURE chunks are attributed; mixed chunks cannot have')
+  console.log('their gzip divided per module, so they are held separately rather than guessed):')
+  console.log(
+    `  ${'route'.padEnd(44)}${'app'.padStart(20)}${'vendor'.padStart(20)}${'generated'.padStart(20)}${'mixed'.padStart(20)}`
+  )
+  for (const row of rows) {
+    const cell = (c) => `${kb(c.raw)}/${kb(c.gz)}`.padStart(20)
+    console.log(
+      `  ${row.route.padEnd(44)}${cell(row.pure.app)}${cell(row.pure.vendor)}${cell(row.pure.generated)}${cell(row.mixed)}`
+    )
+  }
+  console.log('  (raw/gz per cell)')
+
   console.log('\nCSS per route (one global stylesheet, so this is also the per-route figure):')
   for (const row of rows) {
-    const ok = row.css.gz <= BUDGET.cssBytes
-    if (!ok) breach = true
-    console.log(`  ${ok ? '✓' : '✗'} ${row.route.padEnd(46)} ${kb(row.css.gz).padStart(9)} gz / ${kb(BUDGET.cssBytes)}  (${row.css.count} file)`)
+    console.log(`  ${row.cssVerdict === 'PASS' ? '✓' : '✗'} ${row.route.padEnd(44)} ${kb(row.css.gz).padStart(9)} gz / ${kb(BUDGET.cssBytes)}  (${row.css.count} file)`)
   }
 
-  console.log('\nApp-code attribution bounds (gzip cannot be split byte-exactly inside a mixed chunk):')
+  console.log('\nApp-code attribution bounds:')
   for (const row of rows) {
     console.log(
-      `  ${row.route.padEnd(46)} lower ${kb(row.app.lower).padStart(9)}`
+      `  ${row.route.padEnd(44)} lower ${kb(row.app.lower).padStart(9)}`
       + `  estimate ${kb(row.app.estimate).padStart(9)}`
       + `  upper ${kb(row.app.upper).padStart(9)}   → ${row.app.verdict}`
     )
@@ -296,9 +359,9 @@ async function main() {
   const widest = rows[0]
   console.log(`\nLargest referenced JS assets on ${widest.route} :`)
   for (const a of [...widest.js.assets].sort((x, y) => y.gz - x.gz).slice(0, 6)) {
-    const info = meta?.get(a.asset)
-    const mix = info ? ` app≈${(info.appRatio * 100).toFixed(1)}%` : ''
-    console.log(`  ${kb(a.gz).padStart(9)} gz  ${kb(a.raw).padStart(10)} raw  ${a.asset}${mix}`)
+    const info = meta.get(a.asset)
+    const cat = dominantCategory(info) ?? `MIXED (app≈${(info.appRatio * 100).toFixed(1)}%)`
+    console.log(`  ${kb(a.gz).padStart(9)} gz  ${kb(a.raw).padStart(10)} raw  ${a.asset}  ${cat}`)
   }
 
   const ranking = packageRanking(meta, widest.js.assets.map(a => a.asset))
@@ -311,17 +374,22 @@ async function main() {
   if (breach) {
     console.error('\n✗ doc 20 §1 budget not satisfied.')
     for (const row of rows) {
-      if (row.js.gz > BUDGET.totalJsBytes) {
+      if (row.totalVerdict === 'FAIL') {
         console.error(`  ${row.route}: total JS ${kb(row.js.gz)} gz exceeds ${kb(BUDGET.totalJsBytes)} by ${kb(row.js.gz - BUDGET.totalJsBytes)}`)
+      }
+      if (row.cssVerdict === 'FAIL') {
+        console.error(`  ${row.route}: CSS ${kb(row.css.gz)} gz exceeds ${kb(BUDGET.cssBytes)}`)
+      }
+      if (row.app.verdict === 'FAIL') {
+        console.error(`  ${row.route}: app-code at least ${kb(row.app.lower)} gz exceeds ${kb(BUDGET.appJsBytes)} — a real breach however the mixed bytes divide.`)
       }
       if (row.app.verdict === 'INDETERMINATE') {
         console.error(
-          `  ${row.route}: app-code ${kb(row.app.lower)}–${kb(row.app.upper)} gz straddles the ${kb(BUDGET.appJsBytes)} budget`
-          + ' — compliance is not provable while app and vendor modules share a chunk, so this is NOT reported as a pass.'
+          `  ${row.route}: app-code ${kb(row.app.lower)}–${kb(row.app.upper)} gz straddles the ${kb(BUDGET.appJsBytes)} budget.`
+          + '\n      Compliance is NOT PROVABLE while app and vendor modules share a chunk, so this is not reported'
+          + '\n      as a pass. The estimate suggests it is comfortably met; proving it needs a deterministic'
+          + '\n      app/vendor chunk split (doc 20 §5, D20-11).'
         )
-      }
-      if (row.app.verdict === 'UNMEASURABLE') {
-        console.error(`  ${row.route}: app-code budget unmeasurable without ${META_PATH}.`)
       }
     }
     console.error(

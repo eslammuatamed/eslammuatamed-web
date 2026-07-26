@@ -70,16 +70,23 @@ function localNuxtAsset(url, kind) {
 }
 
 /**
- * Split module ids into app-owned vs vendor.
+ * Split module ids into app / vendor / generated (doc 20 §5 classification contract, D20-11).
  *
- * Boundary (doc 08 §1: `app/` is the Nuxt srcDir; project-owned source lives in the repo, packages
- * live in `node_modules`):
- *   - vendor  → anything resolved from `node_modules`, plus Vite/Rollup internal helper modules
- *   - app     → project-owned source in the repo (`app/`, `config/`, `i18n/`, `shared/`, …)
- *   - virtual → Nuxt/Vite generated glue (`virtual:`, `\0`, `#build/...`). Reported SEPARATELY
- *               rather than folded into either side, because calling generated glue "app code"
- *               or "vendor" to suit the outcome is exactly the classification-by-convenience the
- *               budget interpretation must avoid.
+ * Resolved from build provenance, never filenames. The three categories, with the cases the
+ * production client build actually emits:
+ *   - vendor    → `node_modules/**` — external dependency code.
+ *   - app       → project-owned source in the repo. That means srcDir (`app/**`), INCLUDING Vue SFC
+ *                 compiled output (`?vue&type=script…`) and `definePageMeta` route-metadata
+ *                 extraction (`?macro=true`), plus project-authored content that Nuxt convention
+ *                 places outside srcDir — notably `i18n/locales/*.json`, which is translation
+ *                 content this repo authors, not a dependency. Excluding it would let translation
+ *                 growth escape the only budget governing project-owned payload.
+ *   - generated → Nuxt/Vite/Rollup glue authored by neither side (`\0…`, `virtual:*`, `#build/*`,
+ *                 `.nuxt/*`), e.g. `vite/preload-helper`. Reported as its OWN category and never
+ *                 folded into app or vendor, because classifying generated glue to suit the
+ *                 outcome is precisely the convenience the budget interpretation must avoid.
+ * `config/**` is build-time only (nuxt.config inputs) and is verified absent from every client
+ * chunk, so it needs no rule here.
  * @param {string} id
  * @returns {'vendor'|'app'|'virtual'}
  */
@@ -111,7 +118,42 @@ export function vendorPackage(id) {
   return parts[0].startsWith('@') && parts[1] ? `${parts[0]}/${parts[1]}` : parts[0]
 }
 
+/**
+ * One KB is 1024 bytes throughout this gate — doc 20 §1 states the convention explicitly, because
+ * `size-limit` prints decimal `kB` while this gate prints 1024-based `KB` and the same file
+ * otherwise reads as two different numbers. Thresholds in both tools have always been 1024-based
+ * (`bytes.parse('30 KB') === 30720`); only the printed figures differed.
+ */
+export const KB = 1024
+
 /** `1536` → `"1.5 KB"`. Fixed one decimal so columns line up in CI logs. */
 export function kb(bytes) {
-  return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / KB).toFixed(1)} KB`
+}
+
+/**
+ * Budgets are INCLUSIVE — doc 20 §1 writes "≤", so exactly-at-budget passes.
+ * @returns {'PASS'|'FAIL'}
+ */
+export function budgetVerdict(actualBytes, budgetBytes) {
+  return actualBytes <= budgetBytes ? 'PASS' : 'FAIL'
+}
+
+/**
+ * App-code verdict from attribution BOUNDS, never from a single fabricated number.
+ *
+ * gzip cannot be split byte-exactly inside a chunk that mixes app and vendor modules — compression
+ * is shared across the stream — so compliance is only asserted when it holds for every possible
+ * split:
+ *   PASS          upper ≤ budget  → compliant however the mixed bytes divide
+ *   FAIL          lower > budget  → non-compliant however they divide
+ *   INDETERMINATE otherwise       → NOT a pass; the gate fails rather than guess
+ *
+ * @param {{lower: number, upper: number}} bounds
+ * @returns {'PASS'|'FAIL'|'INDETERMINATE'}
+ */
+export function appCodeVerdict({ lower, upper }, budgetBytes) {
+  if (upper <= budgetBytes) return 'PASS'
+  if (lower > budgetBytes) return 'FAIL'
+  return 'INDETERMINATE'
 }
