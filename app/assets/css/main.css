@@ -19,9 +19,13 @@
 /* Arabic-subset only (D20-4). The full `400.css`/`600.css` entrypoints also declare the Latin
    subset of IBM Plex Sans Arabic; because the family sits FIRST in `--font-sans-arabic`, its
    Latin subset used to win for Latin runs inside Arabic copy (measured 38.7 KB of woff2 on
-   every `/ar/**` view). Declaring only the Arabic range lets Latin fall through to the next
-   family in the stack — "Geist Variable", which is the design's Latin body face (doc 03 §3) —
-   so mixed-script Arabic copy renders Latin in the same face the English pages use.
+   every `/ar/**` view). Importing only the `arabic-*` entrypoints means the served woff2 carries
+   no Latin glyphs, so Latin runs reach the next family in the stack — "Geist Variable", the
+   design's Latin body face (doc 03 §3) — and the English and Arabic pages set Latin identically.
+   NOTE the exact mechanism: fontsource's `arabic-*.css` does NOT add a `unicode-range`, so these
+   faces still declare `U+0-10FFFF` (verified via `document.fonts`). Latin therefore falls through
+   per GLYPH, not by range selection — the download saving is real either way, but do not assume a
+   range restriction is in place. Adding explicit `unicode-range` would be the further step.
    Weight 700 is not imported: no rule sets ≥700 on the Arabic body stack (the only 700 is the
    nameplate, which is Reem Kufi Variable), and the file was never fetched on any route. */
 @import "@fontsource/ibm-plex-sans-arabic/arabic-400.css";
