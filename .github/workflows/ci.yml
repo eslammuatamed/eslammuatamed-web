@@ -114,11 +114,18 @@ jobs:
         run: npm run build
 
       # doc 20 §5 order: build → size-limit → forbidden-module check → Lighthouse CI.
-      # Budgets come from doc 20 §1 verbatim (JS ≤ 90 KB gz, CSS ≤ 30 KB gz) — see
-      # .size-limit.cjs. doc 20 §1: budgets "block merges, not aspirations", and are
-      # "re-baselined only by a decision-log entry" in doc 20.
-      - name: Assert bundle size budgets (doc 20 §1)
+      # Budgets are doc 20 §1 verbatim; §1 states they "block merges, not aspirations" and are
+      # "re-baselined only by a decision-log entry" there. Split by what each tool can state
+      # correctly: this step asserts CSS (one global stylesheet, so the glob total IS the per-route
+      # figure — .size-limit.cjs); the next asserts the per-route JS budget.
+      - name: Assert CSS size budget (doc 20 §1)
         run: npm run size
+
+      # Per-public-route JS/CSS transfer budgets. §1 budgets JS "per public route", which a static
+      # glob cannot express (it would also sum the dashboard SPA chunks no public route fetches),
+      # so this boots the production preview and reads each route's real asset set.
+      - name: Assert per-route transfer budgets (doc 20 §1)
+        run: npm run size:routes
 
       - name: Assert bundle isolation
         run: npm run check:bundle

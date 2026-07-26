@@ -22,6 +22,7 @@
     "check:bundle": "node scripts/check-forbidden-modules.mjs",
     "check:logical": "node scripts/check-logical-properties.mjs",
     "size": "size-limit",
+    "size:routes": "node scripts/check-route-size.mjs",
     "ci:preview": "node scripts/ci-preview.mjs",
     "lhci": "lhci autorun",
     "lhci:desktop": "lhci autorun --collect.settings.preset=desktop"
