@@ -108,6 +108,21 @@
     "previous": "Previous",
     "next": "Next"
   },
+  "projects": {
+    "title": "Selected work",
+    "description": "Case studies from production work — the problem, the architecture, the trade-offs, and what shipped.",
+    "emptyTitle": "No case studies yet",
+    "emptyBody": "Work is being written up. In the meantime, the writing section covers the same engineering ground.",
+    "emptyFilteredTitle": "No projects use this technology",
+    "emptyFilteredBody": "Try another technology, or clear the filter to see every case study.",
+    "errorTitle": "Projects could not be loaded",
+    "errorBody": "The request did not complete. This is usually temporary.",
+    "filter": {
+      "label": "Technology",
+      "all": "All technologies",
+      "clear": "Clear filter"
+    }
+  },
   "article": {
     "back": "Back to blog",
     "publishedOn": "Published {date}",
@@ -176,6 +191,10 @@
     "blog": {
       "title": "Blog",
       "description": "Notes on engineering, architecture, and building for the web."
+    },
+    "projects": {
+      "title": "Projects",
+      "description": "Case studies from production frontend and full-stack work by Eslam Muatamed."
     }
   }
 }

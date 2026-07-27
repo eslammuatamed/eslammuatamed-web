@@ -1,0 +1,136 @@
+<script setup lang="ts">
+// Projects index (FR-PUB-030). Featured-first, filterable by technology, published-only — all three
+// enforced by the API (D09-8); this page owns only the query and the presentation.
+//
+// Filter and page state live in the URL (D13-4): a filtered view is linkable, survives reload and
+// back/forward, and is legible to crawlers. The canonical URL is always the unfiltered index (doc 22),
+// so a filter never spawns a competing indexable page.
+const { t } = useI18n()
+const route = useRoute()
+const router = useRouter()
+
+// Query rules live in `~/utils/projects-query` as pure functions so each one is unit-tested; every
+// one of them is invisible in the rendered output until it is wrong.
+const page = computed(() => readPage(route.query))
+const technology = computed(() => readTechnology(route.query))
+
+const { data, status, error, refresh } = await useProjectsList({
+  page: () => page.value,
+  technology: () => technology.value
+})
+const { data: technologies } = await useProjectTechnologies()
+
+// Split pending into initial-load (skeleton) vs a filter/page change with content already on screen
+// (branded overlay) — useAsyncData keeps the previous `data` while refetching (doc 13 §9.1).
+const hasData = computed(() => !!data.value)
+const initialPending = computed(() => status.value === 'pending' && !hasData.value)
+const refreshing = computed(() => status.value === 'pending' && hasData.value)
+// A list page shows real empty copy; optional home sections omit themselves instead (doc 13 §9.1).
+const isEmpty = computed(() => !!data.value && data.value.data.length === 0)
+// "No projects at all" and "no matches for this filter" are different situations and read differently.
+const isFilteredEmpty = computed(() => isEmpty.value && technology.value !== undefined)
+
+/**
+ * Writing the filter to the URL resets `page`: keeping page 3 while switching filters would land on an
+ * out-of-range page and render an empty list that looks like a broken filter. `replace` keeps the
+ * back button meaning "the page before the index" rather than one entry per filter keystroke.
+ */
+function onTechnologyChange(value: string | undefined): void {
+  router.replace({ path: route.path, query: buildFilterQuery(value) })
+}
+
+/** Pagination must carry the active filter, or paging silently widens the result set. */
+function pageLink(target: number) {
+  return { query: buildPageQuery(technology.value, target) }
+}
+
+useSeoMeta({
+  title: () => t('seo.projects.title'),
+  description: () => t('seo.projects.description'),
+  ogTitle: () => `${t('seo.projects.title')} — ${t('brand.name')}`,
+  ogDescription: () => t('seo.projects.description')
+})
+
+// Canonical + hreflang come from `useLocaleHead()` in app.vue, which already excludes the query
+// string — so `/projects?technology=…` canonicalizes to `/projects` exactly as doc 22 requires. A
+// second canonical here would duplicate the tag and fight the global one; verified in the rendered
+// output rather than assumed.
+</script>
+
+<template>
+  <UContainer class="py-[var(--space-section)]">
+    <header class="max-w-2xl">
+      <p class="kicker text-dimmed">{{ t('nav.projects') }}</p>
+      <h1 class="mt-4 font-display text-display text-highlighted text-balance">
+        {{ t('projects.title') }}
+      </h1>
+      <p class="mt-5 text-body-lg text-muted text-pretty">{{ t('projects.description') }}</p>
+    </header>
+
+    <div class="mt-10">
+      <ProjectFilter
+        :technologies="technologies ?? []"
+        :model-value="technology"
+        :disabled="Boolean(error)"
+        @update:model-value="onTechnologyChange"
+      />
+    </div>
+
+    <UiRequestState
+      class="mt-10 block"
+      :pending="initialPending"
+      :refreshing="refreshing"
+      :error="Boolean(error)"
+      :empty="isEmpty"
+      skeleton="work"
+      :count="4"
+      @retry="refresh()"
+    >
+      <template #error>
+        <div class="rounded-card border border-default bg-elevated p-8" role="alert">
+          <p class="font-display text-h3 text-highlighted">{{ t('projects.errorTitle') }}</p>
+          <p class="mt-2 text-muted">{{ t('projects.errorBody') }}</p>
+          <UButton class="mt-4" variant="subtle" color="neutral" @click="refresh()">
+            {{ t('common.retry') }}
+          </UButton>
+        </div>
+      </template>
+
+      <template #empty>
+        <div class="rounded-card border border-default bg-elevated p-8">
+          <p class="font-display text-h3 text-highlighted">
+            {{ isFilteredEmpty ? t('projects.emptyFilteredTitle') : t('projects.emptyTitle') }}
+          </p>
+          <p class="mt-2 text-muted">
+            {{ isFilteredEmpty ? t('projects.emptyFilteredBody') : t('projects.emptyBody') }}
+          </p>
+          <UButton
+            v-if="isFilteredEmpty"
+            class="mt-4"
+            variant="subtle"
+            color="neutral"
+            @click="onTechnologyChange(undefined)"
+          >
+            {{ t('projects.filter.clear') }}
+          </UButton>
+        </div>
+      </template>
+
+      <!-- Order is the API's, rendered verbatim (D09-8) — no client-side sort. -->
+      <ContentWorkEntry
+        v-for="project in (data?.data ?? [])"
+        :key="project.id"
+        :project="project"
+      />
+    </UiRequestState>
+
+    <div v-if="data && data.data.length && data.meta.totalPages > 1" class="mt-12 flex justify-center">
+      <UPagination
+        :page="page"
+        :total="data.meta.total"
+        :items-per-page="data.meta.perPage"
+        :to="pageLink"
+      />
+    </div>
+  </UContainer>
+</template>
