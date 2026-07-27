@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Lighthouse median gate — doc 20 §1 / §5 (D20-13).
+ * Lighthouse median gate — doc 20 §1 / §5 (D20-13, D20-14, D20-15).
  *
  * `npm run lhci` / `npm run lhci:desktop` COLLECT three runs per URL per profile into
  * `.lighthouseci/<profile>/`. This script ASSERTS the approved thresholds on the median of those
@@ -9,7 +9,10 @@
  *
  *     Performance     median ≥ 95 desktop  ·  ≥ 60 mobile
  *     A11y / BP / SEO median 100
- *     LCP / CLS / fonts        unchanged doc 20 §1 limits, now asserted on the median
+ *     LCP (lab)       ≤ 1200 ms desktop  ·  ≤ 4000 ms mobile   — device-scoped (D20-14)
+ *     CLS             ≤ 0.05
+ *     Fonts           Arabic-SCRIPT resources ≤ 130 KiB on Arabic routes (D20-15); the combined
+ *                     per-route total and the non-Arabic split are reported as diagnostics
  *     TBT / Speed Index        recorded, never asserted (doc 20 §1 states no budget)
  *
  * Runs are grouped by `configSettings.formFactor` × `requestedUrl` read from each report — the
@@ -33,6 +36,7 @@ import {
   METRIC_LIMITS,
   RUNS_REQUIRED,
   groupRuns,
+  isArabicRoute,
   overallVerdict,
   readReport,
   summariseGroup
@@ -98,12 +102,14 @@ async function main() {
   const runs = await loadRuns()
   const summaries = groupRuns(runs).map(summariseGroup)
 
-  console.log(`\nLighthouse medians — doc 20 §1 (D20-13), ${RUNS_REQUIRED} runs per configuration`)
+  console.log(`\nLighthouse medians — doc 20 §1 (D20-13/14/15), ${RUNS_REQUIRED} runs per configuration`)
   console.log('Grouped by configSettings.formFactor × requestedUrl (run configuration, not filename).')
-  console.log('Every individual run is shown: the median must not be able to hide instability.\n')
+  console.log('Every individual run is shown: the median must not be able to hide instability.')
+  console.log('LCP budgets are device-scoped (D20-14); the font budget is Arabic-script on Arabic routes (D20-15).\n')
 
   for (const s of summaries) {
-    console.log(`── ${s.formFactor.toUpperCase()}  ${s.url}   (${s.runs.length} run${s.runs.length === 1 ? '' : 's'})`)
+    const locale = isArabicRoute(s.url) ? 'Arabic route' : 'Latin route'
+    console.log(`── ${s.formFactor.toUpperCase()}  ${s.url}   (${s.runs.length} run${s.runs.length === 1 ? '' : 's'}, ${locale})`)
 
     if (s.problems.length) {
       for (const problem of s.problems) console.log(`   ✗ INFRASTRUCTURE: ${problem}`)
@@ -120,9 +126,20 @@ async function main() {
     }
     for (const [id, m] of Object.entries(s.metrics)) {
       const mark = m.pass === null ? '·' : m.pass ? '✓' : '✗'
-      const bound = METRIC_LIMITS[id] ? `≤ ${fmt(METRIC_LIMITS[id].limit, m.unit)}` : '(recorded, no doc 20 §1 budget)'
+      // The bound comes from the SAME resolver the verdict used, so the printed limit can never
+      // disagree with the one asserted — a device-scoped budget printed from a flat constant is how
+      // a wrong bound survives review.
+      // Two different reasons a metric carries no bound, kept distinct: doc 20 §1 states no budget
+      // at all (TBT, Speed Index, the font diagnostics), versus a budget that exists but does not
+      // apply to THIS run context (Arabic fonts on a Latin route). Collapsing them would read as
+      // "unbudgeted" for a metric that is very much budgeted elsewhere.
+      const bound = m.limit === null || m.limit === undefined
+        ? (id in METRIC_LIMITS
+            ? '(budget does not apply to this route)'
+            : '(recorded, no doc 20 §1 budget)')
+        : `≤ ${fmt(m.limit, m.unit)}`
       console.log(
-        `   ${mark} ${m.label.padEnd(30)} runs [${m.values.map(v => fmt(v, m.unit)).join(', ')}]`
+        `   ${mark} ${m.label.padEnd(38)} runs [${m.values.map(v => fmt(v, m.unit)).join(', ')}]`
         + `  median ${fmt(m.median, m.unit)}  ${bound}`
       )
     }

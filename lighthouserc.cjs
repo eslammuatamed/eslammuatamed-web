@@ -11,9 +11,11 @@
  *
  *   Performance (median of 3)         ≥ 95 desktop · ≥ 60 mobile   (D20-13)
  *   A11y / Best Practices / SEO       100                          (unchanged)
- *   LCP                               < 1.2 s (lab)                (unchanged)
+ *   LCP (lab)                         ≤ 1200 ms desktop · ≤ 4000 ms mobile   (D20-14, device-scoped)
  *   CLS                               < 0.05                       (unchanged)
- *   Fonts (first view, per script)    ≤ 130 KB woff2               (unchanged)
+ *   Fonts, Arabic script on /ar**     ≤ 130 KB woff2               (D20-15 — value unchanged, scope
+ *                                                                   corrected; the combined
+ *                                                                   per-route total is a diagnostic)
  *
  * Deliberate scope notes:
  *

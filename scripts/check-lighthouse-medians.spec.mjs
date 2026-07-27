@@ -38,6 +38,17 @@ async function gate(dirs) {
   }
 }
 
+/**
+ * Fonts are emitted per resource via `network-requests` — the audit the per-script budget (D20-15)
+ * is computed from — and echoed in `resource-summary`, whose script-blind total the gate reads back
+ * as a cross-check. The two must agree, so they are derived from one list.
+ */
+const FONT_RESOURCES = [
+  { url: 'http://127.0.0.1:3000/_nuxt/geist-latin-wght-normal.BgDaEnEv.woff2', transferSize: 29715 },
+  { url: 'http://127.0.0.1:3000/_nuxt/cairo-arabic-wght-normal.CJWMIGCx.woff2', transferSize: 31211 }
+]
+const FONT_TOTAL = FONT_RESOURCES.reduce((sum, f) => sum + f.transferSize, 0)
+
 function report({ formFactor = 'mobile', url = 'http://127.0.0.1:3000/', performance = 70, version = '12.0.0' } = {}) {
   return {
     lighthouseVersion: version,
@@ -54,7 +65,15 @@ function report({ formFactor = 'mobile', url = 'http://127.0.0.1:3000/', perform
       'cumulative-layout-shift': { numericValue: 0.01 },
       'total-blocking-time': { numericValue: 150 },
       'speed-index': { numericValue: 1200 },
-      'resource-summary': { details: { items: [{ resourceType: 'font', transferSize: 100 * 1024 }] } }
+      'network-requests': {
+        details: {
+          items: [
+            { url, resourceType: 'Document', transferSize: 8000 },
+            ...FONT_RESOURCES.map(f => ({ ...f, resourceType: 'Font' }))
+          ]
+        }
+      },
+      'resource-summary': { details: { items: [{ resourceType: 'font', transferSize: FONT_TOTAL }] } }
     }
   }
 }
