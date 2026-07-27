@@ -19,18 +19,14 @@ const hasAny = computed(() => Boolean(props.liveUrl || props.repoUrl))
 </script>
 
 <template>
-  <!-- `:external="true"` is explicit rather than relying on AppLink's auto-detect. That detect is
-       currently inert: `external` is declared as an optional Boolean, so Vue casts an absent prop to
-       `false` (not `undefined`), and `props.external ?? /^https?:\/\//.test(props.to)` therefore
-       short-circuits on `false` and never tests the URL. Passing it explicitly takes the external
-       branch and, critically, applies the WD-5 scheme allowlist, so a non-http(s) `liveUrl`/`repoUrl`
-       from the CMS renders inert instead of becoming a live `javascript:` href. The underlying
-       AppLink defect is reported separately — it belongs to Feature 007, not to this slice. -->
+  <!-- AppLink owns external handling: it auto-detects http(s), opens a new tab with a safe rel, and
+       applies the WD-5 scheme allowlist so a non-http(s) value from the CMS renders inert rather than
+       becoming a live javascript: href. No per-call flag is needed. -->
   <div v-if="hasAny" class="flex flex-wrap items-center gap-x-6 gap-y-3">
-    <AppLink v-if="liveUrl" :to="liveUrl" :external="true" class="text-body-sm text-link hover:underline">
+    <AppLink v-if="liveUrl" :to="liveUrl" class="text-body-sm text-link hover:underline">
       {{ t('projects.links.live') }}
     </AppLink>
-    <AppLink v-if="repoUrl" :to="repoUrl" :external="true" class="text-body-sm text-link hover:underline">
+    <AppLink v-if="repoUrl" :to="repoUrl" class="text-body-sm text-link hover:underline">
       {{ t('projects.links.repo') }}
     </AppLink>
   </div>
