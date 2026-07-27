@@ -77,6 +77,10 @@ const crumbs = computed(() => [
   { label: project.value?.title ?? '' }
 ])
 
+// CreativeWork + BreadcrumbList (doc 22 §4), built from the SAME crumbs the template renders so the
+// markup and the structured data cannot disagree.
+useProjectSchema(project, crumbs)
+
 useSeoMeta({
   title: () => project.value?.metaTitle || project.value?.title,
   description: () => project.value?.metaDescription || project.value?.summary,

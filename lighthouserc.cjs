@@ -47,7 +47,15 @@ const urls = [
   'http://127.0.0.1:3000/',
   'http://127.0.0.1:3000/ar',
   'http://127.0.0.1:3000/blog/staying-inside-performance-budget-nuxt',
-  'http://127.0.0.1:3000/ar/blog/albaqaa-dimn-mizaniyat-ada-nuxt'
+  'http://127.0.0.1:3000/ar/blog/albaqaa-dimn-mizaniyat-ada-nuxt',
+  // web-005 Projects. Doc 20 §5's matrix is "four pages (home, article, project, contact) x both
+  // locales"; the project pages now exist, so D20-8's deferral is closed for them. `/contact` remains
+  // deferred with its slice. Slugs are the Prism contract examples, which the mock serves for ANY
+  // slug — the gate must not depend on staging data.
+  'http://127.0.0.1:3000/projects',
+  'http://127.0.0.1:3000/ar/projects',
+  'http://127.0.0.1:3000/projects/content-platform-api',
+  'http://127.0.0.1:3000/ar/projects/content-platform-api'
 ]
 
 module.exports = {

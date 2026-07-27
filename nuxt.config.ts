@@ -84,8 +84,12 @@ export default defineNuxtConfig({
     '/ar/dashboard/**': { ssr: false },
     '/': { swr: 60 },
     '/blog/**': { swr: 60 },
+    '/projects': { swr: 60 },
+    '/projects/**': { swr: 60 },
     '/ar': { swr: 60 },
     '/ar/blog/**': { swr: 60 },
+    '/ar/projects': { swr: 60 },
+    '/ar/projects/**': { swr: 60 },
     // Draft-preview surface (D10-11): never index, never cache, never leak the token-bearing URL via
     // the Referer of any subresource. `robots` drives @nuxtjs/robots (noindex meta + X-Robots-Tag);
     // the explicit headers add no-store + no-referrer. Both locale paths need the header rule — Nitro
@@ -138,8 +142,21 @@ export default defineNuxtConfig({
   },
 
   // OG-image/schema wiring is a later milestone (spec out-of-scope); keep the heavy OG-image
-  // renderer out of the M1 build. Sitemap/robots stay at module defaults.
+  // renderer out of the M1 build. Robots stays at module defaults.
   ogImage: { enabled: false },
+
+  // Published project translations come from the API at request time (doc 22 §sitemap). The handler
+  // lives in Nitro because a sitemap cannot go through a component composable.
+  sitemap: {
+    sources: ['/api/__sitemap__/projects']
+  },
+
+  // Project media is served from the R2 custom domain. The API pre-generates every rendition and R2
+  // serves the static objects, so this only allowlists the origin — no runtime transformation is
+  // configured or wanted (D23-15). Without this, remote descriptors from the contract are rejected.
+  image: {
+    domains: ['media.eslammuatamed.com']
+  },
 
   // Pre-compress public assets at build time (brotli + gzip), so the Nitro origin serves them the
   // way production already serves them to users.

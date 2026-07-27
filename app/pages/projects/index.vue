@@ -44,6 +44,21 @@ function pageLink(target: number) {
   return { query: buildPageQuery(technology.value, target) }
 }
 
+// A visible trail on the index too: Home is otherwise only reachable through the header, and the
+// BreadcrumbList below must mirror something the visitor can actually see (doc 22 §4).
+const crumbs = computed(() => [{ label: t('nav.home'), to: '/' }, { label: t('nav.projects') }])
+
+const siteConfig = useSiteConfig()
+const localePath = useLocalePath()
+useSchemaOrg(() => [
+  defineBreadcrumb({
+    itemListElement: crumbs.value.map(crumb => ({
+      name: crumb.label,
+      item: crumb.to ? `${siteConfig.url}${localePath(crumb.to)}` : undefined
+    }))
+  })
+])
+
 useSeoMeta({
   title: () => t('seo.projects.title'),
   description: () => t('seo.projects.description'),
@@ -59,7 +74,9 @@ useSeoMeta({
 
 <template>
   <UContainer class="py-[var(--space-section)]">
-    <header class="max-w-2xl">
+    <UiBreadcrumbs :items="crumbs" :label="t('projects.breadcrumbLabel')" />
+
+    <header class="mt-10 max-w-2xl">
       <p class="kicker text-dimmed">{{ t('nav.projects') }}</p>
       <h1 class="mt-4 font-display text-display text-highlighted text-balance">
         {{ t('projects.title') }}
