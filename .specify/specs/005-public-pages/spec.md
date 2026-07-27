@@ -6,7 +6,14 @@
 
 **Created**: 2026-07-27
 
-**Status**: Specification — not implemented. Implementation must not begin until this specification is approved.
+**Status**: **Approved 2026-07-27** (owner). Implementation in progress on this branch under PR #22. The PR
+merge remains blocked until the complete **D16-8 Documentation & Handoff Gate** passes.
+
+**Owner amendments (2026-07-27), recorded below and binding**: `FR-PUB-034` stays excluded · the Contact
+CTA is the canonical `mailto:` action only, with **no** `/contact` link in this slice · Playwright + axe
+stay in this same feature and PR and must be **bootstrapped early**, before substantial page work ·
+Arabic UI copy may be drafted during implementation but requires native owner review before closeout,
+and untranslated English fallback strings must never appear on Arabic public routes.
 
 **Input**: Roadmap `web-005 public pages` (doc 24, D24-5). This is the **first vertical slice** of that
 feature: the Projects journey. The remaining public pages (`/experience`, `/about`, `/uses`, `/resume`,
@@ -67,9 +74,10 @@ slug.
 
 ### Explicitly out of scope
 
-- **FR-PUB-034** (Prev/next case-study navigation) — priority **`C`** (doc 02 §4 `:73`). No mandatory
-  journey breaks without it: F-P1 step 4 is satisfied by the case-study Contact CTA, and the index is
-  always reachable via breadcrumbs. **Excluded.**
+- **FR-PUB-034** (Prev/next case-study navigation) — priority **`C`** (doc 02 §4 `:73`). **Excluded by
+  owner decision (2026-07-27).** No mandatory journey breaks without it: breadcrumbs, the Projects index,
+  and the Contact CTA provide sufficient recovery and journey continuity. Do not implement it in this
+  slice.
 - `/experience`, `/about`, `/uses`, `/resume`, `/contact` page implementation (later slices).
 - Any API change, API OpenAPI examples, or API deployment.
 - Production/test content editing, image upload, deployment, `dev → main` promotion.
@@ -144,10 +152,11 @@ slug.
   - `blurhash` supplies the LQIP placeholder.
 - **Breadcrumbs**: Home → Projects → *current project title*, mirroring in RTL, with the current item
   marked `aria-current="page"` and not a link.
-- **Contact CTA**: links to the accepted current contact route. `/contact` is a **documented web-005
-  limitation** and still 404s in this slice; the CTA therefore **also** exposes a working `mailto:` from
-  `GET /settings/site` profile links, so the conversion path is never dead (D05-4 — the email path
-  always works). This is a carried limitation, recorded, not a defect introduced here.
+- **Contact CTA** (owner decision, 2026-07-27): the CTA is the **canonical direct-email action only** —
+  `mailto:eslammuatemed@gmail.com`. **No link to `/contact` is rendered in this slice**, neither primary
+  nor secondary, because that route does not exist yet and a dead link is worse than none (D05-4 — the
+  email path always works). A future Contact slice replaces the CTA destination with the localized
+  `/contact` route, and direct email remains the Contact page's fallback.
 - **Slug-redirect resolution before final 404**: on a `404` from `GET /projects/{slug}`, the app calls
   `GET /redirects/resolve?path=/projects/{slug}` **once**. On `200`, it redirects to `toPath` (a
   section-relative path) with an SSR-correct 301-style navigation. On `404` from the resolver, it throws
@@ -241,6 +250,12 @@ JSON-LD generation · pagination visibility logic · accessible state behavior.
 "home, article, **project**, contact". **None of this infrastructure exists today** — the Web repo has
 no Playwright, no axe, and no e2e directory. Standing it up is part of this slice.
 
+**Owner decision (2026-07-27):** the harness stays in **this same feature and PR** — PR #22 cannot merge
+without the required Projects e2e and accessibility coverage, and it must **not** be split out. Because
+it is the largest implementation uncertainty, it is **bootstrapped and proven first** (see `plan.md`
+§Sequencing and `tasks.md` Phase 1) against an already-stable public route; the full Projects scenarios
+follow once the pages exist.
+
 **Prism is the default mock.** A read-only investigation against the committed contract proved that
 Prism serves usable responses **without any OpenAPI examples**, because the schemas carry
 property-level `example` keywords:
@@ -332,8 +347,12 @@ implementation scope**. None is fixed by this slice.
 
 ### 10.2 Carried Web limitations (unchanged by this slice)
 
-- `/experience`, `/about`, `/uses`, `/resume`, `/contact` still `404`. The case-study Contact CTA keeps a
-  working `mailto:` so F-P1 step 4 never dead-ends.
+- `/experience`, `/about`, `/uses`, `/resume`, `/contact` still `404`. The case-study Contact CTA is the
+  canonical `mailto:` action and deliberately does **not** link `/contact`, so F-P1 step 4 never
+  dead-ends and no dead link ships.
+- **Arabic UI copy** for the new `projects.*` block is author-written during implementation and is
+  **flagged for native owner review before D16-8 closeout**. Untranslated English fallback strings must
+  never render on Arabic public routes — every key ships with a real Arabic value.
 - No CSP / security headers on public routes (launch-hardening follow-up).
 - FR-PUB-015 philosophy section remains deferred (D24-6).
 - Arabic UI copy is author-written and pending owner native review.

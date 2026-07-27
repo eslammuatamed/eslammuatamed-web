@@ -14,18 +14,35 @@ Two things are genuinely new and carry the risk: the **Playwright + axe harness*
 entirely) and **`@nuxt/image` configuration for the remote media origin**. Both are sequenced so the
 pages are independently verifiable before the harness lands.
 
-## Sequencing (why this order)
+## Sequencing (why this order) — revised by owner decision 2026-07-27
 
-1. **Data + routing skeleton first** — a composable and two pages that render real contract shapes.
-   Everything downstream depends on the shapes being right.
-2. **States before styling** — `UiRequestState` wiring, 404, and redirect resolution. These are the
-   behaviors that break silently in SSR and are hardest to retrofit.
-3. **Detail content, then gallery** — the FR-CNT-020 sections work without any media; the gallery is
-   additive and can be verified against mock descriptors.
-4. **SEO/schema after content is stable** — metadata derives from resolved content, so it cannot be
-   finalized earlier.
-5. **Harness last, but not optional** — component tests run continuously from step 1; Playwright + axe
-   land as their own phase so a long harness build cannot block page verification.
+**The harness comes first, not last.** The original plan deferred Playwright + axe to a late phase. The
+owner reversed that: it is the largest implementation uncertainty, so it is bootstrapped and *proven*
+before substantial page work, against an already-stable public route. A harness that turns out to be
+unworkable must surface on day one, not after the pages are written.
+
+1. **Playwright + axe foundation** — config, Prism + Nitro orchestration, CI wiring, and a minimal EN/AR
+   smoke plus one axe scan on an existing route. Proves the harness end-to-end while proving nothing
+   about Projects.
+2. **Data + routing skeleton** — composables and two pages rendering real contract shapes. Everything
+   downstream depends on the shapes being right.
+3. **States before styling** — `UiRequestState` wiring, 404, and redirect resolution. These break
+   silently in SSR and are hardest to retrofit.
+4. **Detail content, then gallery** — the FR-CNT-020 sections work without any media; the gallery is
+   additive and verified against contract descriptors.
+5. **SEO/schema after content is stable** — metadata derives from resolved content.
+6. **Full Projects e2e + axe coverage** — completed once the pages exist, on the foundation from step 1.
+
+## Harness architecture (reuse, don't reinvent)
+
+`scripts/ci-preview.mjs` already orchestrates exactly what the e2e harness needs: Prism on the
+**committed** contract, the built Nitro server pointed at it, deterministic TCP readiness gating for
+*both* ports before announcing readiness, and SIGINT/SIGTERM teardown so no orphan mock survives. Its
+header documents precisely why readiness gating matters — a page server-rendered before Prism is up
+renders its error state and silently changes what the test measures.
+
+Playwright's `webServer` therefore **reuses that script verbatim** rather than duplicating process
+management. This keeps one source of truth for preview orchestration, shared with the Lighthouse gate.
 
 ## Data layer
 
@@ -89,10 +106,11 @@ All are detachable (props/slots only, doc 12 §6) and consume semantic tokens on
 ## Testing
 
 - **Vitest** alongside each component/composable, per §6.1 of the spec. No snapshot-only tests.
-- **Playwright + axe** (new): `@playwright/test` + `@axe-core/playwright`, config running the built
-  preview against `npm run mock` (Prism on the committed contract). Web-owned `page.route()`
-  interception only for the four scenarios Prism cannot express (EN/AR differentiation, empty list,
-  default unknown-slug 404, exact authored Markdown). CI job added to `.github/workflows/ci.yml`.
+- **Playwright + axe** (new, **Phase 1 — first**): `@playwright/test` + `@axe-core/playwright`, with
+  `webServer` delegating to `scripts/ci-preview.mjs`. Web-owned `page.route()` interception only for the
+  scenarios Prism cannot express deterministically (EN/AR content differentiation, empty list, default
+  unknown-slug 404, exact authored Markdown, deterministic redirect resolution). CI job added to
+  `.github/workflows/ci.yml` **without touching any existing threshold or the Lighthouse job**.
 
 ## Verification
 
