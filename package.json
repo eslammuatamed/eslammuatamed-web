@@ -26,7 +26,10 @@
     "ci:preview": "node scripts/ci-preview.mjs",
     "lhci": "LHCI_PROFILE=mobile lhci autorun",
     "lhci:desktop": "LHCI_PROFILE=desktop lhci autorun --collect.settings.preset=desktop",
-    "lhci:assert": "node scripts/check-lighthouse-medians.mjs"
+    "lhci:assert": "node scripts/check-lighthouse-medians.mjs",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "typecheck:e2e": "tsc --noEmit -p e2e/tsconfig.json"
   },
   "lint-staged": {
     "*.{ts,vue,mjs,js}": "eslint --fix"
@@ -71,10 +74,12 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.12.1",
     "@iconify-json/simple-icons": "^1.2.91",
     "@lhci/cli": "^0.15.1",
     "@nuxt/eslint": "^1.16.0",
     "@nuxt/test-utils": "^4.0.3",
+    "@playwright/test": "^1.62.0",
     "@size-limit/file": "^13.0.1",
     "@stoplight/prism-cli": "^5.15.11",
     "@types/markdown-it": "^14.1.2",

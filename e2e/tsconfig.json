@@ -1,0 +1,20 @@
+{
+  // The e2e suite sits OUTSIDE the Nuxt project graph on purpose: it drives the built application over
+  // HTTP and must not import app internals. The root `tsconfig.json` only references the generated
+  // `.nuxt/tsconfig.*` projects, so without this file these specs would never be type-checked at all —
+  // Playwright transpiles TypeScript without checking it, so type errors here would be invisible.
+  // Checked by `npm run typecheck:e2e`.
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022", "DOM"],
+    "types": ["node"],
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "noEmit": true
+  },
+  "include": ["**/*.ts", "../playwright.config.ts"]
+}
