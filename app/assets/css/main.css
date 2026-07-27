@@ -10,6 +10,11 @@
    BODY is the quiet workhorse — Geist (Latin) + IBM Plex Sans Arabic. Mono is data only.
    All variable (one weight-axis file each) to hold the perf budget. */
 @import "@fontsource-variable/space-grotesk/wght.css";
+@import "@fontsource-variable/cairo/wght.css";
+/* Reem Kufi — the Arabic NAMEPLATE face only (D03-12). A modern geometric Kufi with real presence and a
+   premium, distinctive character that stands beside the heavy Space Grotesk Latin name; used solely on the
+   hero name, not on body/section titles (which stay Cairo). Self-hosted variable (wght 400–700). */
+@import "@fontsource-variable/reem-kufi/wght.css";
 @import "@fontsource-variable/geist/wght.css";
 /* Arabic-subset only (D20-4). The full `400.css`/`600.css` entrypoints also declare the Latin
    subset of IBM Plex Sans Arabic; because the family sits FIRST in `--font-sans-arabic`, its
@@ -30,40 +35,6 @@
    declaration weight in the render-blocking stylesheet. */
 @import "@fontsource/jetbrains-mono/latin-400.css";
 
-/* Cairo (Arabic display, D03-9) and Reem Kufi (Arabic nameplate, D03-12) are declared here over the
-   ARABIC `unicode-range` ONLY, instead of importing their `wght.css` entrypoints.
-
-   Both entrypoints also ship latin / latin-ext / vietnamese faces, and `/ar` is inherently bilingual:
-   Latin proper nouns, tech tokens and `<bdi>` runs sit inside Arabic copy. With the full entrypoints
-   imported, those Latin runs won on CAIRO'S and REEM KUFI'S OWN Latin glyphs — which contradicts
-   D03-9, where the Latin display face is Space Grotesk. So the cost bought the WRONG typeface:
-   measured on `/ar`, cairo-latin (34,135 B) + reem-kufi-latin (20,671 B) downloaded on every Arabic
-   view to set Latin text in a face the design does not specify for Latin.
-
-   Restricting both to Arabic makes Latin fall through to "Space Grotesk Variable", now appended to
-   the Arabic display/nameplate stacks below — correct per D03-9, and lighter. Arabic rendering is
-   unchanged: same files, same weights, same `swap`, same variable axes.
-
-   `unicode-range` and `font-weight` axes are fontsource's own `arabic` subset values, copied verbatim
-   from `@fontsource-variable/{cairo,reem-kufi}/wght.css` — this narrows WHEN each face applies, it
-   does not re-cut the font. The `files/*` subpath is a published package export. */
-@font-face {
-  font-family: "Cairo Variable";
-  font-style: normal;
-  font-display: swap;
-  font-weight: 200 1000;
-  src: url("@fontsource-variable/cairo/files/cairo-arabic-wght-normal.woff2") format("woff2-variations");
-  unicode-range: U+0600-06FF,U+0750-077F,U+0870-088E,U+0890-0891,U+0897-08E1,U+08E3-08FF,U+200C-200E,U+2010-2011,U+204F,U+2E41,U+FB50-FDFF,U+FE70-FE74,U+FE76-FEFC,U+102E0-102FB,U+10E60-10E7E,U+10EC2-10EC4,U+10EFC-10EFF,U+1EE00-1EE03,U+1EE05-1EE1F,U+1EE21-1EE22,U+1EE24,U+1EE27,U+1EE29-1EE32,U+1EE34-1EE37,U+1EE39,U+1EE3B,U+1EE42,U+1EE47,U+1EE49,U+1EE4B,U+1EE4D-1EE4F,U+1EE51-1EE52,U+1EE54,U+1EE57,U+1EE59,U+1EE5B,U+1EE5D,U+1EE5F,U+1EE61-1EE62,U+1EE64,U+1EE67-1EE6A,U+1EE6C-1EE72,U+1EE74-1EE77,U+1EE79-1EE7C,U+1EE7E,U+1EE80-1EE89,U+1EE8B-1EE9B,U+1EEA1-1EEA3,U+1EEA5-1EEA9,U+1EEAB-1EEBB,U+1EEF0-1EEF1;
-}
-@font-face {
-  font-family: "Reem Kufi Variable";
-  font-style: normal;
-  font-display: swap;
-  font-weight: 400 700;
-  src: url("@fontsource-variable/reem-kufi/files/reem-kufi-arabic-wght-normal.woff2") format("woff2-variations");
-  unicode-range: U+0600-06FF,U+0750-077F,U+0870-088E,U+0890-0891,U+0897-08E1,U+08E3-08FF,U+200C-200E,U+2010-2011,U+204F,U+2E41,U+FB50-FDFF,U+FE70-FE74,U+FE76-FEFC,U+102E0-102FB,U+10E60-10E7E,U+10EC2-10EC4,U+10EFC-10EFF,U+1EE00-1EE03,U+1EE05-1EE1F,U+1EE21-1EE22,U+1EE24,U+1EE27,U+1EE29-1EE32,U+1EE34-1EE37,U+1EE39,U+1EE3B,U+1EE42,U+1EE47,U+1EE49,U+1EE4B,U+1EE4D-1EE4F,U+1EE51-1EE52,U+1EE54,U+1EE57,U+1EE59,U+1EE5B,U+1EE5D,U+1EE5F,U+1EE61-1EE62,U+1EE64,U+1EE67-1EE6A,U+1EE6C-1EE72,U+1EE74-1EE77,U+1EE79-1EE7C,U+1EE7E,U+1EE80-1EE89,U+1EE8B-1EE9B,U+1EEA1-1EEA3,U+1EEA5-1EEA9,U+1EEAB-1EEBB,U+1EEF0-1EEF1;
-}
-
 /* ---------------------------------------------------------------------------------------
    Theme tokens — names generate Tailwind utilities and CSS variables (Tailwind v4 @theme).
    ------------------------------------------------------------------------------------- */
@@ -73,16 +44,11 @@
      generate the `.font-display` utility; the Arabic swap is one rule in @layer base. */
   --font-display: "Space Grotesk Variable", "Geist Variable", ui-sans-serif, system-ui,
     sans-serif;
-  /* "Space Grotesk Variable" sits after the Arabic face in both Arabic stacks: Cairo/Reem Kufi are
-     now declared over the Arabic `unicode-range` only (above), so Latin runs inside Arabic copy —
-     proper nouns, tech tokens, `<bdi>` — fall through to the Latin DISPLAY face the design actually
-     specifies for them (D03-9), rather than to Cairo's own Latin glyphs or a system fallback. */
-  --font-display-arabic: "Cairo Variable", "Space Grotesk Variable", "IBM Plex Sans Arabic",
-    ui-sans-serif, system-ui, sans-serif;
+  --font-display-arabic: "Cairo Variable", "IBM Plex Sans Arabic", ui-sans-serif, system-ui,
+    sans-serif;
   /* Nameplate face: Latin reuses the display face; Arabic upgrades to Reem Kufi for the hero name (D03-12). */
   --font-nameplate: "Space Grotesk Variable", "Geist Variable", ui-sans-serif, system-ui, sans-serif;
-  --font-nameplate-arabic: "Reem Kufi Variable", "Space Grotesk Variable", ui-sans-serif, system-ui,
-    sans-serif;
+  --font-nameplate-arabic: "Reem Kufi Variable", "Cairo Variable", ui-sans-serif, system-ui, sans-serif;
   --font-sans: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
   --font-sans-arabic: "IBM Plex Sans Arabic", "Geist Variable", ui-sans-serif, system-ui,
     sans-serif;
