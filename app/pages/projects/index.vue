@@ -134,10 +134,13 @@ useSeoMeta({
       </template>
 
       <!-- Order is the API's, rendered verbatim (D09-8) — no client-side sort. -->
+      <!-- h2: these entries sit directly under the page h1, with no intervening section heading, so
+           the default h3 would skip a level (WCAG heading order). -->
       <ContentWorkEntry
         v-for="project in (data?.data ?? [])"
         :key="project.id"
         :project="project"
+        heading-level="h2"
       />
     </UiRequestState>
 

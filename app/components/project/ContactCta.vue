@@ -23,7 +23,9 @@ const mailto = computed(
 <template>
   <UiSpread tone="ink" as="aside">
     <div class="max-w-2xl">
-      <p class="kicker text-primary">{{ t('projects.contact.eyebrow') }}</p>
+      <!-- text-link, not text-primary: violet does not clear AA on the ink surface. 007's
+           acceptance pass made exactly this correction for the Home ink eyebrows. -->
+      <p class="kicker text-link">{{ t('projects.contact.eyebrow') }}</p>
       <p class="mt-4 font-display text-h1 text-highlighted text-balance">
         {{ t('projects.contact.title') }}
       </p>
