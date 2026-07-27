@@ -5,13 +5,20 @@
 const { t } = useI18n()
 const main = useTemplateRef<HTMLElement>('main')
 const router = useRouter()
+const nuxtApp = useNuxtApp()
 
 if (import.meta.client) {
-  const stop = router.afterEach((to, from) => {
-    if (to.path === from.path) return
-    void nextTick(() => main.value?.focus())
+  const initialPath = router.currentRoute.value.fullPath
+  let initialPageFinished = false
+  const stop = nuxtApp.hooks.hook('page:finish', () => {
+    const isInitialRender = !initialPageFinished && router.currentRoute.value.fullPath === initialPath
+    initialPageFinished = true
+    if (isInitialRender) return
+    void nextTick(() => main.value?.focus({ preventScroll: true }))
   })
-  onBeforeUnmount(stop)
+  onBeforeUnmount(() => {
+    stop()
+  })
 }
 </script>
 
@@ -26,10 +33,13 @@ if (import.meta.client) {
 
     <LayoutHeader />
 
-    <main id="main-content" ref="main" tabindex="-1" class="flex-1 outline-none">
+    <!-- overflow-x-clip contains the page-spread transition's inline translate so it never spawns a
+         transient horizontal scrollbar; clip (not hidden) keeps position:sticky working inside. -->
+    <main id="main-content" ref="main" tabindex="-1" class="flex-1 overflow-x-clip outline-none">
       <slot />
     </main>
 
     <LayoutFooter />
+    <UiBackToTop />
   </div>
 </template>

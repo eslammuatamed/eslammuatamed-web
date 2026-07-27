@@ -23,54 +23,58 @@ useSeoMeta({
 </script>
 
 <template>
+  <!-- The home reads as one edition: a paper hero, an ink capability spread, the work index, the
+       experience timeline, the writing list, endorsements, and a closing ink invitation. The surface
+       alternates paper / ink / lift so hierarchy comes from ground changes and varied composition, not a
+       flat stack. Every section is authored in logical properties, so the whole page mirrors in RTL. -->
   <div v-if="settings">
-    <HomeHero :settings="settings" />
+    <HomeNameplate :settings="settings" />
 
-    <HomeTechStack
+    <HomeCapabilities
       :skills="skills.data.value ?? null"
       :pending="skills.status.value === 'pending'"
       :error="Boolean(skills.error.value)"
       @retry="skills.refresh()"
     />
 
-    <HomeFeaturedProjects
+    <HomeSelectedWork
       :projects="projects.data.value ?? null"
       :pending="projects.status.value === 'pending'"
       :error="Boolean(projects.error.value)"
       @retry="projects.refresh()"
     />
 
-    <HomeExperienceSummary
+    <HomeTimeline
       :experiences="experiences.data.value ?? null"
       :pending="experiences.status.value === 'pending'"
       :error="Boolean(experiences.error.value)"
       @retry="experiences.refresh()"
     />
 
-    <HomeLatestArticles
+    <HomeWriting
       :articles="articles.data.value ?? null"
       :pending="articles.status.value === 'pending'"
       :error="Boolean(articles.error.value)"
       @retry="articles.refresh()"
     />
 
-    <HomeTestimonials
+    <HomeVoices
       :testimonials="testimonials.data.value ?? null"
       :pending="testimonials.status.value === 'pending'"
       :error="Boolean(testimonials.error.value)"
       @retry="testimonials.refresh()"
     />
 
-    <HomeContactCta :settings="settings" />
+    <HomeContact :settings="settings" />
   </div>
 
   <!-- Designed API-unavailable state (D13-1): the shell renders sensibly without the API. -->
   <section v-else-if="settingsError" class="py-[var(--space-section)]">
     <UContainer>
-      <UiBrandMark :size="40" class="text-muted" />
-      <h1 class="mt-6 text-h1 text-highlighted">{{ t('home.hero.unavailableTitle') }}</h1>
-      <p class="mt-3 max-w-md text-muted">{{ t('home.hero.unavailableBody') }}</p>
-      <UButton class="mt-6" variant="subtle" color="neutral" @click="refreshSettings()">
+      <p class="kicker text-dimmed">{{ t('brand.role') }}</p>
+      <h1 class="mt-4 font-display text-display text-highlighted">{{ t('home.hero.unavailableTitle') }}</h1>
+      <p class="mt-4 max-w-md text-body-lg text-muted">{{ t('home.hero.unavailableBody') }}</p>
+      <UButton class="mt-8" variant="subtle" color="neutral" @click="refreshSettings()">
         {{ t('common.retry') }}
       </UButton>
     </UContainer>

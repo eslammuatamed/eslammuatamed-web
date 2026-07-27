@@ -16,8 +16,9 @@ const stubs = {
   UContainer: { template: '<div><slot /></div>' },
   UIcon: { template: '<i />', props: ['name'] },
   AppLink: { template: '<a :href="to"><slot /></a>', props: ['to', 'external'] },
-  LayoutLocaleSwitcher: { template: '<div />' },
-  LayoutThemeToggle: { template: '<div />' }
+  LayoutLangToggle: { template: '<div />' },
+  LayoutThemeToggle: { template: '<div />' },
+  UiBrandMark: { template: '<svg />', props: ['size'] }
 }
 
 const full: SiteSettings = {
