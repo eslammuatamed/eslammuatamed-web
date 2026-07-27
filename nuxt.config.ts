@@ -45,11 +45,11 @@ export default defineNuxtConfig({
   // and dark chrome alike (asset-production.md AP-7). The .ico is listed first so chrome
   // without SVG support resolves it.
   app: {
-    // Branded public route transition (007): a "spread" turn — the page leaves toward the inline-start and
-    // the next arrives from the inline-end (direction mirrors in RTL via CSS). `out-in` so only one page
-    // is ever in flow (no overlap jump / cumulative layout shift); compositor-only opacity+transform; the
-    // CSS collapses it to a ≤120ms opacity fade under prefers-reduced-motion (main.css). SSR-safe.
-    pageTransition: { name: 'page-spread', mode: 'out-in' },
+    // NOTE: the branded `page-spread` route transition is declared in `app.vue`, NOT here.
+    // It carries an `onBeforeEnter` hook that finalizes the deferred locale switch, and a hook is a
+    // FUNCTION — `nuxt.config` is serialized into the build, so it cannot hold one. Keeping a
+    // partial copy here would silently win over nothing and drift from the real definition, so the
+    // transition has exactly one source of truth in `app.vue` (its rationale travels with it).
     head: {
       link: [
         { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico', sizes: '32x32' },
@@ -106,6 +106,23 @@ export default defineNuxtConfig({
     langDir: 'locales', // resolved under the i18n/ restructure dir → i18n/locales (v10 default)
     baseUrl: siteUrl, // validated above — never a silent localhost fallback (D23-8)
     detectBrowserLanguage: false, // explicit routing only — no Accept-Language heuristic (D10-6)
+    // Defer the locale commit until the outgoing page is concealed (D03-14).
+    //
+    // Without this, `locale` commits the moment i18n resolves the incoming route — BEFORE Vue's
+    // `out-in` page transition starts its leave animation. Measured on the built preview: `<html dir>`
+    // flipped to `rtl` at t+0 ms and the leave animation only began at t+60..84 ms, so for ~60-84 ms the
+    // still-opaque ENGLISH page was painted mirrored, with the header already in Arabic. That is the
+    // "two consecutive visual changes" the switch used to show.
+    //
+    // With this enabled, the module suspends the switch and hands over `finalizePendingLocaleChange()`,
+    // which `app.vue` calls from the transition's `onBeforeEnter` — i.e. once the outgoing page is gone.
+    // Locale, `<html lang/dir>`, chrome copy and the Nuxt UI locale pack then all commit in one frame,
+    // while nothing of the old page is on screen.
+    //
+    // It is deliberately inert where it must be: the module skips suspension on the server and during
+    // hydration (`runtime/context.js` — `import.meta.server || nuxt.isHydrating`), so a direct `/ar`
+    // load or a refresh is still RTL in the first painted frame, with no client round trip.
+    skipSettingLocaleOnNavigate: true,
     locales: [
       { code: 'en', language: 'en-US', dir: 'ltr', name: 'English', file: 'en.json' },
       { code: 'ar', language: 'ar', dir: 'rtl', name: 'العربية', file: 'ar.json' }
