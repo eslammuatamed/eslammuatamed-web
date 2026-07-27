@@ -122,6 +122,15 @@ useSeoMeta({
           />
         </section>
       </div>
+
+      <!-- Omitted entirely when the owner has not attached media yet — currently every seeded project
+           has an empty gallery, so this is the normal state, not an edge case. -->
+      <ProjectGallery
+        v-if="project.gallery.length"
+        class="mt-16 block"
+        :items="project.gallery"
+        :heading="t('projects.gallery.heading')"
+      />
     </article>
 
     <ProjectContactCta class="mt-20" />
