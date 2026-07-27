@@ -42,6 +42,12 @@ export type ProjectGalleryItem = Schemas['PublicProjectGalleryItemEntity']
 export type ProjectListItem = Schemas['PublicProjectListItemEntity']
 export type ProjectTechnology = Schemas['ProjectTechnologyEntity']
 
+/**
+ * `GET /redirects/resolve` — the destination for a renamed slug (D04-6). `toPath` is
+ * **section-relative** (e.g. `/projects/new-slug`), so the caller localizes it before navigating.
+ */
+export type RedirectResolve = Schemas['RedirectResolveEntity']
+
 /** `GET /skills` — resolved single-locale skill (home tech-stack section, D09-9). */
 export type Skill = Schemas['PublicSkillEntity']
 
