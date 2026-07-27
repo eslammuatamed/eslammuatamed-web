@@ -3,8 +3,11 @@ import {
   ARABIC_FONT_BUDGET,
   CATEGORY_THRESHOLDS,
   LCP_LIMITS,
+  LCP_QUALITY_TARGETS,
+  LCP_ROUTE_CEILINGS,
   METRIC_LIMITS,
   RUNS_REQUIRED,
+  ceilingFor,
   classifyFontResource,
   fontTotalsByScript,
   groupRuns,
@@ -12,6 +15,7 @@ import {
   limitFor,
   median,
   overallVerdict,
+  qualityTargetFor,
   readReport,
   summariseGroup
 } from './lighthouse-medians.mjs'
@@ -356,8 +360,14 @@ describe('thresholds match doc 20 §1 (D20-13/14/15) verbatim', () => {
     })
     expect(RUNS_REQUIRED).toBe(3)
 
-    // D20-14 — device-scoped lab LCP.
+    // D20-14 — device-scoped lab LCP. Unchanged by D20-16: the ceiling is a separate override,
+    // not an edit to the device budget, so every unlisted configuration still resolves to these.
     expect(LCP_LIMITS).toEqual({ desktop: 1200, mobile: 4000 })
+    // D20-16 — a FROZEN route+device ceiling, never recomputed from a run. Pinned so widening it,
+    // or adding a second route to it, cannot happen without editing this expectation.
+    expect(LCP_ROUTE_CEILINGS).toEqual([{ formFactor: 'mobile', pathname: '/ar', ceiling: 5000 }])
+    // The 4000 ms figure survives as a non-blocking target rather than being deleted.
+    expect(LCP_QUALITY_TARGETS).toEqual({ desktop: 1200, mobile: 4000 })
     // D20-15 — the 130 KiB figure is UNCHANGED in value; only its scope was corrected.
     expect(ARABIC_FONT_BUDGET).toBe(130 * 1024)
     expect(ARABIC_FONT_BUDGET).toBe(133120)
@@ -506,6 +516,35 @@ describe('limitFor — the same metric carries a different bound per run context
     expect(limitFor('largest-contentful-paint', { formFactor: 'mobile', url: EN })).toBe(4000)
   })
 
+  it('applies the D20-16 mobile /ar ceiling, and nowhere else', () => {
+    // The one overridden configuration.
+    expect(limitFor('largest-contentful-paint', { formFactor: 'mobile', url: AR })).toBe(5000)
+    // Desktop /ar is NOT overridden — the ceiling is route AND device scoped.
+    expect(limitFor('largest-contentful-paint', { formFactor: 'desktop', url: AR })).toBe(1200)
+    // Latin routes keep the device budget on both profiles.
+    expect(limitFor('largest-contentful-paint', { formFactor: 'mobile', url: EN })).toBe(4000)
+  })
+
+  it('does not leak the /ar ceiling to Arabic child routes', () => {
+    // `/ar/blog/<slug>` measured 2667 ms on the same CI run and must keep the 4000 ms budget;
+    // an exact-pathname match is what keeps a homepage allowance from relaxing a whole locale.
+    const AR_ARTICLE = 'http://127.0.0.1:3000/ar/blog/albaqaa-dimn-mizaniyat-ada-nuxt'
+    expect(limitFor('largest-contentful-paint', { formFactor: 'mobile', url: AR_ARTICLE })).toBe(4000)
+    expect(ceilingFor('largest-contentful-paint', { formFactor: 'mobile', url: AR_ARTICLE })).toBeNull()
+  })
+
+  it('never applies an LCP ceiling to another metric', () => {
+    expect(ceilingFor('cumulative-layout-shift', { formFactor: 'mobile', url: AR })).toBeNull()
+    expect(limitFor('cumulative-layout-shift', { formFactor: 'mobile', url: AR })).toBe(0.05)
+  })
+
+  it('reports a quality target only where a ceiling raised the bound above it', () => {
+    expect(qualityTargetFor('largest-contentful-paint', { formFactor: 'mobile', url: AR })).toBe(4000)
+    // No ceiling here, so the asserted bound already IS the target — nothing extra to report.
+    expect(qualityTargetFor('largest-contentful-paint', { formFactor: 'mobile', url: EN })).toBeNull()
+    expect(qualityTargetFor('largest-contentful-paint', { formFactor: 'desktop', url: AR })).toBeNull()
+  })
+
   it('applies the Arabic font budget on Arabic routes only', () => {
     expect(limitFor('fonts:arabic-script', { formFactor: 'mobile', url: AR })).toBe(ARABIC_FONT_BUDGET)
     expect(limitFor('fonts:arabic-script', { formFactor: 'mobile', url: EN })).toBeNull()
@@ -583,5 +622,48 @@ describe('the font budget blocks on Arabic script, and only there (D20-15)', () 
     expect(s.metrics['fonts:arabic-script'].median).toBe(0)
     expect(s.metrics['fonts:arabic-script'].pass).toBeNull()
     expect(s.metrics['fonts:arabic-script'].limit).toBeNull()
+  })
+})
+
+describe('D20-16 — the mobile /ar ceiling, exercised on the run that produced it', () => {
+  const AR = 'http://127.0.0.1:3000/ar'
+
+  /** The three real readings from CI run 30255314618, the run this ceiling was set against. */
+  const CI_RUN_LCP = [4723, 4381, 4734]
+
+  it('passes at the 5000 ms ceiling and records the 4000 ms target as unmet', () => {
+    const s = summarise(CI_RUN_LCP.map(lcp => ({ formFactor: 'mobile', url: AR, lcp })))
+    const m = s.metrics['largest-contentful-paint']
+
+    expect(m.median).toBe(4723)
+    expect(m.limit).toBe(5000)
+    expect(m.pass).toBe(true)
+    // The whole point of the split: passing the gate must not erase the missed target.
+    expect(m.target).toBe(4000)
+    expect(m.targetMet).toBe(false)
+    expect(s.failures).toEqual([])
+    expect(overallVerdict([s]).code).toBe(0)
+  })
+
+  it('still fails above the ceiling — the gate was relaxed, not removed', () => {
+    const s = summarise([5200, 5100, 5300].map(lcp => ({ formFactor: 'mobile', url: AR, lcp })))
+    expect(s.metrics['largest-contentful-paint'].pass).toBe(false)
+    expect(overallVerdict([s]).code).toBe(1)
+  })
+
+  it('marks the target met once the route reaches it', () => {
+    const s = summarise([3800, 3700, 3900].map(lcp => ({ formFactor: 'mobile', url: AR, lcp })))
+    const m = s.metrics['largest-contentful-paint']
+    expect(m.pass).toBe(true)
+    expect(m.targetMet).toBe(true)
+  })
+
+  it('leaves an un-ceilinged configuration reporting no target at all', () => {
+    // Mobile `/` keeps the 4000 ms device budget, so there is no second number to report.
+    const s = summarise([3200, 3100, 3300].map(lcp => ({ formFactor: 'mobile', lcp })))
+    const m = s.metrics['largest-contentful-paint']
+    expect(m.limit).toBe(4000)
+    expect(m.target).toBeNull()
+    expect(m.targetMet).toBeNull()
   })
 })

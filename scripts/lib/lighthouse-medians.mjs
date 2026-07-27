@@ -50,6 +50,42 @@ export const CATEGORY_THRESHOLDS = {
 export const LCP_LIMITS = { desktop: 1200, mobile: 4000 }
 
 /**
+ * Route + device specific CI REGRESSION CEILINGS that override `LCP_LIMITS` (D20-16, owner decision
+ * 2026-07-27). Matched on the exact pathname — `/ar` is the Arabic HOME route only, never its
+ * children: `/ar/blog/<slug>` measured 2667 ms on the same run and keeps the unmodified 4000 ms.
+ *
+ * WHY THIS EXISTS, AND WHAT IT IS NOT. D20-14 set mobile at 4000 ms from measurements taken on a
+ * local developer workstation (a 3.0–3.9 s band), and doc 20 §5 recorded in its own words that the
+ * figure "must be re-taken on CI hardware before any conclusion is drawn about the threshold". Run
+ * 30255314618 is that re-take: on CI hardware mobile `/ar` measured 4723 / 4381 / 4734 ms — all
+ * three runs over, so a consistent property of the configuration rather than one unlucky sample.
+ * The budget had been calibrated on different hardware than the gate runs on.
+ *
+ * 5000 ms is ~5.6 % above the measured maximum (4734 ms). That is deliberately tight: a real
+ * regression on this route still trips the gate, and no other route or device is relaxed to reach it.
+ *
+ * This is a CI regression ceiling. It is NOT a redefinition of good LCP, NOT a statement that this
+ * route needs no further work, and NOT a licence to re-baseline from future results — the value is
+ * a frozen constant, exactly as D20-12 froze the app-code budget, because a threshold recomputed
+ * from each run measures nothing. The 4000 ms figure survives as a non-blocking QUALITY TARGET
+ * (`LCP_QUALITY_TARGETS`), reported on every run so an unmet target stays visible rather than
+ * disappearing behind a passing gate.
+ */
+export const LCP_ROUTE_CEILINGS = [
+  { formFactor: 'mobile', pathname: '/ar', ceiling: 5000 }
+]
+
+/**
+ * The non-blocking optimization target a configuration is ALSO measured against (D20-16).
+ *
+ * Only meaningful where a ceiling override raised the asserted bound above the device budget: the
+ * gate asserts the ceiling, and reports the target it did or did not meet. Keeping both visible is
+ * the point of the split — relaxing the gate without recording what was given up is how a
+ * temporary ceiling quietly becomes the standard.
+ */
+export const LCP_QUALITY_TARGETS = { mobile: 4000, desktop: 1200 }
+
+/**
  * The per-script font budget, in bytes (doc 20 §1, scope clarified by D20-15).
  *
  * §1 has always written this budget "per script". It was previously ASSERTED against
@@ -271,7 +307,44 @@ export function limitFor(id, { formFactor, url }) {
   if (!Number.isFinite(resolved)) {
     throw new Error(`${id} has no limit defined for form factor "${formFactor}"`)
   }
-  return resolved
+
+  // A route+device ceiling overrides the device budget where one is defined (D20-16). Applied here,
+  // inside the single resolver, so the ceiling cannot be asserted in one place and printed from the
+  // un-overridden constant in another.
+  const ceiling = ceilingFor(id, { formFactor, url })
+  return ceiling === null ? resolved : ceiling
+}
+
+/**
+ * The route+device ceiling that overrides the device budget for `id` here, or null when none does.
+ * LCP is the only metric with ceilings today; the lookup is keyed by id so adding another cannot
+ * silently inherit LCP's table.
+ * @param {string} id metric id
+ * @param {{formFactor: string, url: string}} context
+ */
+export function ceilingFor(id, { formFactor, url }) {
+  if (id !== 'largest-contentful-paint') return null
+  let pathname
+  try {
+    ({ pathname } = new URL(url))
+  } catch {
+    throw new Error(`cannot resolve an LCP ceiling from an unparseable URL (${url})`)
+  }
+  const match = LCP_ROUTE_CEILINGS.find(c => c.formFactor === formFactor && c.pathname === pathname)
+  return match ? match.ceiling : null
+}
+
+/**
+ * The non-blocking quality target for `id` here, or null when the asserted bound already IS the
+ * target. Returned only where a ceiling raised the bound above it, so the gate can report a target
+ * it missed while still passing (D20-16).
+ * @param {string} id metric id
+ * @param {{formFactor: string, url: string}} context
+ */
+export function qualityTargetFor(id, { formFactor, url }) {
+  if (ceilingFor(id, { formFactor, url }) === null) return null
+  const target = LCP_QUALITY_TARGETS[formFactor]
+  return Number.isFinite(target) ? target : null
 }
 
 /**
@@ -391,14 +464,18 @@ export function summariseGroup(group) {
     // Resolved per configuration, not per metric: LCP is device-scoped and the Arabic font budget
     // applies only to Arabic routes, so the SAME id carries a different bound — or none — here.
     const limit = runs.length ? limitFor(id, { formFactor, url }) : null
+    // Non-blocking, and only present where a D20-16 ceiling raised `limit` above it.
+    const target = runs.length ? qualityTargetFor(id, { formFactor, url }) : null
     const values = runs.map(r => r.metrics[id]).filter(v => Number.isFinite(v))
     if (values.length !== runs.length || !runs.length) {
-      metrics[id] = { values, median: null, ...spec, limit, pass: null }
+      metrics[id] = { values, median: null, ...spec, limit, target, targetMet: null, pass: null }
       continue
     }
     const value = median(values)
     const pass = limit === null ? null : value <= limit
-    metrics[id] = { values, median: value, ...spec, limit, pass }
+    // Recorded regardless of the verdict: a missed target must stay visible on a passing gate.
+    const targetMet = target === null ? null : value <= target
+    metrics[id] = { values, median: value, ...spec, limit, target, targetMet, pass }
     if (pass === false && !problems.length) {
       failures.push(`${spec.label} median ${value} exceeds ${limit}${spec.unit} (runs: ${values.join(', ')})`)
     }

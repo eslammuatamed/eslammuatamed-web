@@ -41,7 +41,8 @@ function openMenu(): void {
   mobileOpen.value = true
 }
 
-// Glass is applied only once content is actually behind the header (exploratory, 007-glass).
+// Glass is applied only once content is actually behind the header (D03-14 — the header is flat at
+// rest and glassy only after the page scrolls beneath it).
 // At the very top there is nothing to see through, so a blurred strip there is cost with no signal —
 // and it puts a seam across the top of the hero. Starting `false` also matches SSR, so hydration
 // finds the same classes it rendered.

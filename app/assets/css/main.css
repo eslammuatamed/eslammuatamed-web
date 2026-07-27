@@ -173,7 +173,8 @@
 }
 
 /* ---------------------------------------------------------------------------------------
-   Glass (selective) — EXPLORATORY, not yet a canonical design decision.
+   Glass (selective) — canonical design decision D03-14 (doc 03 §4); tokens owned by D14-8
+   (doc 14 §2.1). Owner-approved 2026-07-27 against a complete 11-cell visual matrix.
 
    Scope is deliberately narrow: surfaces that FLOAT OVER content — the sticky header once the
    page has scrolled beneath it, the mobile navigation panel, and the back-to-top control. Cards,
@@ -552,8 +553,11 @@ html[lang="ar"] .font-nameplate {
    properties throughout so it mirrors in RTL; code is isolated LTR (doc 21 §4).
    ------------------------------------------------------------------------------------- */
 @layer components {
-  /* Selective glass (exploratory). Two surfaces only: `.glass` sits on the page tone, `.glass-panel`
-     on the elevated tone for panels that are their own surface (the mobile drawer, the FAB).
+  /* Selective glass (D03-14). ONE class, `.glass`, carrying blur + edge lighting only; the surface
+     tone is chosen by the consumer as `bg-[var(--glass-surface)]` (page tone — the scrolled header)
+     or `bg-[var(--glass-surface-elevated)]` (elevated tone — the mobile drawer, the FAB). Applied to
+     exactly three floating-chrome surfaces; cards, rows, content sections and the data-loading
+     overlay stay opaque.
 
      ORDER IS THE POINT. The solid fallback is the DEFAULT declaration, and the translucent form is
      added only inside `@supports`. Written the other way round — glass first, fallback in a negated

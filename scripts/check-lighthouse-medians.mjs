@@ -10,6 +10,8 @@
  *     Performance     median ≥ 95 desktop  ·  ≥ 60 mobile
  *     A11y / BP / SEO median 100
  *     LCP (lab)       ≤ 1200 ms desktop  ·  ≤ 4000 ms mobile   — device-scoped (D20-14)
+ *                     mobile `/ar` ≤ 5000 ms — route+device CI regression ceiling (D20-16);
+ *                     4000 ms remains a reported, non-blocking quality target there
  *     CLS             ≤ 0.05
  *     Fonts           Arabic-SCRIPT resources ≤ 130 KiB on Arabic routes (D20-15); the combined
  *                     per-route total and the non-Arabic split are reported as diagnostics
@@ -105,7 +107,8 @@ async function main() {
   console.log(`\nLighthouse medians — doc 20 §1 (D20-13/14/15), ${RUNS_REQUIRED} runs per configuration`)
   console.log('Grouped by configSettings.formFactor × requestedUrl (run configuration, not filename).')
   console.log('Every individual run is shown: the median must not be able to hide instability.')
-  console.log('LCP budgets are device-scoped (D20-14); the font budget is Arabic-script on Arabic routes (D20-15).\n')
+  console.log('LCP budgets are device-scoped (D20-14); the font budget is Arabic-script on Arabic routes (D20-15).')
+  console.log('Mobile /ar asserts the D20-16 CI regression ceiling (5000 ms); its 4000 ms quality target is reported, not blocking.\n')
 
   for (const s of summaries) {
     const locale = isArabicRoute(s.url) ? 'Arabic route' : 'Latin route'
@@ -138,9 +141,18 @@ async function main() {
             ? '(budget does not apply to this route)'
             : '(recorded, no doc 20 §1 budget)')
         : `≤ ${fmt(m.limit, m.unit)}`
+      // A D20-16 ceiling raised the asserted bound above the quality target, so the target is
+      // reported beside the verdict. An unmet target must stay legible on a PASSING gate — a
+      // ceiling that silently absorbs the number it replaced is how a temporary allowance becomes
+      // the permanent standard.
+      const targetNote = m.targetMet === null
+        ? ''
+        : m.targetMet
+          ? `  · quality target ${fmt(m.target, m.unit)} met`
+          : `  · quality target ${fmt(m.target, m.unit)} NOT met (non-blocking, D20-16)`
       console.log(
         `   ${mark} ${m.label.padEnd(38)} runs [${m.values.map(v => fmt(v, m.unit)).join(', ')}]`
-        + `  median ${fmt(m.median, m.unit)}  ${bound}`
+        + `  median ${fmt(m.median, m.unit)}  ${bound}${targetNote}`
       )
     }
     console.log('')
