@@ -172,6 +172,85 @@
   --ui-border-accented: var(--ui-color-neutral-600);
 }
 
+/* ---------------------------------------------------------------------------------------
+   Glass (selective) — EXPLORATORY, not yet a canonical design decision.
+
+   Scope is deliberately narrow: surfaces that FLOAT OVER content — the sticky header once the
+   page has scrolled beneath it, the mobile navigation panel, and the back-to-top control. Cards,
+   article/project rows and ordinary sections stay opaque. Depth in this system comes from borders
+   and surface steps (paper / lift / ink); glass supplements that on floating chrome, it does not
+   replace it — which is why every glass surface keeps its semantic 1px border.
+
+   Values are tokens, never per-component utilities, so the treatment is tuned in one place.
+
+   THE BINDING CONSTRAINT IS CONTRAST, not taste. The header is sticky over full-bleed `.on-ink`
+   spreads, and in LIGHT theme ink is neutral-950 while the header's own text is neutral-900 — so a
+   too-transparent header would put near-black text over a near-black backdrop. The surface
+   percentages below are the floor that keeps header text ≥ AA over the darkest section it can
+   cross; they are not free to lower for aesthetics. Verified over an ink section in both themes.
+   ------------------------------------------------------------------------------------- */
+:root,
+.light {
+  /* DEFAULT IS OPAQUE. The translucent values are added below, only inside `@supports`. Gating the
+     TOKEN rather than a rule is what makes this survive contact with Tailwind's cascade: the surface
+     is applied by a `bg-[var(--glass-surface)]` utility, so it competes with Nuxt UI's own
+     `bg-default` utility on equal terms and tailwind-merge resolves it. An earlier attempt set the
+     background in `@layer components`, which LOST to `bg-default` — leaving an opaque panel with a
+     live `backdrop-filter` behind it: no visible glass, full compositing cost. */
+  --glass-surface: var(--ui-bg);
+  --glass-surface-elevated: var(--ui-bg-elevated);
+  --glass-blur: 14px;
+  /* Slight saturation lift is what reads as "glass" rather than "translucent panel"; it also
+     recovers the colour the blur washes out. Kept low — this is chrome, not decoration. */
+  --glass-saturate: 1.6;
+  /* Depth stays border-led: the semantic border is the primary edge, the highlight is a hairline
+     inner lift on the top edge only. */
+  --glass-highlight: inset 0 1px 0 rgb(255 255 255 / 0.55);
+  --glass-shadow: 0 1px 3px rgb(0 0 0 / 0.04);
+}
+
+.dark {
+  --glass-surface: var(--ui-bg);
+  --glass-surface-elevated: var(--ui-bg-elevated);
+  --glass-saturate: 1.4;
+  /* On a near-black page a white inner highlight reads as a smear, and drop shadows are invisible
+     against the page while still costing a paint. Both drop to near-nothing (owner: restrained
+     shadows, especially in dark). */
+  --glass-highlight: inset 0 1px 0 rgb(255 255 255 / 0.06);
+  --glass-shadow: 0 1px 2px rgb(0 0 0 / 0.30);
+}
+
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root,
+  .light {
+    /* Mixed in sRGB (not oklab) so the alpha result is predictable rather than premultiplied.
+       85%, not the 78% this exploration started at, and the 7 points are NOT cosmetic. Measured from
+       a rendered frame with the header over an ink spread: at 78% the strip composites to
+       rgb(197,197,198) and `text-muted` (#52525C — the nav links and Résumé) lands at 4.48:1, just
+       under the 4.5 AA floor for normal text. At 85% it composites to rgb(213,213,214) and the same
+       text measures 5.26:1, with the highlighted brand text at 12.08:1. Light theme is the
+       constrained case: its ink spreads are neutral-950 while its own header text is near-black. */
+    --glass-surface: color-mix(in srgb, var(--ui-bg) 85%, transparent);
+    --glass-surface-elevated: color-mix(in srgb, var(--ui-bg-elevated) 86%, transparent);
+  }
+
+  /* Dark has room to go further — measured over ink at 72%: highlighted 18.06:1, muted 7.35:1. */
+  .dark {
+    --glass-surface: color-mix(in srgb, var(--ui-bg) 72%, transparent);
+    --glass-surface-elevated: color-mix(in srgb, var(--ui-bg-elevated) 76%, transparent);
+  }
+}
+
+/* Users who ask for less transparency get the opaque surface back, in both themes. */
+@media (prefers-reduced-transparency: reduce) {
+  :root,
+  .light,
+  .dark {
+    --glass-surface: var(--ui-bg);
+    --glass-surface-elevated: var(--ui-bg-elevated);
+  }
+}
+
 /* Non-color role tokens and technology identity colors (doc 14 §2/§4/§5). Technology
    colors are consumed only by technology components (doc 03 usage rules). */
 :root {
@@ -473,6 +552,45 @@ html[lang="ar"] .font-nameplate {
    properties throughout so it mirrors in RTL; code is isolated LTR (doc 21 §4).
    ------------------------------------------------------------------------------------- */
 @layer components {
+  /* Selective glass (exploratory). Two surfaces only: `.glass` sits on the page tone, `.glass-panel`
+     on the elevated tone for panels that are their own surface (the mobile drawer, the FAB).
+
+     ORDER IS THE POINT. The solid fallback is the DEFAULT declaration, and the translucent form is
+     added only inside `@supports`. Written the other way round — glass first, fallback in a negated
+     query — any engine with partial support gets an unreadable half-applied surface. This way the
+     worst case is simply the opaque design that already shipped.
+
+     No `backdrop-filter` here is ever nested inside another, and none covers the full viewport:
+     each is a bounded strip or panel. Nested/full-screen backdrop layers are the expensive case,
+     because the compositor re-samples the whole region beneath on every frame. */
+  /* `.glass` carries ONLY the blur and the edge lighting. The surface colour is applied by the
+     component as `bg-[var(--glass-surface)]` / `bg-[var(--glass-surface-elevated)]`, because a
+     background declared here loses to Nuxt UI's `bg-default` utility (utilities layer beats
+     components) — which silently produces an opaque panel that still pays for a backdrop-filter.
+     Borders also stay with the component: the header wants one edge, the FAB wants four, and the
+     existing border-led depth system stays authoritative. */
+  .glass {
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+    backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+    box-shadow: var(--glass-highlight), var(--glass-shadow);
+  }
+
+  /* With no backdrop-filter support the tokens above are already opaque, so all that is left to
+     remove is the edge lighting that only reads correctly against a blurred surface. */
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .glass {
+      box-shadow: none;
+    }
+  }
+
+  @media (prefers-reduced-transparency: reduce) {
+    .glass {
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+      box-shadow: none;
+    }
+  }
+
   .content-prose {
     max-width: 68ch;
     line-height: var(--leading-prose);

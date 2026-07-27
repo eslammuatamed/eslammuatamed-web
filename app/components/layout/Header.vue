@@ -41,13 +41,43 @@ function openMenu(): void {
   mobileOpen.value = true
 }
 
+// Glass is applied only once content is actually behind the header (exploratory, 007-glass).
+// At the very top there is nothing to see through, so a blurred strip there is cost with no signal —
+// and it puts a seam across the top of the hero. Starting `false` also matches SSR, so hydration
+// finds the same classes it rendered.
+//
+// Only background/border/shadow change: no size, position or layout property is touched, so the
+// state flip cannot shift layout (CLS stays 0).
+const scrolled = ref(false)
+
+onMounted(() => {
+  let ticking = false
+  const read = () => {
+    // 8px, not 0: a rubber-band or anchor-restore jitter at the very top must not flicker the state.
+    scrolled.value = window.scrollY > 8
+    ticking = false
+  }
+  const onScroll = () => {
+    if (ticking) return
+    ticking = true
+    // Coalesce to one read per frame — the listener is passive and never writes layout during scroll.
+    requestAnimationFrame(read)
+  }
+  read()
+  window.addEventListener('scroll', onScroll, { passive: true })
+  onBeforeUnmount(() => window.removeEventListener('scroll', onScroll))
+})
+
 watch(() => route.fullPath, () => {
   mobileOpen.value = false
 })
 </script>
 
 <template>
-  <header class="sticky top-0 z-40 border-b border-default bg-default/80 backdrop-blur-md">
+  <header
+    class="sticky top-0 z-40 border-b transition-colors duration-200"
+    :class="scrolled ? 'glass border-default bg-[var(--glass-surface)]' : 'border-transparent bg-transparent'"
+  >
     <UContainer class="flex h-16 items-center justify-between gap-6">
       <AppLink to="/" class="inline-flex items-center gap-2.5">
         <UiBrandMark :size="20" class="text-primary" />
@@ -100,7 +130,7 @@ watch(() => route.fullPath, () => {
       v-model:open="mobileOpen"
       :title="t('brand.name')"
       :side="menuSide"
-      :ui="{ content: 'w-[70vw] max-w-sm' }"
+      :ui="{ content: 'w-[70vw] max-w-sm glass bg-[var(--glass-surface-elevated)]' }"
     >
       <template #title>
         <span class="inline-flex items-center gap-2.5">

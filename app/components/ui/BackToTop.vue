@@ -32,7 +32,7 @@ function toTop(): void {
         type="button"
         :aria-label="t('a11y.backToTop')"
         :title="t('a11y.backToTop')"
-        class="fixed bottom-6 end-6 z-40 grid size-11 place-items-center rounded-full border border-default bg-elevated/90 text-muted backdrop-blur transition-colors hover:border-primary hover:text-primary"
+        class="glass fixed bottom-6 end-6 z-40 grid size-11 place-items-center rounded-full border border-default bg-[var(--glass-surface-elevated)] text-muted transition-colors hover:border-primary hover:text-primary"
         style="margin-block-end: env(safe-area-inset-bottom)"
         @click="toTop"
       >
