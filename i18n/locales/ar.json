@@ -19,7 +19,8 @@
     "switchLanguage": "تغيير اللغة",
     "openMenu": "فتح القائمة",
     "closeMenu": "إغلاق القائمة",
-    "homeLink": "الانتقال إلى الصفحة الرئيسية"
+    "homeLink": "الانتقال إلى الصفحة الرئيسية",
+    "backToTop": "العودة إلى الأعلى"
   },
   "theme": {
     "light": "فاتح",
@@ -37,12 +38,63 @@
     "viewAll": "عرض الكل",
     "readMore": "اقرأ المزيد"
   },
+  "state": {
+    "loading": "جارٍ التحميل",
+    "updating": "جارٍ التحديث",
+    "saving": "جارٍ الحفظ",
+    "error": "حدث خطأ ما",
+    "retry": "إعادة المحاولة",
+    "offline": "يبدو أنك غير متصل بالإنترنت"
+  },
   "home": {
     "hero": {
       "viewWork": "استعرض الأعمال",
       "contact": "تواصل معي",
+      "valueProp": "أبني واجهات ويب سريعة وسهلة الوصول باستخدام Vue وNuxt، وأوثّق القرارات الهندسية التي تقف خلفها.",
+      "stackLabel": "أعمل عبر",
+      "since": "أبني للإنتاج منذ عام {year}",
       "unavailableTitle": "المحتوى غير متاح",
       "unavailableBody": "تعذّر تحميل الملف الشخصي في الوقت الحالي. يُرجى المحاولة بعد قليل."
+    },
+    "sectionError": "تعذّر تحميل هذا القسم.",
+    "techStack": {
+      "eyebrow": "أدواتي",
+      "title": "التقنيات التي أعمل بها",
+      "group": {
+        "LANGUAGE": "اللغات",
+        "FRAMEWORK": "أُطُر العمل",
+        "TOOLING": "الأدوات",
+        "PRACTICE": "الممارسات"
+      }
+    },
+    "featured": {
+      "eyebrow": "أعمال مختارة",
+      "title": "مشاريع مميّزة"
+    },
+    "experience": {
+      "eyebrow": "الخبرة",
+      "title": "أماكن عملي",
+      "present": "حتى الآن",
+      "employmentType": {
+        "FULL_TIME": "دوام كامل",
+        "PART_TIME": "دوام جزئي",
+        "CONTRACT": "عقد",
+        "FREELANCE": "عمل حر"
+      }
+    },
+    "articles": {
+      "eyebrow": "الكتابة",
+      "title": "أحدث المقالات"
+    },
+    "testimonials": {
+      "eyebrow": "توصيات",
+      "title": "ماذا قالوا"
+    },
+    "contact": {
+      "eyebrow": "تواصل",
+      "title": "لنعمل معًا",
+      "body": "لديك وظيفة أو مشروع أو سؤال؟ يسعدني أن أسمع عنه.",
+      "form": "تواصل معي"
     }
   },
   "blog": {
@@ -82,7 +134,9 @@
   },
   "footer": {
     "rights": "© {year} {name}. جميع الحقوق محفوظة.",
-    "builtWith": "مُصمّم ومبنيّ بعناية."
+    "builtWith": "مُصمّم ومبنيّ بعناية.",
+    "colophon": "مبنيّ بـ Nuxt وVue وTypeScript وTailwind — ثنائي اللغة وبدعم كامل للاتجاهين.",
+    "downloadResume": "تنزيل السيرة الذاتية"
   },
   "error": {
     "notFoundTitle": "الصفحة غير موجودة",
@@ -92,10 +146,31 @@
     "goHome": "العودة إلى الرئيسية",
     "goBlog": "تصفّح المدوّنة"
   },
+  "preview": {
+    "banner": "معاينة مسودّة — غير منشورة",
+    "unavailableTitle": "المعاينة غير متاحة",
+    "unavailableBody": "رابط المعاينة غير متاح أو انتهت صلاحيته. اطلب رابطًا جديدًا.",
+    "project": {
+      "year": "السنة",
+      "technologies": "التقنيات",
+      "liveUrl": "الموقع المباشر",
+      "repoUrl": "المستودع",
+      "gallery": "معرض الصور",
+      "overview": "نظرة عامة",
+      "businessProblem": "المشكلة التجارية",
+      "solution": "الحل",
+      "role": "الدور",
+      "architecture": "البنية",
+      "challenges": "التحدّيات",
+      "features": "الميزات",
+      "lessonsLearned": "الدروس المستفادة"
+    }
+  },
   "seo": {
     "siteDescription": "أعمال وكتابات إسلام معتمد، مهندس واجهات أمامية متخصص في Vue.js و Nuxt.js.",
     "home": {
       "title": "مهندس واجهات أمامية",
+      "titleFull": "إسلام معتمد — مهندس واجهات أمامية",
       "description": "مهندس واجهات أمامية متخصص في Vue.js و Nuxt.js، يبني واجهات ويب سريعة وسهلة الوصول ومهيأة لمحركات البحث."
     },
     "blog": {

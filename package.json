@@ -20,13 +20,22 @@
     "mock": "prism mock openapi/openapi.json --port 3001",
     "api:types": "openapi-typescript openapi/openapi.json --output app/types/api.d.ts",
     "check:bundle": "node scripts/check-forbidden-modules.mjs",
-    "check:logical": "node scripts/check-logical-properties.mjs"
+    "check:logical": "node scripts/check-logical-properties.mjs",
+    "size": "size-limit",
+    "size:routes": "node scripts/check-route-size.mjs",
+    "ci:preview": "node scripts/ci-preview.mjs",
+    "lhci": "LHCI_PROFILE=mobile lhci autorun",
+    "lhci:desktop": "LHCI_PROFILE=desktop lhci autorun --collect.settings.preset=desktop",
+    "lhci:assert": "node scripts/check-lighthouse-medians.mjs"
   },
   "lint-staged": {
     "*.{ts,vue,mjs,js}": "eslint --fix"
   },
   "dependencies": {
+    "@fontsource-variable/cairo": "^5.3.0",
     "@fontsource-variable/geist": "^5.2.9",
+    "@fontsource-variable/reem-kufi": "^5.3.0",
+    "@fontsource-variable/space-grotesk": "^5.3.0",
     "@fontsource/ibm-plex-sans-arabic": "^5.2.9",
     "@fontsource/jetbrains-mono": "^5.2.8",
     "@iconify-json/lucide": "^1.2.117",
@@ -62,8 +71,11 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@iconify-json/simple-icons": "^1.2.91",
+    "@lhci/cli": "^0.15.1",
     "@nuxt/eslint": "^1.16.0",
     "@nuxt/test-utils": "^4.0.3",
+    "@size-limit/file": "^13.0.1",
     "@stoplight/prism-cli": "^5.15.11",
     "@types/markdown-it": "^14.1.2",
     "@vue/test-utils": "^2.4.11",
@@ -72,6 +84,7 @@
     "husky": "^9.1.7",
     "lint-staged": "^17.0.8",
     "openapi-typescript": "^7.13.0",
+    "size-limit": "^13.0.1",
     "typescript": "^5.9.3",
     "vitest": "^4.1.10",
     "vue-tsc": "^3.3.7"

@@ -388,6 +388,23 @@ export interface paths {
         patch: operations["ArticlesAdminController_update_v1"];
         trace?: never;
     };
+    "/api/v1/redirects/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Resolve a website path to its current destination, or 404 when none exists. */
+        get: operations["RedirectsController_resolve_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/permissions": {
         parameters: {
             query?: never;
@@ -697,6 +714,126 @@ export interface paths {
         patch: operations["ProjectsAdminController_update_v1"];
         trace?: never;
     };
+    "/api/v1/contact": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Submit a contact message. Returns an identical receipt whether the message is stored or silently dropped by anti-spam. */
+        post: operations["ContactController_submit_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List contact messages, unread-first, with read/archived filters. */
+        get: operations["MessagesAdminController_list_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/messages/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get one contact message. */
+        get: operations["MessagesAdminController_get_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Toggle read/archived state on a contact message. */
+        patch: operations["MessagesAdminController_update_v1"];
+        trace?: never;
+    };
+    "/api/v1/admin/articles/{id}/preview-token": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Mint a preview token for an article of any status (drafts included). */
+        post: operations["PreviewAdminController_mintArticleToken_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/projects/{id}/preview-token": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Mint a preview token for a project of any status (unpublished included). */
+        post: operations["PreviewAdminController_mintProjectToken_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/preview/articles/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Preview an article of any status with a valid token, else 404. */
+        get: operations["PreviewController_previewArticle_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/preview/projects/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Preview a project of any status with a valid token, else 404. */
+        get: operations["PreviewController_previewProject_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -907,6 +1044,8 @@ export interface components {
             siteName: string | null;
             /** @example Software engineer & architect */
             tagline: string | null;
+            /** @example Open to select consulting engagements */
+            availabilityStatus: string | null;
             defaultMetaTitle: string | null;
             defaultMetaDescription: string | null;
         };
@@ -914,7 +1053,6 @@ export interface components {
             /** Format: uuid */
             id: string;
             profileLinks: components["schemas"]["ProfileLinkEntity"][];
-            availabilityStatus: string | null;
             /** Format: uuid */
             resumeAssetId: string | null;
             /** @example 2023 */
@@ -958,6 +1096,8 @@ export interface components {
             siteName?: string;
             /** @example Software engineer & architect */
             tagline?: string;
+            /** @example Open to select consulting engagements */
+            availabilityStatus?: string;
             /** @example Eslam Muatamed */
             defaultMetaTitle?: string;
             /** @example Portfolio, case studies, and writing. */
@@ -965,8 +1105,6 @@ export interface components {
         };
         UpdateSettingsDto: {
             profileLinks?: components["schemas"]["ProfileLinkDto"][];
-            /** @example Open to select consulting engagements */
-            availabilityStatus?: string;
             /**
              * Format: uuid
              * @description Resume PDF media asset id (must be a PDF), or null to clear.
@@ -1442,6 +1580,13 @@ export interface components {
             coverImageId?: string;
             tagIds?: string[];
             translations?: components["schemas"]["ArticleTranslationDto"][];
+        };
+        RedirectResolveEntity: {
+            /**
+             * @description Section-relative destination path for the matched redirect.
+             * @example /blog/new-slug
+             */
+            toPath: string;
         };
         PermissionCatalogEntity: {
             /**
@@ -2233,6 +2378,98 @@ export interface components {
             technologyIds?: string[];
             /** @description Ordered gallery; the set is replaced on update. */
             gallery?: components["schemas"]["ProjectGalleryItemDto"][];
+        };
+        ContactReceiptEntity: {
+            /**
+             * @description Always true. Identical for accepted and silently-dropped submissions.
+             * @example true
+             */
+            received: boolean;
+        };
+        CreateContactMessageDto: {
+            /** @example Alex Morgan */
+            name: string;
+            /** @example alex@example.com */
+            email: string;
+            /** @example Project inquiry */
+            subject: string;
+            /** @example I'd like to discuss a Nuxt build. */
+            body: string;
+            /**
+             * @description Anti-spam honeypot — leave empty. Any value flags the submission as spam. Never persisted.
+             * @example
+             */
+            website?: string;
+            /**
+             * @description Anti-spam time-trap — milliseconds between form render and submit. Below ~3000 flags the submission as spam. Never persisted.
+             * @example 8200
+             */
+            elapsedMs?: number;
+        };
+        ContactMessageEntity: {
+            /** Format: uuid */
+            id: string;
+            /** @example Alex Morgan */
+            name: string;
+            /** @example alex@example.com */
+            email: string;
+            /** @example Project inquiry */
+            subject: string;
+            /** @example I'd like to discuss a Nuxt build. */
+            body: string;
+            /** @example false */
+            isRead: boolean;
+            /** @example false */
+            isArchived: boolean;
+            /**
+             * Format: date-time
+             * @description The archival instant (D09-14): set when the message is archived, cleared when un-archived. Null while the message has never been archived. Basis for the 12-month retention purge (doc 19 §6).
+             * @example null
+             */
+            archivedAt: string | null;
+            /**
+             * @description Spam forensics captured at intake (userAgent / referrer). Empty object when absent.
+             * @example {
+             *       "userAgent": "Mozilla/5.0",
+             *       "referrer": "https://example.com"
+             *     }
+             */
+            meta: {
+                [key: string]: unknown;
+            };
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        UpdateMessageDto: {
+            /**
+             * @description Mark the message read (true) or unread (false).
+             * @example true
+             */
+            isRead?: boolean;
+            /**
+             * @description Archive (true) or unarchive (false) the message.
+             * @example false
+             */
+            isArchived?: boolean;
+        };
+        PreviewTokenEntity: {
+            /**
+             * @description Stateless HMAC preview token. Also embedded as ?token= in the returned url. Never logged.
+             * @example MTc1MzAxMjgwMDAwMA.q3n8p0Zx5t2Yc1Rk9f7wLmA6bd4eHsG2uVjOiN0pXyE
+             */
+            token: string;
+            /**
+             * @description Absolute rendered-Web preview link (${PUBLIC_WEB_URL}/preview/{articles|projects}/{id}?token=…) the dashboard shares verbatim as a clean-browser link. The Web page renders the draft by calling the consuming GET /api/v1/preview/… API route (D10-11 v1.4.1: the API signs, the Web renders).
+             * @example https://eslammuatamed.com/preview/articles/2f1c8d9e-4a3b-4c5d-8e6f-7a8b9c0d1e2f?token=MTc1MzAxMjgwMDAwMA.q3n8p0Zx5t2Yc1Rk9f7wLmA6bd4eHsG2uVjOiN0pXyE
+             */
+            url: string;
+            /**
+             * Format: date-time
+             * @description When the token expires (mint time + 30 minutes).
+             */
+            expiresAt: string;
         };
     };
     responses: never;
@@ -3995,6 +4232,60 @@ export interface operations {
             };
             /** @description Admin rate limit exceeded (300 / min). */
             429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    RedirectsController_resolve_v1: {
+        parameters: {
+            query: {
+                /** @description Two-letter locale code, validated against enabled locales. */
+                locale?: string;
+                /** @description Section-relative website path to resolve (the front-end strips the /ar prefix). Grammar: /blog/{slug} → article, /projects/{slug} → project. */
+                path: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The destination path for the matched redirect. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["RedirectResolveEntity"];
+                    };
+                };
+            };
+            /** @description Unknown or disabled locale. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description No redirect for this path in the locale. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Malformed query parameters. */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -5951,6 +6242,472 @@ export interface operations {
             };
             /** @description Admin rate limit exceeded (300 / min). */
             429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    ContactController_submit_v1: {
+        parameters: {
+            query?: never;
+            header: {
+                "user-agent": string;
+                referer: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateContactMessageDto"];
+            };
+        };
+        responses: {
+            /** @description The message was received (or silently dropped as spam). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["ContactReceiptEntity"];
+                    };
+                };
+            };
+            /** @description Validation error (missing field, invalid email, or unknown property). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Contact rate limit exceeded (3 / hour or 10 / day per IP). */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    MessagesAdminController_list_v1: {
+        parameters: {
+            query?: {
+                page?: number;
+                perPage?: number;
+                /** @description Filter by read state. */
+                isRead?: boolean;
+                /** @description Filter by archived state. */
+                isArchived?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["ContactMessageEntity"][];
+                        meta: components["schemas"]["PageMeta"];
+                    };
+                };
+            };
+            /** @description Missing or invalid access token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Missing the required permission. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Admin rate limit exceeded (300 / min). */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    MessagesAdminController_get_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["ContactMessageEntity"];
+                    };
+                };
+            };
+            /** @description Missing or invalid access token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Missing the required permission. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Message not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Admin rate limit exceeded (300 / min). */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    MessagesAdminController_update_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateMessageDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["ContactMessageEntity"];
+                    };
+                };
+            };
+            /** @description Missing or invalid access token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Missing the required permission. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Message not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Validation error. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Admin rate limit exceeded (300 / min). */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    PreviewAdminController_mintArticleToken_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The minted token, its absolute rendered-Web preview url, and its expiry. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["PreviewTokenEntity"];
+                    };
+                };
+            };
+            /** @description Missing or invalid access token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Missing the required permission. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Article not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Admin rate limit exceeded (300 / min). */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    PreviewAdminController_mintProjectToken_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The minted token, its absolute rendered-Web preview url, and its expiry. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["PreviewTokenEntity"];
+                    };
+                };
+            };
+            /** @description Missing or invalid access token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Missing the required permission. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Project not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Admin rate limit exceeded (300 / min). */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    PreviewController_previewArticle_v1: {
+        parameters: {
+            query?: {
+                /** @description Two-letter locale code, validated against enabled locales. */
+                locale?: string;
+                /** @description Preview token minted via POST /admin/{articles|projects}/{id}/preview-token. A missing, expired, tampered, or wrong-type token yields 404 (never 401/403), so an unauthorized caller cannot tell a draft exists. */
+                token?: string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The draft article resolved to ?locale=. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["PublicArticleDetailEntity"];
+                    };
+                };
+            };
+            /** @description Unknown or disabled locale. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Missing/invalid/expired token, or no such article. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Malformed query parameters. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    PreviewController_previewProject_v1: {
+        parameters: {
+            query?: {
+                /** @description Two-letter locale code, validated against enabled locales. */
+                locale?: string;
+                /** @description Preview token minted via POST /admin/{articles|projects}/{id}/preview-token. A missing, expired, tampered, or wrong-type token yields 404 (never 401/403), so an unauthorized caller cannot tell a draft exists. */
+                token?: string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The unpublished project resolved to ?locale=. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["PublicProjectDetailEntity"];
+                    };
+                };
+            };
+            /** @description Unknown or disabled locale. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Missing/invalid/expired token, or no such project. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Malformed query parameters. */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };

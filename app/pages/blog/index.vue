@@ -15,6 +15,14 @@ const { data, status, error, refresh } = await useAsyncData(
   { watch: [page] }
 )
 
+// Split pending into initial-load (skeleton) vs a page change with content already on screen
+// (branded overlay, not a skeleton) — useAsyncData keeps the previous `data` while refetching.
+const hasData = computed(() => !!data.value)
+const initialPending = computed(() => status.value === 'pending' && !hasData.value)
+const refreshing = computed(() => status.value === 'pending' && hasData.value)
+// A list page shows a real empty state (unlike optional home sections, which omit — doc 13 §9.1).
+const isEmpty = computed(() => !!data.value && data.value.data.length === 0)
+
 useSeoMeta({
   title: () => t('seo.blog.title'),
   description: () => t('seo.blog.description'),
@@ -24,42 +32,53 @@ useSeoMeta({
 </script>
 
 <template>
-  <UContainer class="py-16">
-    <UiSectionHeader as="h1" :eyebrow="t('nav.blog')" :title="t('blog.title')" />
-    <p class="mt-3 max-w-2xl text-muted">{{ t('blog.description') }}</p>
+  <UContainer class="py-[var(--space-section)]">
+    <header class="max-w-2xl">
+      <p class="kicker text-dimmed">{{ t('nav.blog') }}</p>
+      <h1 class="mt-4 font-display text-display text-highlighted text-balance">{{ t('blog.title') }}</h1>
+      <p class="mt-5 text-body-lg text-muted text-pretty">{{ t('blog.description') }}</p>
+    </header>
 
-    <!-- Skeletons cover client-side page changes; SSR first paint is already content-complete
-         (D13-2). -->
-    <div v-if="status === 'pending'" class="mt-10 grid gap-4 sm:grid-cols-2">
-      <USkeleton v-for="n in 4" :key="n" class="h-40 w-full rounded-card" />
+    <!-- The list consumes the shared data-state contract (doc 13 §9.1): initial → skeleton, error →
+         localized retry, empty → localized copy, loaded → list with a branded overlay during a page
+         change (SSR first paint is already content-complete — D13-2). -->
+    <UiRequestState
+      class="mt-12 block"
+      :pending="initialPending"
+      :refreshing="refreshing"
+      :error="Boolean(error)"
+      :empty="isEmpty"
+      skeleton="articles"
+      :count="6"
+      @retry="refresh()"
+    >
+      <template #error>
+        <div class="rounded-card border border-default bg-elevated p-8" role="alert">
+          <p class="font-display text-h3 text-highlighted">{{ t('blog.errorTitle') }}</p>
+          <p class="mt-2 text-muted">{{ t('blog.errorBody') }}</p>
+          <UButton class="mt-4" variant="subtle" color="neutral" @click="refresh()">
+            {{ t('common.retry') }}
+          </UButton>
+        </div>
+      </template>
+
+      <template #empty>
+        <div class="rounded-card border border-default bg-elevated p-8">
+          <p class="font-display text-h3 text-highlighted">{{ t('blog.emptyTitle') }}</p>
+          <p class="mt-2 text-muted">{{ t('blog.emptyBody') }}</p>
+        </div>
+      </template>
+
+      <ContentArticleRow v-for="article in (data?.data ?? [])" :key="article.id" :article="article" />
+    </UiRequestState>
+
+    <div v-if="data && data.data.length && data.meta.totalPages > 1" class="mt-12 flex justify-center">
+      <UPagination
+        :page="page"
+        :total="data.meta.total"
+        :items-per-page="data.meta.perPage"
+        :to="(p: number) => ({ query: { page: p } })"
+      />
     </div>
-
-    <div v-else-if="error" class="mt-10 rounded-card border border-default p-8 text-center">
-      <p class="text-h3 text-highlighted">{{ t('blog.errorTitle') }}</p>
-      <p class="mt-2 text-muted">{{ t('blog.errorBody') }}</p>
-      <UButton class="mt-4" variant="subtle" color="neutral" @click="refresh()">
-        {{ t('common.retry') }}
-      </UButton>
-    </div>
-
-    <div v-else-if="!data || data.data.length === 0" class="mt-10 rounded-card border border-default p-8 text-center">
-      <p class="text-h3 text-highlighted">{{ t('blog.emptyTitle') }}</p>
-      <p class="mt-2 text-muted">{{ t('blog.emptyBody') }}</p>
-    </div>
-
-    <template v-else>
-      <div class="mt-10 grid gap-4 sm:grid-cols-2">
-        <ContentArticleCard v-for="article in data.data" :key="article.id" :article="article" />
-      </div>
-
-      <div v-if="data.meta.totalPages > 1" class="mt-10 flex justify-center">
-        <UPagination
-          :page="page"
-          :total="data.meta.total"
-          :items-per-page="data.meta.perPage"
-          :to="(p: number) => ({ query: { page: p } })"
-        />
-      </div>
-    </template>
   </UContainer>
 </template>

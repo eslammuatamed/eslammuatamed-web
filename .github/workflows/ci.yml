@@ -110,11 +110,82 @@ jobs:
       - name: Test
         run: npm test
 
+      # `ANALYZE_BUNDLE=1` emits Rollup chunk→module provenance as a SIDECAR file
+      # (.bundle-analysis/). This is REQUIRED, not optional: without it the per-route gate cannot
+      # measure §1's ≤101 KiB app-owned renderedLength budget at all and exits 2 (infrastructure),
+      # so dropping this flag breaks the gate rather than silently loosening it. Verified
+      # byte-identical to a plain build (27 client assets, matching SHA256s), so CI still measures
+      # exactly what the deploy ships. The gate also cross-checks that this sidecar describes THIS
+      # build, so a stale one fails rather than producing a confidently wrong number.
       - name: Build
-        run: npm run build
+        run: ANALYZE_BUNDLE=1 npm run build
+
+      # doc 20 §5 order: build → size-limit → forbidden-module check → Lighthouse CI.
+      # Budgets are doc 20 §1 verbatim; §1 states they "block merges, not aspirations" and are
+      # "re-baselined only by a decision-log entry" there. Split by what each tool can state
+      # correctly: this step asserts CSS (one global stylesheet, so the glob total IS the per-route
+      # figure — .size-limit.cjs); the next asserts the per-route JS budget.
+      - name: Assert CSS size budget (doc 20 §1)
+        run: npm run size
+
+      # Per-public-route JS budgets: total ≤ 250 KB gz (D20-11) and app-owned Rollup
+      # renderedLength ≤ 101 KiB (D20-12, a FROZEN constant — this gate never recalculates the
+      # limit from the build it is measuring, because a budget refitted to each build measures
+      # nothing). §1 budgets JS "per public route", which a static glob cannot express (it would
+      # also sum the dashboard SPA chunks no public route fetches), so this boots the production
+      # preview and reads each route's real first-view asset set.
+      # Exit codes are distinct and must stay that way: 1 = genuine breach (total, app-owned, or
+      # unclassified module bytes in a valid build); 2 = the gate could not measure (missing build,
+      # missing/corrupt/stale provenance, unreachable preview). Never conflate them.
+      - name: Assert per-route size budgets (doc 20 §1)
+        run: npm run size:routes
 
       - name: Assert bundle isolation
         run: npm run check:bundle
 
       - name: Assert logical properties (RTL)
         run: npm run check:logical
+
+      # Lighthouse CI against the built artifact behind a Prism mock of the committed contract
+      # (scripts/ci-preview.mjs) — deterministic, and independent of staging uptime or data.
+      # home + article × EN/AR; `/projects` and `/contact` from doc 20 §5's four-page matrix are
+      # the accepted web-005 404s (spec.md:36) and are deferred with it, not silently dropped.
+      # ubuntu-latest ships Chrome preinstalled, so no browser download step is needed.
+      # COLLECT ONLY — 3 runs per URL per profile, into .lighthouseci/<profile>/. Thresholds are
+      # asserted in the next step, not here: D20-13's semantics (exactly three comparable runs,
+      # grouped by run configuration, where FEWER than three is infrastructure rather than a low
+      # score) cannot be expressed as an LHCI assertion list. Separate output directories keep the
+      # second profile from overwriting the first profile's evidence.
+      - name: Lighthouse CI collect — mobile profile (doc 20 §5)
+        run: npm run lhci
+
+      - name: Lighthouse CI collect — desktop profile (doc 20 §5)
+        run: npm run lhci:desktop
+
+      # Median-of-3 thresholds (doc 20 §1, D20-13): Performance ≥ 95 desktop / ≥ 60 mobile;
+      # Accessibility, Best Practices and SEO 100; LCP, CLS and per-script fonts at their unchanged
+      # §1 limits. Every individual run is printed so a median cannot hide instability. Exit 1 =
+      # a real regression; exit 2 = the collection was incomplete or unreadable.
+      - name: Assert Lighthouse medians (doc 20 §1)
+        run: npm run lhci:assert
+
+      # Reports are preserved even when the assertions fail — that is when they are most useful.
+      # Both profile subdirectories are included, so all three runs behind every median remain
+      # inspectable after the fact.
+      #
+      # `include-hidden-files: true` is REQUIRED, not cosmetic. `.lighthouseci/` is dot-prefixed, and
+      # actions/upload-artifact@v4 defaults that input to false — so run 30221448099 uploaded ZERO
+      # files while the step itself reported success, and the only surviving evidence for the whole
+      # baseline was the assertion step's stdout. The raw LHR JSON for all 24 readings is
+      # unrecoverable. `if-no-files-found: error` makes the next silent loss impossible: this step
+      # runs on `always()` immediately after a gate that is expected to fail sometimes, so "no files"
+      # always means the collection or the path is broken, never a legitimate empty result.
+      - name: Upload Lighthouse reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-reports-${{ github.sha }}
+          path: .lighthouseci/
+          retention-days: 14
+          include-hidden-files: true
+          if-no-files-found: error

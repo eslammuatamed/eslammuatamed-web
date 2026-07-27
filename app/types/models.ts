@@ -30,6 +30,34 @@ export type ProfileLink = Schemas['ProfileLinkEntity']
 export type ArticleListItem = Schemas['PublicArticleListItemEntity']
 export type Article = Schemas['PublicArticleDetailEntity']
 
+/**
+ * `GET /projects/{slug}` detail — also the shape returned by the draft-preview route
+ * `GET /preview/projects/{id}` (D10-11). Its long-form sections are opaque Markdown rendered
+ * through the single `ContentProse` surface, like an article `body`.
+ */
+export type ProjectDetail = Schemas['PublicProjectDetailEntity']
+export type ProjectGalleryItem = Schemas['PublicProjectGalleryItemEntity']
+
+/** `GET /projects` list item (featured-first, published-only) — home featured section + projects index card. */
+export type ProjectListItem = Schemas['PublicProjectListItemEntity']
+export type ProjectTechnology = Schemas['ProjectTechnologyEntity']
+
+/** `GET /skills` — resolved single-locale skill (home tech-stack section, D09-9). */
+export type Skill = Schemas['PublicSkillEntity']
+
+/** `GET /experiences` — resolved single-locale experience (home timeline summary; `employmentType` code, D09-9). */
+export type Experience = Schemas['PublicExperienceEntity']
+
+/** `GET /testimonials` — visible testimonials (home social-proof section). */
+export type Testimonial = Schemas['PublicTestimonialEntity']
+
+/** Resolved media descriptors (D10-10): image renditions / résumé PDF, served from the media origin. */
+export type MediaImage = Schemas['PublicMediaImageDescriptor']
+export type MediaPdf = Schemas['PublicMediaPdfDescriptor']
+
+/** Category/tag ref carried on article list items. */
+export type ArticleTaxonomyRef = Schemas['ArticleTaxonomyRefEntity']
+
 /** Auth (D11-1): login returns the access token + user; refresh rotates only the access token. */
 export type AuthUser = Schemas['AuthUserEntity']
 export type AuthSession = Schemas['LoginResponse']

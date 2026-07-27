@@ -4,26 +4,63 @@
 @import "tailwindcss";
 @import "@nuxt/ui";
 
-/* Self-hosted brand typography (D03-1, D20-4). Geist ships as one weight-axis variable
-   file; Arabic and mono load the two weights the brand uses. */
+/* Self-hosted typography (D03-1, D20-4, revised for 007). Two type registers:
+   DISPLAY carries the personality — Space Grotesk (Latin) + Cairo (Arabic), each a first-class
+   display face set at monumental scale (the redesign is type-led; there are no hero images).
+   BODY is the quiet workhorse — Geist (Latin) + IBM Plex Sans Arabic. Mono is data only.
+   All variable (one weight-axis file each) to hold the perf budget. */
+@import "@fontsource-variable/space-grotesk/wght.css";
+@import "@fontsource-variable/cairo/wght.css";
+/* Reem Kufi — the Arabic NAMEPLATE face only (D03-12). A modern geometric Kufi with real presence and a
+   premium, distinctive character that stands beside the heavy Space Grotesk Latin name; used solely on the
+   hero name, not on body/section titles (which stay Cairo). Self-hosted variable (wght 400–700). */
+@import "@fontsource-variable/reem-kufi/wght.css";
 @import "@fontsource-variable/geist/wght.css";
-@import "@fontsource/ibm-plex-sans-arabic/400.css";
-@import "@fontsource/ibm-plex-sans-arabic/600.css";
-@import "@fontsource/jetbrains-mono/400.css";
+/* Arabic-subset only (D20-4). The full `400.css`/`600.css` entrypoints also declare the Latin
+   subset of IBM Plex Sans Arabic; because the family sits FIRST in `--font-sans-arabic`, its
+   Latin subset used to win for Latin runs inside Arabic copy (measured 38.7 KB of woff2 on
+   every `/ar/**` view). Importing only the `arabic-*` entrypoints means the served woff2 carries
+   no Latin glyphs, so Latin runs reach the next family in the stack — "Geist Variable", the
+   design's Latin body face (doc 03 §3) — and the English and Arabic pages set Latin identically.
+   NOTE the exact mechanism: fontsource's `arabic-*.css` does NOT add a `unicode-range`, so these
+   faces still declare `U+0-10FFFF` (verified via `document.fonts`). Latin therefore falls through
+   per GLYPH, not by range selection — the download saving is real either way, but do not assume a
+   range restriction is in place. Adding explicit `unicode-range` would be the further step.
+   Weight 700 is not imported: no rule sets ≥700 on the Arabic body stack (the only 700 is the
+   nameplate, which is Reem Kufi Variable), and the file was never fetched on any route. */
+@import "@fontsource/ibm-plex-sans-arabic/arabic-400.css";
+@import "@fontsource/ibm-plex-sans-arabic/arabic-600.css";
+/* Latin subset only — mono is data/code, and the site ships exactly two scripts (en, ar), so the
+   Cyrillic/Cyrillic-ext/Greek/Vietnamese/Latin-ext @font-face blocks in `400.css` were dead
+   declaration weight in the render-blocking stylesheet. */
+@import "@fontsource/jetbrains-mono/latin-400.css";
 
 /* ---------------------------------------------------------------------------------------
    Theme tokens — names generate Tailwind utilities and CSS variables (Tailwind v4 @theme).
    ------------------------------------------------------------------------------------- */
 @theme {
-  /* Families (doc 03 §3). The Arabic stack is swapped in at the html[lang="ar"] root — the
-     per-locale switch lives in exactly one place (D14-5). */
+  /* Families (doc 03 §3, revised 007). The Arabic stacks are swapped in at html[lang="ar"] —
+     the per-locale switch lives in exactly one place (D14-5). `--font-display` / `-arabic`
+     generate the `.font-display` utility; the Arabic swap is one rule in @layer base. */
+  --font-display: "Space Grotesk Variable", "Geist Variable", ui-sans-serif, system-ui,
+    sans-serif;
+  --font-display-arabic: "Cairo Variable", "IBM Plex Sans Arabic", ui-sans-serif, system-ui,
+    sans-serif;
+  /* Nameplate face: Latin reuses the display face; Arabic upgrades to Reem Kufi for the hero name (D03-12). */
+  --font-nameplate: "Space Grotesk Variable", "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-nameplate-arabic: "Reem Kufi Variable", "Cairo Variable", ui-sans-serif, system-ui, sans-serif;
   --font-sans: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
   --font-sans-arabic: "IBM Plex Sans Arabic", "Geist Variable", ui-sans-serif, system-ui,
     sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", monospace;
 
-  /* Fluid type scale (doc 03 §3), clamp(mobile → desktop). Tracking on display/h1 is a
-     Latin-only refinement, reset for Arabic below (connected script — doc 03 §3). */
+  /* Fluid type scale (doc 03 §3, extended 007). `--text-mega` is the nameplate register — the
+     monumental bilingual name that is the hero (type-as-thesis). Tracking on the display sizes is
+     a Latin-only refinement, reset for Arabic below (connected script — doc 03 §3). */
+  --text-mega: clamp(3.25rem, 1.2rem + 8.5vw, 6.75rem);
+  --text-mega--line-height: 0.9;
+  --text-mega--font-weight: 600;
+  --text-mega--letter-spacing: -0.035em;
   --text-display: clamp(2.5rem, 1.3rem + 5vw, 4rem);
   --text-display--line-height: 1.05;
   --text-display--font-weight: 600;
@@ -73,6 +110,10 @@
   --ui-text: var(--ui-color-neutral-900); /* #18181B */
   --ui-text-highlighted: var(--ui-color-neutral-900);
   --ui-text-muted: var(--ui-color-neutral-600); /* #52525B */
+  /* Dimmed is the quietest readable tier — must still clear AA on paper (doc 21). Nuxt UI's default
+     light dimmed (neutral-400) fails at ~2.3:1 on #FAFAFA; neutral-600 clears 7:1 and stays a step below
+     muted only in name, so 500 (~4.6:1 on paper) is the readable floor for dates/labels/meta. */
+  --ui-text-dimmed: var(--ui-color-neutral-500); /* #71717A ≈ 4.6:1 on paper */
   --ui-border: var(--ui-color-neutral-200); /* #E4E4E7 */
   /* Accent split (D03-2, values per D03-7): fill is always violet-600 (white text passes
      AA at 5.7:1); link text is violet-600 in light. */
@@ -87,11 +128,128 @@
   --ui-text: var(--ui-color-neutral-50); /* #FAFAFA */
   --ui-text-highlighted: var(--ui-color-neutral-50);
   --ui-text-muted: var(--ui-color-neutral-400); /* #A1A1AA */
+  /* Dark moves the opposite way to light: neutral-500 dimmed fails (~4.1:1) on the near-black page, so
+     dimmed lifts to neutral-400 (~7.5:1). Distinct from muted by usage, not hue, at the dark end. */
+  --ui-text-dimmed: var(--ui-color-neutral-400);
   --ui-border: var(--ui-color-neutral-700); /* #3F3F46 */
   /* Fill stays violet-600; link text lifts to violet-400 so it clears 4.5:1 on the
      near-black background where violet-600 fails (D03-2, values per D03-7). */
   --ui-primary: var(--ui-color-primary-600);
   --ui-link: var(--ui-color-primary-400);
+}
+
+/* Ink/paper surface strategy (007) — the page is composed as a sequence of spreads that
+   alternate a light "paper" ground with dark "ink" feature spreads, giving real surface
+   hierarchy instead of one flat background. `.on-ink` re-points the semantic --ui-* tokens to
+   an ink palette for its whole subtree, so components inside stay theme-agnostic (they still
+   read text-default / bg-elevated / border-default). In light theme an ink spread is a true
+   near-black island (#09090B). In dark theme the page is already near-black, so the spread
+   lifts one step to graphite (#18181B) — the figure/ground contrast survives the theme flip.
+   The accent link lifts to violet-400 on ink (clears 4.5:1 on near-black, D03-2). */
+.on-ink {
+  --ui-bg: var(--ui-color-neutral-950);
+  --ui-bg-elevated: var(--ui-color-neutral-900);
+  --ui-bg-accented: var(--ui-color-neutral-800);
+  --ui-text: var(--ui-color-neutral-50);
+  --ui-text-highlighted: #ffffff;
+  --ui-text-muted: var(--ui-color-neutral-400);
+  --ui-text-dimmed: var(--ui-color-neutral-400); /* on ink, dimmed must clear AA on near-black (~7.5:1) */
+  --ui-border: var(--ui-color-neutral-800);
+  --ui-border-accented: var(--ui-color-neutral-700);
+  --ui-link: var(--ui-color-primary-400);
+  background-color: var(--ui-bg);
+  color: var(--ui-text);
+}
+
+.dark .on-ink {
+  /* Dark theme has little range at the dark end, so keep three distinct levels: page 950 < lift 900 <
+     ink 800. The ink feature spread becomes the brightest panel (it stands out most, as it does in light
+     where it is the darkest) rather than colliding with the lift surface at 900. */
+  --ui-bg: var(--ui-color-neutral-800);
+  --ui-bg-elevated: var(--ui-color-neutral-700);
+  --ui-bg-accented: var(--ui-color-neutral-600);
+  --ui-border: var(--ui-color-neutral-700);
+  --ui-border-accented: var(--ui-color-neutral-600);
+}
+
+/* ---------------------------------------------------------------------------------------
+   Glass (selective) — canonical design decision D03-14 (doc 03 §4); tokens owned by D14-8
+   (doc 14 §2.1). Owner-approved 2026-07-27 against a complete 11-cell visual matrix.
+
+   Scope is deliberately narrow: surfaces that FLOAT OVER content — the sticky header once the
+   page has scrolled beneath it, the mobile navigation panel, and the back-to-top control. Cards,
+   article/project rows and ordinary sections stay opaque. Depth in this system comes from borders
+   and surface steps (paper / lift / ink); glass supplements that on floating chrome, it does not
+   replace it — which is why every glass surface keeps its semantic 1px border.
+
+   Values are tokens, never per-component utilities, so the treatment is tuned in one place.
+
+   THE BINDING CONSTRAINT IS CONTRAST, not taste. The header is sticky over full-bleed `.on-ink`
+   spreads, and in LIGHT theme ink is neutral-950 while the header's own text is neutral-900 — so a
+   too-transparent header would put near-black text over a near-black backdrop. The surface
+   percentages below are the floor that keeps header text ≥ AA over the darkest section it can
+   cross; they are not free to lower for aesthetics. Verified over an ink section in both themes.
+   ------------------------------------------------------------------------------------- */
+:root,
+.light {
+  /* DEFAULT IS OPAQUE. The translucent values are added below, only inside `@supports`. Gating the
+     TOKEN rather than a rule is what makes this survive contact with Tailwind's cascade: the surface
+     is applied by a `bg-[var(--glass-surface)]` utility, so it competes with Nuxt UI's own
+     `bg-default` utility on equal terms and tailwind-merge resolves it. An earlier attempt set the
+     background in `@layer components`, which LOST to `bg-default` — leaving an opaque panel with a
+     live `backdrop-filter` behind it: no visible glass, full compositing cost. */
+  --glass-surface: var(--ui-bg);
+  --glass-surface-elevated: var(--ui-bg-elevated);
+  --glass-blur: 14px;
+  /* Slight saturation lift is what reads as "glass" rather than "translucent panel"; it also
+     recovers the colour the blur washes out. Kept low — this is chrome, not decoration. */
+  --glass-saturate: 1.6;
+  /* Depth stays border-led: the semantic border is the primary edge, the highlight is a hairline
+     inner lift on the top edge only. */
+  --glass-highlight: inset 0 1px 0 rgb(255 255 255 / 0.55);
+  --glass-shadow: 0 1px 3px rgb(0 0 0 / 0.04);
+}
+
+.dark {
+  --glass-surface: var(--ui-bg);
+  --glass-surface-elevated: var(--ui-bg-elevated);
+  --glass-saturate: 1.4;
+  /* On a near-black page a white inner highlight reads as a smear, and drop shadows are invisible
+     against the page while still costing a paint. Both drop to near-nothing (owner: restrained
+     shadows, especially in dark). */
+  --glass-highlight: inset 0 1px 0 rgb(255 255 255 / 0.06);
+  --glass-shadow: 0 1px 2px rgb(0 0 0 / 0.30);
+}
+
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root,
+  .light {
+    /* Mixed in sRGB (not oklab) so the alpha result is predictable rather than premultiplied.
+       85%, not the 78% this exploration started at, and the 7 points are NOT cosmetic. Measured from
+       a rendered frame with the header over an ink spread: at 78% the strip composites to
+       rgb(197,197,198) and `text-muted` (#52525C — the nav links and Résumé) lands at 4.48:1, just
+       under the 4.5 AA floor for normal text. At 85% it composites to rgb(213,213,214) and the same
+       text measures 5.26:1, with the highlighted brand text at 12.08:1. Light theme is the
+       constrained case: its ink spreads are neutral-950 while its own header text is near-black. */
+    --glass-surface: color-mix(in srgb, var(--ui-bg) 85%, transparent);
+    --glass-surface-elevated: color-mix(in srgb, var(--ui-bg-elevated) 86%, transparent);
+  }
+
+  /* Dark has room to go further — measured over ink at 72%: highlighted 18.06:1, muted 7.35:1. */
+  .dark {
+    --glass-surface: color-mix(in srgb, var(--ui-bg) 72%, transparent);
+    --glass-surface-elevated: color-mix(in srgb, var(--ui-bg-elevated) 76%, transparent);
+  }
+}
+
+/* Users who ask for less transparency get the opaque surface back, in both themes. */
+@media (prefers-reduced-transparency: reduce) {
+  :root,
+  .light,
+  .dark {
+    --glass-surface: var(--ui-bg);
+    --glass-surface-elevated: var(--ui-bg-elevated);
+  }
 }
 
 /* Non-color role tokens and technology identity colors (doc 14 §2/§4/§5). Technology
@@ -111,7 +269,9 @@
   --duration-standard: 200ms;
   --duration-structural: 320ms;
 
-  --space-section: clamp(6rem, 4rem + 8vw, 8rem); /* 96 → 128px */
+  /* Per-side section padding. Adjacent sections stack their padding, so this is ~half the intended
+     inter-section rhythm (doc 03 §4: 96/128 between sections). Kept generous but not cavernous. */
+  --space-section: clamp(3.5rem, 2.5rem + 4vw, 5rem); /* 56 → 80px per side → ~112–160px between */
   --space-card: 1.5rem;
 
   /* Nuxt UI derives component radii from this base; 6px aligns controls to doc 03 §4. */
@@ -124,11 +284,217 @@
   color: var(--ui-link);
 }
 
+/* Kicker — the small section label / eyebrow, the one recurring structural device (007). In Latin it is
+   the engineer's register: mono, uppercase, tracked. Arabic has no case, no monospace, and is a connected
+   script where letter-spacing is actively harmful — so under the Arabic root it becomes the Plex Arabic
+   label instead. The per-locale switch is one place (D14-5); size/colour are applied by the consumer. */
+@utility kicker {
+  font-family: var(--font-mono);
+  font-size: var(--text-caption);
+  line-height: 1.3;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+}
+
+/* Unlayered so it beats Tailwind's `utilities` layer without !important (element+attr specificity).
+   Neutralises the Latin-only kicker treatment for Arabic, and — defensively — cancels any `tracking-*`
+   utility anywhere under the Arabic root, since letter-spacing must never apply to connected Arabic. */
+html[lang="ar"] .kicker {
+  font-family: var(--font-sans-arabic);
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+html[lang="ar"] [class*="tracking-"] {
+  letter-spacing: normal;
+}
+
+/* Hero / first-view entrance (doc 03 §5, doc 13 §9): one opacity+transform rise, compositor-only.
+   Longhand (no `animation-delay`) so an arbitrary `[animation-delay:*]` utility can stagger a second
+   element. The @layer base `prefers-reduced-motion` rule forces the duration to ~0, collapsing it to an
+   instant reveal — no non-essential motion for reduced-motion visitors (doc 21 §5). */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@utility animate-rise {
+  animation-name: rise;
+  animation-duration: var(--duration-structural);
+  animation-timing-function: var(--ease-standard);
+  animation-fill-mode: both;
+}
+
+/* ---------------------------------------------------------------------------------------
+   Branded scrollbar (007) — restrained, token-driven, both themes. Firefox uses the two-property
+   `scrollbar-*`; Chromium/WebKit use the `::-webkit-scrollbar` pseudos. Kept a usable width (not hidden,
+   not hairline). forced-colors: hand back to the UA so high-contrast users get the system scrollbar.
+   ------------------------------------------------------------------------------------- */
+@media (pointer: fine) {
+  html {
+    scrollbar-width: thin;
+    scrollbar-color: var(--ui-bg-accented) transparent;
+  }
+  ::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background-color: var(--ui-bg-accented);
+    border: 3px solid var(--ui-bg);
+    border-radius: 999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: var(--ui-color-primary-500);
+  }
+  ::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+}
+@media (forced-colors: active) {
+  html {
+    scrollbar-color: auto;
+  }
+}
+
+/* ---------------------------------------------------------------------------------------
+   Branded public route transition (007) — a "spread" turn, not a generic fade: the outgoing page slides a
+   short distance toward the inline-start and fades while the incoming page arrives from the inline-end.
+   Compositor-only (opacity + transform), 320ms structural, standard easing. Directional sign flips under
+   [dir="rtl"] so EN and AR mirror. Reduced motion collapses it to a ≤120ms opacity fade with no transform.
+   ------------------------------------------------------------------------------------- */
+.page-spread-enter-active {
+  transition:
+    opacity var(--duration-structural) var(--ease-standard),
+    transform var(--duration-structural) var(--ease-standard);
+}
+.page-spread-leave-active {
+  transition:
+    opacity var(--duration-standard) var(--ease-exit),
+    transform var(--duration-standard) var(--ease-exit);
+}
+.page-spread-enter-from {
+  opacity: 0;
+  transform: translateX(1.25rem);
+}
+.page-spread-leave-to {
+  opacity: 0;
+  transform: translateX(-1.25rem);
+}
+[dir="rtl"] .page-spread-enter-from {
+  transform: translateX(-1.25rem);
+}
+[dir="rtl"] .page-spread-leave-to {
+  transform: translateX(1.25rem);
+}
+@media (prefers-reduced-motion: reduce) {
+  .page-spread-enter-active,
+  .page-spread-leave-active {
+    transition-duration: var(--duration-micro);
+  }
+  .page-spread-enter-from,
+  .page-spread-leave-to {
+    transform: none;
+  }
+}
+
+/* Public-shell transition classes live here beside `page-spread`, NOT in the owning components'
+   `<style scoped>` blocks (D20-4). Vite emits every scoped block as its own CSS asset, and Nuxt
+   links each one with `rel="stylesheet"` — so these two short rule sets were shipping as an extra
+   render-blocking request (183 B raw / 115 B brotli) that cost a measured 484 ms on mobile: one
+   extra round trip at 150 ms RTT ahead of first paint, the worst byte-to-cost ratio in the whole
+   critical path. Folding them into the single global stylesheet removes the request outright.
+   `page-spread` above already established this pattern; the names are Vue transition names, unique
+   to their one owner (`fade` → UiDataLoadingOverlay, `fab` → UiBackToTop). */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity var(--duration-standard) var(--ease-standard);
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+.fab-enter-active,
+.fab-leave-active {
+  transition:
+    opacity var(--duration-standard) var(--ease-standard),
+    transform var(--duration-standard) var(--ease-standard);
+}
+.fab-enter-from,
+.fab-leave-to {
+  opacity: 0;
+  transform: translateY(0.5rem);
+}
+/* Explicit guard retained from the component block: the global reduced-motion rule shortens
+   durations, but the entry/leave transform must be removed outright, not merely sped up. */
+@media (prefers-reduced-motion: reduce) {
+  .fab-enter-from,
+  .fab-leave-to {
+    transform: none;
+  }
+}
+
+/* Loading-system motion (007): a skeleton sweep that matches content geometry, and a violet data-sweep
+   for the revalidation overlay. Both collapse to a static state under reduced motion (handled in @layer
+   base's global rule + the components' own guards). */
+@keyframes skeleton-sweep {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+@keyframes data-sweep {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@utility skeleton {
+  background-color: var(--ui-bg-accented);
+  border-radius: var(--radius-control);
+  background-image: linear-gradient(
+    90deg,
+    transparent 20%,
+    color-mix(in oklab, var(--ui-bg-elevated) 65%, transparent) 50%,
+    transparent 80%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-sweep 1.6s var(--ease-standard) infinite;
+}
+
 @layer base {
   html {
     font-family: var(--font-sans);
     -webkit-text-size-adjust: 100%;
     text-rendering: optimizeLegibility;
+  }
+
+  /* Keyboard focus is release-blocking (WCAG 2.2 AA 2.4.7, doc 21). A zero-specificity default ring on
+     every custom link/button — the ones the design styles by hand (header nav, index rows, view-all,
+     footer/social) — so keyboard focus is always visible, including on ink spreads where the violet ring
+     clears the dark ground. `:where()` keeps specificity 0, so Nuxt UI's own focus-visible rings win on
+     its components. Mouse/touch focus stays quiet (`:focus-visible` only). */
+  :where(a, button, [tabindex]):focus-visible {
+    outline: 2px solid var(--ui-primary);
+    outline-offset: 2px;
+    border-radius: var(--radius-control);
   }
 
   body {
@@ -146,6 +512,7 @@
   }
 
   html[lang="ar"] :is(h1, h2, h3),
+  html[lang="ar"] .text-mega,
   html[lang="ar"] .text-display,
   html[lang="ar"] .text-h1 {
     letter-spacing: normal;
@@ -164,11 +531,70 @@
   }
 }
 
+/* Locale-specific font utilities must remain unlayered. Tailwind generates `.font-display`,
+   `.font-nameplate`, and `.text-mega` in its utilities layer; cascade-layer order is evaluated
+   before selector specificity, so putting these overrides in `@layer base` leaves the Latin
+   utility values in control even under `html[lang="ar"]`. Unlayered author rules outrank every
+   layered rule without resorting to `!important` (D14-5). */
+html[lang="ar"] .font-display {
+  font-family: var(--font-display-arabic);
+}
+
+/* Arabic nameplate (D03-12): Reem Kufi at the top of its weight axis carries the same visual
+   mass as the heavy Space Grotesk Latin name. Its taller Kufi forms receive extra line-height. */
+html[lang="ar"] .font-nameplate {
+  font-family: var(--font-nameplate-arabic);
+  font-weight: 700;
+  line-height: 1.12;
+}
+
 /* ---------------------------------------------------------------------------------------
    Prose — the rendered-Markdown surface owned by ContentProse (doc 12 §5, doc 13 §9). Logical
    properties throughout so it mirrors in RTL; code is isolated LTR (doc 21 §4).
    ------------------------------------------------------------------------------------- */
 @layer components {
+  /* Selective glass (D03-14). ONE class, `.glass`, carrying blur + edge lighting only; the surface
+     tone is chosen by the consumer as `bg-[var(--glass-surface)]` (page tone — the scrolled header)
+     or `bg-[var(--glass-surface-elevated)]` (elevated tone — the mobile drawer, the FAB). Applied to
+     exactly three floating-chrome surfaces; cards, rows, content sections and the data-loading
+     overlay stay opaque.
+
+     ORDER IS THE POINT. The solid fallback is the DEFAULT declaration, and the translucent form is
+     added only inside `@supports`. Written the other way round — glass first, fallback in a negated
+     query — any engine with partial support gets an unreadable half-applied surface. This way the
+     worst case is simply the opaque design that already shipped.
+
+     No `backdrop-filter` here is ever nested inside another, and none covers the full viewport:
+     each is a bounded strip or panel. Nested/full-screen backdrop layers are the expensive case,
+     because the compositor re-samples the whole region beneath on every frame. */
+  /* `.glass` carries ONLY the blur and the edge lighting. The surface colour is applied by the
+     component as `bg-[var(--glass-surface)]` / `bg-[var(--glass-surface-elevated)]`, because a
+     background declared here loses to Nuxt UI's `bg-default` utility (utilities layer beats
+     components) — which silently produces an opaque panel that still pays for a backdrop-filter.
+     Borders also stay with the component: the header wants one edge, the FAB wants four, and the
+     existing border-led depth system stays authoritative. */
+  .glass {
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+    backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+    box-shadow: var(--glass-highlight), var(--glass-shadow);
+  }
+
+  /* With no backdrop-filter support the tokens above are already opaque, so all that is left to
+     remove is the edge lighting that only reads correctly against a blurred surface. */
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .glass {
+      box-shadow: none;
+    }
+  }
+
+  @media (prefers-reduced-transparency: reduce) {
+    .glass {
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+      box-shadow: none;
+    }
+  }
+
   .content-prose {
     max-width: 68ch;
     line-height: var(--leading-prose);

@@ -10,8 +10,14 @@ interface Props {
 const props = defineProps<Props>()
 const localePath = useLocalePath()
 
+// A forced `:external` bypasses the `^https?://` auto-detect, so guard the external branch with a scheme
+// allowlist (security review WD-5): a non-http(s)/mailto/tel target (e.g. `javascript:`) falls back to an
+// inert `#` rather than binding a live `href`. Internal targets always resolve through localePath.
+const SAFE_EXTERNAL = /^(https?:|mailto:|tel:)/i
 const isExternal = computed(() => props.external ?? /^https?:\/\//.test(props.to))
-const target = computed(() => (isExternal.value ? props.to : localePath(props.to)))
+const target = computed(() =>
+  isExternal.value ? (SAFE_EXTERNAL.test(props.to) ? props.to : '#') : localePath(props.to)
+)
 </script>
 
 <template>
