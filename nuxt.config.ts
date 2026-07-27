@@ -124,6 +124,36 @@ export default defineNuxtConfig({
   // renderer out of the M1 build. Sitemap/robots stay at module defaults.
   ogImage: { enabled: false },
 
+  // Pre-compress public assets at build time (brotli + gzip), so the Nitro origin serves them the
+  // way production already serves them to users.
+  //
+  // Production is Cloudflare → Caddy → Nitro (doc 23 §1), and the edge compresses: `curl -I` against
+  // eslammuatamed.com returns `content-encoding: br` for the document and `gzip` for `entry.css`.
+  // Nitro's own origin did NOT compress, which nothing noticed in production because Cloudflare
+  // covers for it — but the Lighthouse gate measures the origin directly, with no edge in front.
+  //
+  // That made the lab measurement diverge from reality on the single most expensive resource on the
+  // critical path. Same commit (c3a5215), same four routes:
+  //
+  //     entry.css over the wire   production 22,609 B (br)   CI preview 203,776 B (none)   ~9x
+  //     Performance, desktop      production 100 x4          CI 89-93
+  //     Performance, mobile       production 94/89/85/96     CI 58-60
+  //
+  // The gate was failing a render-blocking stylesheet that no user has ever downloaded uncompressed.
+  // With this set, the same build measures desktop 99/99/99/100 and mobile 85/77/82/89 locally, and
+  // desktop LCP lands at 653-891 ms — inside doc 20 §1's 1.2 s lab budget, which was unreachable
+  // before only because of the serving layer.
+  //
+  // This is a serving-layer correction, not a Lighthouse one: throttling, device emulation, audit
+  // weights, the route matrix, the run count and the median calculation are all untouched. It also
+  // helps production on its own terms — the origin now ships compressed bytes to the edge instead of
+  // relying on Cloudflare to compress on every cache miss.
+  //
+  // Still NOT compressed by this setting: the SSR HTML document (39,002 B on `/ar`), which Nitro
+  // generates per request rather than serving from `.output/public`. Production brotlis it at the
+  // edge; the preview cannot. That residual gap is why local mobile still reads below production.
+  nitro: { compressPublicAssets: true },
+
   typescript: {
     tsConfig: {
       compilerOptions: {
