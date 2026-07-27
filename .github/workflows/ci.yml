@@ -172,6 +172,14 @@ jobs:
       # Reports are preserved even when the assertions fail — that is when they are most useful.
       # Both profile subdirectories are included, so all three runs behind every median remain
       # inspectable after the fact.
+      #
+      # `include-hidden-files: true` is REQUIRED, not cosmetic. `.lighthouseci/` is dot-prefixed, and
+      # actions/upload-artifact@v4 defaults that input to false — so run 30221448099 uploaded ZERO
+      # files while the step itself reported success, and the only surviving evidence for the whole
+      # baseline was the assertion step's stdout. The raw LHR JSON for all 24 readings is
+      # unrecoverable. `if-no-files-found: error` makes the next silent loss impossible: this step
+      # runs on `always()` immediately after a gate that is expected to fail sometimes, so "no files"
+      # always means the collection or the path is broken, never a legitimate empty result.
       - name: Upload Lighthouse reports
         if: always()
         uses: actions/upload-artifact@v4
@@ -179,4 +187,5 @@ jobs:
           name: lighthouse-reports-${{ github.sha }}
           path: .lighthouseci/
           retention-days: 14
-          if-no-files-found: warn
+          include-hidden-files: true
+          if-no-files-found: error
