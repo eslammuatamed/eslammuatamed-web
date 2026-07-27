@@ -9,7 +9,8 @@
     "experience": "Experience",
     "about": "About",
     "resume": "Résumé",
-    "contact": "Contact"
+    "contact": "Contact",
+    "home": "Home"
   },
   "a11y": {
     "skipToContent": "Skip to content",
@@ -121,6 +122,27 @@
       "label": "Technology",
       "all": "All technologies",
       "clear": "Clear filter"
+    },
+    "breadcrumbLabel": "Breadcrumb",
+    "sections": {
+      "overview": "Overview",
+      "businessProblem": "The problem",
+      "solution": "The solution",
+      "role": "My role",
+      "architecture": "Architecture",
+      "challenges": "Challenges",
+      "features": "Key features",
+      "lessonsLearned": "What I took away"
+    },
+    "links": {
+      "live": "Live product",
+      "repo": "Repository"
+    },
+    "contact": {
+      "eyebrow": "Next step",
+      "title": "Have a problem shaped like this one?",
+      "body": "If this kind of work is what you need, the fastest route is a direct email — it reaches me straight away.",
+      "action": "Email me"
     }
   },
   "article": {
