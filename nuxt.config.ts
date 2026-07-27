@@ -151,12 +151,13 @@ export default defineNuxtConfig({
     sources: ['/api/__sitemap__/projects']
   },
 
-  // Project media is served from the R2 custom domain. The API pre-generates every rendition and R2
-  // serves the static objects, so this only allowlists the origin — no runtime transformation is
-  // configured or wanted (D23-15). Without this, remote descriptors from the contract are rejected.
-  image: {
-    domains: ['media.eslammuatamed.com']
-  },
+  // NO `image.domains` for the media origin — deliberately. Allowlisting a host is what ENABLES
+  // @nuxt/image's IPX runtime transformation for it, which is the opposite of D23-15: the API
+  // pre-generates every rendition and R2 serves the static objects. Setting it rewrote remote
+  // descriptors to `/_ipx/s_80x80/https://media…`, which 404s and drops Lighthouse best-practices to
+  // 96 via `errors-in-console` on the home page. Left unset, <NuxtImg> emits the contract's absolute
+  // URLs untouched, which is exactly what the pre-generated pipeline wants; the gallery additionally
+  // builds its srcset from the contract's own `variants`.
 
   // Pre-compress public assets at build time (brotli + gzip), so the Nitro origin serves them the
   // way production already serves them to users.
