@@ -363,9 +363,12 @@ describe('thresholds match doc 20 §1 (D20-13/14/15) verbatim', () => {
     // D20-14 — device-scoped lab LCP. Unchanged by D20-16: the ceiling is a separate override,
     // not an edit to the device budget, so every unlisted configuration still resolves to these.
     expect(LCP_LIMITS).toEqual({ desktop: 1200, mobile: 4000 })
-    // D20-16 — a FROZEN route+device ceiling, never recomputed from a run. Pinned so widening it,
-    // or adding a second route to it, cannot happen without editing this expectation.
-    expect(LCP_ROUTE_CEILINGS).toEqual([{ formFactor: 'mobile', pathname: '/ar', ceiling: 5000 }])
+    // D20-16 / D20-17 — FROZEN route+device ceilings, never recomputed from a run. Pinned so
+    // widening one, or adding a third route, cannot happen without editing this expectation.
+    expect(LCP_ROUTE_CEILINGS).toEqual([
+      { formFactor: 'mobile', pathname: '/ar', ceiling: 5000 },
+      { formFactor: 'mobile', pathname: '/ar/projects', ceiling: 5500 }
+    ])
     // The 4000 ms figure survives as a non-blocking target rather than being deleted.
     expect(LCP_QUALITY_TARGETS).toEqual({ desktop: 1200, mobile: 4000 })
     // D20-15 — the 130 KiB figure is UNCHANGED in value; only its scope was corrected.
@@ -543,6 +546,67 @@ describe('limitFor — the same metric carries a different bound per run context
     // No ceiling here, so the asserted bound already IS the target — nothing extra to report.
     expect(qualityTargetFor('largest-contentful-paint', { formFactor: 'mobile', url: EN })).toBeNull()
     expect(qualityTargetFor('largest-contentful-paint', { formFactor: 'desktop', url: AR })).toBeNull()
+  })
+
+  // ---------------------------------------------------------------------------------------------
+  // D20-17 — mobile /ar/projects. The route is matched on the NORMALISED EXACT PATHNAME. These
+  // cases exist because the failure mode of a route exception is silent over-reach: a prefix or
+  // substring match would relax `/ar/projects/<slug>` and `/ar/projects-extra` too, neither of
+  // which was ever measured over budget. Each negative case below is a route that must keep 4000.
+  // ---------------------------------------------------------------------------------------------
+  const AR_PROJECTS = 'http://127.0.0.1:3000/ar/projects'
+
+  it('applies the D20-17 mobile /ar/projects ceiling with its 4000 ms quality target', () => {
+    expect(limitFor('largest-contentful-paint', { formFactor: 'mobile', url: AR_PROJECTS })).toBe(5500)
+    expect(ceilingFor('largest-contentful-paint', { formFactor: 'mobile', url: AR_PROJECTS })).toBe(5500)
+    expect(qualityTargetFor('largest-contentful-paint', { formFactor: 'mobile', url: AR_PROJECTS })).toBe(4000)
+  })
+
+  it('does not extend the /ar/projects exception to desktop', () => {
+    // Route AND device scoped: the variance D20-17 records is a mobile CPU-throttling artefact.
+    expect(limitFor('largest-contentful-paint', { formFactor: 'desktop', url: AR_PROJECTS })).toBe(1200)
+    expect(ceilingFor('largest-contentful-paint', { formFactor: 'desktop', url: AR_PROJECTS })).toBeNull()
+    expect(qualityTargetFor('largest-contentful-paint', { formFactor: 'desktop', url: AR_PROJECTS })).toBeNull()
+  })
+
+  it('does not extend the /ar/projects exception to the Latin /projects index', () => {
+    const EN_PROJECTS = 'http://127.0.0.1:3000/projects'
+    expect(limitFor('largest-contentful-paint', { formFactor: 'mobile', url: EN_PROJECTS })).toBe(4000)
+    expect(ceilingFor('largest-contentful-paint', { formFactor: 'mobile', url: EN_PROJECTS })).toBeNull()
+  })
+
+  it('does not leak the /ar/projects ceiling to project detail routes', () => {
+    // `/ar/projects/content-platform-api` measured a 91 median on the same runs and keeps 4000 ms.
+    const AR_DETAIL = 'http://127.0.0.1:3000/ar/projects/content-platform-api'
+    expect(limitFor('largest-contentful-paint', { formFactor: 'mobile', url: AR_DETAIL })).toBe(4000)
+    expect(ceilingFor('largest-contentful-paint', { formFactor: 'mobile', url: AR_DETAIL })).toBeNull()
+  })
+
+  it('does not match a route that merely starts with the same characters', () => {
+    // The substring trap: `/ar/projects-extra` is a DIFFERENT route and must not inherit 5500 ms.
+    const SIBLING = 'http://127.0.0.1:3000/ar/projects-extra'
+    expect(limitFor('largest-contentful-paint', { formFactor: 'mobile', url: SIBLING })).toBe(4000)
+    expect(ceilingFor('largest-contentful-paint', { formFactor: 'mobile', url: SIBLING })).toBeNull()
+  })
+
+  it('classifies on pathname alone — a query string cannot change the bound', () => {
+    // Both directions: a query must neither remove the exception nor grant it to another route.
+    expect(limitFor('largest-contentful-paint', { formFactor: 'mobile', url: `${AR_PROJECTS}?page=2` })).toBe(5500)
+    expect(limitFor('largest-contentful-paint', { formFactor: 'mobile', url: `${AR_PROJECTS}?technology=nuxt#top` })).toBe(5500)
+    expect(limitFor('largest-contentful-paint', { formFactor: 'mobile', url: 'http://127.0.0.1:3000/projects?x=/ar/projects' })).toBe(4000)
+  })
+
+  it('cannot be broadened by a trailing slash', () => {
+    // The checker performs no trailing-slash normalisation, so `/ar/projects/` simply does not
+    // match. That is the SAFE direction — it can only ever withhold the exception, never widen it.
+    // Pinned so that if normalisation is ever added, it must be reviewed against this expectation.
+    expect(limitFor('largest-contentful-paint', { formFactor: 'mobile', url: `${AR_PROJECTS}/` })).toBe(4000)
+    expect(ceilingFor('largest-contentful-paint', { formFactor: 'mobile', url: `${AR_PROJECTS}/` })).toBeNull()
+  })
+
+  it('leaves the D20-16 /ar home ceiling untouched at its own value', () => {
+    // D20-17 is a separate entry, not a widening of D20-16 — /ar keeps 5000, not 5500.
+    expect(limitFor('largest-contentful-paint', { formFactor: 'mobile', url: AR })).toBe(5000)
   })
 
   it('applies the Arabic font budget on Arabic routes only', () => {
