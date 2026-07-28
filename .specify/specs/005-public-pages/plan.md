@@ -41,8 +41,55 @@ unworkable must surface on day one, not after the pages are written.
 header documents precisely why readiness gating matters — a page server-rendered before Prism is up
 renders its error state and silently changes what the test measures.
 
-Playwright's `webServer` therefore **reuses that script verbatim** rather than duplicating process
+Playwright's `webServer` therefore **reuses that script** rather than duplicating process
 management. This keeps one source of truth for preview orchestration, shared with the Lighthouse gate.
+
+### Revision, 2026-07-28 — browser interception disproved; two lanes instead
+
+The original mechanism for the scenarios Prism cannot express was Playwright `page.route()`
+interception (below, and T071). **It was tried and it does not work for these routes.** Measured, not
+assumed:
+
+- a direct load is **server-rendered**, so the API read happens inside Nitro and never reaches the
+  browser — `page.route()` intercepted **0** requests;
+- a client-side navigation does not help either, because `/projects**` carries `swr: 60` route rules,
+  so Nuxt fetches the pre-rendered `_payload.json` instead of calling the API from the browser —
+  again **0** intercepted.
+
+Intercepting `_payload.json` was rejected: it would assert against Nuxt's serialization format rather
+than the application's behaviour, and it would break on any Nuxt upgrade without the behaviour having
+changed. Downgrading the six scenarios to unit-only coverage was also rejected — they are SSR
+behaviours, and unit tests cannot observe SSR.
+
+**Approved replacement: a test-only SSR scenario server.** The fixture moves from the browser to the
+process boundary *below* Nitro, which is where the read actually happens. No application code is
+involved either way.
+
+- **Prism remains the primary contract mock.** It backs the Lighthouse gate, the per-route size gate,
+  and the `contract` Playwright project, which keeps the whole normal journey (19 tests: journeys,
+  ordering, filter, gallery, SEO, schema, locale, breadcrumbs, axe). It is **not** replaced globally.
+- **`ssr-scenarios`** is a second Playwright project served by `scripts/e2e/scenario-server.ts` — a
+  small deterministic Node server limited to the six states Prism cannot express, because Prism
+  replays one example for every slug and every locale. Normal journey tests are **not** duplicated
+  into it.
+- **One orchestrator, not two.** `scripts/ci-preview.mjs` gains `--backend prism|scenarios`; the
+  backend is the only thing that changes. Real `.output` execution, TCP readiness gating before any
+  SSR request, `reuseExistingServer: false`, zero retries, observed SIGTERM→SIGKILL shutdown and the
+  report upload are shared verbatim. Both ports are env-driven so the two lanes never collide.
+- **Design invariant: one URL ⇒ one scenario.** Every scenario is selected purely from the request
+  path, slug and `?locale=`. There is no mutable scenario state, so the lane runs fully parallel with
+  no reset hook, and Nitro's `swr: 60` cache is safe — its key is a hash of the full path including
+  the query string, so no two scenarios can share an entry and no stale success can mask a failure.
+- **Contract fidelity, twice.** Fixtures are typed with the OpenAPI-derived types generated into
+  `app/types/api.d.ts` (compile time, `typecheck:e2e`), and every served response is validated against
+  the committed `openapi/openapi.json` with ajv (run time,
+  `scripts/e2e/contract-fixtures.spec.ts`). Errors use the contract's own RFC 7807
+  `ProblemDetailsDto`. No second handwritten DTO model exists, and the contract is read, never
+  written.
+
+The scenario server lives entirely in `scripts/e2e/**`. It is not in `app/**`, not a Nitro business
+route, not a runtime plugin, not a composable, and not a component — and it must not grow into a
+general mock API.
 
 ## Data layer
 
@@ -107,10 +154,15 @@ All are detachable (props/slots only, doc 12 §6) and consume semantic tokens on
 
 - **Vitest** alongside each component/composable, per §6.1 of the spec. No snapshot-only tests.
 - **Playwright + axe** (new, **Phase 1 — first**): `@playwright/test` + `@axe-core/playwright`, with
-  `webServer` delegating to `scripts/ci-preview.mjs`. Web-owned `page.route()` interception only for the
-  scenarios Prism cannot express deterministically (EN/AR content differentiation, empty list, default
-  unknown-slug 404, exact authored Markdown, deterministic redirect resolution). CI job added to
-  `.github/workflows/ci.yml` **without touching any existing threshold or the Lighthouse job**.
+  `webServer` delegating to `scripts/ci-preview.mjs`. Two projects: `contract` (Prism, the normal
+  journey) and `ssr-scenarios` (the test-only SSR scenario server, for the scenarios Prism cannot
+  express deterministically — EN/AR content differentiation, empty list, unknown-slug 404, redirect
+  resolution, unavailable API, empty gallery). CI job added to `.github/workflows/ci.yml` **without
+  touching any existing threshold or the Lighthouse job**.
+
+  ~~Web-owned `page.route()` interception~~ — superseded on 2026-07-28; see “browser interception
+  disproved” above. Browser interception cannot observe an SSR read, and `_payload.json` interception
+  was rejected rather than adopted.
 
 ## Verification
 

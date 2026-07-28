@@ -18,11 +18,54 @@
  * escalates to SIGKILL, and waits again. The previous version exited ~300 ms after signalling, which
  * reparented Prism to init and left port 3001 held; the next run's readiness check then passed against
  * a stale mock. See `scripts/lib/process-group.mjs`.
+ *
+ * TWO BACKENDS, ONE ORCHESTRATOR (`--backend prism|scenarios`, default `prism`).
+ * Prism remains the primary contract mock and backs every gate: Lighthouse, the route-size budget,
+ * and the `contract` Playwright project. `--backend scenarios` swaps ONLY the upstream, for the
+ * `ssr-scenarios` Playwright project, which covers the six states Prism cannot express
+ * deterministically because it replays one example for every slug and locale
+ * (`scripts/e2e/scenario-server.ts`). Everything else — real `.output` execution, readiness gating
+ * before any SSR request, observed shutdown — is shared verbatim rather than reimplemented, which is
+ * the entire reason this is a flag and not a second script. Both ports are env-driven, so the two
+ * Playwright projects run side by side without colliding.
  */
 import net from 'node:net'
 import process from 'node:process'
 import { setTimeout as sleep } from 'node:timers/promises'
 import { shutdownAll, startTracked } from './lib/process-group.mjs'
+
+const BACKENDS = {
+  // The RESOLVED binary, not `npx`: the npx shim spawns Prism as a grandchild, so the process we
+  // track is not the process that binds the port, and signalling the shim leaves the listener holding
+  // the port. Invoking the binary directly makes the listener our direct child, which is what makes
+  // the shutdown below sufficient — and keeps every child inside our process group, where
+  // Playwright's `webServer` teardown and Ctrl+C already reap them.
+  prism: {
+    label: 'prism (contract mock)',
+    command: 'node_modules/.bin/prism',
+    args: port => ['mock', 'openapi/openapi.json', '--port', port]
+  },
+  // Node 24 runs TypeScript directly, so the fixtures stay typed with the generated OpenAPI-derived
+  // types instead of drifting as untyped JSON. Same reasoning as above: this IS the listener.
+  scenarios: {
+    label: 'scenario backend (SSR scenarios)',
+    command: process.execPath,
+    args: () => ['scripts/e2e/scenario-server.ts']
+  }
+}
+
+const backendArg = process.argv.indexOf('--backend')
+const BACKEND_NAME = backendArg === -1
+  ? (process.env.CI_PREVIEW_BACKEND ?? 'prism')
+  : process.argv[backendArg + 1]
+
+const BACKEND = BACKENDS[BACKEND_NAME]
+if (!BACKEND) {
+  console.error(
+    `[ci-preview] unknown backend "${BACKEND_NAME}". Expected one of: ${Object.keys(BACKENDS).join(', ')}.`
+  )
+  process.exit(1)
+}
 
 const WEB_PORT = process.env.CI_PREVIEW_PORT ?? '3000'
 const API_PORT = process.env.CI_MOCK_PORT ?? '3001'
@@ -62,14 +105,8 @@ function start(name, command, args, env) {
   })
 }
 
-// 1. Contract mock first — the Nitro server fetches it during SSR.
-//
-// The RESOLVED binary, not `npx`: the npx shim spawns Prism as a grandchild, so the process we track
-// is not the process that binds the port, and signalling the shim leaves the listener holding 3001.
-// Invoking the binary directly makes the listener our direct child, which is what makes the shutdown
-// below sufficient — and keeps every child inside our process group, where Playwright's `webServer`
-// teardown and Ctrl+C already reap them.
-start('prism', 'node_modules/.bin/prism', ['mock', 'openapi/openapi.json', '--port', API_PORT])
+// 1. The API backend first — the Nitro server fetches it during SSR.
+start(BACKEND_NAME, BACKEND.command, BACKEND.args(API_PORT), { CI_MOCK_PORT: API_PORT })
 
 // 2. The built Nitro server. Its runtime API base points at the mock.
 start('nitro', 'node', ['.output/server/index.mjs'], {
@@ -102,19 +139,20 @@ async function waitForPort(name, port, timeoutMs = 90_000) {
   return false
 }
 
-// The readiness line must not be printed until BOTH ports actually accept connections, and Prism must
-// be checked FIRST. `spawn()` resolves as soon as the child process exists, so announcing readiness
-// there would let a gate start collecting while Nitro is still booting and Prism is still parsing the
-// OpenAPI document. That does not merely risk a connection refusal: if the mock is not up when a
+// The readiness line must not be printed until BOTH ports actually accept connections, and the API
+// backend must be checked FIRST. `spawn()` resolves as soon as the child process exists, so announcing
+// readiness there would let a gate start collecting while Nitro is still booting and Prism is still
+// parsing the OpenAPI document. That does not merely risk a connection refusal: if the mock is not up
+// when a
 // `/blog/<slug>` or `/projects/<slug>` request is server-rendered, the page renders its ERROR state,
 // which silently changes LCP and makes assertions pass or fail by timing — the intermittently-flaky
 // gate this setup exists to avoid. It passed locally only because Chrome's own launch time absorbed
 // the slack.
-const ready = (await waitForPort('prism (contract mock)', API_PORT))
+const ready = (await waitForPort(BACKEND.label, API_PORT))
   && (await waitForPort('nitro (web preview)', WEB_PORT))
 
 if (!ready) {
   await shutdown(1)
 } else {
-  console.log(`[ci-preview] listening on http://127.0.0.1:${WEB_PORT} (contract mock on ${API_PORT})`)
+  console.log(`[ci-preview] listening on http://127.0.0.1:${WEB_PORT} (${BACKEND.label} on ${API_PORT})`)
 }

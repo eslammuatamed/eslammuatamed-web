@@ -14,8 +14,10 @@ import { expect, test } from '@playwright/test'
  *     (again 0 intercepted).
  * Everything below is therefore what the contract mock can express honestly. The remaining scenarios
  * — empty list, unknown-slug 404, redirect-resolved slug, unavailable API, empty gallery, and exact
- * EN/AR content differences — need a server-side scenario mock, which is raised as a decision rather
- * than smuggled in as a brittle `_payload.json` intercept.
+ * EN/AR content differences — needed a server-side scenario mock, which was raised as a decision
+ * rather than smuggled in as a brittle `_payload.json` intercept. That decision was approved: they
+ * now live in the `ssr-scenarios` project (`e2e/scenarios/**`), served by
+ * `scripts/e2e/scenario-server.ts`. THIS file stays on Prism and stays the primary lane.
  *
  * Prism serves the same example for any slug, so assertions are STRUCTURAL: routing, locale, ordering,
  * semantics and presence — never authored copy, which would only be pinning the mock's own fixtures.
