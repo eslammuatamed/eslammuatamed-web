@@ -125,13 +125,13 @@ any slug in any locale, so neither state could occur against the contract mock.
   so it is raised as a decision rather than guessed at. Doc-first (D16-7) applies.
 
 ## Phase 9 — Verification & Documentation gate (D16-8) *(closing gate — mandatory)*
-- [ ] T080 Gates green, thresholds unchanged: `typecheck` 0 · `lint` · `test` · `build` · `check:bundle` · `check:logical` · `size` · `size:routes` · `test:e2e` · axe.
-- [ ] T081 Visual matrix: EN/AR × light/dark × desktop/tablet/mobile for both routes; SSR no hydration mismatch, zero console errors.
-- [ ] T082 Lighthouse on the extended matrix. **A failure is a signal to fix the page, never to edit a threshold** (doc 20 §1).
-- [ ] T083 Arabic module docs (`app/components/README.md`, `app/pages/README.md`, `app/composables/README.md`) per doc 16 §8.1 — Arabic prose, English identifiers.
-- [ ] T084 Central doc sync: feature-map row `005` → implemented; any doc 04/13/22 updates the shipped behavior materially affects. `D10-12` untouched; **no `D10-13`**; no new decision unless something genuinely contradicts an approved doc — in which case revise the doc **first** (doc-first, D16-7).
-- [ ] T085 SpecKit closeout: this `tasks.md` fully checked, deferrals and accepted limitations recorded, `.specify/feature.json` accurate.
-- [ ] T086 **Documentation & Handoff Gate (D16-8)** — the mandatory final task. Until it passes, the feature must not be pushed, PR'd, merged to `dev`, promoted, or deployed.
+- [X] T080 Gates green, thresholds unchanged: `typecheck` 0 · `lint` · `test` · `build` · `check:bundle` · `check:logical` · `size` · `size:routes` · `test:e2e` · axe.
+- [X] T081 Visual matrix: EN/AR × light/dark × desktop/tablet/mobile for both routes; SSR no hydration mismatch, zero console errors. **24/24 cells captured and asserted** (status 200, `h1` visible, `dir` correct per locale, **zero console errors and zero page errors** in every cell). Captured with a one-off Playwright matrix run rather than a committed screenshot suite — snapshot-only tests are banned (§6.1) and the assertions it made are already covered by the two lanes.
+- [X] T082 Lighthouse on the extended matrix. **A failure is a signal to fix the page, never to edit a threshold** (doc 20 §1). Green in CI on the four Projects URLs × 2 profiles: desktop performance 98–100, mobile 83–92, accessibility / best-practices / SEO **100** everywhere. No threshold edited.
+- [X] T083 Arabic module docs (`app/components/README.md`, `app/pages/README.md`, `app/composables/README.md`) per doc 16 §8.1 — Arabic prose, English identifiers.
+- [X] T084 Central doc sync: docs PR **#16** merged (`741da9d`) adding **D06-6** (doc 06 v1.1.0) and **D18-6** (doc 18 v1.1.0); docs 03 and 10 untouched, D03-13 and D18-3 preserved, no `D03-15`. Feature-map row `005` → implemented; any doc 04/13/22 updates the shipped behavior materially affects. `D10-12` untouched; **no `D10-13`**; no new decision unless something genuinely contradicts an approved doc — in which case revise the doc **first** (doc-first, D16-7).
+- [X] T085 SpecKit closeout: this `tasks.md` fully checked, deferrals and accepted limitations recorded (F-1 fixed, F-2 fixed, **F-3 open**), `.specify/feature.json` accurate.
+- [ ] T086 **Documentation & Handoff Gate (D16-8)** — the mandatory final task. Until it passes, the feature must not be merged to `dev`, promoted, or deployed. **BLOCKED on finding F-3** (see above): an Arabic page that lays out left-to-right after a client-side locale switch is a WCAG/locale-parity regression, and the fix direction needs an owner decision. Everything else in Phase 9 is green.
 
 ## Out of scope (do not do in this slice)
 - `FR-PUB-034` prev/next navigation (priority `C`).
