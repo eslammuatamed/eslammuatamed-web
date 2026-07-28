@@ -50,9 +50,11 @@ export const CATEGORY_THRESHOLDS = {
 export const LCP_LIMITS = { desktop: 1200, mobile: 4000 }
 
 /**
- * Route + device specific CI REGRESSION CEILINGS that override `LCP_LIMITS` (D20-16, owner decision
- * 2026-07-27). Matched on the exact pathname — `/ar` is the Arabic HOME route only, never its
- * children: `/ar/blog/<slug>` measured 2667 ms on the same run and keeps the unmodified 4000 ms.
+ * Route + device specific CI REGRESSION CEILINGS that override `LCP_LIMITS` (D20-16 and D20-17,
+ * owner decisions 2026-07-27 and 2026-07-28). Matched on the exact pathname — `/ar` is the Arabic
+ * HOME route only, never its children: `/ar/blog/<slug>` measured 2667 ms on the same run and keeps
+ * the unmodified 4000 ms. `/ar/projects` is likewise the Arabic projects INDEX only, never
+ * `/ar/projects/<slug>` and never a prefix match such as `/ar/projects-extra`.
  *
  * WHY THIS EXISTS, AND WHAT IT IS NOT. D20-14 set mobile at 4000 ms from measurements taken on a
  * local developer workstation (a 3.0–3.9 s band), and doc 20 §5 recorded in its own words that the
@@ -64,6 +66,21 @@ export const LCP_LIMITS = { desktop: 1200, mobile: 4000 }
  * 5000 ms is ~5.6 % above the measured maximum (4734 ms). That is deliberately tight: a real
  * regression on this route still trips the gate, and no other route or device is relaxed to reach it.
  *
+ * D20-17 (2026-07-28) adds mobile `/ar/projects` at 5500 ms for a DIFFERENT reason, reached by the
+ * same mechanism. Here the gate was not consistently over budget — it was non-deterministic AT the
+ * boundary. The PR #23 baseline investigation measured 12 runs of a byte-equivalent tree
+ * (5101/2810/2804, 5106/2826/5111, 5128/4050/3676, 5128/2826/3975): exactly 6 of 12 above 4000 ms
+ * and 6 below, pooled median 4012.5 ms, gate outcomes 2 pass / 2 fail, and a controlled diagnostic
+ * on unchanged `dev` that passed by 25 ms. The variance is isolated to LCP RENDER DELAY
+ * (2326–4649 ms) against a near-constant TTFB (472–482 ms) and an invariant payload (523,327 B,
+ * 47 requests) — a text LCP element whose paint waits on the main thread under CPU throttling, so
+ * the result is bimodal (~2.8 s fast mode / ~5.1 s slow mode) from bytes that never changed.
+ * 5500 ms is the measured slow cluster (5101–5128 ms) rounded up to the next 500 ms boundary.
+ *
+ * D20-17 is a SEPARATE entry, not a widening of D20-16: broadening `/ar` to all Arabic routes would
+ * relax routes never measured over budget. Two narrow entries state what was measured; one broad
+ * rule would state more than the evidence supports.
+ *
  * This is a CI regression ceiling. It is NOT a redefinition of good LCP, NOT a statement that this
  * route needs no further work, and NOT a licence to re-baseline from future results — the value is
  * a frozen constant, exactly as D20-12 froze the app-code budget, because a threshold recomputed
@@ -72,7 +89,8 @@ export const LCP_LIMITS = { desktop: 1200, mobile: 4000 }
  * disappearing behind a passing gate.
  */
 export const LCP_ROUTE_CEILINGS = [
-  { formFactor: 'mobile', pathname: '/ar', ceiling: 5000 }
+  { formFactor: 'mobile', pathname: '/ar', ceiling: 5000 },
+  { formFactor: 'mobile', pathname: '/ar/projects', ceiling: 5500 }
 ]
 
 /**
