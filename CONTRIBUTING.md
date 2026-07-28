@@ -4,8 +4,12 @@
 - **`main`** — production, and the GitHub default branch. Every commit on `main` is deployed automatically (see below). Protected **by project policy**, not by GitHub (see the Free-plan note).
 - **`dev`** — development / integration. Feature work lands here first, then promotes to `main`.
 
-## Release freeze (active — until the Website/Homepage phase)
-`main` is **frozen at the current production baseline** by owner directive (2026-07-20) — canonical rule **doc 17 §4 / D17-5**, deployment hold **doc 23 §3 / D23-18**. `feature → PR → dev` merges continue as normal, but **no `dev → main` promotion and no production deployment** happen until the owner opens the Website/Homepage phase and explicitly authorizes it (deploy workflows are unchanged). The full rule lives in doc 17 / doc 23 and is **not restated here**.
+## Release freeze (fulfilled — lifted for this repository)
+The Web release freeze was **fulfilled and lifted on 2026-07-27**, after Feature 007 closed — canonical rule **doc 17 §4 / D17-5**, deployment hold **doc 23 §3 / D23-18**. This is a lifecycle update to those decisions, not a new one: no threshold, budget, or release rule changed. The full rule and its lift record live in doc 17 / doc 23 and are **not restated here**.
+
+Web changes therefore flow `feature → dev → main` exactly as described below. `main` still deploys automatically, but a commit only reaches `main` through an **explicitly approved promotion** — promoting `dev → main` remains an owner decision, never an automatic consequence of a green `dev`.
+
+**This section describes this repository only.** `eslammuatamed-api` has an independent release state that must not be inferred from Web policy — consult doc 17 / doc 23 for the API.
 
 ## Normal flow
 ```
