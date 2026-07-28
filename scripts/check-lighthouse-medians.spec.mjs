@@ -49,7 +49,7 @@ const FONT_RESOURCES = [
 ]
 const FONT_TOTAL = FONT_RESOURCES.reduce((sum, f) => sum + f.transferSize, 0)
 
-function report({ formFactor = 'mobile', url = 'http://127.0.0.1:3000/', performance = 70, version = '12.0.0' } = {}) {
+function report({ formFactor = 'mobile', url = 'http://127.0.0.1:3000/', performance = 70, version = '12.0.0', lcp = 900 } = {}) {
   return {
     lighthouseVersion: version,
     requestedUrl: url,
@@ -61,7 +61,7 @@ function report({ formFactor = 'mobile', url = 'http://127.0.0.1:3000/', perform
       seo: { score: 1 }
     },
     audits: {
-      'largest-contentful-paint': { numericValue: 900 },
+      'largest-contentful-paint': { numericValue: lcp },
       'cumulative-layout-shift': { numericValue: 0.01 },
       'total-blocking-time': { numericValue: 150 },
       'speed-index': { numericValue: 1200 },
@@ -195,6 +195,66 @@ describe('lighthouse median gate', () => {
     expect(code).toBe(0)
     expect(out).toMatch(/http:\/\/127\.0\.0\.1:3000\/\s/)
     expect(out).toMatch(/http:\/\/127\.0\.0\.1:3000\/ar/)
+  })
+
+  // -----------------------------------------------------------------------------------------
+  // D20-17 — the mobile /ar/projects ceiling, asserted end-to-end through the real gate.
+  // The unit tests pin which bound each configuration RESOLVES to; these pin what the gate
+  // DOES with it: which exit code, and what an operator actually reads in the log.
+  // -----------------------------------------------------------------------------------------
+  const AR_PROJECTS = 'http://127.0.0.1:3000/ar/projects'
+
+  it('fails (exit 1) when the mobile /ar/projects median exceeds the 5500 ms ceiling', async () => {
+    const dir = join(await scratch(), 'mobile')
+    await seed(dir, { url: AR_PROJECTS, lcp: 5600 })
+    const { code, out } = await gate([dir])
+    expect(code).toBe(1)
+    expect(out).toMatch(/thresholds not satisfied/)
+    expect(out).toMatch(/exceeds 5500ms/)
+    // A budget breach is never reported as a broken pipeline.
+    expect(out).not.toMatch(/MEASUREMENT FAILURE/)
+  })
+
+  it('passes a mobile /ar/projects median between 4000 and 5500 ms, but reports the missed target', async () => {
+    const dir = join(await scratch(), 'mobile')
+    await seed(dir, { url: AR_PROJECTS, lcp: 4600 })
+    const { code, out } = await gate([dir])
+    // Under the D20-17 ceiling, so the gate passes …
+    expect(code).toBe(0)
+    // … but the 4000 ms quality target it missed must stay visible on that passing gate. A ceiling
+    // that silently absorbs the number it replaced is how a temporary allowance becomes permanent.
+    // Asserted on the METRIC line (which carries the median), not on the always-printed preamble —
+    // otherwise this passes even when the per-run target reporting is removed entirely.
+    expect(out).toMatch(/median 4600 ms\s+≤ 5500 ms\s+· quality target 4000 ms NOT met \(non-blocking, D20-16\/D20-17\)/)
+  })
+
+  it('still prints all three raw runs and the median for /ar/projects', async () => {
+    const dir = join(await scratch(), 'mobile')
+    await seed(dir, { url: AR_PROJECTS, lcp: 4600 })
+    const { out } = await gate([dir])
+    // Median-of-three is retained by D20-17 (a larger sample was explicitly rejected), and every
+    // individual reading stays on screen so the median cannot hide a bimodal distribution.
+    expect(out).toMatch(/runs \[4600 ms, 4600 ms, 4600 ms\]/)
+    expect(out).toMatch(/median 4600 ms/)
+  })
+
+  it('keeps /ar/projects an ordinary 4000 ms route on desktop', async () => {
+    const dir = join(await scratch(), 'desktop')
+    await seed(dir, { url: AR_PROJECTS, formFactor: 'desktop', performance: 96, lcp: 1300 })
+    const { code, out } = await gate([dir])
+    // 1300 ms is under the mobile budget but over the 1200 ms desktop one — the exception must
+    // not follow the route across devices.
+    expect(code).toBe(1)
+    expect(out).toMatch(/exceeds 1200ms/)
+  })
+
+  it('still reports an unmeasurable /ar/projects collection as exit 2, not a budget failure', async () => {
+    const dir = join(await scratch(), 'mobile')
+    await seed(dir, { url: AR_PROJECTS, lcp: 5600 }, 2) // two runs, not three
+    const { code, out } = await gate([dir])
+    // The route exception must not reclassify a broken collection as an actionable score.
+    expect(code).toBe(2)
+    expect(out).toMatch(/MEASUREMENT FAILURE/)
   })
 
   it('leaves the report directory untouched — the gate reads, it does not clean up evidence', async () => {
