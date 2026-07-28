@@ -8,14 +8,23 @@ import type { Article, Envelope } from '~/types/models'
 const { t, locale } = useI18n()
 const route = useRoute()
 const api = useApi()
+// The ROUTE's locale, not the reactive UI locale (D06-6). Article slugs are per-locale (D04-2), so
+// during the D03-13 deferred locale commit this page would otherwise request the incoming locale's
+// slug in the OUTGOING language and render a 404 for an article that exists. `locale` above stays the
+// UI locale — it is used for date formatting, which must match the chrome the visitor is looking at.
+const contentLocale = useRouteLocale()
 // Call this composable before the await so it runs in a valid Nuxt context (auto-import context
 // caution) — the returned setter is invoked once the article resolves.
 const setI18nParams = useSetI18nParams()
 
 const slug = computed(() => String(route.params.slug))
 
-const { data: article, error } = await useAsyncData(`article:${slug.value}:${locale.value}`, () =>
-  api<Envelope<Article>>(`/articles/${slug.value}`).then(res => res.data)
+const { data: article, error } = await useAsyncData(
+  () => `article:${slug.value}:${contentLocale.value}`,
+  () =>
+    api<Envelope<Article>>(`/articles/${slug.value}`, { locale: contentLocale.value }).then(
+      res => res.data
+    )
 )
 
 if (error.value) {

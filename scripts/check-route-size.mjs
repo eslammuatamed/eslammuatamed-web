@@ -61,14 +61,22 @@ import {
   vendorPackage
 } from './lib/route-assets.mjs'
 
-/** The public surface. `/projects` + `/contact` are the accepted web-005 404s (spec.md:36). */
+/**
+ * The public surface. `/contact` remains an accepted web-005 404 until its own slice; the Projects
+ * routes shipped with the Projects slice and are measured here. Detail slugs are the Prism contract
+ * examples — the preview serves the committed contract, so the gate never depends on staging data.
+ */
 const ROUTES = [
   '/',
   '/ar',
   '/blog',
   '/ar/blog',
   '/blog/staying-inside-performance-budget-nuxt',
-  '/ar/blog/albaqaa-dimn-mizaniyat-ada-nuxt'
+  '/ar/blog/albaqaa-dimn-mizaniyat-ada-nuxt',
+  '/projects',
+  '/ar/projects',
+  '/projects/content-platform-api',
+  '/ar/projects/content-platform-api'
 ]
 
 const BASE = process.env.ROUTE_SIZE_BASE ?? 'http://127.0.0.1:3000'

@@ -45,6 +45,21 @@
 - **وارد:** التخطيطات (`LayoutHeader`/`LayoutFooter`/`UiBackToTop` في `default.vue`)، الصفحات (`HomeNameplate`, `HomeCapabilities`, `HomeSelectedWork`, `HomeTimeline`, `HomeWriting`, `HomeVoices`, `HomeContact`, `ContentArticleRow`, `ContentProse`، `UiSpread`، `UiSectionHead`، `UiRequestState`).
 - **صادر:** مكوّنات `Nuxt UI`، `useI18n`/`useLocalePath`/`useSwitchLocalePath`/`useColorMode`، ومركّبات البيانات (`useSiteSettings`/`useHomeData`/`useSiteSchema`)، و`utils` (`formatDate`/`formatMonthYear`/`formatExperiencePeriod`)، وبدائيّات الواجهة الجديدة (`UiSpread`/`UiSectionHead`/`UiBrandMark`/`UiRequestState`/`LayoutLangToggle`).
 
+### مكوّنات المشاريع (005)
+
+- **`project/Filter.vue`** — مرشّح التقنيات من سجلّ المهارات لا من نصّ حرّ؛ القيمة المُرسَلة هي
+  `UUID` القياسي (الشكل الوحيد الذي يقبله العقد)، والتسميات للعرض فقط. «كل التقنيات» **عنصر نائب**
+  لا خيار في القائمة: `reka-ui` تحجز السلسلة الفارغة لمسح الاختيار وترفض عنصرًا قيمته `''`؛ فالمسح
+  إجراء صريح يظهر فقط أثناء وجود مرشّح.
+- **`project/Gallery.vue`** — `srcset` مبني من `variants` الواردة في العقد نفسه، لا من تحويل وقت
+  تشغيل (`D23-15`: الـ API يولّد النسخ وR2 يقدّمها ساكنة). `width`/`height` صريحان دائمًا — هما ما
+  يُثبّت `CLS` عند الصفر. و**`alt === null` تختلف عن `alt === ''`**: الأولى تعني «لا ترجمة للنصّ
+  البديل» فتُخفى الصورة من شجرة الإتاحة، والثانية تعني «زخرفيّة عن قصد».
+- **`project/Links.vue`** — يعرض `liveUrl`/`repoUrl` بالتوليفات الأربع، ولا يعرض **أيّ** منطقة حين
+  يكونان معًا `null`.
+- **`ui/Breadcrumbs.vue`** — `nav` دلالي بقائمة مرتّبة، والعنصر الأخير يحمل `aria-current="page"`
+  وليس رابطًا، وبخصائص CSS منطقيّة فينعكس المسار تلقائيًّا في RTL.
+
 ## قرارات جوهرية (شرح لمطوّر مبتدئ)
 
 - **`AppLink` يملك تعقيد الروابط:** توطين المسار الداخلي والـ `rel=noopener` للخارجي في مكان واحد، فلا تبني الصفحات `localePath()` يدويًّا.

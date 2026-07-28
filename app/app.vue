@@ -1,11 +1,13 @@
 <script setup lang="ts">
-// Global document shell. `useLocaleHead` supplies hreflang/canonical/og:locale; the explicit
-// htmlAttrs below guarantee `<html lang dir>` per locale (locale parity, Pillar 3). The brand
-// suffix is appended once via titleTemplate so pages set only a short title.
+// Global document shell. EVERY locale-derived head tag — `<html lang dir>`, the locale alternates,
+// the canonical, `og:locale`/`og:locale:alternate`/`og:url` — is owned by `@nuxtjs/i18n` under strict
+// SEO (D22-7, `nuxt.config` `i18n.experimental.strictSeo`), so nothing here writes them. `useLocaleHead()`
+// is not called: the module throws on it in strict mode, because the two would compete for the same
+// tags — which is exactly how finding F-3 happened. The brand suffix is appended once via
+// titleTemplate so pages set only a short title.
 import * as uiLocales from '@nuxt/ui/locale'
 
-const { t, locale, locales, finalizePendingLocaleChange } = useI18n()
-const localeHead = useLocaleHead()
+const { t, locale, finalizePendingLocaleChange } = useI18n()
 const brand = computed(() => t('brand.name'))
 
 // Branded public route transition (007): a "spread" turn — the page leaves toward the inline-start
@@ -27,19 +29,14 @@ const brand = computed(() => t('brand.name'))
 // contract can be unit-tested rather than only observed in a browser.
 const pageTransition = createPageTransition(finalizePendingLocaleChange)
 
-const activeLocale = computed(() => locales.value.find(item => item.code === locale.value))
-
 // Nuxt UI localizes its built-in strings and mirrors component direction from this locale pack,
 // switched with the active i18n locale (ui.nuxt.com/docs/getting-started/i18n/nuxt). The pack keys
-// (`en`/`ar`) match our i18n codes; the `<html lang dir>` authority stays with i18n above.
+// (`en`/`ar`) match our i18n codes; the `<html lang dir>` authority is i18n's, per D22-7.
 const uiLocale = computed(() => uiLocales[locale.value as keyof typeof uiLocales])
 
-useHead(localeHead)
+// Title only. Locale-derived tags are the module's (D22-7); description, OG image, structured data
+// and the D22-6 global metas remain page/entity concerns, below and in the pages themselves.
 useHead(() => ({
-  htmlAttrs: {
-    lang: activeLocale.value?.language ?? locale.value,
-    dir: activeLocale.value?.dir ?? 'ltr'
-  },
   titleTemplate: title => (title ? `${title} — ${brand.value}` : brand.value)
 }))
 

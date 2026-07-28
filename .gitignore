@@ -32,3 +32,9 @@ logs
 
 # Bundle-provenance analysis output (ANALYZE_BUNDLE=1); analysis input, never committed
 .bundle-analysis
+
+# Playwright e2e output (uploaded as a CI artifact, never committed)
+test-results
+playwright-report
+blob-report
+.playwright

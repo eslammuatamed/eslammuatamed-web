@@ -1,0 +1,30 @@
+{
+  // The e2e suite sits OUTSIDE the Nuxt project graph on purpose: it drives the built application over
+  // HTTP and must not import app internals. The root `tsconfig.json` only references the generated
+  // `.nuxt/tsconfig.*` projects, so without this file these specs would never be type-checked at all —
+  // Playwright transpiles TypeScript without checking it, so type errors here would be invisible.
+  // Checked by `npm run typecheck:e2e`.
+  //
+  // `scripts/e2e/**` is included here rather than left unchecked: it is the SSR scenario backend, and
+  // its fixtures are typed with the OpenAPI-derived types generated into `app/types/api.d.ts`. That
+  // typing is one of the two contract-fidelity mechanisms (the other is ajv validation against the
+  // committed document in `scripts/e2e/contract-fixtures.spec.ts`), so it has to be enforced by a
+  // gate. Those files are executed directly by Node 24's TypeScript support, which does no module
+  // resolution guessing — hence `allowImportingTsExtensions` for their explicit `.ts` specifiers.
+  // Importing the GENERATED CONTRACT TYPES is not importing app internals: it is type-only, erased at
+  // runtime, and points at the same contract the mock serves.
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022", "DOM"],
+    "types": ["node"],
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "esModuleInterop": true,
+    "allowImportingTsExtensions": true,
+    "skipLibCheck": true,
+    "noEmit": true
+  },
+  "include": ["**/*.ts", "../playwright.config.ts", "../scripts/e2e/**/*.ts"]
+}

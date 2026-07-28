@@ -84,8 +84,12 @@ export default defineNuxtConfig({
     '/ar/dashboard/**': { ssr: false },
     '/': { swr: 60 },
     '/blog/**': { swr: 60 },
+    '/projects': { swr: 60 },
+    '/projects/**': { swr: 60 },
     '/ar': { swr: 60 },
     '/ar/blog/**': { swr: 60 },
+    '/ar/projects': { swr: 60 },
+    '/ar/projects/**': { swr: 60 },
     // Draft-preview surface (D10-11): never index, never cache, never leak the token-bearing URL via
     // the Referer of any subresource. `robots` drives @nuxtjs/robots (noindex meta + X-Robots-Tag);
     // the explicit headers add no-store + no-referrer. Both locale paths need the header rule — Nitro
@@ -106,7 +110,8 @@ export default defineNuxtConfig({
     langDir: 'locales', // resolved under the i18n/ restructure dir → i18n/locales (v10 default)
     baseUrl: siteUrl, // validated above — never a silent localhost fallback (D23-8)
     detectBrowserLanguage: false, // explicit routing only — no Accept-Language heuristic (D10-6)
-    // Defer the locale commit until the outgoing page is concealed (D03-14).
+    // Defer the locale commit until the outgoing page is concealed (D03-13 — the branded
+    // `page-spread` transition; D03-14 is selective glass and is unrelated).
     //
     // Without this, `locale` commits the moment i18n resolves the incoming route — BEFORE Vue's
     // `out-in` page transition starts its leave animation. Measured on the built preview: `<html dir>`
@@ -122,11 +127,40 @@ export default defineNuxtConfig({
     // It is deliberately inert where it must be: the module skips suspension on the server and during
     // hydration (`runtime/context.js` — `import.meta.server || nuxt.isHydrating`), so a direct `/ar`
     // load or a refresh is still RTL in the first painted frame, with no client round trip.
+    //
+    // CONSEQUENCE, handled rather than absorbed: the incoming page's `setup()` runs INSIDE the
+    // suspension window, so the reactive locale it reads is still the OUTGOING one. Public content
+    // reads therefore take their locale from the ROUTE (D06-6, `useRouteLocale()`), not from this
+    // reactive state — otherwise a locale switch requests the incoming per-locale slug (D04-2) in the
+    // previous language and renders a 404 for content that exists.
     skipSettingLocaleOnNavigate: true,
     locales: [
       { code: 'en', language: 'en-US', dir: 'ltr', name: 'English', file: 'en.json' },
       { code: 'ar', language: 'ar', dir: 'rtl', name: 'العربية', file: 'ar.json' }
-    ]
+    ],
+    /**
+     * Strict SEO — the module owns every locale-derived head tag (D22-7, doc 22 §2).
+     *
+     * `<html lang>`/`<html dir>`, the locale alternates including `x-default` (D22-3), the
+     * route-derived canonical, `og:locale`/`og:locale:alternate`/`og:url`, and the localized
+     * dynamic-route parameters fed by `useSetI18nParams()` are all generated internally, as one
+     * unit. `app.vue` therefore no longer calls `useLocaleHead()` — the module throws on it here,
+     * because the two would be competing writers for the same tags.
+     *
+     * WHY (finding F-3). With the head split between the module and app-owned writers, a
+     * client-side locale switch on a route that calls `setI18nParams()` left `dir` on `ltr` for an
+     * Arabic page, `og:locale` on `en_US`, and the canonical carrying the Arabic slug on the English
+     * path — while `lang` and `hreflang` updated correctly. Upgrading the module to 10.5.0 was tried
+     * first and did not fix it; app-owned `htmlAttrs` lost the merge, and raising their priority
+     * changed nothing. Fixing `dir` alone would have left the crawler-visible half broken.
+     *
+     * Page and entity code keeps title, description, entity OG image, structured data and the D22-6
+     * global metas. `skipSettingLocaleOnNavigate` (D03-13) and route-resolved content locale (D06-6)
+     * are untouched — this changes who writes the tags, not when the locale commits.
+     */
+    experimental: {
+      strictSeo: true
+    }
   },
 
   // Class strategy, system default, no flash (D14-4). Nuxt UI bundles color-mode; classSuffix
@@ -138,8 +172,22 @@ export default defineNuxtConfig({
   },
 
   // OG-image/schema wiring is a later milestone (spec out-of-scope); keep the heavy OG-image
-  // renderer out of the M1 build. Sitemap/robots stay at module defaults.
+  // renderer out of the M1 build. Robots stays at module defaults.
   ogImage: { enabled: false },
+
+  // Published project translations come from the API at request time (doc 22 §sitemap). The handler
+  // lives in Nitro because a sitemap cannot go through a component composable.
+  sitemap: {
+    sources: ['/api/__sitemap__/projects']
+  },
+
+  // NO `image.domains` for the media origin — deliberately. Allowlisting a host is what ENABLES
+  // @nuxt/image's IPX runtime transformation for it, which is the opposite of D23-15: the API
+  // pre-generates every rendition and R2 serves the static objects. Setting it rewrote remote
+  // descriptors to `/_ipx/s_80x80/https://media…`, which 404s and drops Lighthouse best-practices to
+  // 96 via `errors-in-console` on the home page. Left unset, <NuxtImg> emits the contract's absolute
+  // URLs untouched, which is exactly what the pre-generated pipeline wants; the gallery additionally
+  // builds its srcset from the contract's own `variants`.
 
   // Pre-compress public assets at build time (brotli + gzip), so the Nitro origin serves them the
   // way production already serves them to users.

@@ -29,7 +29,9 @@ export async function usePreview<T>(resource: 'articles' | 'projects') {
     return (Array.isArray(raw) ? raw[0] : raw) ?? ''
   })
 
-  const { locale } = useI18n()
+  // Route-resolved, per D06-6 — which is what the paragraph above already claims the preview surface
+  // does. Reading the reactive UI locale instead would break that claim during a locale switch.
+  const locale = useRouteLocale()
 
   // Registered before the await so it runs in a valid Nuxt context (auto-import caution). The robots
   // meta mirrors error.vue's established `useSeoMeta({ robots })` pattern; the referrer meta backs up
@@ -46,7 +48,10 @@ export async function usePreview<T>(resource: 'articles' | 'projects') {
     () => `preview:${resource}:${id.value}:${locale.value}`,
     async () => {
       try {
-        const res = await api<Envelope<T>>(`/preview/${resource}/${id.value}`, { query: { token: token.value } })
+        const res = await api<Envelope<T>>(`/preview/${resource}/${id.value}`, {
+          locale: locale.value,
+          query: { token: token.value }
+        })
         return { document: res.data, ok: true }
       } catch {
         return { document: null, ok: false }

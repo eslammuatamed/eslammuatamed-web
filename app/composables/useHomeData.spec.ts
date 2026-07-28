@@ -9,6 +9,8 @@ import { useHomeData } from './useHomeData'
 // resilience guarantee, so it gets a dedicated regression test.
 // `t` is stubbed too: the global @nuxtjs/seo fallback-title composable calls `i18n.t` during the run.
 mockNuxtImport('useI18n', () => () => ({ t: (key: string) => key, locale: ref('en') }))
+// Home reads take the ROUTE locale (D06-6); resolution itself is covered by `useRouteLocale`'s spec.
+mockNuxtImport('useRouteLocale', () => () => ref('en'))
 mockNuxtImport('useApi', () => () => (path: string) => {
   if (path.startsWith('/experiences')) return Promise.reject(new Error('boom'))
   if (path.startsWith('/skills')) {

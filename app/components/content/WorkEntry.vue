@@ -9,9 +9,16 @@ import type { ProjectListItem } from '~/types/models'
 // list contract, so the entry is purely typographic — and degrades cleanly if one is added later.
 interface Props {
   project: ProjectListItem
+  /**
+   * Heading level for the entry title. Defaults to `h3`, which is correct on the home page where a
+   * `UiSectionHead` `h2` precedes the list. The projects index puts these entries directly under its
+   * `h1`, so it passes `h2` — otherwise the document skips a level and fails WCAG heading order
+   * (caught by the Lighthouse accessibility gate on /projects).
+   */
+  headingLevel?: 'h2' | 'h3'
 }
 
-defineProps<Props>()
+withDefaults(defineProps<Props>(), { headingLevel: 'h3' })
 </script>
 
 <template>
@@ -22,11 +29,14 @@ defineProps<Props>()
 
     <div class="sm:col-start-2">
       <div class="flex items-start justify-between gap-6">
-        <h3 class="font-display text-h2 text-highlighted transition-colors group-hover:text-link">
+        <component
+          :is="headingLevel"
+          class="font-display text-h2 text-highlighted transition-colors group-hover:text-link"
+        >
           <AppLink :to="`/projects/${project.slug}`" class="after:absolute after:inset-0">
             {{ project.title }}
           </AppLink>
-        </h3>
+        </component>
         <UIcon
           name="i-lucide-arrow-up-right"
           class="mt-1.5 size-5 shrink-0 text-dimmed transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:text-link rtl:-scale-x-100"

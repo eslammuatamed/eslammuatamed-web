@@ -9,7 +9,8 @@
     "experience": "Experience",
     "about": "About",
     "resume": "Résumé",
-    "contact": "Contact"
+    "contact": "Contact",
+    "home": "Home"
   },
   "a11y": {
     "skipToContent": "Skip to content",
@@ -108,6 +109,45 @@
     "previous": "Previous",
     "next": "Next"
   },
+  "projects": {
+    "title": "Selected work",
+    "description": "Case studies from production work — the problem, the architecture, the trade-offs, and what shipped.",
+    "emptyTitle": "No case studies yet",
+    "emptyBody": "Work is being written up. In the meantime, the writing section covers the same engineering ground.",
+    "emptyFilteredTitle": "No projects use this technology",
+    "emptyFilteredBody": "Try another technology, or clear the filter to see every case study.",
+    "errorTitle": "Projects could not be loaded",
+    "errorBody": "The request did not complete. This is usually temporary.",
+    "filter": {
+      "label": "Technology",
+      "all": "All technologies",
+      "clear": "Clear filter"
+    },
+    "breadcrumbLabel": "Breadcrumb",
+    "sections": {
+      "overview": "Overview",
+      "businessProblem": "The problem",
+      "solution": "The solution",
+      "role": "My role",
+      "architecture": "Architecture",
+      "challenges": "Challenges",
+      "features": "Key features",
+      "lessonsLearned": "What I took away"
+    },
+    "links": {
+      "live": "Live product",
+      "repo": "Repository"
+    },
+    "contact": {
+      "eyebrow": "Next step",
+      "title": "Have a problem shaped like this one?",
+      "body": "If this kind of work is what you need, the fastest route is a direct email — it reaches me straight away.",
+      "action": "Email me"
+    },
+    "gallery": {
+      "heading": "Gallery"
+    }
+  },
   "article": {
     "back": "Back to blog",
     "publishedOn": "Published {date}",
@@ -176,6 +216,10 @@
     "blog": {
       "title": "Blog",
       "description": "Notes on engineering, architecture, and building for the web."
+    },
+    "projects": {
+      "title": "Projects",
+      "description": "Case studies from production frontend and full-stack work by Eslam Muatamed."
     }
   }
 }
