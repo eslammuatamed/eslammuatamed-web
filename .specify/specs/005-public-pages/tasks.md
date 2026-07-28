@@ -66,7 +66,7 @@ split into a separate PR.
 
 ## Phase 7 — Performance & i18n wiring *(depends on Phases 3–5)*
 - [X] T060 `nuxt.config.ts` — `swr: 60` route rules for `/projects`, `/projects/**`, `/ar/projects`, `/ar/projects/**`.
-- [X] T061 `i18n/locales/{en,ar}.json` — the `projects.*` block (titles, filter, empty copy, eight section headings, gallery, links, breadcrumbs). Arabic is author-written and **flagged for native owner review before closeout**; every key ships a real Arabic value — **no untranslated English fallback may render on `/ar`**.
+- [X] T061 `i18n/locales/{en,ar}.json` — the `projects.*` block (titles, filter, empty copy, eight section headings, gallery, links, breadcrumbs). **Native Arabic review COMPLETE (owner, 2026-07-28):** nine owner-approved replacements applied verbatim (`projects.description`, `emptyBody`, `emptyFilteredBody`, `filter.clear`, `links.live`, `contact.title`, `contact.body`, `contact.action`, `seo.projects.description`); all other Arabic strings approved unchanged. EN/AR key parity verified at **153/153**, the only identical values being the locale self-names (`locale.en`/`locale.ar`, correct by design) — **no untranslated English fallback can render on `/ar`**. Affected e2e assertions and the Arabic module README updated. No repository-wide punctuation/diacritics cleanup was started (owner instruction).
 - [X] T062 `lighthouserc.cjs` — append the four Projects URLs. **No threshold, budget, or release rule is edited** (HR-3).
 - [X] T063 Confirm `check:bundle` still reports no dashboard/editor leak and `size:routes` stays within budget.
 
@@ -110,19 +110,30 @@ any slug in any locale, so neither state could occur against the contract mock.
   Note: **D10-6 does not mandate reading the reactive i18n locale**; it governs the `?locale=`
   parameter itself. Doc 10 was not modified.
 
-- **F-3 — OPEN, needs an owner decision. Pre-existing, unrelated to D06-6, blocks D16-8.**
-  Observed, and only this: `<html dir>` does not follow a **client-side** locale switch on routes that
-  call `setI18nParams()` (Projects and Blog detail) — `lang` does. Index routes are unaffected (the
-  blog index flips to `rtl` correctly), so **`setI18nParams` is the differentiator**. The same
-  staleness hits `og:locale` (stays `en_US`) and `canonical` (keeps the AR slug but loses its `/ar`
-  prefix) after that switch. Reproduced on the **`contract` lane** with unmodified data code, so it
-  predates web-005.
-  **Server-rendered output is correct in both locales** — every direct visit and every crawl — so this
-  is a visible RTL bug for a visitor who uses the toggle, not an indexing emergency.
-  Tried and did not change the outcome: i18n's documented `localeProperties` (which is itself correct
-  — it reports `dir: 'rtl'` at the moment the page is wrong) and unhead's `tagPriority: 'high'`.
-  **The mechanism is not established** and is deliberately not guessed at here; a wrong mechanism sends
-  the fix down the wrong path. Doc-first (D16-7) applies to whatever direction is chosen.
+- **F-3 — RESOLVED via the owner's staged decision (docs PR #17, merge `7e98ce7`; D22-7).**
+
+  *Stage A — upgrade first.* `@nuxtjs/i18n` 10.4.1 → 10.5.0, as an isolated commit. It did **not**
+  fix the defect; its only SEO change concerns `differentDomains`. Measured after a client-side
+  switch, against the head a direct load produces: `lang` ✓ and `hreflang` ✓, but `dir` stayed
+  `ltr`, canonical kept the Arabic slug on the English path, and `og:locale` stayed `en_US`. The
+  Projects **index** switch was correct in both directions — closing the earlier evidence gap and
+  confirming `setI18nParams()` as the differentiator.
+
+  *Stage B — docs-first strict SEO.* **D22-7** (doc 22 v1.2.0) gives `@nuxtjs/i18n` ownership of
+  `<html lang dir>`, locale alternates, route-derived canonical, `og:locale`/`og:locale:alternate`/
+  `og:url` and localized dynamic-route parameters, via `i18n.experimental.strictSeo`.
+  `useLocaleHead()` was removed — the module throws on it in strict mode, which is the root of F-3:
+  two writers for the same tags. `app.vue` keeps only the title template; `error.vue`'s `htmlAttrs`
+  became duplication and were removed (F-2's behaviour is unchanged and still asserted — only its
+  owner moved). Page/entity code keeps title, description, OG image, structured data and D22-6 metas.
+  `skipSettingLocaleOnNavigate` (D03-13), D06-6, and the API contract are untouched.
+
+  *Caught during Stage B.* The header language switcher's rendered `href` was the re-prefixed
+  same-locale slug. Clicking worked — the router resolved the reactive target — so it was invisible
+  to a mouse user and live for a crawler, a middle-click or a no-JS visitor. Cause: the header
+  server-renders **before** the page calls `setI18nParams()`. Fixed with the module's own
+  `<SwitchLocalePathLink>`, whose `href` the module rewrites on `app:rendered`, after the whole page
+  has run. Both switchers now emit the counterpart slug in SSR, in both locales.
 
 - **F-4 — FOUND AND FIXED while implementing D06-6; worth an owner note.**
   D06-6 says "public data composables default to a locale resolved from the route". Applied literally

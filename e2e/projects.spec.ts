@@ -61,7 +61,7 @@ test.describe('F-P1 — hiring-manager journey (AR, RTL)', () => {
     await expect(page).toHaveURL(new RegExp(`/ar/projects/${SLUG}$`))
     await expect(page.locator('html')).toHaveAttribute('lang', 'ar')
 
-    await expect(page.getByRole('link', { name: /راسلني بالبريد/ })).toHaveAttribute(
+    await expect(page.getByRole('link', { name: /راسلني عبر البريد/ })).toHaveAttribute(
       'href',
       'mailto:eslammuatemed@gmail.com'
     )

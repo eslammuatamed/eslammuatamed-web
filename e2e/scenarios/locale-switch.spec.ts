@@ -91,10 +91,7 @@ test.describe('Project locale switch', () => {
     await expect(page).toHaveURL(new RegExp(`/ar/projects/${SLUG.bilingual.ar}$`))
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('دراسة تمايز اللغتين')
     await expect(page.locator('html')).toHaveAttribute('lang', 'ar')
-    // `dir` after a CLIENT-SIDE switch is finding F-3 — a separate, pre-existing defect in
-    // `@nuxtjs/i18n`'s head handling that reproduces on the `contract` lane with unmodified data
-    // code. Asserting it here would fail for a reason D06-6 does not own. Server-rendered `dir` IS
-    // asserted, above and throughout the rest of this lane.
+    await expect(page.locator('html')).toHaveAttribute('dir', 'rtl')
 
     // The regression assertion, stated positively AND negatively.
     // The regression assertion. The counterpart rendering at all proves Nitro asked in the right
@@ -119,6 +116,7 @@ test.describe('Project locale switch', () => {
     await expect(page).toHaveURL(new RegExp(`/projects/${SLUG.bilingual.en}$`))
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Bilingual differentiation study')
     await expect(page.locator('html')).toHaveAttribute('lang', 'en-US')
+    await expect(page.locator('html')).toHaveAttribute('dir', 'ltr')
 
     // The regression assertion. The counterpart rendering at all proves Nitro asked in the right
     // language — the backend 404s a per-locale slug requested in the wrong one — and no browser
@@ -142,6 +140,7 @@ test.describe('Blog locale switch — the same defect, the same fix', () => {
     await expect(page).toHaveURL(new RegExp(`/ar/blog/${ARTICLE_SLUG.bilingual.ar}$`))
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('دراسة تمايز المقالات بين اللغتين')
     await expect(page.locator('html')).toHaveAttribute('lang', 'ar')
+    await expect(page.locator('html')).toHaveAttribute('dir', 'rtl')
 
     expect(
       requests.filter(url => url.includes('locale=en')),
@@ -159,6 +158,7 @@ test.describe('Blog locale switch — the same defect, the same fix', () => {
     await expect(page).toHaveURL(new RegExp(`/blog/${ARTICLE_SLUG.bilingual.en}$`))
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Bilingual article differentiation study')
     await expect(page.locator('html')).toHaveAttribute('lang', 'en-US')
+    await expect(page.locator('html')).toHaveAttribute('dir', 'ltr')
 
     expect(
       requests.filter(url => url.includes('locale=ar')),

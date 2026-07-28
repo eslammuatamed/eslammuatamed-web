@@ -137,7 +137,30 @@ export default defineNuxtConfig({
     locales: [
       { code: 'en', language: 'en-US', dir: 'ltr', name: 'English', file: 'en.json' },
       { code: 'ar', language: 'ar', dir: 'rtl', name: 'العربية', file: 'ar.json' }
-    ]
+    ],
+    /**
+     * Strict SEO — the module owns every locale-derived head tag (D22-7, doc 22 §2).
+     *
+     * `<html lang>`/`<html dir>`, the locale alternates including `x-default` (D22-3), the
+     * route-derived canonical, `og:locale`/`og:locale:alternate`/`og:url`, and the localized
+     * dynamic-route parameters fed by `useSetI18nParams()` are all generated internally, as one
+     * unit. `app.vue` therefore no longer calls `useLocaleHead()` — the module throws on it here,
+     * because the two would be competing writers for the same tags.
+     *
+     * WHY (finding F-3). With the head split between the module and app-owned writers, a
+     * client-side locale switch on a route that calls `setI18nParams()` left `dir` on `ltr` for an
+     * Arabic page, `og:locale` on `en_US`, and the canonical carrying the Arabic slug on the English
+     * path — while `lang` and `hreflang` updated correctly. Upgrading the module to 10.5.0 was tried
+     * first and did not fix it; app-owned `htmlAttrs` lost the merge, and raising their priority
+     * changed nothing. Fixing `dir` alone would have left the crawler-visible half broken.
+     *
+     * Page and entity code keeps title, description, entity OG image, structured data and the D22-6
+     * global metas. `skipSettingLocaleOnNavigate` (D03-13) and route-resolved content locale (D06-6)
+     * are untouched — this changes who writes the tags, not when the locale commits.
+     */
+    experimental: {
+      strictSeo: true
+    }
   },
 
   // Class strategy, system default, no flash (D14-4). Nuxt UI bundles color-mode; classSuffix

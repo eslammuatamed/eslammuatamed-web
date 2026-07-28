@@ -113,6 +113,29 @@ for the incoming per-locale slug (D04-2) in the outgoing language — a legitima
 frontend derives the value. Rejected alternatives (i18n's `@internal` `__pendingLocale`; disabling
 `skipSettingLocaleOnNavigate`; suppressing the 404) are recorded in D06-6.
 
+### Revision, 2026-07-28 — D22-7, locale-owned head metadata (strict SEO)
+
+Owner-approved staged resolution of finding F-3 (docs PR #17, merge `741da9d` → `7e98ce7`).
+
+Stage A upgraded `@nuxtjs/i18n` 10.4.1 → 10.5.0 as an isolated commit and **did not** fix it.
+Stage B adopted the module's official `experimental.strictSeo`, so `@nuxtjs/i18n` owns
+`<html lang dir>`, the locale alternates (D22-3), the route-derived canonical,
+`og:locale`/`og:locale:alternate`/`og:url`, and the localized dynamic-route parameters fed by
+`setI18nParams()`. `useLocaleHead()` is removed — the module throws on it, and two competing writers
+for the same tags is precisely what F-3 was.
+
+Consequences in this repo:
+
+- `app.vue` keeps the title template only; `error.vue` no longer sets `htmlAttrs` (module-owned now).
+- `LangToggle.vue` uses the module's `<SwitchLocalePathLink>` rather than a pre-resolved
+  `switchLocalePath()`, because the header renders before the page calls `setI18nParams()` and was
+  therefore emitting the same-locale slug in its `href`.
+- Page/entity code is unchanged: title, description, OG image, structured data and the D22-6 global
+  metas stay where they were.
+
+`prefix_except_default` (D01-3), the deferred locale commit (D03-13), route-resolved content locale
+(D06-6) and the API contract are all untouched. No OpenAPI change.
+
 ## Data layer
 
 - `app/composables/useProjects.ts` — two functions over `useApi()`:

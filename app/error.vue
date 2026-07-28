@@ -8,24 +8,15 @@ interface Props {
 }
 
 const props = defineProps<Props>()
-const { t, locale, localeProperties } = useI18n()
+const { t } = useI18n()
 const localePath = useLocalePath()
 
-/**
- * `<html lang dir>` has to be set HERE as well as in `app.vue`.
- *
- * A fatal error renders `error.vue` INSTEAD of `app.vue`, so app.vue's `htmlAttrs` never run — the
- * Arabic 404 and 500 pages were served without `dir="rtl"` and laid out left-to-right. i18n supplies
- * `lang` on its own, which is what made the omission easy to miss: the page looked localized while
- * every RTL behaviour was wrong. Caught by the SSR scenario lane's unknown-slug test.
- */
-const activeLocale = computed(() => localeProperties.value)
-useHead(() => ({
-  htmlAttrs: {
-    lang: activeLocale.value?.language ?? locale.value,
-    dir: activeLocale.value?.dir ?? 'ltr'
-  }
-}))
+// `<html lang dir>` is NOT set here. It used to be (finding F-2): a fatal error renders this component
+// instead of `app.vue`, so app.vue's `htmlAttrs` never ran and the Arabic 404 laid out left-to-right.
+// Under strict SEO (D22-7) the i18n module writes those attributes itself, independently of which
+// component renders, so a second writer here would be duplication. Verified by removing it and
+// re-running the Arabic-404 test, which still asserts `dir="rtl"` — F-2's behaviour is unchanged, only
+// its owner is.
 
 // `status`/`statusText` are the current NuxtError accessors; `statusCode`/`statusMessage` are
 // `@deprecated` in their favor. createError and the H3 layer accept the new names too (see the

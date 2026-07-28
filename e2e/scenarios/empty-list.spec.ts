@@ -109,7 +109,7 @@ test.describe('Empty projects list — Arabic', () => {
 
     await expect(page.getByText('لا مشاريع تستخدم هذه التقنية')).toBeVisible()
     await emptyStatePanel(page, 'لا مشاريع تستخدم هذه التقنية')
-      .getByRole('button', { name: 'مسح المرشّح' })
+      .getByRole('button', { name: 'إزالة التصفية' })
       .click()
     await expect(page).toHaveURL(/\/ar\/projects$/)
     await expect(page.getByText('لا توجد دراسات حالة بعد')).toBeVisible()
