@@ -91,6 +91,28 @@ The scenario server lives entirely in `scripts/e2e/**`. It is not in `app/**`, n
 route, not a runtime plugin, not a composable, and not a component — and it must not grow into a
 general mock API.
 
+### Revision, 2026-07-28 — D06-6, effective locale from the route
+
+Owner-approved (docs PR #16, merge `741da9d`) after the scenario lane surfaced finding **F-1**.
+
+Public content reads take their locale from the **target route**, not from the reactive UI locale.
+The two agree in normal rendering and diverge only inside the `page-spread` transition (**D03-13** —
+not D03-14, which is selective glass), which defers the locale commit until the outgoing page is
+concealed. The incoming page's `setup()` runs inside that window, so a read using reactive state asks
+for the incoming per-locale slug (D04-2) in the outgoing language — a legitimate contract 404.
+
+- `app/utils/route-locale.ts` — pure resolver over the configured codes, default locale and the
+  `prefix_except_default` strategy. Nothing hard-coded to `en`/`ar`; adding a locale needs no change.
+- `app/composables/useRouteLocale.ts` — the composable form, reading `$i18n` (safe outside setup, the
+  same reason `useApi()` documents) rather than the setup-only `useI18n()`.
+- `useApi()` gains an optional explicit `locale`; public composables and both per-locale-slug pages
+  pass the route-resolved value and use it in their `useAsyncData` keys. Dashboard, auth and mutation
+  paths are untouched.
+
+**Doc 10 is unchanged.** D10-6 governs the `?locale=` parameter and its semantics, not how the
+frontend derives the value. Rejected alternatives (i18n's `@internal` `__pendingLocale`; disabling
+`skipSettingLocaleOnNavigate`; suppressing the 404) are recorded in D06-6.
+
 ## Data layer
 
 - `app/composables/useProjects.ts` — two functions over `useApi()`:

@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import Ajv from 'ajv'
 import addFormats from 'ajv-formats'
 import { describe, expect, it } from 'vitest'
-import { PROJECTS, REDIRECTS, SLUG, TECHNOLOGY } from './fixtures.ts'
+import { ARTICLES, ARTICLE_SLUG, PROJECTS, REDIRECTS, SLUG, TECHNOLOGY } from './fixtures.ts'
 import { API_PREFIX, resolveRequest } from './scenario-server.ts'
 
 /**
@@ -110,7 +110,9 @@ const SUCCESS_RESPONSES: { label: string, path: string, schema: string, list?: b
   { label: 'empty-gallery project (en)', path: `/projects/${SLUG.emptyGallery.en}?locale=en`, schema: 'PublicProjectDetailEntity' },
   { label: 'empty-gallery project (ar)', path: `/projects/${SLUG.emptyGallery.ar}?locale=ar`, schema: 'PublicProjectDetailEntity' },
   { label: 'bilingual project (en)', path: `/projects/${SLUG.bilingual.en}?locale=en`, schema: 'PublicProjectDetailEntity' },
-  { label: 'bilingual project (ar)', path: `/projects/${SLUG.bilingual.ar}?locale=ar`, schema: 'PublicProjectDetailEntity' }
+  { label: 'bilingual project (ar)', path: `/projects/${SLUG.bilingual.ar}?locale=ar`, schema: 'PublicProjectDetailEntity' },
+  { label: 'bilingual article (en)', path: `/articles/${ARTICLE_SLUG.bilingual.en}?locale=en`, schema: 'PublicArticleDetailEntity' },
+  { label: 'bilingual article (ar)', path: `/articles/${ARTICLE_SLUG.bilingual.ar}?locale=ar`, schema: 'PublicArticleDetailEntity' }
 ]
 
 describe('the committed contract is loadable and its schemas compile', () => {
@@ -178,6 +180,19 @@ describe('fixture drift guards', () => {
         expect(serve(`/projects/${slug}?locale=${locale}`)).toHaveProperty('data.slug', slug)
       }
     }
+  })
+
+  it('the bilingual ARTICLE pair differs per locale and maps slugs both ways', () => {
+    const english = ARTICLES.en[ARTICLE_SLUG.bilingual.en]!
+    const arabic = ARTICLES.ar[ARTICLE_SLUG.bilingual.ar]!
+
+    for (const field of ['slug', 'title', 'excerpt', 'body'] as const) {
+      expect(arabic[field], `${field} is identical across locales`).not.toBe(english[field])
+    }
+    // The slug map is what `setI18nParams` feeds `switchLocalePath`; both sides must agree or the
+    // switcher sends the visitor to a URL the other locale does not have.
+    expect(english.slugs).toEqual({ en: ARTICLE_SLUG.bilingual.en, ar: ARTICLE_SLUG.bilingual.ar })
+    expect(arabic.slugs).toEqual(english.slugs)
   })
 
   it('every redirect destination is a project that actually exists', () => {

@@ -4,7 +4,7 @@
 // suffix is appended once via titleTemplate so pages set only a short title.
 import * as uiLocales from '@nuxt/ui/locale'
 
-const { t, locale, locales, finalizePendingLocaleChange } = useI18n()
+const { t, locale, localeProperties, finalizePendingLocaleChange } = useI18n()
 const localeHead = useLocaleHead()
 const brand = computed(() => t('brand.name'))
 
@@ -27,7 +27,18 @@ const brand = computed(() => t('brand.name'))
 // contract can be unit-tested rather than only observed in a browser.
 const pageTransition = createPageTransition(finalizePendingLocaleChange)
 
-const activeLocale = computed(() => locales.value.find(item => item.code === locale.value))
+/**
+ * The ACTIVE locale's properties, from `@nuxtjs/i18n`'s documented `localeProperties` composable.
+ *
+ * This replaced a hand-rolled `locales.value.find(item => item.code === locale.value)`, which
+ * silently resolved to `undefined` after a client-side locale switch on a detail route: `<html>` then
+ * kept `dir="ltr"` while `lang` fell through to the raw code, so the Arabic page laid out
+ * left-to-right (verified in the browser, both lanes). `localeProperties` resolves against the
+ * module's own normalized locale config rather than a reactive list that is not stable across the
+ * D03-13 deferred commit — the documented API doing what the hand-rolled lookup only appeared to do
+ * (principle 16).
+ */
+const activeLocale = computed(() => localeProperties.value)
 
 // Nuxt UI localizes its built-in strings and mirrors component direction from this locale pack,
 // switched with the active i18n locale (ui.nuxt.com/docs/getting-started/i18n/nuxt). The pack keys
@@ -35,6 +46,21 @@ const activeLocale = computed(() => locales.value.find(item => item.code === loc
 const uiLocale = computed(() => uiLocales[locale.value as keyof typeof uiLocales])
 
 useHead(localeHead)
+
+/**
+ * `<html lang dir>` per locale (locale parity, Pillar 3).
+ *
+ * KNOWN LIMITATION — finding F-3, open. This block is currently INERT for `dir`: `useLocaleHead()`
+ * above also writes `htmlAttrs` and wins the merge, verified by hard-coding a value here and seeing
+ * no change in the rendered `<html>`. Raising this entry to `tagPriority: 'high'` was tried and did
+ * not change the outcome either, so the ownership sits inside `@nuxtjs/i18n`'s head handling rather
+ * than in merge order, and is not fixable from here without a decision.
+ *
+ * The consequence is confined to a CLIENT-SIDE locale switch on a per-locale-slug route, where i18n
+ * updates `lang` but leaves `dir` on the outgoing value. Server-rendered loads — every direct visit,
+ * every crawl — are correct in both locales. Reproduced on the `contract` lane with unmodified data
+ * code, so it predates web-005 and is unrelated to D06-6.
+ */
 useHead(() => ({
   htmlAttrs: {
     lang: activeLocale.value?.language ?? locale.value,

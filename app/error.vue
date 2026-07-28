@@ -8,7 +8,7 @@ interface Props {
 }
 
 const props = defineProps<Props>()
-const { t, locale, locales } = useI18n()
+const { t, locale, localeProperties } = useI18n()
 const localePath = useLocalePath()
 
 /**
@@ -19,7 +19,7 @@ const localePath = useLocalePath()
  * `lang` on its own, which is what made the omission easy to miss: the page looked localized while
  * every RTL behaviour was wrong. Caught by the SSR scenario lane's unknown-slug test.
  */
-const activeLocale = computed(() => locales.value.find(item => item.code === locale.value))
+const activeLocale = computed(() => localeProperties.value)
 useHead(() => ({
   htmlAttrs: {
     lang: activeLocale.value?.language ?? locale.value,

@@ -5,7 +5,7 @@
  * renamed slug or technology id cannot leave the tests asserting against a scenario that no longer
  * exists — it fails to compile instead (`npm run typecheck:e2e`).
  */
-export { SLUG, TECHNOLOGY } from '../../scripts/e2e/fixtures.ts'
+export { ARTICLE_SLUG, SLUG, TECHNOLOGY } from '../../scripts/e2e/fixtures.ts'
 
 /**
  * The scenario backend's own origin, for asserting UPSTREAM preconditions directly.

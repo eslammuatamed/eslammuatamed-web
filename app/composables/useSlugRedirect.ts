@@ -11,16 +11,20 @@ import { toApiError } from '~/utils/api-error'
  * Any OTHER failure is rethrown. Swallowing a 5xx here would silently turn an outage into a 404 and
  * deindex a live page, which is the same defect `projectErrorParams` exists to prevent.
  *
- * `path` is section-relative and NOT locale-prefixed (contract example: `/blog/old-slug`); `useApi()`
- * adds `?locale=` itself (D10-6). The returned `toPath` is likewise section-relative, so the caller
- * localizes it before navigating.
+ * `path` is section-relative and NOT locale-prefixed (contract example: `/blog/old-slug`); `?locale=`
+ * is added by `useApi()` (D10-6) from the ROUTE's locale (D06-6). That matters here more than
+ * anywhere: resolution is locale-scoped, so asking in the outgoing language during a locale switch
+ * would miss a redirect that exists and turn it into a 404. The returned `toPath` is likewise
+ * section-relative, so the caller localizes it before navigating.
  */
 export function useSlugRedirect() {
   const api = useApi()
+  const locale = useRouteLocale()
 
   return async function resolveRedirect(path: string): Promise<string | null> {
     try {
       const response = await api<Envelope<RedirectResolve>>('/redirects/resolve', {
+        locale: locale.value,
         query: { path }
       })
       return response.data.toPath

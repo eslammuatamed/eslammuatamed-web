@@ -2,7 +2,13 @@ import type { Envelope, Paginated, ProjectDetail, ProjectListItem, Skill } from 
 
 /**
  * Projects data reads (FR-PUB-030, FR-PUB-031). Both go through the single API door `useApi()`, which
- * injects `?locale=` on every GET (D10-6) — the locale is never passed by hand.
+ * puts `?locale=` on every GET (D10-6).
+ *
+ * The locale is the ROUTE's, not the reactive UI locale (D06-6). During the D03-13 deferred locale
+ * commit the incoming page fetches while the UI locale still holds the outgoing language, and because
+ * project slugs are per-locale (D04-2) that asks for the Arabic slug in English — a legitimate 404 for
+ * a project that exists. The `useAsyncData` key uses the SAME value that is sent, so a payload can
+ * never be cached under a key naming a different language than the request that produced it.
  *
  * Ordering is the API's: `featured desc, order asc` (doc 09 D09-8). The client MUST NOT re-sort, or the
  * curated order the owner controls in the CMS stops being what visitors see. The home page's
@@ -28,13 +34,14 @@ interface ProjectsListParams {
  */
 export function useProjectsList(params: ProjectsListParams) {
   const api = useApi()
-  const { locale } = useI18n()
+  const locale = useRouteLocale()
 
   return useAsyncData(
     () => `projects:${locale.value}:${params.page()}:${params.technology() ?? 'all'}`,
     () => {
       const technology = params.technology()
       return api<Paginated<ProjectListItem>>('/projects', {
+        locale: locale.value,
         // Omit `technology` entirely when unset — sending an empty string would be a 422.
         query: { page: params.page(), ...(technology ? { technology } : {}) }
       })
@@ -52,12 +59,14 @@ export function useProjectsList(params: ProjectsListParams) {
  */
 export function useProjectDetail(slug: () => string) {
   const api = useApi()
-  const { locale } = useI18n()
+  const locale = useRouteLocale()
 
   return useAsyncData(
     () => `project:${slug()}:${locale.value}`,
     () =>
-      api<Envelope<ProjectDetail>>(`/projects/${encodeURIComponent(slug())}`).then(res => res.data),
+      api<Envelope<ProjectDetail>>(`/projects/${encodeURIComponent(slug())}`, {
+        locale: locale.value
+      }).then(res => res.data),
     { watch: [locale] }
   )
 }
@@ -69,11 +78,11 @@ export function useProjectDetail(slug: () => string) {
  */
 export function useProjectTechnologies() {
   const api = useApi()
-  const { locale } = useI18n()
+  const locale = useRouteLocale()
 
   return useAsyncData(
     () => `projects:technologies:${locale.value}`,
-    () => api<Envelope<Skill[]>>('/skills').then(res => res.data),
+    () => api<Envelope<Skill[]>>('/skills', { locale: locale.value }).then(res => res.data),
     { watch: [locale] }
   )
 }

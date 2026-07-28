@@ -93,19 +93,36 @@ any slug in any locale, so neither state could occur against the contract mock.
   on its own, so the Arabic 404 and 500 pages looked localized while laying out left-to-right. Fixed
   by setting `<html lang dir>` in `app/error.vue` as well. Covered by the unknown-slug scenario.
 
-- **F-1 — OPEN, needs an owner decision. Pre-existing and site-wide; not a Projects regression.**
-  A **client-side** locale switch on a case study renders the localized 404 instead of the counterpart
-  project. The URL is correct; the data read is not. Measured:
-  `GET /api/v1/projects/ssr-bilingual-ar?locale=en`, then
-  `GET /api/v1/redirects/resolve?locale=en&path=/projects/ssr-bilingual-ar` — the Arabic slug with the
-  **English** locale, which is a legitimate 404 by contract.
-  Cause: `skipSettingLocaleOnNavigate: true` (D03-14) defers the locale commit to the page
-  transition's `onBeforeEnter`; the incoming page's `setup()`, and therefore `useApi()` reading the
-  current locale (D10-6), runs before that commit. The page throws a fatal 404 before
-  `useAsyncData`'s `watch: [locale]` can re-run. The same pattern exists in `blog/[slug].vue`.
-  Every candidate fix trades against an approved decision — D03-14, D10-6, or reading i18n's
-  `@internal` `__pendingLocale` (principle 16) — so per doc-first (D16-7) the doc is revised before
-  the code. **Phase 9 / D16-8 cannot close until this is decided.**
+- **F-1 — FIXED under owner-approved Option B (docs PR #16, merge `741da9d`).**
+  A client-side locale switch on a per-locale-slug route rendered the localized 404 instead of the
+  counterpart document. Measured: `GET /projects/ssr-bilingual-ar?locale=en`, then
+  `GET /redirects/resolve?locale=en&path=…` — the INCOMING slug with the OUTGOING language, which is
+  a legitimate 404 because public slugs are per locale (D04-2). Cause: the `page-spread` transition
+  (**D03-13**, not D03-14) defers the locale commit until the outgoing page is concealed, and the
+  incoming page's `setup()` runs inside that window.
+  **Fix (D06-6):** public content reads resolve their locale from the TARGET ROUTE.
+  `app/utils/route-locale.ts` (pure, 8 unit tests) + `app/composables/useRouteLocale.ts` (4 unit
+  tests); `useApi()` accepts an explicit `locale`; every public composable and the two per-locale-slug
+  pages pass the route-resolved locale and use it in their `useAsyncData` keys. Dashboard, auth and
+  mutation behaviour unchanged. Verified on **both** surfaces (Projects and Blog, both directions).
+  A welcome side effect: the client `useAsyncData` key now matches the SSR payload key, so the switch
+  makes **no** browser API request at all — one fewer round trip than before, not one more.
+  Note: **D10-6 does not mandate reading the reactive i18n locale**; it governs the `?locale=`
+  parameter itself. Doc 10 was not modified.
+
+- **F-3 — OPEN, needs an owner decision. Pre-existing, unrelated to D06-6, blocks D16-8.**
+  `<html dir>` does not follow a **client-side** locale switch on a per-locale-slug route: i18n
+  updates `lang` but leaves `dir` on the outgoing value, so the Arabic page lays out left-to-right
+  until a reload. Server-rendered loads — every direct visit and every crawl — are correct in both
+  locales, and the whole scenario lane asserts that.
+  Evidence: reproduced on the **`contract` lane** with unmodified data code, so it predates web-005.
+  `app/app.vue`'s `htmlAttrs` are **inert** for `dir` — a hard-coded value there produced no change in
+  the rendered `<html>` at all, and `tagPriority: 'high'` did not change that either, so ownership
+  sits inside `@nuxtjs/i18n`'s head handling rather than in unhead merge order. The same staleness
+  also affects `og:locale` (stayed `en_US`) and `canonical` (lost its `/ar` prefix) after the switch.
+  Candidate directions all carry trade-offs — upgrade/patch `@nuxtjs/i18n`, enable its strict-SEO
+  mode (which forbids `useLocaleHead`), or take ownership of `<html lang dir>` away from the module —
+  so it is raised as a decision rather than guessed at. Doc-first (D16-7) applies.
 
 ## Phase 9 — Verification & Documentation gate (D16-8) *(closing gate — mandatory)*
 - [ ] T080 Gates green, thresholds unchanged: `typecheck` 0 · `lint` · `test` · `build` · `check:bundle` · `check:logical` · `size` · `size:routes` · `test:e2e` · axe.

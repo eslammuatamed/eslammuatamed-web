@@ -10,6 +10,9 @@ import { useProjectDetail, useProjectsList } from './useProjects'
 const apiMock = vi.fn()
 mockNuxtImport('useI18n', () => () => ({ t: (key: string) => key, locale: ref('en') }))
 mockNuxtImport('useApi', () => () => apiMock)
+// The effective content locale is route-resolved (D06-6); `useRouteLocale` has its own spec, so here
+// it is stubbed to keep these tests about the QUERY SHAPE rather than about locale resolution.
+mockNuxtImport('useRouteLocale', () => () => ref('en'))
 
 const card = (slug: string, featured: boolean) => ({
   id: slug, slug, title: slug, summary: '', featured, year: 2025, technologies: [], availableLocales: ['en']
@@ -44,7 +47,7 @@ describe('useProjectsList', () => {
     await run(() => useProjectsList({ page: () => 1, technology: () => undefined }))
 
     // An empty string would be a contract 422, not "unfiltered".
-    expect(apiMock).toHaveBeenCalledWith('/projects', { query: { page: 1 } })
+    expect(apiMock).toHaveBeenCalledWith('/projects', { locale: 'en', query: { page: 1 } })
   })
 
   it('sends the canonical technology UUID when a filter is active', async () => {
@@ -54,7 +57,7 @@ describe('useProjectsList', () => {
 
     await run(() => useProjectsList({ page: () => 2, technology: () => uuid }))
 
-    expect(apiMock).toHaveBeenCalledWith('/projects', { query: { page: 2, technology: uuid } })
+    expect(apiMock).toHaveBeenCalledWith('/projects', { locale: 'en', query: { page: 2, technology: uuid } })
   })
 
   it('preserves the API order verbatim — the client never re-sorts (D09-8)', async () => {
@@ -95,7 +98,7 @@ describe('useProjectDetail', () => {
 
     await run(() => useProjectDetail(() => 'personal-platform'))
 
-    expect(apiMock).toHaveBeenCalledWith('/projects/personal-platform')
+    expect(apiMock).toHaveBeenCalledWith('/projects/personal-platform', { locale: 'en' })
   })
 
   it('encodes the slug so a malformed param cannot alter the request path', async () => {
@@ -104,7 +107,7 @@ describe('useProjectDetail', () => {
 
     await run(() => useProjectDetail(() => 'a b/../c'))
 
-    expect(apiMock).toHaveBeenCalledWith('/projects/a%20b%2F..%2Fc')
+    expect(apiMock).toHaveBeenCalledWith('/projects/a%20b%2F..%2Fc', { locale: 'en' })
   })
 
   it('unwraps the envelope to the project itself', async () => {

@@ -16,12 +16,15 @@
  *
  * WHY THE CONTENT IS AUTHORED RATHER THAN GENERATED. Prism replays the contract's single example for
  * every slug and every locale, so it cannot express "EN and AR differ" or "this gallery is empty".
- * These fixtures state those differences explicitly, which is the whole point of the lane.
+ * These fixtures state those differences explicitly, which is the whole point of the lane. It is also
+ * why the D06-6 locale-switch fix is provable here and nowhere else: against Prism, requesting the
+ * Arabic slug with `?locale=en` succeeds, so the bug is invisible.
  */
 import type { components } from '../../app/types/api'
 
 type Schemas = components['schemas']
 
+export type ArticleDetail = Schemas['PublicArticleDetailEntity']
 export type ProjectDetail = Schemas['PublicProjectDetailEntity']
 export type ProjectListItem = Schemas['PublicProjectListItemEntity']
 export type GalleryItem = Schemas['PublicProjectGalleryItemEntity']
@@ -72,6 +75,15 @@ export const SLUG = {
   /** Deliberately different EN and AR content, and a slug map that differs between them. */
   bilingual: { en: 'ssr-bilingual', ar: 'ssr-bilingual-ar' }
 } as const
+
+/**
+ * Article slugs. Only the bilingual pair exists, and only because D06-6's fix has to be proven on
+ * BOTH per-locale-slug surfaces — `blog/[slug].vue` carries the identical pattern to
+ * `projects/[slug].vue`, so fixing one and testing one would leave the other unverified.
+ * This is the whole of the blog surface the scenario backend serves; the blog index and every other
+ * article behaviour stay with Prism in the `contract` lane.
+ */
+export const ARTICLE_SLUG = { bilingual: { en: 'ssr-article', ar: 'ssr-article-ar' } } as const
 
 const MEDIA_ORIGIN = 'https://media.eslammuatamed.com/media'
 
@@ -295,6 +307,48 @@ export const PROJECTS: Record<Locale, Record<string, ProjectDetail>> = {
     [SLUG.emptyGallery.ar]: EMPTY_GALLERY_AR,
     [SLUG.bilingual.ar]: BILINGUAL_AR
   }
+}
+
+/**
+ * The bilingual ARTICLE pair — the blog counterpart of the project pair above, and for the same
+ * reason: article slugs are per locale (D04-2), so a locale switch that requested the incoming slug
+ * in the outgoing language would 404. Authored separately per locale so an English fallback on the
+ * Arabic page is visible rather than plausible.
+ */
+const ARTICLE_EN: ArticleDetail = {
+  id: '019f89b5-3050-7161-af37-0000000000d1',
+  title: 'Bilingual article differentiation study',
+  slug: ARTICLE_SLUG.bilingual.en,
+  excerpt: 'This English excerpt contains no Arabic whatsoever.',
+  readingTimeMin: 6,
+  publishAt: '2026-05-01T09:00:00.000Z',
+  coverImageId: null,
+  coverImage: null,
+  category: { id: '019f89b5-3050-7161-af37-0000000000e1', name: 'Engineering', slug: 'engineering' },
+  tags: [{ id: '019f89b5-3050-7161-af37-0000000000e2', name: 'Nuxt', slug: 'nuxt' }],
+  availableLocales: ['en', 'ar'],
+  slugs: { en: ARTICLE_SLUG.bilingual.en, ar: ARTICLE_SLUG.bilingual.ar },
+  body: 'The English article body, written only in English.',
+  metaTitle: null,
+  metaDescription: null,
+  ogImageId: null,
+  ogImage: null,
+  canonicalUrl: null
+}
+
+const ARTICLE_AR: ArticleDetail = {
+  ...ARTICLE_EN,
+  title: 'دراسة تمايز المقالات بين اللغتين',
+  slug: ARTICLE_SLUG.bilingual.ar,
+  excerpt: 'هذا المقتطف العربي لا يحتوي على أي إنجليزية.',
+  category: { id: '019f89b5-3050-7161-af37-0000000000e1', name: 'الهندسة', slug: 'engineering' },
+  tags: [{ id: '019f89b5-3050-7161-af37-0000000000e2', name: 'نكست', slug: 'nuxt' }],
+  body: 'متن المقال بالعربية، مكتوب بالعربية وحدها.'
+}
+
+export const ARTICLES: Record<Locale, Record<string, ArticleDetail>> = {
+  en: { [ARTICLE_SLUG.bilingual.en]: ARTICLE_EN },
+  ar: { [ARTICLE_SLUG.bilingual.ar]: ARTICLE_AR }
 }
 
 /**

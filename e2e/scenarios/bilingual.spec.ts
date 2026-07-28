@@ -126,42 +126,13 @@ test.describe('EN/AR project differentiation', () => {
     await toArabic.click()
     await expect(page).toHaveURL(new RegExp(`/ar/projects/${SLUG.bilingual.ar}$`))
 
+    // What the switch RENDERS — and the requests it makes — is `locale-switch.spec.ts`; this test
+    // owns the routing and metadata half.
+    //
     // The reverse direction resolves to the English slug rather than a re-prefixed Arabic one.
     await page.goto(`/ar/projects/${SLUG.bilingual.ar}`)
     const toEnglish = page.getByRole('group', { name: /لغة|language/i }).first().getByRole('link', { name: 'EN' })
     await expect(toEnglish).toHaveAttribute('href', `/projects/${SLUG.bilingual.en}`)
-  })
-
-  /**
-   * KNOWN DEFECT — awaiting an owner decision. Marked `test.fail()` so it is recorded rather than
-   * hidden, and so it starts failing again the moment it is fixed without this note being updated.
-   *
-   * A CLIENT-SIDE locale switch renders the localized 404 instead of the counterpart project. The
-   * URL is right; the DATA READ is not. Measured, not inferred — the browser sends:
-   *     GET /api/v1/projects/ssr-bilingual-ar?locale=en
-   *     GET /api/v1/redirects/resolve?locale=en&path=/projects/ssr-bilingual-ar
-   * i.e. the Arabic slug with the ENGLISH locale, which is a legitimate 404 by contract.
-   *
-   * Cause: `skipSettingLocaleOnNavigate: true` (D03-14) defers the locale commit to the page
-   * transition's `onBeforeEnter`, deliberately, to stop the outgoing page being repainted mirrored.
-   * The incoming page's `setup()` — and therefore `useApi()`, which reads the CURRENT locale
-   * (D10-6) — runs before that commit. The page then throws a fatal 404 before `useAsyncData`'s
-   * `watch: [locale]` can re-run with the committed locale.
-   *
-   * It is invisible everywhere else, which is why it surfaced only now: Prism answers any slug in
-   * any locale, and a direct load is server-rendered with the locale already correct. The same
-   * pattern exists in `blog/[slug].vue`, so this is pre-existing and site-wide rather than a
-   * Projects regression.
-   *
-   * Every candidate fix trades against an approved decision (D03-14, D10-6, or reading i18n's
-   * `@internal` `__pendingLocale`), so it is raised as a decision instead of being chosen here.
-   */
-  test.fail('a client-side locale switch renders the counterpart project', async ({ page }) => {
-    await page.goto(`/projects/${SLUG.bilingual.en}`)
-    await page.getByRole('group', { name: /language/i }).first().getByRole('link', { name: 'AR' }).click()
-
-    await expect(page).toHaveURL(new RegExp(`/ar/projects/${SLUG.bilingual.ar}$`))
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText('دراسة تمايز اللغتين')
   })
 
   test('both localized pages have no accessibility violations', async ({ page }) => {

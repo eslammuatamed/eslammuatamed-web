@@ -12,10 +12,11 @@
  * application's behaviour, so the read is moved to where it actually happens — the process boundary
  * BELOW Nitro. This server is the upstream Nitro talks to. Nothing about the application changes.
  *
- * PRISM IS NOT REPLACED. The `contract` project still runs the whole normal journey — 19 tests —
- * against Prism and the committed `openapi/openapi.json`. This backend serves ONLY the six scenarios
- * Prism cannot express deterministically, because Prism replays one example for every slug and every
- * locale. It is not, and must not become, a general mock API.
+ * PRISM IS NOT REPLACED (D18-6). The `contract` project still runs the whole normal journey — 19
+ * tests — against Prism and the committed `openapi/openapi.json`. This backend serves ONLY the six
+ * SSR scenarios Prism cannot express deterministically (because Prism replays one example for every
+ * slug and every locale), plus the one bilingual ARTICLE pair D06-6 needs to be proven on both
+ * per-locale-slug surfaces. It is not, and must not become, a general mock API.
  *
  * ── THE DESIGN INVARIANT: ONE URL ⇒ ONE SCENARIO ─────────────────────────────────────────────────
  * There is NO mutable scenario state. Every scenario is selected purely from the request path, the
@@ -45,7 +46,7 @@ import { realpathSync } from 'node:fs'
 import http from 'node:http'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
-import { EMPTY_PAGE, PROJECTS, REDIRECTS, SITE_SETTINGS, SKILLS, TECHNOLOGY, isLocale, problem } from './fixtures.ts'
+import { ARTICLES, EMPTY_PAGE, PROJECTS, REDIRECTS, SITE_SETTINGS, SKILLS, TECHNOLOGY, isLocale, problem } from './fixtures.ts'
 import type { Locale, ProblemDetail } from './fixtures.ts'
 
 /** The contract's mount point. `NUXT_PUBLIC_API_BASE` points Nitro at `http://host:port/api/v1`. */
@@ -103,6 +104,20 @@ function resolveProjectDetail(slug: string, locale: Locale, instance: string): R
 }
 
 /**
+ * `GET /articles/{slug}` — the blog detail route.
+ *
+ * The ONLY blog endpoint here, and only so D06-6 can be proven on both per-locale-slug surfaces:
+ * `blog/[slug].vue` carries the same pattern as `projects/[slug].vue`, so verifying one would leave
+ * the other unverified. Everything else about the blog stays with Prism in the `contract` lane.
+ */
+function resolveArticleDetail(slug: string, locale: Locale, instance: string): Reply {
+  const article = ARTICLES[locale][slug]
+  return article
+    ? json({ data: article })
+    : notFound(instance, `No published article matches “${slug}” in ${locale}.`)
+}
+
+/**
  * `GET /redirects/resolve?path=…` — consulted only after a 404 (D04-6). A 404 here means "no redirect
  * exists" and is a normal answer; the caller turns that into the real not-found page.
  */
@@ -139,8 +154,11 @@ export function resolveRequest(url: string): Reply {
   if (pathname === '/projects') return resolveProjectsIndex(parsed.searchParams.get('technology'), instance)
   if (pathname === '/redirects/resolve') return resolveRedirect(parsed.searchParams.get('path'), locale, instance)
 
-  const detail = /^\/projects\/([^/]+)$/.exec(pathname)
-  if (detail) return resolveProjectDetail(decodeURIComponent(detail[1]!), locale, instance)
+  const projectDetail = /^\/projects\/([^/]+)$/.exec(pathname)
+  if (projectDetail) return resolveProjectDetail(decodeURIComponent(projectDetail[1]!), locale, instance)
+
+  const articleDetail = /^\/articles\/([^/]+)$/.exec(pathname)
+  if (articleDetail) return resolveArticleDetail(decodeURIComponent(articleDetail[1]!), locale, instance)
 
   // Deliberately narrow: this backend serves the six scenarios and the page shell, nothing else. A
   // request for any other endpoint is a mistake in the test, and it should read as one.

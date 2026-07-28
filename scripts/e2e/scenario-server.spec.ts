@@ -1,6 +1,6 @@
 import net from 'node:net'
 import { describe, expect, it } from 'vitest'
-import { SLUG, TECHNOLOGY } from './fixtures.ts'
+import { ARTICLE_SLUG, SLUG, TECHNOLOGY } from './fixtures.ts'
 import { API_PREFIX, createScenarioServer, resolveRequest, stopScenarioServer } from './scenario-server.ts'
 
 /**
@@ -60,10 +60,19 @@ describe('route selection', () => {
       .toMatchObject({ kind: 'problem', status: 404 })
   })
 
+  it('serves the one bilingual article pair D06-6 is proven on', () => {
+    expect(resolveRequest(url(`/articles/${ARTICLE_SLUG.bilingual.en}?locale=en`)))
+      .toMatchObject({ kind: 'json', status: 200 })
+    expect(resolveRequest(url(`/articles/${ARTICLE_SLUG.bilingual.ar}?locale=ar`)))
+      .toMatchObject({ kind: 'json', status: 200 })
+  })
+
   it('refuses to act as a general mock API', () => {
     // Scope guard: an endpoint nobody added on purpose must fail loudly, not return something
-    // plausible. This is what keeps the backend limited to the six scenarios.
+    // plausible. This is what keeps the backend bounded (D18-6) — the article DETAIL route exists
+    // only for the locale-switch scenario, and the blog INDEX deliberately does not.
     expect(resolveRequest(url('/articles?locale=en'))).toMatchObject({ kind: 'problem', status: 404 })
+    expect(resolveRequest(url('/experiences?locale=en'))).toMatchObject({ kind: 'problem', status: 404 })
     expect(resolveRequest('/not-the-api/projects?locale=en')).toMatchObject({ kind: 'problem', status: 404 })
   })
 
@@ -86,6 +95,18 @@ describe('locale selection', () => {
     // Asking for the English slug in Arabic must MISS. A fallback here would make the EN/AR
     // differentiation scenario pass while the application silently served English on /ar.
     expect(resolveRequest(url(`/projects/${SLUG.bilingual.en}?locale=ar`)))
+      .toMatchObject({ kind: 'problem', status: 404 })
+  })
+
+  it('404s a per-locale slug asked for in the WRONG locale — the F-1 fault, reproduced', () => {
+    // This is exactly what the application used to send during a client-side locale switch: the
+    // INCOMING slug with the OUTGOING locale. The backend answering 404 here is what makes the
+    // D06-6 e2e tests meaningful — if it fell back, the fix would be untestable.
+    expect(resolveRequest(url(`/projects/${SLUG.bilingual.ar}?locale=en`)))
+      .toMatchObject({ kind: 'problem', status: 404 })
+    expect(resolveRequest(url(`/articles/${ARTICLE_SLUG.bilingual.ar}?locale=en`)))
+      .toMatchObject({ kind: 'problem', status: 404 })
+    expect(resolveRequest(url(`/articles/${ARTICLE_SLUG.bilingual.en}?locale=ar`)))
       .toMatchObject({ kind: 'problem', status: 404 })
   })
 

@@ -110,7 +110,8 @@ export default defineNuxtConfig({
     langDir: 'locales', // resolved under the i18n/ restructure dir → i18n/locales (v10 default)
     baseUrl: siteUrl, // validated above — never a silent localhost fallback (D23-8)
     detectBrowserLanguage: false, // explicit routing only — no Accept-Language heuristic (D10-6)
-    // Defer the locale commit until the outgoing page is concealed (D03-14).
+    // Defer the locale commit until the outgoing page is concealed (D03-13 — the branded
+    // `page-spread` transition; D03-14 is selective glass and is unrelated).
     //
     // Without this, `locale` commits the moment i18n resolves the incoming route — BEFORE Vue's
     // `out-in` page transition starts its leave animation. Measured on the built preview: `<html dir>`
@@ -126,6 +127,12 @@ export default defineNuxtConfig({
     // It is deliberately inert where it must be: the module skips suspension on the server and during
     // hydration (`runtime/context.js` — `import.meta.server || nuxt.isHydrating`), so a direct `/ar`
     // load or a refresh is still RTL in the first painted frame, with no client round trip.
+    //
+    // CONSEQUENCE, handled rather than absorbed: the incoming page's `setup()` runs INSIDE the
+    // suspension window, so the reactive locale it reads is still the OUTGOING one. Public content
+    // reads therefore take their locale from the ROUTE (D06-6, `useRouteLocale()`), not from this
+    // reactive state — otherwise a locale switch requests the incoming per-locale slug (D04-2) in the
+    // previous language and renders a 404 for content that exists.
     skipSettingLocaleOnNavigate: true,
     locales: [
       { code: 'en', language: 'en-US', dir: 'ltr', name: 'English', file: 'en.json' },
