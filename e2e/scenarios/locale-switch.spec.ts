@@ -201,6 +201,43 @@ test.describe('The fix does not weaken what surrounds it', () => {
     expect(warnings).toEqual([])
   })
 
+  test('persistent chrome flips in ONE step — the footer never leads the header', async ({ page }) => {
+    await page.goto(`/projects/${SLUG.bilingual.en}`)
+
+    // The footer lives in the persistent `default` layout, so the page transition does NOT conceal
+    // it. Its API-localized `availabilityStatus` must therefore commit with the rest of the chrome.
+    //
+    // This is a REGRESSION TEST for a real one: applying D06-6's route-resolved locale to
+    // `useSiteSettings` made the footer flip at navigation while the header still flipped at the
+    // D03-13 commit, producing a visible Arabic-footer/English-header frame. Measured as
+    //   footerAR=false navAR=false → footerAR=TRUE navAR=FALSE → footerAR=true navAR=true
+    // Page CONTENT stays on the route locale; only this chrome read follows the UI locale.
+    await page.evaluate(() => {
+      const samples: string[] = []
+      ;(window as unknown as { __chrome: string[] }).__chrome = samples
+      const record = () => {
+        const footer = document.querySelector('footer')?.textContent ?? ''
+        const nav = document.querySelector('nav')?.textContent ?? ''
+        samples.push(`${/متاح لارتباطات/.test(footer)}|${/المشاريع/.test(nav)}`)
+      }
+      record()
+      new MutationObserver(record).observe(document.body, {
+        childList: true,
+        subtree: true,
+        characterData: true
+      })
+    })
+
+    await switchLocale(page, 'AR')
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('دراسة تمايز اللغتين')
+    await expect(page.locator('footer')).toContainText('متاح لارتباطات استشارية مختارة')
+
+    const samples = await page.evaluate(() => (window as unknown as { __chrome: string[] }).__chrome)
+    expect(samples.length, 'the observer must have seen the switch happen').toBeGreaterThan(0)
+    // Footer and header are either both English or both Arabic — never one of each.
+    expect([...new Set(samples)].filter(state => state === 'true|false' || state === 'false|true')).toEqual([])
+  })
+
   test('the D03-13 deferred locale commit still completes', async ({ page }) => {
     await page.goto(`/projects/${SLUG.bilingual.en}`)
     // Located by position, not by accessible name: the nav's own label is localized too, so a

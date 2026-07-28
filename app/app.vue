@@ -50,16 +50,23 @@ useHead(localeHead)
 /**
  * `<html lang dir>` per locale (locale parity, Pillar 3).
  *
- * KNOWN LIMITATION — finding F-3, open. This block is currently INERT for `dir`: `useLocaleHead()`
- * above also writes `htmlAttrs` and wins the merge, verified by hard-coding a value here and seeing
- * no change in the rendered `<html>`. Raising this entry to `tagPriority: 'high'` was tried and did
- * not change the outcome either, so the ownership sits inside `@nuxtjs/i18n`'s head handling rather
- * than in merge order, and is not fixable from here without a decision.
+ * KNOWN DEFECT — finding F-3, OPEN, mechanism NOT established. Observed, and only this:
+ *   - `dir` does not follow a CLIENT-SIDE locale switch on routes that call `setI18nParams()`
+ *     (Projects and Blog detail); `lang` does. Index routes are unaffected — the blog index flips to
+ *     `rtl` correctly, so `setI18nParams` is the differentiator between affected and unaffected.
+ *   - the same staleness hits `og:locale` (stays `en_US`) and `canonical` (keeps the AR slug but
+ *     loses its `/ar` prefix) after that switch.
+ *   - reproduced on the `contract` lane with unmodified data code, so it predates web-005 and is
+ *     unrelated to D06-6.
+ *   - `localeProperties` (used below, and correct — it reports `dir: 'rtl'` at the moment the page is
+ *     wrong) and `tagPriority: 'high'` were each tried and neither changed the outcome.
  *
- * The consequence is confined to a CLIENT-SIDE locale switch on a per-locale-slug route, where i18n
- * updates `lang` but leaves `dir` on the outgoing value. Server-rendered loads — every direct visit,
- * every crawl — are correct in both locales. Reproduced on the `contract` lane with unmodified data
- * code, so it predates web-005 and is unrelated to D06-6.
+ * SERVER-RENDERED OUTPUT IS CORRECT in both locales — every direct visit and every crawl. The defect
+ * is confined to the in-page switch, so it is a visible RTL bug for a visitor who uses the toggle,
+ * not an indexing problem.
+ *
+ * The block below is kept because it is right, it is what `error.vue` relies on (where app.vue does
+ * not render, and where `dir` demonstrably works), and it costs nothing.
  */
 useHead(() => ({
   htmlAttrs: {

@@ -111,18 +111,31 @@ any slug in any locale, so neither state could occur against the contract mock.
   parameter itself. Doc 10 was not modified.
 
 - **F-3 — OPEN, needs an owner decision. Pre-existing, unrelated to D06-6, blocks D16-8.**
-  `<html dir>` does not follow a **client-side** locale switch on a per-locale-slug route: i18n
-  updates `lang` but leaves `dir` on the outgoing value, so the Arabic page lays out left-to-right
-  until a reload. Server-rendered loads — every direct visit and every crawl — are correct in both
-  locales, and the whole scenario lane asserts that.
-  Evidence: reproduced on the **`contract` lane** with unmodified data code, so it predates web-005.
-  `app/app.vue`'s `htmlAttrs` are **inert** for `dir` — a hard-coded value there produced no change in
-  the rendered `<html>` at all, and `tagPriority: 'high'` did not change that either, so ownership
-  sits inside `@nuxtjs/i18n`'s head handling rather than in unhead merge order. The same staleness
-  also affects `og:locale` (stayed `en_US`) and `canonical` (lost its `/ar` prefix) after the switch.
-  Candidate directions all carry trade-offs — upgrade/patch `@nuxtjs/i18n`, enable its strict-SEO
-  mode (which forbids `useLocaleHead`), or take ownership of `<html lang dir>` away from the module —
-  so it is raised as a decision rather than guessed at. Doc-first (D16-7) applies.
+  Observed, and only this: `<html dir>` does not follow a **client-side** locale switch on routes that
+  call `setI18nParams()` (Projects and Blog detail) — `lang` does. Index routes are unaffected (the
+  blog index flips to `rtl` correctly), so **`setI18nParams` is the differentiator**. The same
+  staleness hits `og:locale` (stays `en_US`) and `canonical` (keeps the AR slug but loses its `/ar`
+  prefix) after that switch. Reproduced on the **`contract` lane** with unmodified data code, so it
+  predates web-005.
+  **Server-rendered output is correct in both locales** — every direct visit and every crawl — so this
+  is a visible RTL bug for a visitor who uses the toggle, not an indexing emergency.
+  Tried and did not change the outcome: i18n's documented `localeProperties` (which is itself correct
+  — it reports `dir: 'rtl'` at the moment the page is wrong) and unhead's `tagPriority: 'high'`.
+  **The mechanism is not established** and is deliberately not guessed at here; a wrong mechanism sends
+  the fix down the wrong path. Doc-first (D16-7) applies to whatever direction is chosen.
+
+- **F-4 — FOUND AND FIXED while implementing D06-6; worth an owner note.**
+  D06-6 says "public data composables default to a locale resolved from the route". Applied literally
+  to `useSiteSettings` that is **wrong**, and measurably so: the footer lives in the persistent
+  `default` layout, which the D03-13 page transition does **not** conceal, so its API-localized
+  `availabilityStatus` flipped at navigation while the header still flipped at the locale commit —
+  a visible Arabic-footer/English-header frame (`footerAR=true navAR=false`).
+  The distinction that holds: **page content follows the route** (it is concealed during the
+  transition, and it can 404 on a per-locale slug — the thing D06-6 exists to prevent); **persistent
+  chrome follows the committed UI locale** (it has no slug, cannot 404 on a locale mismatch, and must
+  commit in the same frame as the rest of the chrome per D03-13). Locked in by a regression test.
+  If the owner wants doc 06 to say this explicitly, D06-6's wording is the place — flagged, not
+  assumed.
 
 ## Phase 9 — Verification & Documentation gate (D16-8) *(closing gate — mandatory)*
 - [X] T080 Gates green, thresholds unchanged: `typecheck` 0 · `lint` · `test` · `build` · `check:bundle` · `check:logical` · `size` · `size:routes` · `test:e2e` · axe.

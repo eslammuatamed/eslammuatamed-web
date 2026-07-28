@@ -6,12 +6,19 @@ import type { Envelope, SiteSettings } from '~/types/models'
 // would stay on the previous locale (a locale-parity regression, code-review WD-6). The per-locale key
 // still dedupes the shared page+footer read (doc 20 §7). Mirrors the blog/index reactive-key idiom.
 //
-// The locale is the ROUTE's (D06-6): during the D03-13 deferred locale commit the incoming page reads
-// while the UI locale still holds the outgoing language, which here would render the previous
-// language's `availabilityStatus` — the same locale-parity regression the watch exists to prevent.
+// THE LOCALE HERE IS THE UI LOCALE, NOT THE ROUTE'S — deliberately, and it is the one public read that
+// differs. D06-6 exists to stop a per-locale-slug read (D04-2) asking for the incoming slug in the
+// outgoing language, which 404s. This read has no slug and cannot 404 on a locale mismatch; what it
+// feeds is PERSISTENT CHROME (the footer, in the `default` layout), which the D03-13 page transition
+// does not conceal. Switching it to the route locale was tried and measured: the footer's Arabic
+// `availabilityStatus` appeared while the header was still English —
+//     footerAR=false navAR=false → footerAR=TRUE navAR=FALSE → footerAR=true navAR=true
+// i.e. a visible mixed-language frame, which is precisely what D03-13's single-frame commit exists to
+// prevent. Following the UI locale keeps this text flipping in the same frame as the rest of the
+// chrome. Page CONTENT stays on the route locale, because it is concealed during the transition.
 export function useSiteSettings() {
   const api = useApi()
-  const locale = useRouteLocale()
+  const { locale } = useI18n()
   return useAsyncData(
     () => `settings:site:${locale.value}`,
     () => api<Envelope<SiteSettings>>('/settings/site', { locale: locale.value }).then(res => res.data),
