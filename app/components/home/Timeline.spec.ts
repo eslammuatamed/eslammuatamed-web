@@ -33,6 +33,7 @@ const experience = (overrides: Partial<Experience>): Experience => ({
   startDate: '2020-01-01T00:00:00.000Z',
   endDate: null,
   order: 0,
+  technologies: [],
   availableLocales: ['en'],
   ...overrides
 })

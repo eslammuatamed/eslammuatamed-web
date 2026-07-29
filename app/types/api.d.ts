@@ -971,6 +971,52 @@ export interface components {
             /** @example 245123 */
             sizeBytes: number;
         };
+        PublicMediaVariantDescriptor: {
+            /**
+             * @example WEBP
+             * @enum {string}
+             */
+            format: "WEBP" | "AVIF";
+            /** @example 1280 */
+            width: number;
+            /** @example 720 */
+            height: number;
+            /** @example https://media.eslammuatamed.com/media/8f…/1280-webp.webp */
+            url: string;
+        };
+        PublicMediaImageDescriptor: {
+            /** Format: uuid */
+            id: string;
+            /**
+             * @example IMAGE
+             * @enum {string}
+             */
+            kind: "IMAGE" | "PDF";
+            /**
+             * @description Widest WebP rendition (never the sanitized master).
+             * @example https://media.eslammuatamed.com/media/8f…/1920-webp.webp
+             */
+            url: string;
+            /**
+             * @description Intrinsic image width (px).
+             * @example 2400
+             */
+            width: number;
+            /** @example 1350 */
+            height: number;
+            /**
+             * @description BlurHash LQIP.
+             * @example LEHV6nWB2yk8pyo0adR*.7kCMdnj
+             */
+            blurhash: string | null;
+            /**
+             * @description Alt for the requested ?locale=: null = no translation (no fallback), "" = intentionally decorative.
+             * @example A laptop on a wooden desk
+             */
+            alt: string | null;
+            /** @description Every WebP/AVIF rendition (width asc, format asc). */
+            variants: components["schemas"]["PublicMediaVariantDescriptor"][];
+        };
         ProfileLinkEntity: {
             /** @example GitHub */
             label: string;
@@ -1030,6 +1076,26 @@ export interface components {
             customMetas: components["schemas"]["CustomMetaEntity"][];
             /** @description Resolved résumé PDF descriptor (FR-PUB-023); null when no résumé is configured. The bare asset id stays admin-only. */
             resumeAsset: components["schemas"]["PublicMediaPdfDescriptor"] | null;
+            /** Format: uuid */
+            portraitAssetId: string | null;
+            /** @description Resolved About portrait descriptor (FR-PUB-020); null when no portrait is configured. */
+            portrait: components["schemas"]["PublicMediaImageDescriptor"] | null;
+            /**
+             * @description Professional address (CV, resume, outreach).
+             * @example hello@eslammuatamed.com
+             */
+            professionalEmail: string | null;
+            /**
+             * @description Public website contact address.
+             * @example contact@eslammuatamed.com
+             */
+            contactEmail: string | null;
+            /** @description Markdown source. */
+            aboutBio: string | null;
+            /** @description Markdown source. */
+            engineeringPhilosophy: string | null;
+            /** @description Plain text. */
+            currentFocus: string | null;
             /**
              * @description Locales with a translation.
              * @example [
@@ -1048,6 +1114,12 @@ export interface components {
             availabilityStatus: string | null;
             defaultMetaTitle: string | null;
             defaultMetaDescription: string | null;
+            /** @description Markdown source. */
+            aboutBio: string | null;
+            /** @description Markdown source. */
+            engineeringPhilosophy: string | null;
+            /** @description Plain text. */
+            currentFocus: string | null;
         };
         AdminSiteSettingsEntity: {
             /** Format: uuid */
@@ -1055,6 +1127,12 @@ export interface components {
             profileLinks: components["schemas"]["ProfileLinkEntity"][];
             /** Format: uuid */
             resumeAssetId: string | null;
+            /** Format: uuid */
+            portraitAssetId: string | null;
+            /** @description Resolved portrait descriptor for the media picker; null when unset. Read-only — write via portraitAssetId. */
+            portrait: components["schemas"]["PublicMediaImageDescriptor"] | null;
+            professionalEmail: string | null;
+            contactEmail: string | null;
             /** @example 2023 */
             careerStartYear: number | null;
             /** @example 11 */
@@ -1102,6 +1180,12 @@ export interface components {
             defaultMetaTitle?: string;
             /** @example Portfolio, case studies, and writing. */
             defaultMetaDescription?: string;
+            /** @description Markdown source. */
+            aboutBio?: string;
+            /** @description Markdown source. */
+            engineeringPhilosophy?: string;
+            /** @example Building bilingual product platforms. */
+            currentFocus?: string;
         };
         UpdateSettingsDto: {
             profileLinks?: components["schemas"]["ProfileLinkDto"][];
@@ -1110,6 +1194,15 @@ export interface components {
              * @description Resume PDF media asset id (must be a PDF), or null to clear.
              */
             resumeAssetId?: string | null;
+            /**
+             * Format: uuid
+             * @description About portrait media asset id (must be an IMAGE), or null to clear.
+             */
+            portraitAssetId?: string | null;
+            /** @example hello@eslammuatamed.com */
+            professionalEmail?: string | null;
+            /** @example contact@eslammuatamed.com */
+            contactEmail?: string | null;
             /**
              * @description Career start year; set together with careerStartMonth.
              * @example 2023
@@ -1256,7 +1349,7 @@ export interface components {
              * @example article-cover
              * @enum {string}
              */
-            type: "article-cover" | "article-og" | "project-og" | "project-gallery" | "testimonial-avatar" | "page-seo-og" | "settings-resume";
+            type: "article-cover" | "article-og" | "project-og" | "project-gallery" | "testimonial-avatar" | "page-seo-og" | "settings-resume" | "settings-portrait";
             /**
              * Format: uuid
              * @description Id of the record that references the asset.
@@ -1777,6 +1870,12 @@ export interface components {
              */
             translations?: components["schemas"]["SkillTranslationDto"][];
         };
+        ExperienceTechnologyEntity: {
+            /** Format: uuid */
+            id: string;
+            /** @example Nuxt.js */
+            label: string;
+        };
         PublicExperienceEntity: {
             /** Format: uuid */
             id: string;
@@ -1793,6 +1892,7 @@ export interface components {
             endDate: string | null;
             /** @example 1 */
             order: number;
+            technologies: components["schemas"]["ExperienceTechnologyEntity"][];
             /**
              * @example [
              *       "en",
@@ -1808,6 +1908,8 @@ export interface components {
             impact: string;
         };
         AdminExperienceEntity: {
+            /** @description Selected Skill ids; write via technologyIds. */
+            technologyIds: string[];
             /** Format: uuid */
             id: string;
             /** Format: date-time */
@@ -1866,6 +1968,8 @@ export interface components {
              *     ]
              */
             translations: components["schemas"]["ExperienceTranslationDto"][];
+            /** @description Skill ids; replaces the full set. Empty array clears. */
+            technologyIds?: string[];
         };
         UpdateExperienceDto: {
             /**
@@ -1899,6 +2003,8 @@ export interface components {
              *     ]
              */
             translations?: components["schemas"]["ExperienceTranslationDto"][];
+            /** @description Skill ids; replaces the full set. Empty array clears. */
+            technologyIds?: string[];
         };
         PublicTestimonialEntity: {
             /** Format: uuid */
@@ -2016,52 +2122,6 @@ export interface components {
              *     ]
              */
             availableLocales: string[];
-        };
-        PublicMediaVariantDescriptor: {
-            /**
-             * @example WEBP
-             * @enum {string}
-             */
-            format: "WEBP" | "AVIF";
-            /** @example 1280 */
-            width: number;
-            /** @example 720 */
-            height: number;
-            /** @example https://media.eslammuatamed.com/media/8f…/1280-webp.webp */
-            url: string;
-        };
-        PublicMediaImageDescriptor: {
-            /** Format: uuid */
-            id: string;
-            /**
-             * @example IMAGE
-             * @enum {string}
-             */
-            kind: "IMAGE" | "PDF";
-            /**
-             * @description Widest WebP rendition (never the sanitized master).
-             * @example https://media.eslammuatamed.com/media/8f…/1920-webp.webp
-             */
-            url: string;
-            /**
-             * @description Intrinsic image width (px).
-             * @example 2400
-             */
-            width: number;
-            /** @example 1350 */
-            height: number;
-            /**
-             * @description BlurHash LQIP.
-             * @example LEHV6nWB2yk8pyo0adR*.7kCMdnj
-             */
-            blurhash: string | null;
-            /**
-             * @description Alt for the requested ?locale=: null = no translation (no fallback), "" = intentionally decorative.
-             * @example A laptop on a wooden desk
-             */
-            alt: string | null;
-            /** @description Every WebP/AVIF rendition (width asc, format asc). */
-            variants: components["schemas"]["PublicMediaVariantDescriptor"][];
         };
         PublicProjectGalleryItemEntity: {
             /** Format: uuid */
