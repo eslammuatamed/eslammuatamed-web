@@ -185,6 +185,25 @@ test.describe('Locale switching', () => {
   })
 })
 
+test.describe('Home is unaffected (FR-PUB-013 vs FR-PUB-021)', () => {
+  // The timeline entry component is shared with the home summary. Technologies were approved for
+  // `/experience` only, so this asserts the boundary on the REAL build rather than trusting the
+  // component default — Prism supplies technologies to both pages.
+  for (const home of ['/', '/ar']) {
+    test(`${home} renders no technology chips`, async ({ page }) => {
+      await page.goto(home)
+      await expect(page.locator('main ul[aria-labelledby]')).toHaveCount(0)
+    })
+  }
+
+  test('/experience does render them, so the difference is the prop and not a data gap', async ({ page }) => {
+    await page.goto(EN)
+    // Prism serves the same `/experiences` payload to both pages; if this is zero the comparison
+    // above proves nothing.
+    expect(await page.locator('main ul[aria-labelledby]').count()).toBeGreaterThan(0)
+  })
+})
+
 test.describe('Accessibility — unfiltered axe', () => {
   // The UNFILTERED ruleset on purpose: a wcag-tag-filtered scan reported /projects clean while
   // Lighthouse scored it 98, because Lighthouse's accessibility category runs a broader set.

@@ -14,9 +14,19 @@ interface Props {
    * that page passes `h2` — otherwise the document skips a level and fails WCAG heading order.
    */
   headingLevel?: 'h2' | 'h3'
+  /**
+   * Technologies belong to `/experience` (FR-PUB-021). The home experience summary is FR-PUB-013 and
+   * was approved without them, so the DEFAULT IS FALSE and the already-merged home rendering is
+   * unchanged — the caller opts in, and `/experience` is the only one that does.
+   *
+   * A prop rather than a route check inside the component: a shared presentational component that
+   * inspects the current route stops being mountable in isolation (doc 12 §6) and hides a page-level
+   * decision inside a leaf.
+   */
+  showTechnologies?: boolean
 }
 
-const props = withDefaults(defineProps<Props>(), { headingLevel: 'h3' })
+const props = withDefaults(defineProps<Props>(), { headingLevel: 'h3', showTechnologies: false })
 const { t, locale } = useI18n()
 
 // The two ends are rendered as separate `<time datetime>` elements rather than one formatted string:
@@ -96,7 +106,7 @@ const technologiesLabelId = computed(() => `tech-${props.experience.id}`)
 
     <!-- FR-PUB-021: technologies from the Skill registry (D02-9). A real <ul> so the set is
          announced as a list with a count, not a run of adjacent text. -->
-    <template v-if="technologies.length">
+    <template v-if="showTechnologies && technologies.length">
       <p :id="technologiesLabelId" class="sr-only">
         {{ t('experience.technologiesLabel', { role: experience.role }) }}
       </p>

@@ -76,11 +76,27 @@ describe('ContentTimelineEntry', () => {
     expect(wrapper.text()).toContain('home.experience.present')
   })
 
+  // ---- Technologies are OPT-IN (FR-PUB-021 is /experience; the home summary is FR-PUB-013) ----
+
+  it('renders NO technology markup by default, preserving the merged home behaviour', async () => {
+    const wrapper = await mountSuspended(TimelineEntry, {
+      props: {
+        experience: experience({ technologies: [{ id: 't1', label: 'Nuxt.js' }] })
+      }
+    })
+
+    // Absent from the DOM entirely — not merely hidden, and not present-but-empty.
+    expect(wrapper.find('ul[aria-labelledby]').exists()).toBe(false)
+    expect(wrapper.find('.sr-only').exists()).toBe(false)
+    expect(wrapper.text()).not.toContain('Nuxt.js')
+  })
+
   it('renders technologies in the API order and never re-sorts them', async () => {
     // Deliberately NOT alphabetical and NOT id-ordered: the API has already applied `Skill.order`
     // (D02-9), so any client-side sort would be visible here as a reordering.
     const wrapper = await mountSuspended(TimelineEntry, {
       props: {
+        showTechnologies: true,
         experience: experience({
           technologies: [
             { id: 't3', label: 'Vue.js' },
@@ -99,16 +115,16 @@ describe('ContentTimelineEntry', () => {
 
   it('labels the technology list with the role it belongs to', async () => {
     const wrapper = await mountSuspended(TimelineEntry, {
-      props: { experience: experience({ technologies: [{ id: 't1', label: 'Nuxt.js' }] }) }
+      props: { showTechnologies: true, experience: experience({ technologies: [{ id: 't1', label: 'Nuxt.js' }] }) }
     })
     const list = wrapper.find('ul[aria-labelledby]')
     expect(list.exists()).toBe(true)
     expect(wrapper.find(`#${list.attributes('aria-labelledby')}`).exists()).toBe(true)
   })
 
-  it('omits the technology list entirely when the role has no technologies', async () => {
+  it('omits the technology list entirely when enabled but the role has none', async () => {
     const wrapper = await mountSuspended(TimelineEntry, {
-      props: { experience: experience({ technologies: [] }) }
+      props: { showTechnologies: true, experience: experience({ technologies: [] }) }
     })
     expect(wrapper.find('ul[aria-labelledby]').exists()).toBe(false)
   })

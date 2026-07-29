@@ -100,11 +100,14 @@ useSeoMeta({
       <ol :aria-label="t('experience.timelineLabel')" class="max-w-3xl">
         <!-- h2: entries sit directly under the page h1 with no intervening section heading, so the
              component default h3 would skip a level (WCAG heading order). -->
+        <!-- `show-technologies`: FR-PUB-021 puts the stack on THIS page. The home summary
+             (FR-PUB-013) was approved without it and keeps the component default. -->
         <ContentTimelineEntry
           v-for="experience in (data ?? [])"
           :key="experience.id"
           :experience="experience"
           heading-level="h2"
+          show-technologies
         />
       </ol>
     </UiRequestState>

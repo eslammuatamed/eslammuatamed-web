@@ -72,6 +72,19 @@ Legend: `[x]` done · `[ ]` open · `[owner]` blocked on owner review.
 - [x] T058 Lighthouse collect (mobile + desktop, 3 runs x 10 URLs each) with both new routes added
       to the URL list, then `lhci:assert` — **all medians within doc 20 §1, no threshold changed**
 
+## T7 — Owner review corrections (2026-07-29)
+
+- [x] T080 Isolate the home summary: `showTechnologies` prop (default **false**), `/experience` opts
+      in, no route checks in the shared component, no duplicated component, markup absent from the
+      DOM when disabled
+- [x] T081 Lock both sides — home spec asserts the prop is never enabled and no chip text renders;
+      component spec asserts default renders no technology markup; page + e2e specs assert
+      `/experience` still renders them in API order
+- [x] T082 Home bundle after correction vs pre-slice baseline recorded (91170 → 93132 B)
+- [x] T083 Docs-first: doc 20 **D20-18** adds `/experience` + `/ar/experience` to the Lighthouse
+      matrix — Docs PR #23, squash `78bc945d32c8ab37a9a8ebfc3ac957489bd441df`, doc 20 **v1.11.0**
+- [x] T084 Full exact-head re-verification after the amendment
+
 ## T6 — Closeout (D16-8 / D16-9)
 
 - [x] T060 Arabic module documentation

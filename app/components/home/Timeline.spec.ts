@@ -17,7 +17,12 @@ const stubs = {
     template: '<div><h2 :id="titleId">{{ title }}</h2><slot name="action" /></div>'
   },
   UiStateError: { template: '<div class="state-error"><button @click="$emit(\'retry\')">retry</button></div>' },
-  ContentTimelineEntry: { template: '<li class="entry">{{ experience.role }}</li>', props: ['experience'] },
+  // Records the props the home page actually passes, so the FR-PUB-013 rendering contract is
+  // observable here rather than only inside the shared component.
+  ContentTimelineEntry: {
+    template: '<li class="entry" :data-show-tech="showTechnologies ? \'1\' : \'0\'">{{ experience.role }}</li>',
+    props: ['experience', 'showTechnologies', 'headingLevel']
+  },
   AppLink: { template: '<a :href="to"><slot /></a>', props: ['to', 'external'] },
   UIcon: { template: '<i />', props: ['name'] }
 }
@@ -39,6 +44,21 @@ const experience = (overrides: Partial<Experience>): Experience => ({
 })
 
 describe('HomeTimeline', () => {
+  // FR-PUB-013 is the home summary and was approved WITHOUT technologies; FR-PUB-021 put them on
+  // `/experience`. The shared component defaults to off, and the home must never opt in — this is
+  // the assertion that fails if a later change flips the default or adds the prop here.
+  it('never enables technology chips, even when the API supplies them', async () => {
+    const experiences: Experience[] = [
+      experience({ role: 'With stack', technologies: [{ id: 't1', label: 'Nuxt.js' }] }),
+      experience({ role: 'Without stack', technologies: [] })
+    ]
+    const wrapper = await mountSuspended(Timeline, { props: { experiences }, global: { stubs } })
+
+    const flags = wrapper.findAll('.entry').map(el => el.attributes('data-show-tech'))
+    expect(flags).toEqual(['0', '0'])
+    expect(wrapper.text()).not.toContain('Nuxt.js')
+  })
+
   it('sorts the current role first, then the rest by startDate desc', async () => {
     const experiences: Experience[] = [
       experience({ role: 'Older, not current, later start', isCurrent: false, startDate: '2026-01-01T00:00:00.000Z' }),

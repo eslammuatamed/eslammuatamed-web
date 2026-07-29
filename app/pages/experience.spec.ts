@@ -167,6 +167,14 @@ describe('experience page — populated', () => {
     expect(wrapper.findAll('ol > li').map(li => li.find('h2').text())).toEqual(['Role a', 'Role b'])
   })
 
+  it('enables technologies on this page — the home summary does not (FR-PUB-021 vs FR-PUB-013)', async () => {
+    const withStack = { ...role('a'), technologies: [{ id: 't1', label: 'Nuxt.js' }, { id: 't2', label: 'Vue.js' }] }
+    const wrapper = await render({ locale: 'en', data: [withStack], error: null })
+
+    const chips = wrapper.findAll('ul[aria-labelledby] li').map(li => li.text())
+    expect(chips).toEqual(['Nuxt.js', 'Vue.js'])
+  })
+
   it('shows neither the empty nor the error copy when entries exist', async () => {
     const wrapper = await render({ locale: 'en', data: [role('a')], error: null })
 
