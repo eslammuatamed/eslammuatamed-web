@@ -113,7 +113,7 @@ describe('experience page — empty state', () => {
     const wrapper = await render({ locale: 'ar', data: [], error: null })
     const text = wrapper.text()
 
-    expect(text).toContain('لا توجد أدوار منشورة بعد')
+    expect(text).toContain('لم تُنشر الخبرات المهنية بعد')
     expect(text).toContain('تصفّح المشاريع')
     // The specific regression this guards: English leaking onto an Arabic public route.
     expect(text).not.toContain('No roles published yet')
