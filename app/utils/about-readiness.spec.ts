@@ -14,10 +14,10 @@ function portrait(alt: string | null): MediaImage {
   return {
     id: '019f89b5-3050-7161-af37-0000000000f1',
     kind: 'IMAGE',
-    url: 'https://media.example.com/p/1280-webp.webp',
-    width: 1600,
-    height: 2000,
-    blurhash: 'LEHV6nWB2yk8pyo0adR*.7kCMdnj',
+    url: 'https://media.example.com/p/1086-webp.webp',
+    width: 1086,
+    height: 1448,
+    blurhash: 'LA8:bcoL0LR+^NoL9uWC0zaz}@oL',
     alt,
     variants: []
   }

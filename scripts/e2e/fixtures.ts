@@ -218,14 +218,27 @@ function portraitImage(id: string, alt: string | null): MediaImage {
   return {
     id,
     kind: 'IMAGE',
-    url: `${MEDIA_ORIGIN}/${id}/1280-webp.webp`,
-    width: 1600,
-    height: 2000,
-    blurhash: 'LEHV6nWB2yk8pyo0adR*.7kCMdnj',
+    // Transcribed from a real `/admin/media` upload of the approved 1086×1448 portrait through the
+    // post-D20-20 pipeline, so this fixture is the shape the live API actually returns rather than a
+    // plausible-looking invention. Three properties are load-bearing and were all wrong before:
+    //
+    //   • There is NO 1280 rendition. 1086 falls strictly between 640 and 1280, so the ladder stops at
+    //     640 and D20-20 adds a terminal rendition at the source width. A fixture advertising 1280w
+    //     described a file the API cannot produce for this source.
+    //   • AVIF exists. Every width is emitted in both public formats, which is what makes the
+    //     component's per-format `<source>` split observable at all.
+    //   • Top-level url/width/height describe ONE file — the widest public WebP (D10-14) — not the
+    //     private master. The master is 1086×1448 too, so `url` is asserted alongside the numbers.
+    url: `${MEDIA_ORIGIN}/${id}/1086-webp.webp`,
+    width: 1086,
+    height: 1448,
+    blurhash: 'LA8:bcoL0LR+^NoL9uWC0zaz}@oL',
     alt,
     variants: [
-      { format: 'WEBP', width: 640, height: 800, url: `${MEDIA_ORIGIN}/${id}/640-webp.webp` },
-      { format: 'WEBP', width: 1280, height: 1600, url: `${MEDIA_ORIGIN}/${id}/1280-webp.webp` }
+      { format: 'AVIF', width: 640, height: 853, url: `${MEDIA_ORIGIN}/${id}/640-avif.avif` },
+      { format: 'WEBP', width: 640, height: 853, url: `${MEDIA_ORIGIN}/${id}/640-webp.webp` },
+      { format: 'AVIF', width: 1086, height: 1448, url: `${MEDIA_ORIGIN}/${id}/1086-avif.avif` },
+      { format: 'WEBP', width: 1086, height: 1448, url: `${MEDIA_ORIGIN}/${id}/1086-webp.webp` }
     ]
   }
 }

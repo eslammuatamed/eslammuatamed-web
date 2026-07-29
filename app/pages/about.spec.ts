@@ -60,17 +60,22 @@ function translate(key: string, params: Record<string, unknown> = {}): string {
   return resolved.replace(/\{(\w+)\}/g, (_, name: string) => String(params[name] ?? ''))
 }
 
+// The real post-D20-20 descriptor for the approved 1086×1448 portrait: the ladder stops at 640 for
+// this source and a terminal rendition lands at 1086, in both public formats. Top-level
+// url/width/height describe the widest public WebP (D10-14), not the private master.
 const PORTRAIT = {
   id: '019f89b5-3050-7161-af37-0000000000f1',
   kind: 'IMAGE' as const,
-  url: 'https://media.example.com/p/1280-webp.webp',
-  width: 1600,
-  height: 2000,
-  blurhash: 'LEHV6nWB2yk8pyo0adR*.7kCMdnj',
+  url: 'https://media.example.com/p/1086-webp.webp',
+  width: 1086,
+  height: 1448,
+  blurhash: 'LA8:bcoL0LR+^NoL9uWC0zaz}@oL',
   alt: 'Eslam Muatamed against a plain wall',
   variants: [
-    { format: 'WEBP' as const, width: 640, height: 800, url: 'https://media.example.com/p/640-webp.webp' },
-    { format: 'WEBP' as const, width: 1280, height: 1600, url: 'https://media.example.com/p/1280-webp.webp' }
+    { format: 'AVIF' as const, width: 640, height: 853, url: 'https://media.example.com/p/640-avif.avif' },
+    { format: 'WEBP' as const, width: 640, height: 853, url: 'https://media.example.com/p/640-webp.webp' },
+    { format: 'AVIF' as const, width: 1086, height: 1448, url: 'https://media.example.com/p/1086-avif.avif' },
+    { format: 'WEBP' as const, width: 1086, height: 1448, url: 'https://media.example.com/p/1086-webp.webp' }
   ]
 }
 

@@ -36,6 +36,16 @@ const ALT = {
   ar: 'إسلام معتمد، صورة أمام جدار سادة'
 }
 
+/** Mirrors `MEDIA_ORIGIN` + `PORTRAIT_ID` in `scripts/e2e/fixtures.ts`. */
+const MEDIA_ORIGIN_RE = 'https://media.eslammuatamed.com/media/019f89b5-3050-7161-af37-0000000000f1'
+
+/**
+ * The portrait slot, as `AboutPortrait` declares it. Asserted verbatim rather than loosely so every
+ * candidate list is proven to describe the SAME box — sizing one `<source>` against a different slot
+ * than the `<img>` is a silent way to pick the wrong width.
+ */
+const SLOT_SIZES = '(min-width: 1024px) 480px, (min-width: 640px) 420px, 100vw'
+
 test.describe('Published page — English', () => {
   test('renders the governed sections in order, from the SSR document', async ({ page, request }) => {
     await open(page, EN)
@@ -66,11 +76,63 @@ test.describe('Published page — English', () => {
     const portrait = page.getByRole('img', { name: ALT.en })
 
     await expect(portrait).toBeVisible()
-    // width/height are what actually reserve the box and hold CLS at zero.
-    await expect(portrait).toHaveAttribute('width', '1600')
-    await expect(portrait).toHaveAttribute('height', '2000')
-    await expect(portrait).toHaveAttribute('srcset', /640-webp\.webp 640w/)
-    await expect(portrait).toHaveAttribute('srcset', /1280-webp\.webp 1280w/)
+    // width/height are what actually reserve the box and hold CLS at zero. They describe the widest
+    // public WebP (D10-14), which for this source is the D20-20 terminal rendition.
+    await expect(portrait).toHaveAttribute('width', '1086')
+    await expect(portrait).toHaveAttribute('height', '1448')
+
+    // The <img> fallback carries the WebP ladder, ascending, with truthful widths.
+    const srcset = await portrait.getAttribute('srcset')
+    expect(srcset).toBe(
+      [
+        `${MEDIA_ORIGIN_RE}/640-webp.webp 640w`,
+        `${MEDIA_ORIGIN_RE}/1086-webp.webp 1086w`
+      ].join(', ')
+    )
+    // Never a width the API cannot produce for a 1086px source.
+    expect(srcset).not.toContain('1280')
+    // The private master is never referenced.
+    expect(srcset).not.toContain('master')
+    await expect(portrait).toHaveAttribute('src', /1086-webp\.webp$/)
+  })
+
+  test('offers AVIF and WebP as separate typed sources, each well-formed', async ({ page }) => {
+    await open(page, EN)
+
+    // One <source> per format: a single mixed srcset would carry two entries at the same `w`
+    // descriptor, which the UA cannot disambiguate by type.
+    const avif = page.locator('picture source[type="image/avif"]')
+    const webp = page.locator('picture source[type="image/webp"]')
+    await expect(avif).toHaveCount(1)
+    await expect(webp).toHaveCount(1)
+
+    for (const [source, ext] of [[avif, 'avif'], [webp, 'webp']] as const) {
+      const srcset = await source.getAttribute('srcset')
+      expect(srcset).toBe(
+        [
+          `${MEDIA_ORIGIN_RE}/640-${ext}.${ext} 640w`,
+          `${MEDIA_ORIGIN_RE}/1086-${ext}.${ext} 1086w`
+        ].join(', ')
+      )
+      // Ascending, deduplicated, and describing the same slot as the <img>.
+      await expect(source).toHaveAttribute('sizes', SLOT_SIZES)
+    }
+  })
+
+  test('backs the transparent portrait with a token surface, not a BlurHash colour', async ({ page }) => {
+    await open(page, EN)
+    const portrait = page.getByRole('img', { name: ALT.en })
+
+    // The muddy BlurHash average (#4d3433 for this cutout) must not be the permanent backdrop, and no
+    // inline backgroundColor should be set at all — the surface is a class-driven token.
+    const inlineStyle = (await portrait.getAttribute('style')) ?? ''
+    expect(inlineStyle).not.toMatch(/background/i)
+    await expect(portrait).toHaveClass(/bg-elevated/)
+
+    // Resolved to a real, opaque colour in the light theme.
+    const bg = await portrait.evaluate(el => getComputedStyle(el).backgroundColor)
+    expect(bg).not.toBe('transparent')
+    expect(bg).not.toBe('rgba(0, 0, 0, 0)')
   })
 
   test('does not shift layout once the portrait resolves', async ({ page }) => {
