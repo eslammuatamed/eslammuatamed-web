@@ -114,5 +114,19 @@ rather than re-authoring it, and is a separately approved short field, not a tru
    chrome settings from Profile content without introducing duplicate requests. **Not redesigned in
    this PR** by owner instruction.
 
+4. **F-4 — `project/Gallery.vue` may share the portrait's two media assumptions.** Observed while
+   fixing `AboutPortrait`, **not reproduced**, so no defect is claimed. Gallery builds one `srcset`
+   from all variants regardless of format, and sets the `<img>` background from the BlurHash
+   average. Both were genuine problems for the portrait — a mixed-format `srcset` puts two entries
+   on the same `w` descriptor, and a BlurHash backdrop is permanent behind a transparent cutout —
+   but neither necessarily bites here: gallery images are opaque photographs, so their BlurHash
+   backdrop really is a placeholder the image covers, and whether the `srcset` is malformed depends
+   on whether any real gallery asset has both formats at the same width. **Requires a separate
+   investigation using real affected assets** before anything is changed. Deliberately **not**
+   touched in the portrait PR — that PR's scope was the portrait, and widening it into a media-system
+   refactor was declined by owner instruction. **Blocks no route threshold and no release.**
+
 **Resolved during this slice:** the `about-states` scenario backend variant is implemented as the
-`about-readiness` lane (T048); F-3 is closed by Docs PR #25 and API PR #39.
+`about-readiness` lane (T048); F-3 is closed by Docs PR #25 and API PR #39. The portrait's own two
+display findings are closed by Docs `3b2b67f3` (D20-20, D10-14), Docs `da958612` (D12-5) and API
+`188e7718`, with the rendering delivered in Web PR #27.
