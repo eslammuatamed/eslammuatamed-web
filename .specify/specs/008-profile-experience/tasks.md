@@ -4,6 +4,9 @@ Slice of the `web-005` Profile Pages umbrella. Branch `008-profile-experience` o
 
 Legend: `[x]` done · `[ ]` open · `[owner]` blocked on owner review.
 
+> A box is ticked only after the command has actually been run and passed in this branch. An
+> unticked box below is genuinely outstanding, not an oversight.
+
 ## T0 — Baseline and identity
 
 - [x] T001 Fetch Docs/API/Web remotes; verify all three checkpoints (Docs `a1be740`, API `f3a8e9eb` /
@@ -49,27 +52,32 @@ Legend: `[x]` done · `[ ]` open · `[owner]` blocked on owner review.
 - [x] T043 Scenario backend `/experiences` handler + `scenario-server.spec.ts` coverage
 - [x] T044 Scenario e2e `e2e/scenarios/experience-states.spec.ts` (9 tests) — empty, error/retry,
       D03-13 atomicity, head-vs-direct-load invariant
-- [x] T045 Unfiltered axe: EN + AR × desktop + mobile × light + dark (8 scans)
+- [x] T046 Page spec `app/pages/experience.spec.ts` (6 tests) — covers the two state x locale
+      combinations the scenario lane cannot reach (**AR empty**, **EN error**), resolving `t` against
+      the real locale files so a missing or English-leaking Arabic string fails
+- [x] T045 Unfiltered axe: EN + AR × desktop + mobile × light + dark (8 scans), each asserting the
+      emulated colour scheme actually reached `<html>` so no two scans are silent duplicates
 
 ## T5 — Gates
 
 - [x] T050 `lint` · `typecheck` · `typecheck:e2e` — all clean
-- [x] T051 Unit/component — 49 files, 504 tests
-- [x] T052 Contract + scenario e2e — 107 tests
-- [x] T053 Flake check at CI concurrency
+- [x] T051 Unit/component — **50 files, 510 tests**, exit 0 (no unhandled errors)
+- [x] T052 Contract + scenario e2e — **107 tests**
+- [x] T053 Flake check at CI concurrency — `CI=1 npx playwright test --repeat-each=3`
+      (2 workers, 0 retries): **321 passed, 0 flaky**
 - [x] T054 `build`
 - [x] T055 `check:bundle` — 39 public chunks, no editor/dashboard identifiers
 - [x] T056 `check:logical` — logical properties only
 - [x] T057 `size` (CSS) + `size:routes` with `/experience` and `/ar/experience` added to `ROUTES`
-- [x] T058 Lighthouse collect (mobile + desktop) with both new routes added to the URL list, then
-      `lhci:assert` medians — **no threshold changed**
+- [x] T058 Lighthouse collect (mobile + desktop, 3 runs x 10 URLs each) with both new routes added
+      to the URL list, then `lhci:assert` — **all medians within doc 20 §1, no threshold changed**
 
 ## T6 — Closeout (D16-8 / D16-9)
 
 - [x] T060 Arabic module documentation
 - [x] T061 SpecKit `spec.md` / `plan.md` / `tasks.md`
 - [x] T062 Feature-map row for 008; `web-005` umbrella left OPEN
-- [x] T063 Record API/OpenAPI source SHA + hash, test totals, performance evidence
+- [x] T063 Record API/OpenAPI source SHA + hash, test totals, performance evidence — in the PR body
 - [x] T064 Verify no secrets, clean diff, clean worktree, zero stashes
 - [ ] T065 **[owner]** Native Arabic UI copy review — **blocks merge**
 

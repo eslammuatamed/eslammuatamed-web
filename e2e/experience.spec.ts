@@ -204,6 +204,11 @@ test.describe('Accessibility — unfiltered axe', () => {
           await page.emulateMedia({ colorScheme: scheme })
           await page.goto(route)
 
+          // Prove the emulation actually reached the app before trusting the scan. Without this,
+          // a colour mode that ignored the media query would make four of these eight scans
+          // silent duplicates that pass vacuously.
+          await expect(page.locator('html')).toHaveClass(new RegExp(`\\b${scheme}\\b`))
+
           const results = await new AxeBuilder({ page }).analyze()
           expect(results.violations.map(v => `${v.id}: ${v.help}`)).toEqual([])
         })
