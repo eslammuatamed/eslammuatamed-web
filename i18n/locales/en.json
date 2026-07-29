@@ -1,7 +1,7 @@
 {
   "brand": {
     "name": "Eslam Muatamed",
-    "role": "Frontend Engineer"
+    "role": "JavaScript Product Engineer"
   },
   "nav": {
     "projects": "Projects",
@@ -160,6 +160,26 @@
     "errorBody": "The request did not complete. This is usually temporary.",
     "breadcrumbLabel": "Breadcrumb"
   },
+  "about": {
+    "title": "About",
+    "description": "How I work, what I specialize in, and what I am building right now.",
+    "breadcrumbLabel": "Breadcrumb",
+    "bioHeading": "Background",
+    "philosophyHeading": "How I approach engineering",
+    "focusHeading": "What I am working on now",
+    "moreLabel": "More about my work",
+    "experienceAction": "See my experience",
+    "projectsAction": "Browse projects",
+    "readiness": {
+      "title": "This page is still being finished",
+      "portraitBody": "The written sections are ready, but this page is not published until it is complete. In the meantime, my experience and projects cover the same work in more depth.",
+      "contentBody": "This page is being prepared and is not published yet. My experience and projects already cover the same work in depth.",
+      "experienceAction": "See my experience",
+      "projectsAction": "Browse projects"
+    },
+    "errorTitle": "This page could not be loaded",
+    "errorBody": "The request did not complete. This is usually temporary."
+  },
   "article": {
     "back": "Back to blog",
     "publishedOn": "Published {date}",
@@ -236,6 +256,10 @@
     "experience": {
       "title": "Experience",
       "description": "The roles Eslam Muatamed has held, what each involved, and the technologies used."
+    },
+    "about": {
+      "title": "About",
+      "description": "Eslam Muatamed is a JavaScript Product Engineer — frontend-led, with end-to-end product delivery experience in Vue.js and Nuxt.js."
     }
   }
 }

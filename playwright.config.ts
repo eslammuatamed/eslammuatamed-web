@@ -40,6 +40,11 @@ const CONTRACT_API_PORT = Number(process.env.CI_MOCK_PORT ?? 3001)
 const SCENARIO_PORT = Number(process.env.CI_SCENARIO_PORT ?? 3100)
 const SCENARIO_API_PORT = Number(process.env.CI_SCENARIO_MOCK_PORT ?? 3101)
 
+// The About readiness lane. Its own ports because it is its own preview + backend pair: the settings
+// variant it needs must not be visible to the other two lanes.
+const READINESS_PORT = Number(process.env.CI_READINESS_PORT ?? 3200)
+const READINESS_API_PORT = Number(process.env.CI_READINESS_MOCK_PORT ?? 3201)
+
 // Fail with an actionable message instead of a connection-refused timeout 90 s later. `ci-preview.mjs`
 // boots `.output/server/index.mjs` directly, so a missing build is a setup mistake, not a test failure.
 if (!existsSync('.output/server/index.mjs')) {
@@ -89,18 +94,24 @@ export default defineConfig({
   projects: [
     {
       name: 'contract',
-      testIgnore: 'scenarios/**',
+      testIgnore: ['scenarios/**', 'readiness/**'],
       use: { ...devices['Desktop Chrome'], baseURL: `http://127.0.0.1:${CONTRACT_PORT}` }
     },
     {
       name: 'ssr-scenarios',
       testMatch: 'scenarios/**/*.spec.ts',
       use: { ...devices['Desktop Chrome'], baseURL: `http://127.0.0.1:${SCENARIO_PORT}` }
+    },
+    {
+      name: 'about-readiness',
+      testMatch: 'readiness/**/*.spec.ts',
+      use: { ...devices['Desktop Chrome'], baseURL: `http://127.0.0.1:${READINESS_PORT}` }
     }
   ],
 
   webServer: [
     previewServer('prism', CONTRACT_PORT, CONTRACT_API_PORT),
-    previewServer('scenarios', SCENARIO_PORT, SCENARIO_API_PORT)
+    previewServer('scenarios', SCENARIO_PORT, SCENARIO_API_PORT),
+    previewServer('about-readiness', READINESS_PORT, READINESS_API_PORT)
   ]
 })
