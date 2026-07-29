@@ -51,6 +51,17 @@ const BACKENDS = {
     label: 'scenario backend (SSR scenarios)',
     command: process.execPath,
     args: () => ['scripts/e2e/scenario-server.ts']
+  },
+  // The SAME server, run as a separate process with one variable pinned: `/settings/site` answers
+  // with the real live About state (governed prose, no portrait). A distinct process on a distinct
+  // port is what keeps the global settings endpoint published and healthy for every other scenario —
+  // no unrelated test becomes scenario-dependent, and the variant stays a property of the process
+  // rather than of a request.
+  'about-readiness': {
+    label: 'scenario backend (About portrait-null)',
+    command: process.execPath,
+    args: () => ['scripts/e2e/scenario-server.ts'],
+    env: { E2E_ABOUT_STATE: 'portrait-null' }
   }
 }
 
@@ -106,7 +117,7 @@ function start(name, command, args, env) {
 }
 
 // 1. The API backend first — the Nitro server fetches it during SSR.
-start(BACKEND_NAME, BACKEND.command, BACKEND.args(API_PORT), { CI_MOCK_PORT: API_PORT })
+start(BACKEND_NAME, BACKEND.command, BACKEND.args(API_PORT), { CI_MOCK_PORT: API_PORT, ...BACKEND.env })
 
 // 2. The built Nitro server. Its runtime API base points at the mock.
 start('nitro', 'node', ['.output/server/index.mjs'], {

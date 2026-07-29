@@ -149,6 +149,20 @@ export const SITE_SETTINGS: Record<Locale, SiteSettings> = {
 }
 
 /**
+ * The REAL live API state for `/about` after the content seed: every governed About field populated,
+ * **no portrait**. Served by the dedicated `about-readiness` backend configuration on its own port,
+ * so `/settings/site` stays healthy and published for every other scenario — the readiness lane
+ * cannot perturb an unrelated test, because it is a different process answering a different port.
+ *
+ * Derived from `SITE_SETTINGS` rather than retyped, so the two cannot drift in any field except the
+ * one under test.
+ */
+export const ABOUT_READINESS_SETTINGS: Record<Locale, SiteSettings> = {
+  en: { ...SITE_SETTINGS.en, portraitAssetId: null, portrait: null },
+  ar: { ...SITE_SETTINGS.ar, portraitAssetId: null, portrait: null }
+}
+
+/**
  * The technology filter's options. The three scenario ids are ordinary, selectable options — the
  * filter control and its clear action stay fully exercised in the empty and error scenarios, which
  * is exactly what "filters and recovery behavior remain accessible" has to mean to be worth testing.

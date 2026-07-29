@@ -48,11 +48,25 @@ import { realpathSync } from 'node:fs'
 import http from 'node:http'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
-import { ARTICLES, EMPTY_PAGE, PROJECTS, REDIRECTS, SITE_SETTINGS, SKILLS, TECHNOLOGY, isLocale, problem } from './fixtures.ts'
+import { ARTICLES, EMPTY_PAGE, PROJECTS, REDIRECTS, SITE_SETTINGS, SKILLS, TECHNOLOGY, isLocale, problem,
+  ABOUT_READINESS_SETTINGS} from './fixtures.ts'
 import type { Locale, ProblemDetail } from './fixtures.ts'
 
 /** The contract's mount point. `NUXT_PUBLIC_API_BASE` points Nitro at `http://host:port/api/v1`. */
 export const API_PREFIX = '/api/v1'
+
+/**
+ * Which `/settings/site` variant this PROCESS serves, fixed at start-up and never per-request.
+ *
+ * `portrait-null` reproduces the real live API state for `/about` (governed prose present, no
+ * portrait). It is selected by `ci-preview.mjs --backend about-readiness`, which runs this server as
+ * a SEPARATE process on its own port. That separation is the point: the global settings endpoint
+ * stays published and healthy for every other scenario, so no unrelated test becomes
+ * scenario-dependent, and the "one URL ⇒ one scenario" invariant is preserved because the variant is
+ * a property of the process, not of the request.
+ */
+const ABOUT_STATE = process.env.E2E_ABOUT_STATE === 'portrait-null' ? 'portrait-null' : 'published'
+const SETTINGS = ABOUT_STATE === 'portrait-null' ? ABOUT_READINESS_SETTINGS : SITE_SETTINGS
 
 /**
  * What the server should do with one request. `destroy` is the genuine connection failure: the socket
@@ -176,7 +190,7 @@ export function resolveRequest(url: string): Reply {
     return unprocessable(instance, `Query parameter \`locale\` must be "en" or "ar"; received “${locale}”.`)
   }
 
-  if (pathname === '/settings/site') return json({ data: SITE_SETTINGS[locale] })
+  if (pathname === '/settings/site') return json({ data: SETTINGS[locale] })
   if (pathname === '/skills') return json({ data: SKILLS[locale] })
   if (pathname === '/experiences') return resolveExperiences(locale, instance)
   if (pathname === '/projects') return resolveProjectsIndex(parsed.searchParams.get('technology'), instance)
