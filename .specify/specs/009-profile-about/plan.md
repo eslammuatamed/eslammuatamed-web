@@ -6,7 +6,7 @@
 
 | | |
 | --- | --- |
-| Source API SHA | `289c7ee0ac4e6fc800da805c5381239c2f091ab3` (API `dev`) |
+| Source API SHA | `254f6cd0062ffab81186a2bdaedf1d6893e49001` (API `dev`, after the tagline alignment) |
 | OpenAPI hash | `3376ac58d5038ca6eff4fc3d4259d60c8823161940ad4ffce5b4a41ea0ad8307` |
 | Generated type hash | `56f7b714598a7ae24b6d8541e2e0e9cb249279904c8364991524fc520f77bc3b` |
 | Two consecutive generations | byte-identical |
@@ -29,9 +29,9 @@ Generated types are never hand-edited.
 | `i18n/locales/{en,ar}.json` | `about.*` and `seo.about.*` (additions only) |
 | `scripts/e2e/fixtures.ts` | populated About settings + portrait fixture |
 
-## 3. Copy inventory — OWNER REVIEW GATE
+## 3. Copy inventory — OWNER APPROVED 2026-07-29
 
-**Merge is blocked until the owner approves the Arabic column.** The governed body copy
+**Approved.** The governed body copy
 (`aboutBio`, `engineeringPhilosophy`, `currentFocus`) is **not** in this table: it is already approved
 and comes from the API byte-identical.
 
@@ -41,7 +41,7 @@ and comes from the API byte-identical.
 | --- | --- | --- |
 | `about.title` | About | نبذة عني |
 | `about.description` | How I work, what I specialize in, and what I am building right now. | كيف أعمل، وفيمَ أتخصص، وما الذي أبنيه الآن. |
-| `about.breadcrumbLabel` | Breadcrumb | مسار التنقل |
+| `about.breadcrumbLabel` | Breadcrumb | مسار التنقّل |
 | `about.bioHeading` | Background | خلفيتي |
 | `about.philosophyHeading` | How I approach engineering | منهجي في الهندسة |
 | `about.focusHeading` | What I am working on now | ما أعمل عليه الآن |
@@ -49,19 +49,30 @@ and comes from the API byte-identical.
 | `about.experienceAction` | See my experience | اطّلع على خبرتي |
 | `about.projectsAction` | Browse projects | تصفّح المشاريع |
 | `about.readiness.title` | This page is still being finished | هذه الصفحة قيد الإنجاز |
-| `about.readiness.portraitBody` | The written sections are ready, but this page is not published until it is complete. In the meantime, my experience and projects cover the same work in more depth. | الأقسام المكتوبة جاهزة، لكن الصفحة لا تُنشر قبل اكتمالها. في هذه الأثناء، تغطي صفحتا الخبرة والمشاريع العمل نفسه بتفصيل أوفى. |
-| `about.readiness.contentBody` | This page is being prepared and is not published yet. My experience and projects already cover the same work in depth. | يجري إعداد هذه الصفحة ولم تُنشر بعد. تغطي صفحتا الخبرة والمشاريع العمل نفسه بتفصيل واضح. |
+| `about.readiness.portraitBody` | The written sections are ready, but this page is not published until it is complete. In the meantime, my experience and projects cover the same work in more depth. | المحتوى المكتوب جاهز، لكنني أنتظر اكتمال الصفحة قبل عرضها كاملة. في الوقت الحالي، يمكنك الاطّلاع على خبرتي ومشاريعي لمزيد من التفاصيل عن عملي. |
+| `about.readiness.contentBody` | This page is being prepared and is not published yet. My experience and projects already cover the same work in depth. | ما زال محتوى هذه الصفحة قيد الإعداد. في الوقت الحالي، يمكنك الاطّلاع على خبرتي ومشاريعي لمزيد من التفاصيل عن عملي. |
 | `about.readiness.experienceAction` | See my experience | اطّلع على خبرتي |
 | `about.readiness.projectsAction` | Browse projects | تصفّح المشاريع |
 | `about.errorTitle` | This page could not be loaded | تعذّر تحميل هذه الصفحة |
-| `about.errorBody` | The request did not complete. This is usually temporary. | لم يكتمل الطلب. عادةً ما تكون المشكلة مؤقتة. |
+| `about.errorBody` | The request did not complete. This is usually temporary. | تعذّر إكمال الطلب، وعادةً ما تكون هذه مشكلة مؤقتة. |
 | `seo.about.title` | About | نبذة عني |
-| `seo.about.description` | Eslam Muatamed is a JavaScript Product Engineer — frontend-led, with end-to-end product delivery experience in Vue.js and Nuxt.js. | إسلام معتمد مهندس برمجيات للمنتجات متخصص في الواجهات الأمامية، بخبرة تمتد عبر طبقات المنتج باستخدام Vue.js وNuxt.js. |
+| `seo.about.description` | Eslam Muatamed is a JavaScript Product Engineer — frontend-led, with end-to-end product delivery experience in Vue.js and Nuxt.js. | إسلام معتمد مهندس برمجيات للمنتجات، متخصص في هندسة الواجهات الأمامية باستخدام Vue.js وNuxt.js، ولديه خبرة في تسليم منتجات الويب من البداية إلى النهاية. |
 
 ### Reused strings
 
-`nav.home`, `nav.about`, `nav.experience`, `nav.projects`, `common.retry`, `brand.name`,
-`brand.role` — all pre-existing and already owner-reviewed.
+`nav.home`, `nav.about`, `nav.experience`, `nav.projects`, `common.retry`, `brand.name` —
+pre-existing and already owner-reviewed.
+
+`brand.role` was **changed** by owner decision (2026-07-29) so the null-tagline fallback stops
+publishing the superseded primary identity: EN `JavaScript Product Engineer`, AR
+`مهندس برمجيات للمنتجات`. It is a fallback only — the full CMS tagline is never copied into the
+Web locale files, because the tagline is API-owned (positioning-strategy v1.1.0 §8).
+
+### Owner copy approval (2026-07-29)
+
+All English strings approved unchanged. All Arabic approved unchanged except five exact
+replacements, applied verbatim above: `about.breadcrumbLabel`, `about.readiness.portraitBody`,
+`about.readiness.contentBody`, `about.errorBody`, `seo.about.description`.
 
 ### Portrait accessibility text
 
@@ -93,7 +104,15 @@ rather than re-authoring it, and is a separately approved short field, not a tru
 ## 5. Follow-ups recorded, not silently skipped
 
 1. **Real portrait upload + EN/AR alt approval** — publication blocker (§5 of `spec.md`).
-2. **`about-states` scenario backend variant** — would move the readiness refusals into a browser
-   lane; currently proven at component level (§8 of `spec.md`).
-3. **Branded social-card fallback** — finding F-1, carried from the Experience slice; until it
+2. **Branded social-card fallback** — finding F-1, carried from the Experience slice; until it
    exists, `og:image` stays omitted.
+3. **F-2 — chrome serializes the whole settings object** into the hydration payload on every route.
+   Non-blocking for this slice (the About prose is public-intended content), but it causes
+   cross-route over-fetching and payload growth, and **hidden content is not confidential merely
+   because it is not rendered**. Any future private, draft, or publication-gated field must never
+   rely on UI hiding for confidentiality. A later architecture review should consider separating
+   chrome settings from Profile content without introducing duplicate requests. **Not redesigned in
+   this PR** by owner instruction.
+
+**Resolved during this slice:** the `about-states` scenario backend variant is implemented as the
+`about-readiness` lane (T048); F-3 is closed by Docs PR #25 and API PR #39.

@@ -49,7 +49,7 @@ const READINESS = {
   },
   ar: {
     title: 'هذه الصفحة قيد الإنجاز',
-    body: 'الأقسام المكتوبة جاهزة، لكن الصفحة لا تُنشر قبل اكتمالها. في هذه الأثناء، تغطي صفحتا الخبرة والمشاريع العمل نفسه بتفصيل أوفى.'
+    body: 'المحتوى المكتوب جاهز، لكنني أنتظر اكتمال الصفحة قبل عرضها كاملة. في الوقت الحالي، يمكنك الاطّلاع على خبرتي ومشاريعي لمزيد من التفاصيل عن عملي.'
   }
 }
 
@@ -58,6 +58,19 @@ const GOVERNED_PROSE = {
   en: 'Most of my work is Vue and Nuxt.',
   ar: 'معظم عملي بـ Vue وNuxt.'
 }
+
+/**
+ * The approved public tagline (positioning-strategy v1.1.0 §2/§3), seeded by API `254f6cd0` and
+ * carried verbatim by this lane's fixtures. `Person.jobTitle` derives from it (D22-8), so asserting
+ * the exact string here is what proves the identity is API-owned and not hard-coded anywhere.
+ */
+const APPROVED_TAGLINE = {
+  en: 'JavaScript Product Engineer — Frontend Engineer specializing in Vue.js & Nuxt.js',
+  ar: 'مهندس برمجيات للمنتجات — متخصص في هندسة الواجهات الأمامية باستخدام Vue.js وNuxt.js'
+}
+
+/** Superseded titles; their reappearance anywhere is a regression. */
+const SUPERSEDED_TITLES = ['Frontend Engineer — Vue.js & Nuxt.js', 'مهندس واجهات أمامية — Vue.js و Nuxt.js']
 
 const CASES = [
   { label: 'English', path: EN, locale: 'en' as const, lang: 'en-US', dir: 'ltr', og: 'en_US' },
@@ -137,6 +150,17 @@ for (const { label, path, locale, lang, dir, og } of CASES) {
 
       // No ImageObject anywhere in the graph traceable to the portrait.
       expect(JSON.stringify(nodes)).not.toContain('media.eslammuatamed.com')
+    })
+
+    test('Person.jobTitle is the approved tagline, sourced from the API', async ({ page }) => {
+      await open(page, path)
+      const person = (await schemaNodes(page)).find(node => isType(node, 'Person'))
+
+      // Exactly the governed string — not a Web constant, not an About-specific title.
+      expect(person?.jobTitle).toBe(APPROVED_TAGLINE[locale])
+      for (const stale of SUPERSEDED_TITLES) {
+        expect(JSON.stringify(person)).not.toContain(stale)
+      }
     })
 
     test('exactly one Person exists and ProfilePage.mainEntity references its @id', async ({ page }) => {

@@ -6,9 +6,10 @@
 
 **Created**: 2026-07-29
 
-**Status**: In implementation. Merge blocked on the **D16-8 Documentation & Handoff Gate**, on
-**owner review of the Arabic UI copy** (§7), and on the **real portrait upload + EN/AR alt approval**
-(§5), which is a publication blocker rather than a merge blocker.
+**Status**: Implemented and verified. Arabic UI copy **approved by the owner 2026-07-29** (five exact
+replacements applied verbatim). The **real portrait upload + EN/AR alt approval** (§5) remains a
+**publication** blocker, not a merge blocker. PR #26 is deliberately left unmerged pending the owner's
+final merge authorization.
 
 ## Umbrella relationship — read first
 
@@ -36,7 +37,8 @@ histories are complete and closed. Completing this slice does not close the umbr
 ## 2. Source of the content
 
 The six governed About fields are seeded into `SiteSettingsTranslation` by API
-`289c7ee0ac4e6fc800da805c5381239c2f091ab3` from the approved copy at
+`289c7ee0ac4e6fc800da805c5381239c2f091ab3` (current API `dev` is `254f6cd0`, which additionally
+aligns the public tagline) from the approved copy at
 `eslammuatamed-docs@78bc945d…:content/profile/about-copy.md` (Approved v1.0.0, 2026-07-29).
 
 The Web **renders the contract value verbatim**. It never rewraps, truncates, or re-authors the
@@ -112,9 +114,11 @@ monogram standing in for a face.
 ## 6. SEO and structured data
 
 `/about` is the primary `ProfilePage` (D22-8). Its `mainEntity` **references** the site-wide `Person`
-by `@id` (`{host}#identity`) rather than nesting a second person; `Person.jobTitle` comes from the
-Site Settings tagline, so positioning propagates as data. Exactly one `Person` node exists in the
-page graph.
+by `@id` (`{host}/#identity` — with the trailing slash schema-org actually uses) rather than nesting a
+second person; `Person.jobTitle` comes from the Site Settings tagline, so positioning propagates as
+data. Exactly one `Person` node exists in the page graph. The tagline now carries the approved public
+title (positioning-strategy v1.1.0 §2/§3, seeded by API `254f6cd0`), so `jobTitle` emits it without
+any Web-side constant.
 
 `knowsAbout` is deliberately omitted: D22-8 names the portrait, tagline, professional email and
 profile links as this schema's sources, and fetching `/skills` purely to enrich the graph would add a
@@ -129,9 +133,13 @@ substituted for one. Carried from the Experience slice as finding **F-1**.
 
 ## 7. Copy review gate
 
-Every new EN/AR string is listed in `plan.md` §Copy inventory. **Merge is blocked until the owner
-approves the complete Arabic UI inventory.** The governed body copy is out of scope for that review —
-it is already approved and must stay byte-identical.
+Every new EN/AR string is listed in `plan.md` §Copy inventory. **The owner approved it on 2026-07-29**
+— all English unchanged, all Arabic unchanged except five exact replacements, applied verbatim. The
+governed body copy was out of scope for that review: it is already approved and stays byte-identical.
+
+`brand.role` was changed in the same decision so the null-tagline fallback stops publishing the
+superseded identity. It remains a fallback only; the full CMS tagline is never copied into the Web
+locale files.
 
 ## 8. Test strategy
 
@@ -142,13 +150,17 @@ it is already approved and must stay byte-identical.
 | Contract e2e (Prism) | routing, SSR, locale head tags, ProfilePage/Person graph, unfiltered axe |
 | Scenario e2e | the **published** page: portrait descriptor, variants, CLS, RTL, locale-transition atomicity, axe × light/dark |
 
-### Recorded limitation
+### Three browser lanes
 
-The scenario backend selects scenarios purely from path + slug + locale query. `/settings/site` has
-**neither slug nor query**, and it must stay healthy for every other scenario's chrome, so that lane
-can express **one settings variant per locale**. The published state is given to it, because portrait
-rendering, RTL layout, CLS and axe are only observable in a browser. The readiness refusals are pure
-render decisions and are proven exhaustively in the component and unit lanes instead.
+`/settings/site` carries neither slug nor query, so a single backend cannot express more than one
+settings variant per locale — and it must stay healthy for every other scenario's chrome. The
+`about-readiness` lane resolves this with a **separate preview + backend pair on its own ports**
+(3200/3201), where the variant is pinned per PROCESS rather than per request. The
+"one URL ⇒ one scenario" invariant is preserved, no unrelated test becomes scenario-dependent, and
+nothing intercepts `_payload.json` or patches runtime code.
 
-Adding a dedicated `about-states` backend variant (a third Playwright project) would put the refusals
-in a browser too. It is recorded as a **follow-up**, not silently skipped.
+| Lane | Backend | Serves |
+| --- | --- | --- |
+| `contract` | Prism on the committed contract | routing, SSR, locale head, schema graph, axe |
+| `ssr-scenarios` | scenario server (published) | portrait, variants, CLS, RTL, locale atomicity |
+| `about-readiness` | scenario server, `E2E_ABOUT_STATE=portrait-null` | the REAL live state |

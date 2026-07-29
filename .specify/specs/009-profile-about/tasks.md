@@ -6,7 +6,7 @@ Legend: `[x]` done · `[ ]` outstanding.
 
 ## 1. Contract adoption
 
-- [x] **T001** Verify the OpenAPI artifact at API `dev` `289c7ee0` — hash `3376ac58…`, unchanged from the committed `openapi/openapi.json`.
+- [x] **T001** Verify the OpenAPI artifact at API `dev` `254f6cd0` — hash `3376ac58…`, unchanged from the committed `openapi/openapi.json`.
 - [x] **T002** Regenerate types; confirm two consecutive generations are byte-identical (`56f7b714…`) and that nothing drifted. No hand edits.
 - [x] **T003** Record that **no adoption commit is required** under doc 16 §3: the About content seed changed no endpoint and no schema, so there is nothing to adopt.
 
@@ -55,7 +55,9 @@ Legend: `[x]` done · `[ ]` outstanding.
 - [x] **T054** **Docs D20-19** governing T053 — written into doc 20 (v1.12.0), open as **docs PR #24**. *B12 requires the doc first; PR #26 must not merge before #24 lands.*
 - [x] **T055** Lighthouse median collection — both routes × both profiles × 3 runs. Desktop **99/99** perf, LCP **739/817 ms**, CLS **0.0000/0.0024**; mobile **91/91** perf, LCP **2790/2793 ms**, CLS **0.0000/0.0041**; A11y/BP/SEO **100** in all four. Inside every threshold with margin.
 - [x] **T056** Flake check — `--repeat-each=3 --workers=2` (CI concurrency), **480 passed, zero failures, zero flaky**.
-- [ ] **T057** Owner approval of the Arabic UI inventory (`plan.md` §3).
+- [x] **T057** Owner approval of the Arabic UI inventory — granted 2026-07-29 with five exact Arabic replacements, applied verbatim.
+- [x] **T059** Apply the owner's `brand.role` fallback change (EN `JavaScript Product Engineer`, AR `مهندس برمجيات للمنتجات`) so the null-tagline fallback no longer publishes the superseded identity.
+- [x] **T060b** Update the scenario and readiness fixtures to the approved API tagline; assert `Person.jobTitle` emits it exactly.
 - [x] **T058** Feature-map entry for 009.
 
 ## 7. Blockers carried to publication (not merge)
@@ -69,5 +71,5 @@ Until both, `/about` renders the readiness state. No portrait is invented for an
 
 - **F-1 — no branded social-card fallback.** Carried from the Experience slice; until one exists, `og:image` stays omitted rather than pointing at a URL that does not resolve.
 - **F-2 — governed prose in the hydration payload.** The About prose appears once in the Nuxt payload on `/about` (never rendered), because `/settings/site` is one object the persistent footer chrome serializes on every route. `/experience` carries it identically and shipped first, so this is pre-existing behaviour of the shared settings read. Pinned by assertion so a change is visible. Removing it is a separate cross-route decision.
-- **F-3 — `Person.jobTitle` carries a superseded title.** The mapping is correct per D22-8, but the seeded `settings.tagline` still holds the pre-positioning title. See the addendum; the fix is an API seed change with site-wide copy impact and needs owner approval of the exact EN/AR strings.
+- **F-3 — RESOLVED.** The seeded `settings.tagline` held the pre-positioning title. Governed Docs-first (positioning-strategy v1.1.0 §2/§3, PR #25 → `64a0f075`) and corrected in the API seed (PR #39 → `254f6cd0`). `Person.jobTitle` now emits the approved tagline, still sourced from `settings.tagline` with no hard-coded title anywhere.
 - **Resolved:** the `about-states` backend variant recorded earlier as a follow-up is now implemented as T048.
