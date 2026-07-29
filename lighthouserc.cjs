@@ -60,7 +60,11 @@ const urls = [
   // stays exactly as `npm run lhci:assert` defines it (D20-13). A new public route that is never
   // measured is a budget that silently does not apply to it.
   'http://127.0.0.1:3000/experience',
-  'http://127.0.0.1:3000/ar/experience'
+  'http://127.0.0.1:3000/ar/experience',
+  // web-005 Profile, About slice (009). Added to the COLLECTION only — every threshold stays exactly
+  // as `npm run lhci:assert` defines it (D20-13). Governed by D20-19, recorded in doc 20 first.
+  'http://127.0.0.1:3000/about',
+  'http://127.0.0.1:3000/ar/about'
 ]
 
 module.exports = {

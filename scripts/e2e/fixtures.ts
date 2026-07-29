@@ -87,6 +87,9 @@ export const ARTICLE_SLUG = { bilingual: { en: 'ssr-article', ar: 'ssr-article-a
 
 const MEDIA_ORIGIN = 'https://media.eslammuatamed.com/media'
 
+/** Declared beside MEDIA_ORIGIN, above SITE_SETTINGS, because SITE_SETTINGS reads it at module init. */
+const PORTRAIT_ID = '019f89b5-3050-7161-af37-0000000000f1'
+
 /** Site settings — always healthy, in both locales: the page shell must not be part of any failure. */
 export const SITE_SETTINGS: Record<Locale, SiteSettings> = {
   en: {
@@ -102,13 +105,20 @@ export const SITE_SETTINGS: Record<Locale, SiteSettings> = {
     bingSiteVerification: null,
     customMetas: [],
     resumeAsset: null,
-    aboutBio: null,
-    engineeringPhilosophy: null,
-    currentFocus: null,
-    professionalEmail: null,
-    contactEmail: null,
-    portraitAssetId: null,
-    portrait: null,
+    // About content + portrait are POPULATED here on purpose: this is the only lane that can render
+    // the published /about page in a real browser, which is where the portrait descriptor, RTL
+    // layout, CLS and unfiltered axe are actually observable. The negative readiness states
+    // (portrait absent, localized alt absent, prose absent) are pure render decisions and are proven
+    // exhaustively in the component/unit lane instead — `/settings/site` carries no slug or query for
+    // this backend to select a scenario on, and it must stay healthy for every other scenario's
+    // chrome, so it cannot express more than one variant per locale.
+    aboutBio: 'I build for the web, frontend first.\n\nMost of my work is Vue and Nuxt.',
+    engineeringPhilosophy: 'I prefer maintainability over cleverness.\n\nBudgets that are not enforced are not budgets.',
+    currentFocus: 'Building bilingual web products and developing this platform in the open.',
+    professionalEmail: 'hello@eslammuatamed.com',
+    contactEmail: 'contact@eslammuatamed.com',
+    portraitAssetId: PORTRAIT_ID,
+    portrait: portraitImage(PORTRAIT_ID, 'Eslam Muatamed, photographed against a plain wall'),
     availableLocales: ['en', 'ar']
   },
   ar: {
@@ -124,13 +134,16 @@ export const SITE_SETTINGS: Record<Locale, SiteSettings> = {
     bingSiteVerification: null,
     customMetas: [],
     resumeAsset: null,
-    aboutBio: null,
-    engineeringPhilosophy: null,
-    currentFocus: null,
-    professionalEmail: null,
-    contactEmail: null,
-    portraitAssetId: null,
-    portrait: null,
+    // The Arabic alt is authored SEPARATELY rather than reusing the English string: that is what makes
+    // "no cross-locale alt fallback" (D10-6) observable here — if the page ever borrowed the other
+    // locale's alt, this fixture would show it.
+    aboutBio: 'أبني للويب، والواجهة الأمامية أولًا.\n\nمعظم عملي بـ Vue وNuxt.',
+    engineeringPhilosophy: 'أُفضّل قابلية الصيانة على الاستعراض التقني.\n\nوالميزانية التي لا تُنفَّذ ليست ميزانية.',
+    currentFocus: 'أبني منتجات ويب ثنائية اللغة، وأطوّر هذه المنصة بشكل مفتوح.',
+    professionalEmail: 'hello@eslammuatamed.com',
+    contactEmail: 'contact@eslammuatamed.com',
+    portraitAssetId: PORTRAIT_ID,
+    portrait: portraitImage(PORTRAIT_ID, 'إسلام معتمد، صورة أمام جدار سادة'),
     availableLocales: ['en', 'ar']
   }
 }
@@ -171,6 +184,31 @@ function image(id: string, alt: string | null): MediaImage {
     variants: [
       { format: 'WEBP', width: 1280, height: 720, url: `${MEDIA_ORIGIN}/${id}/1280-webp.webp` },
       { format: 'WEBP', width: 1920, height: 1080, url: `${MEDIA_ORIGIN}/${id}/1920-webp.webp` }
+    ]
+  }
+}
+
+/**
+ * The About portrait (FR-PUB-020) — portrait-ORIENTED, unlike the landscape gallery images above, so
+ * the page's `aspect-[4/5]` frame is exercised against a descriptor whose intrinsic ratio matches
+ * rather than one it would have to crop aggressively.
+ *
+ * `alt` is a REQUIRED argument with no default: the About readiness gate treats a missing localized
+ * alt as unpublishable, so a fixture that could silently omit it would let the very state under test
+ * appear by accident.
+ */
+function portraitImage(id: string, alt: string | null): MediaImage {
+  return {
+    id,
+    kind: 'IMAGE',
+    url: `${MEDIA_ORIGIN}/${id}/1280-webp.webp`,
+    width: 1600,
+    height: 2000,
+    blurhash: 'LEHV6nWB2yk8pyo0adR*.7kCMdnj',
+    alt,
+    variants: [
+      { format: 'WEBP', width: 640, height: 800, url: `${MEDIA_ORIGIN}/${id}/640-webp.webp` },
+      { format: 'WEBP', width: 1280, height: 1600, url: `${MEDIA_ORIGIN}/${id}/1280-webp.webp` }
     ]
   }
 }
