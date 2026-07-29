@@ -42,6 +42,7 @@ Legend: `[x]` done · `[ ]` outstanding.
 - [x] **T043** `about.spec.ts` — 13 tests, every state × both locales.
 - [x] **T044** `e2e/about.spec.ts` — contract lane: routing, SSR, locale head, schema graph, unfiltered axe.
 - [x] **T045** `e2e/scenarios/about-published.spec.ts` — published page: portrait, variants, CLS, RTL, locale-transition atomicity, axe × light/dark. **16/16.**
+- [x] **T048** `e2e/readiness/about-portrait-null.spec.ts` + the `about-readiness` Playwright project and `ci-preview --backend about-readiness` configuration (ports 3200/3201) — browser coverage for the REAL portrait-null state. **21/21.** Supersedes the earlier component-only limitation.
 - [x] **T046** Populate the scenario fixtures with About content + a portrait-oriented descriptor with per-locale alt; ajv-validated against the committed contract.
 - [x] **T047** Navigate via `domcontentloaded` in the About e2e specs, with the reason recorded: the eager LCP portrait points at a media origin that does not exist in test.
 
@@ -53,7 +54,7 @@ Legend: `[x]` done · `[ ]` outstanding.
 - [x] **T053** Add `/about` + `/ar/about` to the Lighthouse collection matrix (thresholds untouched).
 - [x] **T054** **Docs D20-19** governing T053 — written into doc 20 (v1.12.0), open as **docs PR #24**. *B12 requires the doc first; PR #26 must not merge before #24 lands.*
 - [x] **T055** Lighthouse median collection — both routes × both profiles × 3 runs. Desktop **99/99** perf, LCP **739/817 ms**, CLS **0.0000/0.0024**; mobile **91/91** perf, LCP **2790/2793 ms**, CLS **0.0000/0.0041**; A11y/BP/SEO **100** in all four. Inside every threshold with margin.
-- [x] **T056** Flake check — `--repeat-each=3`, **417 passed, zero failures, zero flaky**.
+- [x] **T056** Flake check — `--repeat-each=3 --workers=2` (CI concurrency), **480 passed, zero failures, zero flaky**.
 - [ ] **T057** Owner approval of the Arabic UI inventory (`plan.md` §3).
 - [x] **T058** Feature-map entry for 009.
 
@@ -64,7 +65,9 @@ Legend: `[x]` done · `[ ]` outstanding.
 
 Until both, `/about` renders the readiness state. No portrait is invented for any purpose.
 
-## 8. Follow-ups recorded, not silently skipped
+## 8. Findings and follow-ups
 
-- **`about-states` scenario backend variant** — would move the readiness refusals into a browser lane. They are currently proven in the component/unit lanes because `/settings/site` carries no scenario selector and must stay healthy for every other scenario's chrome.
-- **Branded social-card fallback** — finding F-1; until it exists, `og:image` stays omitted.
+- **F-1 — no branded social-card fallback.** Carried from the Experience slice; until one exists, `og:image` stays omitted rather than pointing at a URL that does not resolve.
+- **F-2 — governed prose in the hydration payload.** The About prose appears once in the Nuxt payload on `/about` (never rendered), because `/settings/site` is one object the persistent footer chrome serializes on every route. `/experience` carries it identically and shipped first, so this is pre-existing behaviour of the shared settings read. Pinned by assertion so a change is visible. Removing it is a separate cross-route decision.
+- **F-3 — `Person.jobTitle` carries a superseded title.** The mapping is correct per D22-8, but the seeded `settings.tagline` still holds the pre-positioning title. See the addendum; the fix is an API seed change with site-wide copy impact and needs owner approval of the exact EN/AR strings.
+- **Resolved:** the `about-states` backend variant recorded earlier as a follow-up is now implemented as T048.
