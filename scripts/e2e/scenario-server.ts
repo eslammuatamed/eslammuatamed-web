@@ -37,6 +37,8 @@
  *   /projects/ssr-canonical                        200                             canonical case study
  *   /projects/ssr-unknown-slug                     404, then resolver 404          localized Nuxt 404
  *   /projects/ssr-upstream-failure                 RFC 7807 503                    error page, never a 404
+ *   /experience                                    200, zero experiences           localized empty state
+ *   /ar/experience                                 RFC 7807 503                    localized RTL error state
  *
  * `/settings/site` and `/skills` are ALWAYS healthy, including in the failure scenarios. If the page
  * shell also failed, the accessibility and recovery-action assertions would be measuring a different
@@ -80,6 +82,31 @@ function unavailable(instance: string): Reply {
     status: 503,
     body: problem(503, 'Service Unavailable', 'The upstream service is unavailable.', instance)
   }
+}
+
+/**
+ * `GET /experiences` — the Experience timeline (008).
+ *
+ * THE SELECTOR IS THE LOCALE, and it has to be. Every other scenario here keys off something the
+ * page puts in the request — a slug or the `?technology=` filter. `/experience` takes no parameters
+ * and forwards none, so the only variable this backend can see is `?locale=`. Adding a query
+ * parameter to the page purely so tests could select a scenario would be production API surface
+ * invented for the harness.
+ *
+ * The design invariant still holds — one URL still means exactly one deterministic scenario:
+ *
+ *   /experience     (locale=en)   200, zero experiences   localized EMPTY state
+ *   /ar/experience  (locale=ar)   RFC 7807 503            localized, RTL ERROR state
+ *
+ * The pairing is deliberate rather than arbitrary: the error state is the one that must be proven
+ * direction-correct, so it is the Arabic route that exercises it.
+ *
+ * Nothing else in this lane reads `/experiences` (the home page is not a scenario route), so the
+ * Arabic 503 cannot leak into another scenario's page shell.
+ */
+function resolveExperiences(locale: Locale, instance: string): Reply {
+  if (locale === 'ar') return unavailable(instance)
+  return json({ data: [] })
 }
 
 /** `GET /projects` — the index. The `technology` filter is the scenario selector (see the table above). */
@@ -151,6 +178,7 @@ export function resolveRequest(url: string): Reply {
 
   if (pathname === '/settings/site') return json({ data: SITE_SETTINGS[locale] })
   if (pathname === '/skills') return json({ data: SKILLS[locale] })
+  if (pathname === '/experiences') return resolveExperiences(locale, instance)
   if (pathname === '/projects') return resolveProjectsIndex(parsed.searchParams.get('technology'), instance)
   if (pathname === '/redirects/resolve') return resolveRedirect(parsed.searchParams.get('path'), locale, instance)
 

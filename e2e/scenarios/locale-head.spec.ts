@@ -129,6 +129,10 @@ const CASES = [
     click: 'EN' as const,
     heading: 'Selected work'
   }
+  // Experience (008) is deliberately NOT listed here. This spec asserts zero console errors, and the
+  // scenario backend serves `/ar/experience` as an intentional 503 so the RTL error state can be
+  // proven — that 503 is a console error by design. The same head invariant is asserted for
+  // `/experience` in `experience-states.spec.ts`, which tolerates that one expected failure.
 ]
 
 for (const { name, from, to, click, heading } of CASES) {

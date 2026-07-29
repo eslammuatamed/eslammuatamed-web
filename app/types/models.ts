@@ -54,6 +54,14 @@ export type Skill = Schemas['PublicSkillEntity']
 /** `GET /experiences` — resolved single-locale experience (home timeline summary; `employmentType` code, D09-9). */
 export type Experience = Schemas['PublicExperienceEntity']
 
+/**
+ * One technology on an experience (FR-PUB-021, D02-9) — a Skill-registry reference, not free text,
+ * so the label matches the Projects filter and translates with the registry. The API orders these by
+ * `Skill.order` and drops a skill with no translation in the requested locale rather than falling
+ * back to another one (D10-6); the client renders the array verbatim.
+ */
+export type ExperienceTechnology = Schemas['ExperienceTechnologyEntity']
+
 /** `GET /testimonials` — visible testimonials (home social-proof section). */
 export type Testimonial = Schemas['PublicTestimonialEntity']
 
