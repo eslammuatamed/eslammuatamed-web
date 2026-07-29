@@ -30,6 +30,13 @@ const base = (overrides: Partial<SiteSettings> = {}): SiteSettings => ({
   bingSiteVerification: null,
   customMetas: [],
   resumeAsset: null,
+  aboutBio: null,
+  engineeringPhilosophy: null,
+  currentFocus: null,
+  professionalEmail: null,
+  contactEmail: null,
+  portraitAssetId: null,
+  portrait: null,
   availableLocales: ['en'],
   ...overrides
 })

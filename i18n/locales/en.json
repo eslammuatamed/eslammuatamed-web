@@ -148,6 +148,18 @@
       "heading": "Gallery"
     }
   },
+  "experience": {
+    "title": "Professional experience",
+    "description": "Where I've worked, what each role involved, and the technologies it used — most recent first.",
+    "timelineLabel": "Professional experience timeline",
+    "technologiesLabel": "Technologies used in the {role} role",
+    "emptyTitle": "No roles published yet",
+    "emptyBody": "The timeline is being prepared. The projects section already covers the same engineering work in depth.",
+    "emptyAction": "Browse projects",
+    "errorTitle": "Experience could not be loaded",
+    "errorBody": "The request did not complete. This is usually temporary.",
+    "breadcrumbLabel": "Breadcrumb"
+  },
   "article": {
     "back": "Back to blog",
     "publishedOn": "Published {date}",
@@ -220,6 +232,10 @@
     "projects": {
       "title": "Projects",
       "description": "Case studies from production frontend and full-stack work by Eslam Muatamed."
+    },
+    "experience": {
+      "title": "Experience",
+      "description": "The roles Eslam Muatamed has held, what each involved, and the technologies used."
     }
   }
 }

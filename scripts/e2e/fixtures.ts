@@ -102,6 +102,13 @@ export const SITE_SETTINGS: Record<Locale, SiteSettings> = {
     bingSiteVerification: null,
     customMetas: [],
     resumeAsset: null,
+    aboutBio: null,
+    engineeringPhilosophy: null,
+    currentFocus: null,
+    professionalEmail: null,
+    contactEmail: null,
+    portraitAssetId: null,
+    portrait: null,
     availableLocales: ['en', 'ar']
   },
   ar: {
@@ -117,6 +124,13 @@ export const SITE_SETTINGS: Record<Locale, SiteSettings> = {
     bingSiteVerification: null,
     customMetas: [],
     resumeAsset: null,
+    aboutBio: null,
+    engineeringPhilosophy: null,
+    currentFocus: null,
+    professionalEmail: null,
+    contactEmail: null,
+    portraitAssetId: null,
+    portrait: null,
     availableLocales: ['en', 'ar']
   }
 }

@@ -55,7 +55,12 @@ const urls = [
   'http://127.0.0.1:3000/projects',
   'http://127.0.0.1:3000/ar/projects',
   'http://127.0.0.1:3000/projects/content-platform-api',
-  'http://127.0.0.1:3000/ar/projects/content-platform-api'
+  'http://127.0.0.1:3000/ar/projects/content-platform-api',
+  // web-005 Profile, Experience slice (008). Adding URLs to the COLLECTION only — every threshold
+  // stays exactly as `npm run lhci:assert` defines it (D20-13). A new public route that is never
+  // measured is a budget that silently does not apply to it.
+  'http://127.0.0.1:3000/experience',
+  'http://127.0.0.1:3000/ar/experience'
 ]
 
 module.exports = {

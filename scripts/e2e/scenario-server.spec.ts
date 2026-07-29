@@ -72,8 +72,20 @@ describe('route selection', () => {
     // plausible. This is what keeps the backend bounded (D18-6) — the article DETAIL route exists
     // only for the locale-switch scenario, and the blog INDEX deliberately does not.
     expect(resolveRequest(url('/articles?locale=en'))).toMatchObject({ kind: 'problem', status: 404 })
-    expect(resolveRequest(url('/experiences?locale=en'))).toMatchObject({ kind: 'problem', status: 404 })
+    expect(resolveRequest(url('/testimonials?locale=en'))).toMatchObject({ kind: 'problem', status: 404 })
     expect(resolveRequest('/not-the-api/projects?locale=en')).toMatchObject({ kind: 'problem', status: 404 })
+  })
+
+  // `/experiences` (008) — the locale IS the scenario selector, because `/experience` forwards no
+  // parameter this backend could key off. One URL still means one deterministic scenario.
+  it('serves an empty experience list in English (the empty-state scenario)', () => {
+    expect(resolveRequest(url('/experiences?locale=en')))
+      .toMatchObject({ kind: 'json', status: 200, body: { data: [] } })
+  })
+
+  it('fails the Arabic experience request (the RTL error-state scenario)', () => {
+    expect(resolveRequest(url('/experiences?locale=ar')))
+      .toMatchObject({ kind: 'problem', status: 503 })
   })
 
   it('decodes a percent-encoded slug before selecting the scenario', () => {

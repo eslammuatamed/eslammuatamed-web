@@ -76,7 +76,9 @@ const ROUTES = [
   '/projects',
   '/ar/projects',
   '/projects/content-platform-api',
-  '/ar/projects/content-platform-api'
+  '/ar/projects/content-platform-api',
+  '/experience',
+  '/ar/experience'
 ]
 
 const BASE = process.env.ROUTE_SIZE_BASE ?? 'http://127.0.0.1:3000'
