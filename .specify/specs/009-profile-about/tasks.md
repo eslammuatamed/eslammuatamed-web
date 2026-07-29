@@ -51,11 +51,11 @@ Legend: `[x]` done · `[ ]` outstanding.
 - [x] **T051** Unit/component suite — 52 files / 536 tests.
 - [x] **T052** Add `/about` + `/ar/about` to the route-size matrix; confirm all budgets pass and Home/Experience are unchanged.
 - [x] **T053** Add `/about` + `/ar/about` to the Lighthouse collection matrix (thresholds untouched).
-- [ ] **T054** **Docs D20-19** governing T053. *B12 requires the doc first; PR #26 must not merge before it lands.*
-- [ ] **T055** Lighthouse median collection for both new routes, both profiles.
-- [ ] **T056** Flake check (`--repeat-each=3` at CI concurrency).
+- [x] **T054** **Docs D20-19** governing T053 — written into doc 20 (v1.12.0), open as **docs PR #24**. *B12 requires the doc first; PR #26 must not merge before #24 lands.*
+- [x] **T055** Lighthouse median collection — both routes × both profiles × 3 runs. Desktop **99/99** perf, LCP **739/817 ms**, CLS **0.0000/0.0024**; mobile **91/91** perf, LCP **2790/2793 ms**, CLS **0.0000/0.0041**; A11y/BP/SEO **100** in all four. Inside every threshold with margin.
+- [x] **T056** Flake check — `--repeat-each=3`, **417 passed, zero failures, zero flaky**.
 - [ ] **T057** Owner approval of the Arabic UI inventory (`plan.md` §3).
-- [ ] **T058** Feature-map entry for 009.
+- [x] **T058** Feature-map entry for 009.
 
 ## 7. Blockers carried to publication (not merge)
 
