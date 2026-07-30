@@ -45,6 +45,13 @@ const SCENARIO_API_PORT = Number(process.env.CI_SCENARIO_MOCK_PORT ?? 3101)
 const READINESS_PORT = Number(process.env.CI_READINESS_PORT ?? 3200)
 const READINESS_API_PORT = Number(process.env.CI_READINESS_MOCK_PORT ?? 3201)
 
+// The résumé PDF lane (010). Its own preview + backend pair again: the populated `resumeAsset`
+// must not be visible to the other lanes, because the PDF-NULL state is the real live state and is
+// what every other lane must keep rendering. This backend also serves the PDF object itself, so the
+// attachment headers are observable by a real browser.
+const RESUME_PDF_PORT = Number(process.env.CI_RESUME_PDF_PORT ?? 3300)
+const RESUME_PDF_API_PORT = Number(process.env.CI_RESUME_PDF_MOCK_PORT ?? 3301)
+
 // Fail with an actionable message instead of a connection-refused timeout 90 s later. `ci-preview.mjs`
 // boots `.output/server/index.mjs` directly, so a missing build is a setup mistake, not a test failure.
 if (!existsSync('.output/server/index.mjs')) {
@@ -94,7 +101,7 @@ export default defineConfig({
   projects: [
     {
       name: 'contract',
-      testIgnore: ['scenarios/**', 'readiness/**'],
+      testIgnore: ['scenarios/**', 'readiness/**', 'resume-pdf/**'],
       use: { ...devices['Desktop Chrome'], baseURL: `http://127.0.0.1:${CONTRACT_PORT}` }
     },
     {
@@ -106,12 +113,18 @@ export default defineConfig({
       name: 'about-readiness',
       testMatch: 'readiness/**/*.spec.ts',
       use: { ...devices['Desktop Chrome'], baseURL: `http://127.0.0.1:${READINESS_PORT}` }
+    },
+    {
+      name: 'resume-pdf',
+      testMatch: 'resume-pdf/**/*.spec.ts',
+      use: { ...devices['Desktop Chrome'], baseURL: `http://127.0.0.1:${RESUME_PDF_PORT}` }
     }
   ],
 
   webServer: [
     previewServer('prism', CONTRACT_PORT, CONTRACT_API_PORT),
     previewServer('scenarios', SCENARIO_PORT, SCENARIO_API_PORT),
-    previewServer('about-readiness', READINESS_PORT, READINESS_API_PORT)
+    previewServer('about-readiness', READINESS_PORT, READINESS_API_PORT),
+    previewServer('resume-pdf', RESUME_PDF_PORT, RESUME_PDF_API_PORT)
   ]
 })

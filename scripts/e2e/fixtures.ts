@@ -165,6 +165,52 @@ export const ABOUT_READINESS_SETTINGS: Record<Locale, SiteSettings> = {
   ar: { ...SITE_SETTINGS.ar, portraitAssetId: null, portrait: null }
 }
 
+/** The résumé asset id and filename the PDF lane serves (010). Stable so tests can assert on them. */
+export const RESUME_ASSET_ID = '3f2504e0-4f89-11d3-9a0c-0305e82c3301'
+export const RESUME_PDF_FILENAME = 'eslam-muatamed-resume.pdf'
+
+/**
+ * A minimal, structurally valid PDF — NOT the owner's résumé.
+ *
+ * The PDF lane exists to prove the DELIVERY contract: an absolute media-origin URL, an
+ * `application/pdf` content type, and a `Content-Disposition: attachment` header that makes the
+ * link download rather than navigate. None of that depends on what the document contains, and
+ * committing a copy of the real CV into the test harness would put a second, drifting copy of a
+ * governed asset in this repository. So the fixture is the smallest byte sequence that is honestly
+ * a PDF: a header, one empty A4 page, and an EOF marker.
+ */
+export const RESUME_PDF_BYTES: Uint8Array = new TextEncoder().encode(
+  '%PDF-1.4\n'
+  + '1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n'
+  + '2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n'
+  + '3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 595 842]>>endobj\n'
+  + 'trailer<</Root 1 0 R/Size 4>>\n'
+  + '%%EOF\n'
+)
+
+/**
+ * `SITE_SETTINGS` with the résumé PDF slot POPULATED, for the `resume-pdf` lane.
+ *
+ * The descriptor's `url` is built from the media origin the scenario server is actually listening
+ * on, so the browser downloads from a real absolute cross-origin URL — the same shape the API emits
+ * from `PUBLIC_MEDIA_URL`, and the only way the attachment headers can be observed end to end.
+ * Derived from `SITE_SETTINGS` rather than retyped, so the two cannot drift in any field except the
+ * one under test.
+ */
+export function resumePdfSettings(mediaOrigin: string): Record<Locale, SiteSettings> {
+  const asset = {
+    id: RESUME_ASSET_ID,
+    kind: 'PDF' as const,
+    url: `${mediaOrigin}/media/${RESUME_PDF_FILENAME}`,
+    filename: RESUME_PDF_FILENAME,
+    sizeBytes: RESUME_PDF_BYTES.byteLength
+  }
+  return {
+    en: { ...SITE_SETTINGS.en, resumeAsset: asset },
+    ar: { ...SITE_SETTINGS.ar, resumeAsset: asset }
+  }
+}
+
 /**
  * The technology filter's options. The three scenario ids are ordinary, selectable options — the
  * filter control and its clear action stay fully exercised in the empty and error scenarios, which

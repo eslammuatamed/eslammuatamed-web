@@ -82,7 +82,10 @@ const ROUTES = [
   // web-005 Profile, About slice (009) — D20-19. Measured here for the same reason as every other
   // public route: a route that is never measured is a budget that silently does not apply to it.
   '/about',
-  '/ar/about'
+  '/ar/about',
+  // web-005 Profile, Resume slice (010) — D20-21.
+  '/resume',
+  '/ar/resume'
 ]
 
 const BASE = process.env.ROUTE_SIZE_BASE ?? 'http://127.0.0.1:3000'

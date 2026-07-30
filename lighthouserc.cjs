@@ -64,7 +64,12 @@ const urls = [
   // web-005 Profile, About slice (009). Added to the COLLECTION only — every threshold stays exactly
   // as `npm run lhci:assert` defines it (D20-13). Governed by D20-19, recorded in doc 20 first.
   'http://127.0.0.1:3000/about',
-  'http://127.0.0.1:3000/ar/about'
+  'http://127.0.0.1:3000/ar/about',
+  // web-005 Profile, Resume slice (010). Added to the COLLECTION only — every threshold stays
+  // exactly as `npm run lhci:assert` defines it (D20-13). Governed by D20-21, recorded in doc 20
+  // first.
+  'http://127.0.0.1:3000/resume',
+  'http://127.0.0.1:3000/ar/resume'
 ]
 
 module.exports = {

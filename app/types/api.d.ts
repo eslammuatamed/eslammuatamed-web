@@ -993,16 +993,19 @@ export interface components {
              */
             kind: "IMAGE" | "PDF";
             /**
-             * @description Widest WebP rendition (never the sanitized master).
+             * @description Widest PUBLIC WebP rendition (never the sanitized master). `width`/`height` are this exact file’s dimensions (D10-14).
              * @example https://media.eslammuatamed.com/media/8f…/1920-webp.webp
              */
             url: string;
             /**
-             * @description Intrinsic image width (px).
-             * @example 2400
+             * @description Width (px) of the file served by `url` — NOT the private master’s. Safe to use as that candidate’s width descriptor (D10-14).
+             * @example 1920
              */
             width: number;
-            /** @example 1350 */
+            /**
+             * @description Height (px) of the file served by `url` (D10-14).
+             * @example 1080
+             */
             height: number;
             /**
              * @description BlurHash LQIP.

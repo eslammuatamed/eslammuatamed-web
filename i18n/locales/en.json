@@ -160,6 +160,29 @@
     "errorBody": "The request did not complete. This is usually temporary.",
     "breadcrumbLabel": "Breadcrumb"
   },
+  "resume": {
+    "title": "Résumé",
+    "breadcrumbLabel": "Breadcrumb",
+    "contactLabel": "Contact and profiles",
+    "experienceTitle": "Experience",
+    "experienceListLabel": "Professional experience, most recent first",
+    "experienceEmpty": "No roles are published yet.",
+    "experienceErrorTitle": "Experience could not be loaded",
+    "experienceErrorBody": "The request did not complete. This is usually temporary.",
+    "skillsTitle": "Skills",
+    "skillsEmpty": "No skills are published yet.",
+    "skillsErrorTitle": "Skills could not be loaded",
+    "skillsErrorBody": "The request did not complete. This is usually temporary.",
+    "print": "Print",
+    "pdf": {
+      "download": "Download PDF",
+      "downloadA11y": "Download the résumé as a PDF file, {filename}",
+      "downloadA11yWithSize": "Download the résumé as a PDF file, {filename}, {size}",
+      "unavailable": "A PDF version is not available yet. This page contains the full résumé and can be printed.",
+      "unitKb": "kB",
+      "unitMb": "MB"
+    }
+  },
   "about": {
     "title": "About",
     "description": "How I work, what I specialize in, and what I am building right now.",
@@ -256,6 +279,10 @@
     "experience": {
       "title": "Experience",
       "description": "The roles Eslam Muatamed has held, what each involved, and the technologies used."
+    },
+    "resume": {
+      "title": "Résumé",
+      "description": "The résumé of Eslam Muatamed — professional experience, responsibilities, skills, and technologies."
     },
     "about": {
       "title": "About",

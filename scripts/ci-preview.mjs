@@ -62,6 +62,19 @@ const BACKENDS = {
     command: process.execPath,
     args: () => ['scripts/e2e/scenario-server.ts'],
     env: { E2E_ABOUT_STATE: 'portrait-null' }
+  },
+  // The SAME server again, with the résumé PDF slot populated (010). It additionally serves the PDF
+  // object itself with `Content-Type: application/pdf` and `Content-Disposition: attachment`, so the
+  // download contract is observed end to end by a real browser rather than asserted from the markup.
+  // Its own process and port for the same reason as `about-readiness`: `/settings/site` carries no
+  // slug or query this backend could select a variant on, so a variant must be a property of the
+  // process — which also keeps the PDF-NULL state (the real live state) as what every other lane
+  // renders.
+  'resume-pdf': {
+    label: 'scenario backend (Résumé PDF available)',
+    command: process.execPath,
+    args: () => ['scripts/e2e/scenario-server.ts'],
+    env: { E2E_RESUME_STATE: 'pdf' }
   }
 }
 
