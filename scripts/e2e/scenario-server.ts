@@ -49,7 +49,7 @@ import http from 'node:http'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
 import { ARTICLES, EMPTY_PAGE, PROJECTS, REDIRECTS, SITE_SETTINGS, SKILLS, TECHNOLOGY, isLocale, problem,
-  ABOUT_READINESS_SETTINGS} from './fixtures.ts'
+  ABOUT_READINESS_SETTINGS, RESUME_PDF_BYTES, RESUME_PDF_FILENAME, resumePdfSettings } from './fixtures.ts'
 import type { Locale, ProblemDetail } from './fixtures.ts'
 
 /** The contract's mount point. `NUXT_PUBLIC_API_BASE` points Nitro at `http://host:port/api/v1`. */
@@ -66,7 +66,30 @@ export const API_PREFIX = '/api/v1'
  * a property of the process, not of the request.
  */
 const ABOUT_STATE = process.env.E2E_ABOUT_STATE === 'portrait-null' ? 'portrait-null' : 'published'
-const SETTINGS = ABOUT_STATE === 'portrait-null' ? ABOUT_READINESS_SETTINGS : SITE_SETTINGS
+
+/**
+ * Which `/settings/site` résumé slot this PROCESS serves (010), on the same process-variant
+ * principle as `ABOUT_STATE` above.
+ *
+ * `null` — the DEFAULT and the real live state — is what the ordinary scenario lane serves, so the
+ * honest PDF-unavailable rendering is proven against the state production is actually in. The
+ * `pdf` variant is selected by `ci-preview.mjs --backend resume-pdf` and additionally serves the
+ * object itself at `/media/…`, which is the only way the `application/pdf` content type and the
+ * `Content-Disposition: attachment` header can be observed by a real browser.
+ */
+const RESUME_STATE = process.env.E2E_RESUME_STATE === 'pdf' ? 'pdf' : 'none'
+
+/**
+ * The origin the résumé descriptor points at. Read from the SAME env var the listener binds below,
+ * so the advertised URL and the port actually serving the bytes cannot disagree.
+ */
+const MEDIA_ORIGIN = `http://127.0.0.1:${Number(process.env.CI_MOCK_PORT ?? 3101)}`
+
+const SETTINGS = ABOUT_STATE === 'portrait-null'
+  ? ABOUT_READINESS_SETTINGS
+  : RESUME_STATE === 'pdf'
+    ? resumePdfSettings(MEDIA_ORIGIN)
+    : SITE_SETTINGS
 
 /**
  * What the server should do with one request. `destroy` is the genuine connection failure: the socket
@@ -242,6 +265,34 @@ export function createScenarioServer(): http.Server {
     if (request.method === 'OPTIONS') {
       response.writeHead(204, cors)
       response.end()
+      return
+    }
+
+    /**
+     * The résumé OBJECT (010) — served outside `API_PREFIX`, because a media object is not an API
+     * endpoint: production serves it from a separate media origin (R2 behind `PUBLIC_MEDIA_URL`),
+     * and the point of this route is to reproduce that separation locally.
+     *
+     * The two headers below are the ones under test. In production they are OBJECT METADATA written
+     * at upload time (doc 19 §5, `media.service.ts`), not response logic — which is exactly why the
+     * Web app must not rely on the HTML `download` attribute: it is ignored cross-origin, so the
+     * storage headers are the authoritative download mechanism, and this route is where that claim
+     * becomes observable.
+     */
+    if ((request.url ?? '').split('?')[0] === `/media/${RESUME_PDF_FILENAME}`) {
+      if (RESUME_STATE !== 'pdf') {
+        response.writeHead(404, { ...cors, 'content-type': 'text/plain' })
+        response.end('not served by this lane')
+        return
+      }
+      response.writeHead(200, {
+        ...cors,
+        'content-type': 'application/pdf',
+        'content-disposition': `attachment; filename="${RESUME_PDF_FILENAME}"`,
+        'content-length': RESUME_PDF_BYTES.byteLength,
+        'cache-control': 'no-store'
+      })
+      response.end(Buffer.from(RESUME_PDF_BYTES))
       return
     }
 
