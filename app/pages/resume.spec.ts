@@ -35,7 +35,7 @@ const messages: Record<string, Record<string, unknown>> = { en: localeFile('en')
 const locale = ref<'en' | 'ar'>('en')
 
 /** Namespaces this page owns. A miss inside one is a real defect and throws. */
-const OWNED = ['resume.', 'seo.resume.', 'nav.', 'common.', 'brand.', 'home.experience.', 'experience.technologiesLabel']
+const OWNED = ['resume.', 'seo.resume.', 'nav.', 'common.', 'brand.', 'home.experience.', 'home.techStack.group.', 'experience.technologiesLabel']
 
 function translate(key: string, params: Record<string, unknown> = {}): string {
   const resolved = key
@@ -110,7 +110,7 @@ const role = (id: string, overrides: Partial<Experience> = {}): Experience => ({
   ...overrides
 })
 
-const skill = (id: string, label: string, group: string | null): Skill =>
+const skill = (id: string, label: string, group: Skill['group']): Skill =>
   ({ id, label, group, order: 0, brandColor: null, availableLocales: ['en', 'ar'] } as Skill)
 
 async function render(options: {
@@ -124,7 +124,7 @@ async function render(options: {
   locale.value = options.locale ?? 'en'
   settingsState.data.value = options.settings === undefined ? settings() : options.settings
   experiencesState.data.value = options.experiences === undefined ? [role('e1')] : options.experiences
-  skillsState.data.value = options.skills === undefined ? [skill('s1', 'Vue.js', 'Frontend')] : options.skills
+  skillsState.data.value = options.skills === undefined ? [skill('s1', 'Vue.js', 'FRAMEWORK')] : options.skills
   experiencesState.error.value = options.experiencesError ?? null
   skillsState.error.value = options.skillsError ?? null
   return mountSuspended(ResumePage, { global: { stubs } })
@@ -262,10 +262,10 @@ describe('resume page — structure', () => {
 
   it('groups skills under their API group label', async () => {
     const wrapper = await render({
-      skills: [skill('s1', 'Vue.js', 'Frontend'), skill('s2', 'NestJS', 'Backend')]
+      skills: [skill('s1', 'Vue.js', 'FRAMEWORK'), skill('s2', 'TypeScript', 'LANGUAGE')]
     })
     const groups = wrapper.findAll('dt').map(dt => dt.text())
-    expect(groups).toEqual(['Frontend', 'Backend'])
+    expect(groups).toEqual(['Frameworks', 'Languages'])
   })
 
   it('carries the resume-page hook the print stylesheet is gated on', async () => {

@@ -6,7 +6,7 @@ import { formatFileSize, groupSkills, impactBullets, resumeEmail, resumeLinks } 
 // output until they are wrong: registry order, the professional-email rule, and the fact that a
 // malformed descriptor degrades rather than printing "NaN kB".
 
-const skill = (id: string, label: string, group: string | null): Skill => ({
+const skill = (id: string, label: string, group: Skill['group']): Skill => ({
   id,
   label,
   group,
@@ -17,46 +17,56 @@ const skill = (id: string, label: string, group: string | null): Skill => ({
 
 const UNITS = { kb: 'kB', mb: 'MB' }
 
+// `group` is a REQUIRED enum in the contract, not free text and never null.
 describe('groupSkills', () => {
   it('groups by the API group, preserving arrival order within each group', () => {
     const groups = groupSkills([
-      skill('1', 'Vue.js', 'Frontend'),
-      skill('2', 'Nuxt', 'Frontend'),
-      skill('3', 'NestJS', 'Backend')
+      skill('1', 'Vue.js', 'FRAMEWORK'),
+      skill('2', 'Nuxt', 'FRAMEWORK'),
+      skill('3', 'TypeScript', 'LANGUAGE')
     ])
 
     expect(groups).toEqual([
-      { group: 'Frontend', skills: [expect.objectContaining({ label: 'Vue.js' }), expect.objectContaining({ label: 'Nuxt' })] },
-      { group: 'Backend', skills: [expect.objectContaining({ label: 'NestJS' })] }
+      { group: 'FRAMEWORK', skills: [expect.objectContaining({ label: 'Vue.js' }), expect.objectContaining({ label: 'Nuxt' })] },
+      { group: 'LANGUAGE', skills: [expect.objectContaining({ label: 'TypeScript' })] }
     ])
   })
 
-  // The binding rule: group order is FIRST APPEARANCE in the API sequence. Sorting groups
-  // alphabetically here would silently reimpose a Web-side order over the owner's curated one.
-  it('orders groups by first appearance, never alphabetically', () => {
+  /**
+   * The binding rule: group order is FIRST APPEARANCE in the API sequence — not alphabetical,
+   * and *not* the enum's own declaration order. `TOOLING` precedes `LANGUAGE` here purely
+   * because the API sent it first, which is the owner's curated order.
+   */
+  it('orders groups by first appearance, never by the enum declaration order', () => {
     const groups = groupSkills([
-      skill('1', 'NestJS', 'Zebra'),
-      skill('2', 'Vue.js', 'Alpha')
+      skill('1', 'Git', 'TOOLING'),
+      skill('2', 'TypeScript', 'LANGUAGE')
     ])
 
-    expect(groups.map(g => g.group)).toEqual(['Zebra', 'Alpha'])
+    expect(groups.map(g => g.group)).toEqual(['TOOLING', 'LANGUAGE'])
   })
 
   // Interleaved members rejoin their group without disturbing the group sequence.
   it('reunites a group whose members are not adjacent', () => {
     const groups = groupSkills([
-      skill('1', 'Vue.js', 'Frontend'),
-      skill('2', 'NestJS', 'Backend'),
-      skill('3', 'Nuxt', 'Frontend')
+      skill('1', 'Vue.js', 'FRAMEWORK'),
+      skill('2', 'TypeScript', 'LANGUAGE'),
+      skill('3', 'Nuxt', 'FRAMEWORK')
     ])
 
-    expect(groups.map(g => g.group)).toEqual(['Frontend', 'Backend'])
+    expect(groups.map(g => g.group)).toEqual(['FRAMEWORK', 'LANGUAGE'])
     expect(groups[0]!.skills.map(s => s.label)).toEqual(['Vue.js', 'Nuxt'])
   })
 
-  it('keeps an ungrouped skill instead of dropping it', () => {
-    const groups = groupSkills([skill('1', 'Git', null)])
-    expect(groups).toEqual([{ group: '', skills: [expect.objectContaining({ label: 'Git' })] }])
+  it('handles all four contract groups', () => {
+    const groups = groupSkills([
+      skill('1', 'TypeScript', 'LANGUAGE'),
+      skill('2', 'Nuxt', 'FRAMEWORK'),
+      skill('3', 'Git', 'TOOLING'),
+      skill('4', 'SSR', 'PRACTICE')
+    ])
+
+    expect(groups.map(g => g.group)).toEqual(['LANGUAGE', 'FRAMEWORK', 'TOOLING', 'PRACTICE'])
   })
 
   it('returns nothing for an empty registry', () => {

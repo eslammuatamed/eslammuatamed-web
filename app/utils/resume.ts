@@ -6,9 +6,16 @@ import type { ProfileLink, SiteSettings, Skill } from '~/types/models'
  * can invent content.
  */
 
-/** One skill group, in the API's group order, holding its skills in the API's `order`. */
+/**
+ * One skill group, in the API's group order, holding its skills in the API's `order`.
+ *
+ * `group` is the contract's ENUM (`LANGUAGE | FRAMEWORK | TOOLING | PRACTICE`), required and
+ * never null — not free text. It is a token, not a label: rendering it directly would print
+ * "FRAMEWORK" on both locales. The localized labels already exist at
+ * `home.techStack.group.{GROUP}` and are reused rather than duplicated.
+ */
 export interface SkillGroup {
-  readonly group: string
+  readonly group: Skill['group']
   readonly skills: readonly Skill[]
 }
 
@@ -18,19 +25,15 @@ export interface SkillGroup {
  * The API returns skills already sorted by `Skill.order` and drops any skill untranslated in
  * the requested locale (D10-6), so the sequence that arrives is the owner's curated one.
  * Group order is therefore taken from FIRST APPEARANCE in that sequence — not alphabetically,
- * not by group name — because sorting groups here would silently reimpose a Web-side order
- * on top of the registry order the owner controls in the CMS.
- *
- * A `null` group is its own bucket keyed by the empty string; the caller decides how (or
- * whether) to label it. No skill is dropped for lacking a group.
+ * not by the enum's declaration order — because sorting groups here would silently reimpose a
+ * Web-side order on top of the registry order the owner controls in the CMS.
  */
 export function groupSkills(skills: readonly Skill[]): readonly SkillGroup[] {
-  const groups = new Map<string, Skill[]>()
+  const groups = new Map<Skill['group'], Skill[]>()
   for (const skill of skills) {
-    const key = skill.group ?? ''
-    const bucket = groups.get(key)
+    const bucket = groups.get(skill.group)
     if (bucket) bucket.push(skill)
-    else groups.set(key, [skill])
+    else groups.set(skill.group, [skill])
   }
   return [...groups].map(([group, list]) => ({ group, skills: list }))
 }

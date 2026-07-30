@@ -170,7 +170,6 @@
     "experienceErrorTitle": "Experience could not be loaded",
     "experienceErrorBody": "The request did not complete. This is usually temporary.",
     "skillsTitle": "Skills",
-    "skillsUngrouped": "Other",
     "skillsEmpty": "No skills are published yet.",
     "skillsErrorTitle": "Skills could not be loaded",
     "skillsErrorBody": "The request did not complete. This is usually temporary.",

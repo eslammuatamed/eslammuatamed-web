@@ -100,8 +100,9 @@ describe('ResumeEntry', () => {
     expect(wrapper.find('ul[aria-labelledby]').exists()).toBe(false)
   })
 
-  it('omits the location segment when the contract has none', async () => {
-    const wrapper = await mountSuspended(Entry, { props: { experience: experience({ location: null }) } })
+  // `location` is a required string in the contract, so "absent" means empty, not null.
+  it('omits the location segment when the contract carries an empty one', async () => {
+    const wrapper = await mountSuspended(Entry, { props: { experience: experience({ location: '' }) } })
     expect(wrapper.text()).not.toContain('Egypt')
     expect(wrapper.text()).toContain('WaveX')
   })
