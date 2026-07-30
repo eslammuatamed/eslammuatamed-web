@@ -227,17 +227,23 @@ useSeoMeta({
 }
 
 @media print {
-  /* Chrome is furniture. The header (sticky, glass) and the footer colophon carry no résumé
-     content and would cost most of a page between them.
-
-     GATED ON `body:has(.resume-page)`. These two selectors target elements this page does not
-     own, and a page component's <style> block is injected globally and STAYS loaded after a
-     client-side navigation away. Without the `:has()` gate, printing `/about` after having
-     visited `/resume` in the same session would silently lose its header and footer. The gate
-     makes the rules apply only while the résumé is actually on screen — CSS-only, no JS, and
-     no cleanup hook to forget. */
-  body:has(.resume-page) header,
-  body:has(.resume-page) footer {
+  /**
+   * Chrome is furniture. The sticky header, the colophon footer, the skip link and the
+   * back-to-top control carry no résumé content and would cost most of a page between them.
+   *
+   * SCOPED TO LAYOUT-LEVEL SIBLINGS OF `<main>`, not to `header`/`footer` by tag. The page's OWN
+   * identity block is a `<header>` too — it holds the name, the positioning line and the contact
+   * row — so a bare `header { display: none }` printed a résumé with no name on it. This selects
+   * "every child of the element that contains `#main-content`, except `#main-content` itself",
+   * which reaches exactly the shell and cannot reach anything inside the page.
+   *
+   * GATED ON `body:has(.resume-page)`. These selectors target elements this page does not own,
+   * and a page component's <style> block is injected globally and STAYS loaded after a
+   * client-side navigation away. Without the gate, printing `/about` after having visited
+   * `/resume` in the same session would silently lose its chrome. CSS-only — no JS, no cleanup
+   * hook to forget.
+   */
+  body:has(.resume-page) :has(> #main-content) > *:not(#main-content) {
     display: none !important;
   }
 

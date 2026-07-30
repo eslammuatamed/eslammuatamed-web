@@ -63,7 +63,10 @@ function print(): void {
       :aria-label="downloadLabel"
     >
       {{ t('resume.pdf.download') }}
-      <span v-if="sizeLabel" class="font-mono text-caption opacity-70">{{ sizeLabel }}</span>
+      <!-- No `opacity`: dimming this on the violet primary surface measured 3.55:1 against
+           #7f22fe, below the 4.5:1 floor for text this size (axe, serious). The size is small
+           and monospaced, which is enough to read it as secondary without lowering contrast. -->
+      <span v-if="sizeLabel" class="font-mono text-caption">{{ sizeLabel }}</span>
     </UButton>
 
     <!-- PDF unavailable. An honest, localized note — NOT a disabled button and NOT a link to a

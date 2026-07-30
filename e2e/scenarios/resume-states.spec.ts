@@ -20,6 +20,17 @@ async function open(page: import('@playwright/test').Page, path: string) {
   return page.goto(path, { waitUntil: 'domcontentloaded' })
 }
 
+/**
+ * Click the language toggle, matching the idiom `locale-switch.spec.ts` established.
+ *
+ * The toggle renders the locale CODE (`EN` / `AR`) as its visible label and carries the full
+ * language name only as a `title`, so the accessible name is the code — scoped to the labelled
+ * `group` so the assertion cannot accidentally match some other two-letter link on the page.
+ */
+async function switchTo(page: import('@playwright/test').Page, code: 'EN' | 'AR') {
+  await page.getByRole('group', { name: /language|لغة/i }).first().getByRole('link', { name: code }).click()
+}
+
 test.describe('PDF unavailable — the real live state', () => {
   test('renders the honest notice and offers no download', async ({ page }) => {
     await open(page, EN)
@@ -137,7 +148,7 @@ test.describe('Locale transition', () => {
     await open(page, EN)
     await expect(page.getByText('No roles are published yet.')).toBeVisible()
 
-    await page.getByRole('link', { name: 'العربية' }).first().click()
+    await switchTo(page, 'AR')
 
     await expect(page).toHaveURL(/\/ar\/resume$/)
     await expect(page.locator('html')).toHaveAttribute('lang', 'ar')
@@ -152,7 +163,7 @@ test.describe('Locale transition', () => {
 
   test('AR → EN flips back with no stale Arabic content or metadata', async ({ page }) => {
     await open(page, AR)
-    await page.getByRole('link', { name: 'English' }).first().click()
+    await switchTo(page, 'EN')
 
     await expect(page).toHaveURL(/\/resume$/)
     await expect(page.locator('html')).toHaveAttribute('lang', 'en-US')
@@ -173,7 +184,7 @@ test.describe('Locale transition', () => {
     })
 
     await open(page, EN)
-    await page.getByRole('link', { name: 'العربية' }).first().click()
+    await switchTo(page, 'AR')
     await expect(page).toHaveURL(/\/ar\/resume$/)
 
     // At most one browser-side settings read per locale — never two for the same one.

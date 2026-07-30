@@ -69,18 +69,18 @@ Checked only after execution and verification.
 - [x] T071 typecheck
 - [x] T072 typecheck:e2e
 - [x] T073 unit/component suite
-- [ ] T074 build + bundle isolation
-- [ ] T075 route-size + CSS budgets for `/resume` and `/ar/resume`
-- [ ] T076 e2e: contract + scenarios + readiness + resume-pdf
-- [ ] T077 flake check at CI concurrency
-- [ ] T078 Lighthouse desktop + mobile medians
-- [ ] T079 Exact-head CI green
+- [x] T074 build + bundle isolation
+- [x] T075 route-size + CSS budgets for `/resume` and `/ar/resume`
+- [x] T076 e2e: contract + scenarios + readiness + resume-pdf (216 passed)
+- [x] T077 flake check at CI concurrency (3 consecutive green runs, 0 flaky)
+- [x] T078 Lighthouse desktop + mobile medians
+- [ ] T079 Exact-head CI green — awaiting the run on the pushed head
 
 ## Docs-first
 
-- [ ] T080 Docs D20 decision adding `/resume` + `/ar/resume` to the performance matrix (no threshold change)
-- [ ] T081 Squash-merge the Docs performance PR before Web merge eligibility
-- [ ] T082 Docs governance for the canonical 2026-08 PDF (identity by SHA-256, 2026-07 superseded) — **separate PR, left open**
+- [x] T080 Docs D20-21 adding `/resume` + `/ar/resume` to the performance matrix (no threshold change)
+- [x] T081 Squash-merge the Docs performance PR before Web merge eligibility (PR #30 → `c02dc23d`)
+- [x] T082 Docs governance for the canonical 2026-08 PDF (identity by SHA-256, 2026-07 superseded) — PR #31 **opened and deliberately left open** (a retained blocker)
 - [x] T083 Arabic module documentation for the résumé slice
 - [x] T084 Feature-map entry for 010
 

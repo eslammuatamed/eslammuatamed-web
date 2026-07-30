@@ -110,6 +110,18 @@ rather than inventing one.
 ## 8. Findings
 
 - **F-1 (carried)** — no branded social-image fallback, so no `og:image` is emitted.
+- **F-5 (new, pre-existing, not caused by this slice)** — the **document** overflows horizontally
+  at a 320 px viewport on **every** public route in this build: `/` by 9 px and `/about`,
+  `/experience`, `/projects` and `/resume` by 2 px each (measured: `scrollWidth` 329/322 vs
+  `clientWidth` 320). The overflowing node is the **global header's trailing control cluster**
+  (language toggle + theme toggle + menu trigger), which this slice does not touch. The résumé's
+  own `<main>` is clean in both locales.
+
+  This slice's layout gate therefore asserts **`<main>`**, not the document. Asserting the
+  document would import a merged-007 chrome defect into a gate this slice cannot satisfy — it
+  would either fail for something the slice did not cause, or be quietly loosened. Fixing the
+  header is a site-wide change to already-merged chrome and belongs to its own change, not to a
+  résumé slice.
 - **R-1 (new, documentation-only)** — the canonical PDF's headline reads
   `Frontend Developer | Vue.js & Nuxt.js`, a variant of the *superseded* pre-v1.0.0 positioning;
   the governed public title is `JavaScript Product Engineer — …`. The HTML résumé renders the
