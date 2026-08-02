@@ -236,7 +236,8 @@
     },
     "success": {
       "title": "Message received",
-      "body": "Thanks — your submission has been received."
+      "body": "Thanks — your submission has been received.",
+      "again": "Send another message"
     },
     "error": {
       "validationTitle": "Check the form",

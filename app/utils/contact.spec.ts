@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import {
+  COUNTRY_RULES,
+  DIAL_CODES,
+  OTHER_DIAL_CODE,
+  normalizePhone,
+  toAsciiDigits,
+  validatePhone,
   CONTACT_LIMITS,
   MIN_FILL_MS,
   formatRetryAfter,
@@ -134,5 +140,155 @@ describe('CONTACT_LIMITS', () => {
   // Mirrored from CreateContactMessageDto so the client rejects exactly what the server would.
   it('matches the API caps', () => {
     expect(CONTACT_LIMITS).toEqual({ name: 200, email: 320, subject: 300, body: 5000 })
+  })
+})
+
+
+// ── country-aware normalization (D13-6) ───────────────────────────────────────────────────────
+// Structural validation only: that a number is well-formed for the selected plan, never that it is
+// in service or belongs to the sender. The API stays authoritative.
+
+const norm = (code: string, input: string) => normalizePhone(code as never, input)
+const ok = (code: string, input: string) => {
+  const n = norm(code, input)
+  return n !== null && validatePhone(code as never, n)
+}
+
+describe('toAsciiDigits', () => {
+  it('folds Arabic-Indic digits', () => {
+    expect(toAsciiDigits('٠١٠٠٢٧٨٥٤٠٨')).toBe('01002785408')
+  })
+
+  it('folds Extended Arabic-Indic (Persian) digits', () => {
+    expect(toAsciiDigits('۰۱۰۰۲۷۸۵۴۰۸')).toBe('01002785408')
+  })
+
+  it('leaves ASCII and punctuation alone', () => {
+    expect(toAsciiDigits('+20 100-278')).toBe('+20 100-278')
+  })
+})
+
+describe('normalizePhone — general rules', () => {
+  it('returns null for an empty entry so "no phone" stays distinct from "bad phone"', () => {
+    expect(norm('+20', '   ')).toBeNull()
+  })
+
+  it('removes spaces, hyphens, parentheses and dots', () => {
+    expect(norm('+20', '(0100) 278-5408')).toBe('+201002785408')
+    expect(norm('+20', '0100.278.5408')).toBe('+201002785408')
+  })
+
+  it('rewrites a leading 00 international prefix to +', () => {
+    expect(norm('+20', '00201002785408')).toBe('+201002785408')
+  })
+
+  it('adds the selected dialing code to a local national number', () => {
+    expect(norm('+965', '51234567')).toBe('+96551234567')
+  })
+
+  it('never doubles an already-present dialing code', () => {
+    expect(norm('+20', '201002785408')).toBe('+201002785408')
+    expect(norm('+20', '+201002785408')).toBe('+201002785408')
+  })
+
+  it('strips the trunk prefix only where the plan defines one', () => {
+    expect(norm('+20', '01002785408')).toBe('+201002785408')
+    // Kuwait has no trunk prefix, so a leading digit is part of the number.
+    expect(norm('+965', '51234567')).toBe('+96551234567')
+  })
+
+  it('keeps a conflicting international number as typed so it is rejected, not re-homed', () => {
+    expect(norm('+20', '+966512345678')).toBe('+966512345678')
+    expect(ok('+20', '+966512345678')).toBe(false)
+  })
+
+  describe('Other country', () => {
+    it('accepts a complete + international number', () => {
+      expect(ok(OTHER_DIAL_CODE, '+1 202 555 0123')).toBe(true)
+      expect(norm(OTHER_DIAL_CODE, '+1 202 555 0123')).toBe('+12025550123')
+    })
+
+    it('rejects a number without the leading +', () => {
+      expect(ok(OTHER_DIAL_CODE, '2025550123')).toBe(false)
+    })
+
+    it('accepts 00 as the international prefix', () => {
+      expect(norm(OTHER_DIAL_CODE, '0012025550123')).toBe('+12025550123')
+    })
+  })
+})
+
+describe('Egypt (+20)', () => {
+  // Every one of these is the same number written the way a real visitor might type it.
+  it.each([
+    ['national with trunk zero', '01002785408'],
+    ['spaced', '0100 278 5408'],
+    ['hyphenated', '0100-278-5408'],
+    ['country code, no plus', '201002785408'],
+    ['full E.164', '+201002785408'],
+    ['00 prefix', '00201002785408'],
+    ['Arabic digits', '٠١٠٠٢٧٨٥٤٠٨']
+  ])('%s normalizes to +201002785408', (_label, input) => {
+    expect(norm('+20', input)).toBe('+201002785408')
+    expect(ok('+20', input)).toBe(true)
+  })
+
+  it.each([['010'], ['011'], ['012'], ['015']])('accepts the %s mobile prefix', (prefix) => {
+    expect(ok('+20', `${prefix}02785408`)).toBe(true)
+  })
+
+  it.each([
+    ['unassigned mobile prefix', '01302785408'],
+    ['too short', '0100278540'],
+    ['too long', '010027854080'],
+    ['duplicated country code', '+2020100278540'],
+    ['another country while Egypt is selected', '+966512345678']
+  ])('rejects %s', (_label, input) => {
+    expect(ok('+20', input)).toBe(false)
+  })
+})
+
+describe('GCC plans', () => {
+  it.each([
+    ['+966', '0512345678', '+966512345678'],
+    ['+971', '0512345678', '+971512345678']
+  ])('%s strips the trunk zero → %s', (code, input, expected) => {
+    expect(norm(code, input)).toBe(expected)
+    expect(ok(code, input)).toBe(true)
+  })
+
+  it.each([
+    ['+965', '51234567'],
+    ['+974', '33123456'],
+    ['+973', '36123456'],
+    ['+968', '91234567']
+  ])('%s accepts its 8-digit national number', (code, input) => {
+    expect(ok(code, input)).toBe(true)
+  })
+
+  it.each([
+    ['+966', '0412345678'],
+    ['+971', '0412345678']
+  ])('%s rejects a non-mobile prefix', (code, input) => {
+    expect(ok(code, input)).toBe(false)
+  })
+
+  it.each([
+    ['+965', '5123456'],
+    ['+974', '331234567'],
+    ['+973', '3612345'],
+    ['+968', '912345678']
+  ])('%s rejects an incorrect national length', (code, input) => {
+    expect(ok(code, input)).toBe(false)
+  })
+})
+
+describe('COUNTRY_RULES coverage', () => {
+  it('defines a rule for every offered dialing code', () => {
+    for (const code of DIAL_CODES) expect(COUNTRY_RULES[code]).toBeDefined()
+  })
+
+  it('offers exactly the seven approved markets', () => {
+    expect([...DIAL_CODES]).toEqual(['+20', '+966', '+971', '+965', '+974', '+973', '+968'])
   })
 })

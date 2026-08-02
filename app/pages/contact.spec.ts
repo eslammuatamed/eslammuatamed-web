@@ -99,7 +99,8 @@ async function fillAndSubmit(wrapper: Awaited<ReturnType<typeof mountSuspended>>
     ...overrides
   }
   for (const [field, value] of Object.entries(values)) {
-    await wrapper.find(`input[name="${field}"], textarea[name="${field}"]`).setValue(value)
+    const control = wrapper.find(`input[name="${field}"], textarea[name="${field}"]`)
+    if (control.exists()) await control.setValue(value)
   }
   await wrapper.find('form').trigger('submit')
   await flush()
@@ -359,17 +360,23 @@ describe('contact page — outcome states', () => {
     expect(wrapper.text()).not.toMatch(/inbox|delivered|stored|saved/i)
   })
 
-  it('clears the visible fields after a confirmed 200', async () => {
+  it('clears the visible fields after a confirmed 200 (seen on the restored form)', async () => {
     const wrapper = await mountSuspended(ContactPage)
     await fillAndSubmit(wrapper)
-    const nameInput = wrapper.find('input[name="name"]').element as HTMLInputElement
-    expect(nameInput.value).toBe('')
+    // Success REPLACES the form, so the cleared values are observed after returning to it.
+    const again = wrapper.findAll('button').find(b => b.text() === translate('contact.success.again'))
+    await again!.trigger('click')
+    await flush()
+    expect((wrapper.find('input[name="name"]').element as HTMLInputElement).value).toBe('')
   })
 
-  it('resets the honeypot after a confirmed 200', async () => {
+  it('resets the honeypot after a confirmed 200 (seen on the restored form)', async () => {
     const wrapper = await mountSuspended(ContactPage)
     await wrapper.find('input[name="company-url"]').setValue('bot')
     await fillAndSubmit(wrapper)
+    const again = wrapper.findAll('button').find(b => b.text() === translate('contact.success.again'))
+    await again!.trigger('click')
+    await flush()
     expect((wrapper.find('input[name="company-url"]').element as HTMLInputElement).value).toBe('')
   })
 
@@ -433,7 +440,8 @@ describe('contact page — outcome states', () => {
     expect(nameInput.value).toBe('Alex Morgan')
   })
 
-  it('exposes one labelled live region for the outcome', async () => {
+  it('exposes exactly one live region for a recoverable outcome', async () => {
+    post.mockRejectedValue(new ApiError({ type: 'about:blank', title: 'Boom', status: 500 }))
     const wrapper = await mountSuspended(ContactPage)
     await fillAndSubmit(wrapper)
     const regions = wrapper.findAll('[role="status"]')
@@ -461,12 +469,12 @@ describe('contact page — double submission', () => {
 
 describe('contact page — locale switch resets the form', () => {
   it('clears entered values, the honeypot and the status', async () => {
+    post.mockRejectedValue(new ApiError({ type: 'about:blank', title: 'Boom', status: 500 }))
     const wrapper = await mountSuspended(ContactPage)
     await fillAndSubmit(wrapper)
-    expect(wrapper.text()).toContain(translate('contact.success.title'))
+    expect(wrapper.text()).toContain(translate('contact.error.serverTitle'))
 
     await wrapper.find('input[name="company-url"]').setValue('bot')
-    await wrapper.find('input[name="name"]').setValue('Alex Morgan')
 
     locale.value = 'ar'
     await flush()
@@ -474,6 +482,18 @@ describe('contact page — locale switch resets the form', () => {
     expect((wrapper.find('input[name="name"]').element as HTMLInputElement).value).toBe('')
     expect((wrapper.find('input[name="company-url"]').element as HTMLInputElement).value).toBe('')
     expect(wrapper.findAll('[role="status"]')).toHaveLength(0)
+  })
+
+  it('dismisses a success state on locale switch and restores a fresh form', async () => {
+    const wrapper = await mountSuspended(ContactPage)
+    await fillAndSubmit(wrapper)
+    expect(wrapper.text()).toContain(translate('contact.success.title'))
+
+    locale.value = 'ar'
+    await flush()
+
+    expect(wrapper.find('form').exists()).toBe(true)
+    expect(wrapper.text()).not.toContain('Message received')
   })
 })
 
@@ -613,5 +633,188 @@ describe('contact page — validation copy', () => {
     await fillAndSubmit(wrapper, { email: '' })
     expect(wrapper.text()).toContain(translate('contact.errors.contactMethodRequired'))
     expect(wrapper.text()).not.toContain('Invalid input')
+  })
+})
+
+
+// ── F-6: the shared contact-method invariant must never go stale ──────────────────────────────
+//
+// Root cause: `UForm._validate({ name })` sets `errors.value = filterErrorsByNames(allErrors,
+// names)`, so a per-field revalidation REPLACES the error list with only that field's errors, and
+// an `input` event revalidates a field only once it has been blurred. A cross-field issue filed
+// under `email` was therefore never re-judged when the phone changed — the message stayed and the
+// next submit stayed blocked. The invariant is now a computed over current form values.
+describe('contact page — F-6 stale contact-method error', () => {
+  // The exact reported sequence.
+  it('clears the shared error when a phone is entered after a failed submit, and submits', async () => {
+    const wrapper = await mountSuspended(ContactPage)
+
+    // 1-2. Submit with both methods empty → the shared error appears.
+    await fillAndSubmit(wrapper, { email: '' })
+    expect(post).not.toHaveBeenCalled()
+    expect(wrapper.text()).toContain(translate('contact.errors.contactMethodRequired'))
+
+    // 3-4. Enter a valid phone → the stale error must go immediately, with no resubmit needed.
+    await wrapper.find('input[name="nationalNumber"]').setValue('1002785408')
+    await flush()
+    expect(wrapper.text()).not.toContain(translate('contact.errors.contactMethodRequired'))
+
+    // 5. Resubmission proceeds without a page reload.
+    await wrapper.find('form').trigger('submit')
+    await flush()
+    expect(post).toHaveBeenCalledTimes(1)
+    const [, options] = post.mock.calls[0] as [string, { body: Record<string, unknown> }]
+    expect(options.body.phone).toBe('+201002785408')
+  })
+
+  it('clears the shared error when an email is entered instead', async () => {
+    const wrapper = await mountSuspended(ContactPage)
+    await fillAndSubmit(wrapper, { email: '' })
+    expect(wrapper.text()).toContain(translate('contact.errors.contactMethodRequired'))
+
+    await wrapper.find('input[name="email"]').setValue('alex@example.com')
+    await flush()
+    expect(wrapper.text()).not.toContain(translate('contact.errors.contactMethodRequired'))
+  })
+
+  it('restores the shared error when both methods are emptied again', async () => {
+    const wrapper = await mountSuspended(ContactPage)
+    await fillAndSubmit(wrapper, { email: '' })
+    await wrapper.find('input[name="nationalNumber"]').setValue('1002785408')
+    await flush()
+    expect(wrapper.text()).not.toContain(translate('contact.errors.contactMethodRequired'))
+
+    await wrapper.find('input[name="nationalNumber"]').setValue('')
+    await flush()
+    expect(wrapper.text()).toContain(translate('contact.errors.contactMethodRequired'))
+  })
+
+  it('keeps a malformed email as an email-specific error while a valid phone is present', async () => {
+    const wrapper = await mountSuspended(ContactPage)
+    await wrapper.find('input[name="nationalNumber"]').setValue('1002785408')
+    await fillAndSubmit(wrapper, { email: 'not-an-email' })
+    expect(post).not.toHaveBeenCalled()
+    expect(wrapper.text()).toContain(translate('contact.errors.emailInvalid'))
+    expect(wrapper.text()).not.toContain(translate('contact.errors.contactMethodRequired'))
+  })
+
+  it('keeps a malformed phone as a phone-specific error while a valid email is present', async () => {
+    const wrapper = await mountSuspended(ContactPage)
+    await wrapper.find('input[name="nationalNumber"]').setValue('12')
+    await fillAndSubmit(wrapper)
+    expect(post).not.toHaveBeenCalled()
+    expect(wrapper.text()).toContain(translate('contact.errors.phoneInvalid'))
+    expect(wrapper.text()).not.toContain(translate('contact.errors.contactMethodRequired'))
+  })
+
+  it('shows the shared error exactly once, never duplicated', async () => {
+    const wrapper = await mountSuspended(ContactPage)
+    await fillAndSubmit(wrapper, { email: '' })
+    await wrapper.find('form').trigger('submit')
+    await flush()
+    const matches = wrapper.text().split(translate('contact.errors.contactMethodRequired')).length - 1
+    expect(matches).toBe(1)
+  })
+
+  it('associates the shared error with the email input for assistive technology', async () => {
+    const wrapper = await mountSuspended(ContactPage)
+    await fillAndSubmit(wrapper, { email: '' })
+    const email = wrapper.find('input[name="email"]')
+    expect(email.attributes('aria-describedby')).toBe('contact-method-error')
+    // `aria-invalid` is owned by UFormField's own error state and is deliberately not overridden
+    // here; the announcement comes from role="alert" plus the describedby association.
+    expect(wrapper.find('#contact-method-error').attributes('role')).toBe('alert')
+  })
+
+  it('does not show the shared error on first paint', async () => {
+    const wrapper = await mountSuspended(ContactPage)
+    expect(wrapper.text()).not.toContain(translate('contact.errors.contactMethodRequired'))
+  })
+})
+
+// ── success-state lifecycle ───────────────────────────────────────────────────────────────────
+describe('contact page — success state', () => {
+  it('replaces the form with a success state after a confirmed 200', async () => {
+    const wrapper = await mountSuspended(ContactPage)
+    await fillAndSubmit(wrapper)
+    expect(wrapper.text()).toContain(translate('contact.success.title'))
+    expect(wrapper.text()).toContain(translate('contact.success.body'))
+    // The form itself is gone, not merely topped with a banner.
+    expect(wrapper.find('form').exists()).toBe(false)
+  })
+
+  it('never claims the message was persisted in an inbox', async () => {
+    const wrapper = await mountSuspended(ContactPage)
+    await fillAndSubmit(wrapper)
+    expect(wrapper.text()).not.toMatch(/inbox|delivered|stored|saved/i)
+  })
+
+  it('keeps the direct-contact methods visible in the left column', async () => {
+    const wrapper = await mountSuspended(ContactPage)
+    await fillAndSubmit(wrapper)
+    const html = wrapper.html()
+    expect(html).toContain('mailto:contact@eslammuatamed.com')
+    expect(html).toContain('tel:+201002785408')
+    expect(html).toContain('wa.me/201002785408')
+  })
+
+  it('announces the state and exposes a focusable heading', async () => {
+    const wrapper = await mountSuspended(ContactPage)
+    await fillAndSubmit(wrapper)
+    const region = wrapper.find('[role="status"]')
+    expect(region.exists()).toBe(true)
+    expect(region.attributes('aria-live')).toBe('polite')
+    expect(wrapper.find('h2[tabindex="-1"]').text()).toBe(translate('contact.success.title'))
+  })
+
+  it('offers Send another message, which restores a fresh empty form', async () => {
+    const wrapper = await mountSuspended(ContactPage)
+    await fillAndSubmit(wrapper)
+
+    const again = wrapper.findAll('button').find(b => b.text() === translate('contact.success.again'))
+    expect(again).toBeDefined()
+    await again!.trigger('click')
+    await flush()
+
+    expect(wrapper.find('form').exists()).toBe(true)
+    expect(wrapper.text()).not.toContain(translate('contact.success.title'))
+    expect((wrapper.find('input[name="name"]').element as HTMLInputElement).value).toBe('')
+    expect((wrapper.find('input[name="company-url"]').element as HTMLInputElement).value).toBe('')
+  })
+
+  it('clears the honeypot and stale validation errors on success', async () => {
+    const wrapper = await mountSuspended(ContactPage)
+    await fillAndSubmit(wrapper, { email: '' })
+    expect(wrapper.text()).toContain(translate('contact.errors.contactMethodRequired'))
+
+    await wrapper.find('input[name="company-url"]').setValue('bot')
+    await wrapper.find('input[name="email"]').setValue('alex@example.com')
+    await wrapper.find('form').trigger('submit')
+    await flush()
+
+    expect(wrapper.text()).toContain(translate('contact.success.title'))
+    expect(wrapper.text()).not.toContain(translate('contact.errors.contactMethodRequired'))
+  })
+
+  it('sends a fresh elapsedMs on the next submission after Send another message', async () => {
+    const wrapper = await mountSuspended(ContactPage)
+    await fillAndSubmit(wrapper)
+    const again = wrapper.findAll('button').find(b => b.text() === translate('contact.success.again'))
+    await again!.trigger('click')
+    await flush()
+
+    await fillAndSubmit(wrapper)
+    expect(post).toHaveBeenCalledTimes(2)
+    const [, second] = post.mock.calls[1] as [string, { body: { elapsedMs: number } }]
+    expect(second.body.elapsedMs).toBeGreaterThanOrEqual(3000)
+  })
+
+  it('keeps recoverable errors inline in the form panel, not as a success state', async () => {
+    post.mockRejectedValue(new ApiError({ type: 'about:blank', title: 'Boom', status: 500 }))
+    const wrapper = await mountSuspended(ContactPage)
+    await fillAndSubmit(wrapper)
+    expect(wrapper.find('form').exists()).toBe(true)
+    expect(wrapper.text()).toContain(translate('contact.error.serverTitle'))
+    expect(wrapper.text()).not.toContain(translate('contact.success.title'))
   })
 })

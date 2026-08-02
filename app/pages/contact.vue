@@ -29,41 +29,42 @@ const { data: settings } = useSiteSettings()
 // Mirrors the API (D10-15 trimming, D10-16 pair rule). `email` and `phone` are individually optional
 // but `superRefine` requires at least one — and a SUPPLIED value is still format-checked, so a
 // mistyped address is an error rather than something quietly ignored because a phone is present.
+// The form's shape, declared explicitly rather than inferred from the schema. The schema needs a
+// sibling field (`dialCode`) to judge the phone, and inferring `state` from the schema while the
+// schema reads `state` is a type cycle — so the interface is the single source of the shape and
+// `superRefine` reads the sibling from the value under validation instead.
+interface ContactForm {
+  name: string
+  email: string
+  dialCode: string
+  nationalNumber: string
+  subject: string
+  body: string
+}
+
+// Per-field rules ONLY. The email-or-phone invariant is deliberately NOT here — see
+// `contactMethodMissing` below for why a cross-field rule cannot live in the schema safely.
+//
+// `email` and `phone` are individually optional; a SUPPLIED value is still format-checked, so a
+// mistyped address is an error rather than something quietly ignored because the other is fine.
 const schema = z.object({
   name: z.string().trim().min(1, t('contact.errors.nameRequired')).max(CONTACT_LIMITS.name, t('contact.errors.nameTooLong')),
-  email: z.string().trim().max(CONTACT_LIMITS.email, t('contact.errors.emailTooLong')).optional(),
+  email: z.string().trim().max(CONTACT_LIMITS.email, t('contact.errors.emailTooLong'))
+    .refine(value => value === '' || z.email().safeParse(value).success, t('contact.errors.emailInvalid')),
   dialCode: z.string(),
-  nationalNumber: z.string().optional(),
+  nationalNumber: z.string(),
   subject: z.string().trim().min(1, t('contact.errors.subjectRequired')).max(CONTACT_LIMITS.subject, t('contact.errors.subjectTooLong')),
   body: z.string().trim().min(1, t('contact.errors.bodyRequired')).max(CONTACT_LIMITS.body, t('contact.errors.bodyTooLong'))
 }).superRefine((value, ctx) => {
-  const emailGiven = (value.email ?? '').trim() !== ''
-  const phoneGiven = (value.nationalNumber ?? '').trim() !== ''
-
-  if (emailGiven && !z.email().safeParse((value.email ?? '').trim()).success) {
-    ctx.addIssue({ code: 'custom', path: ['email'], message: t('contact.errors.emailInvalid') })
-  }
-
-  if (phoneGiven) {
-    const composed = composeE164(value.dialCode as DialCode, value.nationalNumber ?? '')
-    if (composed === null || !isPlausibleE164(composed)) {
-      ctx.addIssue({ code: 'custom', path: ['nationalNumber'], message: t('contact.errors.phoneInvalid') })
-    }
-  }
-
-  // The pair rule. Reported on `email` so a blank form yields one clear error against the first
-  // field of the pair rather than two competing ones — matching where the API reports it.
-  if (!emailGiven && !phoneGiven) {
-    ctx.addIssue({ code: 'custom', path: ['email'], message: t('contact.errors.contactMethodRequired') })
+  // Phone validity needs BOTH the dialing code and the number, so it is an object-level check —
+  // but it stays keyed to `nationalNumber` because it is that field the visitor must correct.
+  const normalized = normalizePhone(value.dialCode as DialCode, value.nationalNumber)
+  if (normalized !== null && !validatePhone(value.dialCode as DialCode, normalized)) {
+    ctx.addIssue({ code: 'custom', path: ['nationalNumber'], message: t('contact.errors.phoneInvalid') })
   }
 })
-type Schema = z.output<typeof schema>
 
-// Initialized to EMPTY STRINGS, not `undefined`, and that matters for the error copy: with
-// `undefined`, `z.string()` fails on the TYPE before `.min(1, …)` is ever reached, so every blank
-// required field rendered zod's generic "Invalid input" instead of the authored message. An empty
-// string reaches the length check and produces the real localized text.
-const emptyForm = (): Schema => ({
+const emptyForm = (): ContactForm => ({
   name: '',
   email: '',
   dialCode: DIAL_CODES[0],
@@ -72,7 +73,7 @@ const emptyForm = (): Schema => ({
   body: ''
 })
 
-const state = reactive<Schema>(emptyForm())
+const state = reactive<ContactForm>(emptyForm())
 
 // The honeypot lives outside `state` and outside the schema. Its DOM name is deliberately not
 // `website`; the value maps onto the contract key only when the request body is assembled.
@@ -80,6 +81,7 @@ const companyUrl = ref('')
 
 const form = useTemplateRef('form')
 const statusRegion = useTemplateRef<HTMLElement>('statusRegion')
+const successHeading = useTemplateRef<HTMLElement>('successHeading')
 const pending = ref(false)
 
 type Outcome = 'success' | 'validation' | 'rateLimit' | 'server' | 'network'
@@ -96,6 +98,36 @@ const dialOptions = computed(() => [
   { value: OTHER_DIAL_CODE as DialCode, label: t('contact.form.otherCountry') }
 ])
 const isOtherCountry = computed(() => state.dialCode === OTHER_DIAL_CODE)
+
+// Switching country changes what counts as a valid number, so the number's own error is re-judged
+// rather than left showing a verdict from the previous plan.
+watch(() => state.dialCode, () => {
+  if ((state.nationalNumber ?? '').trim() !== '') void form.value?.validate({ silent: true })
+})
+
+// ── the email-or-phone invariant (F-6) ────────────────────────────────────────────────────────
+//
+// DERIVED from current form values, not stored as a form error, and that is the whole fix.
+//
+// `UForm._validate({ name })` sets `errors.value = filterErrorsByNames(allErrors, names)` — a
+// per-field revalidation REPLACES the error list with only that field's errors — and an `input`
+// event revalidates a field only once it has been blurred. A cross-field issue keyed to `email`
+// therefore never got re-evaluated when `nationalNumber` changed: the stale message stayed on
+// screen and the next submit was still blocked (F-6). Any variant that files the shared invariant
+// under one field's name inherits that lifecycle.
+//
+// As a computed over `state`, it re-evaluates the instant either input changes, so it cannot go
+// stale in either direction: filling either method clears it, emptying both restores it.
+const emailGiven = computed(() => (state.email ?? '').trim() !== '')
+const phoneGiven = computed(() => (state.nationalNumber ?? '').trim() !== '')
+const contactMethodMissing = computed(() => !emailGiven.value && !phoneGiven.value)
+
+// Shown once the visitor has engaged with the group or attempted a submit — never on first paint.
+const contactMethodTouched = ref(false)
+const showContactMethodError = computed(() => contactMethodTouched.value && contactMethodMissing.value)
+watch([emailGiven, phoneGiven], () => {
+  if (!contactMethodMissing.value) contactMethodTouched.value = true
+})
 
 // ── time trap ─────────────────────────────────────────────────────────────────────────────────
 // `performance.now()`, not `Date.now()`: monotonic, so a clock step mid-fill cannot corrupt it.
@@ -117,6 +149,7 @@ async function waitOutFillTrap(): Promise<void> {
 
 function clearForm(): void {
   Object.assign(state, emptyForm())
+  contactMethodTouched.value = false
   companyUrl.value = ''
   form.value?.clear()
   resetTimingOrigin()
@@ -130,9 +163,18 @@ watch(locale, () => {
   retryAfterLabel.value = null
 })
 
-async function onSubmit(event: FormSubmitEvent<Schema>): Promise<void> {
+async function onSubmit(event: FormSubmitEvent<ContactForm>): Promise<void> {
   // One guard covering the anti-spam wait AND the network request.
   if (pending.value) return
+
+  // The group invariant is checked here rather than in the schema. Focus moves to the first field
+  // of the pair so a keyboard user lands on something they can act on.
+  contactMethodTouched.value = true
+  if (contactMethodMissing.value) {
+    await nextTick()
+    document.getElementById('contact-email')?.focus()
+    return
+  }
   pending.value = true
   outcome.value = null
   retryAfterLabel.value = null
@@ -143,7 +185,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>): Promise<void> {
     const elapsedMs = toElapsedMs(performance.now() - filledFrom.value)
 
     const email = (event.data.email ?? '').trim()
-    const phone = composeE164(event.data.dialCode as DialCode, event.data.nationalNumber ?? '')
+    const phone = normalizePhone(event.data.dialCode as DialCode, event.data.nationalNumber ?? '')
 
     await api<Envelope<{ received: boolean }>>('/contact', {
       method: 'POST',
@@ -192,8 +234,28 @@ async function onSubmit(event: FormSubmitEvent<Schema>): Promise<void> {
   finally {
     pending.value = false
   }
+
+  // Focus follows the outcome so a keyboard or screen-reader user is told what happened instead of
+  // being left on a button whose label just changed back. The success state replaces the form, so
+  // its heading is the correct landing point; every other outcome keeps the form and lands on the
+  // inline message above it.
   await nextTick()
-  statusRegion.value?.focus()
+  if (outcome.value === 'success') {
+    successHeading.value?.focus()
+  }
+  else {
+    statusRegion.value?.focus()
+  }
+}
+
+// Returns to a fresh form. The success state is dismissed by an explicit action rather than a timer,
+// so nothing critical depends on a transient notification.
+async function startAnother(): Promise<void> {
+  outcome.value = null
+  retryAfterLabel.value = null
+  clearForm()
+  await nextTick()
+  document.getElementById('contact-name')?.focus()
 }
 
 const outcomeTitle = computed(() => {
@@ -270,6 +332,42 @@ useSeoMeta({
 
       <!-- The primary action, in a restrained panel rather than bare full-width inputs. -->
       <div class="rounded-xl border border-default bg-elevated/40 p-6 sm:p-8">
+        <!--
+          Success REPLACES the form rather than sitting above it as a banner, and it is dismissed by
+          an explicit action rather than a timer — nothing critical depends on a transient
+          notification. The direct-contact methods stay visible in the left column throughout.
+        -->
+        <div
+          v-if="outcome === 'success'"
+          role="status"
+          aria-live="polite"
+          class="py-6 text-center"
+        >
+          <UIcon name="i-lucide-circle-check" class="size-10 text-success" aria-hidden="true" />
+          <!-- `tabindex="-1"` so focus can land here; it is the correct destination now that the
+               form it replaced is gone. -->
+          <h2
+            ref="successHeading"
+            tabindex="-1"
+            class="mt-4 text-h3 text-highlighted outline-none"
+          >
+            {{ t('contact.success.title') }}
+          </h2>
+          <p class="mt-2 text-muted">
+            {{ t('contact.success.body') }}
+          </p>
+          <UButton
+            class="mt-6"
+            color="neutral"
+            variant="outline"
+            :label="t('contact.success.again')"
+            @click="startAnother"
+          />
+        </div>
+
+        <template v-else>
+        <!-- Field, rate-limit, server and network problems stay INLINE above the form the visitor
+             still needs to correct. -->
         <div
           v-if="outcome"
           ref="statusRegion"
@@ -280,9 +378,9 @@ useSeoMeta({
           class="mb-6 outline-none"
         >
           <UAlert
-            :color="outcome === 'success' ? 'success' : 'error'"
+            color="error"
             variant="subtle"
-            :icon="outcome === 'success' ? 'i-lucide-circle-check' : 'i-lucide-circle-alert'"
+            icon="i-lucide-circle-alert"
             :title="outcomeTitle ?? ''"
             :description="outcomeBody ?? ''"
           />
@@ -333,8 +431,30 @@ useSeoMeta({
             </p>
 
             <UFormField name="email" :label="t('contact.form.email')">
-              <UInput id="contact-email" v-model="state.email" type="email" autocomplete="email" :maxlength="CONTACT_LIMITS.email" class="w-full" />
+              <UInput
+                id="contact-email"
+                v-model="state.email"
+                type="email"
+                autocomplete="email"
+                :maxlength="CONTACT_LIMITS.email"
+                :aria-describedby="showContactMethodError ? 'contact-method-error' : undefined"
+                class="w-full"
+              />
             </UFormField>
+
+            <!--
+              The shared invariant's message lives HERE, driven by a computed over current form
+              values (F-6) rather than by UForm's name-keyed error array — so it clears the instant
+              either method is filled and returns if both are emptied, with no stale state possible.
+            -->
+            <p
+              v-if="showContactMethodError"
+              id="contact-method-error"
+              role="alert"
+              class="text-body-sm text-error"
+            >
+              {{ t('contact.errors.contactMethodRequired') }}
+            </p>
 
             <UFormField name="nationalNumber" :label="t('contact.form.phone')">
               <!--
@@ -397,6 +517,7 @@ useSeoMeta({
             :label="pending ? t('contact.form.submitting') : t('contact.form.submit')"
           />
         </UForm>
+        </template>
       </div>
     </div>
   </UContainer>

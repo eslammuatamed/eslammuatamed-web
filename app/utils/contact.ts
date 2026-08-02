@@ -107,57 +107,145 @@ export const CONTACT_LIMITS = {
   body: 5000
 } as const
 
-// ── phone composition (D13-6) ─────────────────────────────────────────────────────────────────
+// ── phone composition and normalization (D13-6) ───────────────────────────────────────────────
 //
 // Deliberately hand-rolled rather than an international-phone-input component: `/contact` measured
-// 245.8 KB gz against the frozen 250 KB budget, and such a component plus its country metadata is
-// an order of magnitude larger than the remaining headroom. What the client owes is a well-formed
-// CANDIDATE; the API decides validity (D10-16), so no per-country national-number rules live here.
+// 247.6 KB gz against the frozen 250 KB budget, and such a component plus its country metadata is
+// an order of magnitude larger than the remaining headroom.
+//
+// The goal is STRUCTURAL validation — that a number is well-formed for the selected numbering plan
+// — not proof that it is in service or belongs to the sender. The API remains authoritative.
 
 /** The `value` used by the "Other country" option — the visitor types the full international number. */
 export const OTHER_DIAL_CODE = 'other'
 
+export interface CountryRule {
+  /** E.164 country calling code, with the leading `+`. */
+  readonly dialCode: string
+  /** Permitted national-number lengths, AFTER the trunk prefix is removed. */
+  readonly nationalLengths: readonly number[]
+  /** Trunk prefix stripped before composing E.164, when the plan uses one. */
+  readonly trunkPrefix: string | null
+  /**
+   * National prefixes the plan actually assigns, when they are meaningful enough to reject a typo.
+   * Empty means the plan is not narrowed here — length alone decides.
+   */
+  readonly nationalPrefixes: readonly string[]
+}
+
 /**
- * The explicit markets, in the order they are offered. Egypt leads because it is the owner's own
- * market and the sensible default; the rest are the GCC. Everywhere else is served by
- * `OTHER_DIAL_CODE` rather than by shipping a ~250-entry list for a portfolio's realistic audience.
+ * The explicit markets, in offer order. Egypt leads because it is the owner's market and the
+ * sensible default; the rest are the GCC. Everywhere else uses `OTHER_DIAL_CODE` rather than
+ * shipping a ~250-entry list for a portfolio's realistic audience.
+ *
+ * Prefix lists are given only where the numbering plan makes them load-bearing for catching a
+ * mistyped number. Kuwait, Qatar, Bahrain and Oman allocate mobile ranges broadly enough that
+ * enumerating them here would reject valid numbers as the plans evolve, so those are length-checked
+ * only — deliberately permissive, because a client that rejects more than the API turns a valid
+ * number into an error the visitor cannot resolve.
  */
+export const COUNTRY_RULES: Readonly<Record<string, CountryRule>> = {
+  '+20': { dialCode: '+20', nationalLengths: [10], trunkPrefix: '0', nationalPrefixes: ['10', '11', '12', '15'] },
+  '+966': { dialCode: '+966', nationalLengths: [9], trunkPrefix: '0', nationalPrefixes: ['5'] },
+  '+971': { dialCode: '+971', nationalLengths: [9], trunkPrefix: '0', nationalPrefixes: ['5'] },
+  '+965': { dialCode: '+965', nationalLengths: [8], trunkPrefix: null, nationalPrefixes: [] },
+  '+974': { dialCode: '+974', nationalLengths: [8], trunkPrefix: null, nationalPrefixes: [] },
+  '+973': { dialCode: '+973', nationalLengths: [8], trunkPrefix: null, nationalPrefixes: [] },
+  '+968': { dialCode: '+968', nationalLengths: [8], trunkPrefix: null, nationalPrefixes: [] }
+}
+
 export const DIAL_CODES = ['+20', '+966', '+971', '+965', '+974', '+973', '+968'] as const
 
 export type DialCode = (typeof DIAL_CODES)[number] | typeof OTHER_DIAL_CODE
 
 /**
- * Builds the E.164 candidate actually submitted as `phone`.
+ * Folds Arabic-Indic (٠-٩) and Extended Arabic-Indic / Persian (۰-۹) digits to ASCII.
  *
- * For an explicit market the national part is stripped to digits and appended to the chosen prefix.
- * A leading trunk `0` is dropped — writing `010 0278 5408` is how the number is said locally, but
- * E.164 has no trunk prefix, and leaving it produces a number that looks right and is not.
- *
- * For `OTHER_DIAL_CODE` the visitor's own text is normalized as-is; they are asked to include the
- * `+`, and if they do not, the result fails validation rather than being guessed at.
- *
- * Returns `null` when nothing usable was entered, so the caller can treat "no phone" and "a bad
- * phone" as the different things they are.
+ * An Arabic-locale keyboard produces these routinely, and without folding a perfectly valid number
+ * typed on /ar would be rejected as "not a number" — a locale-specific dead end on the platform's
+ * single conversion point.
  */
-export function composeE164(dialCode: DialCode, nationalInput: string): string | null {
-  const raw = nationalInput.trim()
-  if (raw === '') return null
+export function toAsciiDigits(value: string): string {
+  return value.replace(/[\u0660-\u0669\u06F0-\u06F9]/g, (d) => {
+    const code = d.charCodeAt(0)
+    const base = code >= 0x06f0 ? 0x06f0 : 0x0660
+    return String(code - base)
+  })
+}
 
-  if (dialCode === OTHER_DIAL_CODE) {
-    const compact = raw.replace(/[^\d+]/g, '')
-    const normalized = compact.startsWith('+') ? `+${compact.slice(1).replace(/\+/g, '')}` : compact
-    return normalized === '' ? raw : normalized
-  }
-
-  const digits = raw.replace(/\D/g, '').replace(/^0+/, '')
-  return digits === '' ? raw : `${dialCode}${digits}`
+/** Strips formatting humans type — spaces, hyphens, parentheses, dots — leaving digits and `+`. */
+function stripFormatting(value: string): string {
+  return toAsciiDigits(value).replace(/[^\d+]/g, '')
 }
 
 /**
- * A deliberately shallow shape check: `+`, a non-zero leading digit, and a plausible total length.
+ * Normalizes a visitor's phone entry to a single E.164 value for the selected country.
  *
- * This exists to give immediate feedback on an obviously wrong entry, not to adjudicate. It must
- * stay permissive — a client that rejected more than the API would turn a valid number into an
+ * Handles, in order: Arabic/Persian digits → ASCII; formatting removed; a leading `00`
+ * international prefix rewritten to `+`; an already-present country code accepted rather than
+ * doubled; a national trunk prefix removed only where the plan defines one.
+ *
+ * Returns `null` when nothing was entered, so "no phone" and "a bad phone" stay distinguishable.
+ * Returns the cleaned-but-unusable string otherwise, which then fails `validatePhone` — a supplied
+ * value is never silently discarded (D10-16).
+ */
+export function normalizePhone(dialCode: DialCode, input: string): string | null {
+  const raw = input.trim()
+  if (raw === '') return null
+
+  let compact = stripFormatting(raw)
+  if (compact === '') return raw
+
+  // `00` is the international access prefix in every market listed here.
+  if (compact.startsWith('00')) compact = `+${compact.slice(2)}`
+  // A stray interior `+` is formatting noise; only a leading one is meaningful.
+  compact = compact.startsWith('+') ? `+${compact.slice(1).replace(/\+/g, '')}` : compact.replace(/\+/g, '')
+
+  if (dialCode === OTHER_DIAL_CODE) return compact
+
+  const rule = COUNTRY_RULES[dialCode]
+  if (!rule) return compact
+
+  const bare = rule.dialCode.slice(1)
+
+  // Already international: keep it as typed so a mismatched country is REJECTED downstream rather
+  // than silently re-homed to the selected one.
+  if (compact.startsWith('+')) return compact
+  // The country code typed without a `+` (e.g. "201002785408") — accepted, never doubled.
+  if (compact.startsWith(bare) && compact.length > bare.length) return `+${compact}`
+
+  let national = compact
+  if (rule.trunkPrefix && national.startsWith(rule.trunkPrefix)) {
+    national = national.slice(rule.trunkPrefix.length)
+  }
+  return `${rule.dialCode}${national}`
+}
+
+/**
+ * Structural validation of a normalized E.164 value against the selected country's plan.
+ *
+ * For an explicit country this checks the country code matches the selection, the national length
+ * is one the plan uses, and — where the plan makes prefixes meaningful — that the prefix is
+ * assigned. For "Other country" it requires only a well-formed international number, because this
+ * app holds no plan data for the rest of the world and guessing would reject valid numbers.
+ */
+export function validatePhone(dialCode: DialCode, normalized: string): boolean {
+  if (dialCode === OTHER_DIAL_CODE) return isPlausibleE164(normalized)
+  const rule = COUNTRY_RULES[dialCode]
+  if (!rule) return isPlausibleE164(normalized)
+
+  if (!normalized.startsWith(`${rule.dialCode}`)) return false
+  const national = normalized.slice(rule.dialCode.length)
+  if (!/^\d+$/.test(national)) return false
+  if (!rule.nationalLengths.includes(national.length)) return false
+  if (rule.nationalPrefixes.length > 0 && !rule.nationalPrefixes.some(p => national.startsWith(p))) return false
+  return true
+}
+
+/**
+ * A deliberately shallow shape check: `+`, a non-zero leading digit, plausible total length.
+ *
+ * Must stay permissive — a client that rejected more than the API would turn a valid number into an
  * error the visitor cannot resolve, and D13-6 is explicit that the API is authoritative.
  */
 export function isPlausibleE164(value: string): boolean {
