@@ -21,7 +21,8 @@
     "openMenu": "Open menu",
     "closeMenu": "Close menu",
     "homeLink": "Go to homepage",
-    "backToTop": "Back to top"
+    "backToTop": "Back to top",
+    "switchToOtherLocale": "Switch to Arabic"
   },
   "theme": {
     "light": "Light",

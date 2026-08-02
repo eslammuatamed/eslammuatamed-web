@@ -21,7 +21,8 @@
     "openMenu": "فتح القائمة",
     "closeMenu": "إغلاق القائمة",
     "homeLink": "الانتقال إلى الصفحة الرئيسية",
-    "backToTop": "العودة إلى الأعلى"
+    "backToTop": "العودة إلى الأعلى",
+    "switchToOtherLocale": "التبديل إلى الإنجليزية"
   },
   "theme": {
     "light": "فاتح",
