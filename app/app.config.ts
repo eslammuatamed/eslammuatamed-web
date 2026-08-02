@@ -22,6 +22,17 @@ export default defineAppConfig({
       compoundVariants: [
         { color: 'primary', variant: 'solid', class: 'text-white hover:text-white' }
       ]
+    },
+    // Field-error text is darkened in LIGHT mode only. Nuxt UI's default resolves `text-error` to
+    // red-500, which measures 3.71:1 against the light surface (#fb2c36 on #fcfcfc) — below the
+    // 4.5:1 WCAG AA minimum for body text, and a real unfiltered-axe failure on the first public
+    // route that renders form errors. red-700 clears it. Dark mode already passes on the dark
+    // surface and is deliberately left alone, since lightening it there would reduce contrast.
+    // Applies to every UFormField, so the dashboard's forms inherit the same correction.
+    formField: {
+      slots: {
+        error: 'text-error-700 dark:text-error'
+      }
     }
   }
 })
