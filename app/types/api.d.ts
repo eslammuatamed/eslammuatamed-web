@@ -2450,16 +2450,28 @@ export interface components {
             received: boolean;
         };
         CreateContactMessageDto: {
-            /** @example Alex Morgan */
+            /**
+             * @description Trimmed of surrounding whitespace before validation; a value empty after trimming is rejected (D10-15).
+             * @example Alex Morgan
+             */
             name: string;
-            /** @example alex@example.com */
+            /**
+             * @description Trimmed of surrounding whitespace before validation, so a padded but otherwise valid address is accepted (D10-15).
+             * @example alex@example.com
+             */
             email: string;
-            /** @example Project inquiry */
+            /**
+             * @description Trimmed of surrounding whitespace before validation; a value empty after trimming is rejected (D10-15).
+             * @example Project inquiry
+             */
             subject: string;
-            /** @example I'd like to discuss a Nuxt build. */
+            /**
+             * @description Trimmed of surrounding whitespace before validation; a value empty after trimming is rejected (D10-15).
+             * @example I'd like to discuss a Nuxt build.
+             */
             body: string;
             /**
-             * @description Anti-spam honeypot — leave empty. Any value flags the submission as spam. Never persisted.
+             * @description Anti-spam honeypot — leave empty. Any value flags the submission as spam. Never trimmed, never persisted.
              * @example
              */
             website?: string;
@@ -6350,9 +6362,11 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetailsDto"];
                 };
             };
-            /** @description Contact rate limit exceeded (3 / hour or 10 / day per IP). */
+            /** @description Contact rate limit exceeded (3 / hour or 10 / day per IP). Carries `Retry-After` in seconds. */
             429: {
                 headers: {
+                    /** @description Seconds to wait before retrying (delta-seconds, never an HTTP-date). Exposed via CORS so browser clients can read it. */
+                    "Retry-After"?: number;
                     [name: string]: unknown;
                 };
                 content: {
