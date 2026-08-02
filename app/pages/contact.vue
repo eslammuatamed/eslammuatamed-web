@@ -372,13 +372,24 @@ useSeoMeta({
           :aria-label="t('contact.a11y.statusLabel')"
           class="mb-6 outline-none"
         >
-          <UAlert
-            color="error"
-            variant="subtle"
-            icon="i-lucide-circle-alert"
-            :title="outcomeTitle ?? ''"
-            :description="outcomeBody ?? ''"
-          />
+          <!--
+            Plain token-styled markup rather than `UAlert`. The alert was a title + description box
+            with no behaviour this state needs — the surrounding element already carries
+            `role="status"`, `aria-live` and the focus target — and dropping the component removed
+            weight from a route that has to fit a frozen 250 KB budget. Appearance and semantics are
+            unchanged; only the implementation is lighter.
+          -->
+          <div class="flex gap-3 rounded-lg bg-error/10 p-4 ring ring-inset ring-error/25">
+            <UIcon name="i-lucide-circle-alert" class="mt-0.5 size-5 shrink-0 text-error-700 dark:text-error" aria-hidden="true" />
+            <div>
+              <p class="font-medium text-error-700 dark:text-error">
+                {{ outcomeTitle }}
+              </p>
+              <p class="mt-1 text-body-sm text-toned">
+                {{ outcomeBody }}
+              </p>
+            </div>
+          </div>
         </div>
 
         <p class="text-body-sm text-muted">
