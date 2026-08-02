@@ -591,3 +591,27 @@ describe('contact page — email or phone', () => {
     expect(wrapper.text()).toContain(translate('contact.form.requiredHint'))
   })
 })
+
+
+// Regression guard: with `undefined` initial values, zod failed on the TYPE before `.min(1, …)`
+// and every blank required field rendered its generic "Invalid input" instead of authored copy.
+describe('contact page — validation copy', () => {
+  it('shows the authored required messages, never zod\'s generic fallback', async () => {
+    const wrapper = await mountSuspended(ContactPage)
+    await wrapper.find('form').trigger('submit')
+    await flush()
+
+    const text = wrapper.text()
+    expect(text).not.toContain('Invalid input')
+    expect(text).toContain(translate('contact.errors.nameRequired'))
+    expect(text).toContain(translate('contact.errors.subjectRequired'))
+    expect(text).toContain(translate('contact.errors.bodyRequired'))
+  })
+
+  it('shows the pair message once the other required fields are filled', async () => {
+    const wrapper = await mountSuspended(ContactPage)
+    await fillAndSubmit(wrapper, { email: '' })
+    expect(wrapper.text()).toContain(translate('contact.errors.contactMethodRequired'))
+    expect(wrapper.text()).not.toContain('Invalid input')
+  })
+})

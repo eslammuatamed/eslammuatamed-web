@@ -59,14 +59,20 @@ const schema = z.object({
 })
 type Schema = z.output<typeof schema>
 
-const state = reactive<Partial<Schema>>({
-  name: undefined,
-  email: undefined,
+// Initialized to EMPTY STRINGS, not `undefined`, and that matters for the error copy: with
+// `undefined`, `z.string()` fails on the TYPE before `.min(1, …)` is ever reached, so every blank
+// required field rendered zod's generic "Invalid input" instead of the authored message. An empty
+// string reaches the length check and produces the real localized text.
+const emptyForm = (): Schema => ({
+  name: '',
+  email: '',
   dialCode: DIAL_CODES[0],
-  nationalNumber: undefined,
-  subject: undefined,
-  body: undefined
+  nationalNumber: '',
+  subject: '',
+  body: ''
 })
+
+const state = reactive<Schema>(emptyForm())
 
 // The honeypot lives outside `state` and outside the schema. Its DOM name is deliberately not
 // `website`; the value maps onto the contract key only when the request body is assembled.
@@ -110,12 +116,7 @@ async function waitOutFillTrap(): Promise<void> {
 }
 
 function clearForm(): void {
-  state.name = undefined
-  state.email = undefined
-  state.dialCode = DIAL_CODES[0]
-  state.nationalNumber = undefined
-  state.subject = undefined
-  state.body = undefined
+  Object.assign(state, emptyForm())
   companyUrl.value = ''
   form.value?.clear()
   resetTimingOrigin()
@@ -318,17 +319,31 @@ useSeoMeta({
             The email/phone pair, grouped under one hint so the at-least-one rule is stated before
             the visitor can trip it rather than only afterwards as an error.
           -->
-          <fieldset class="space-y-4 rounded-lg border border-default/60 p-4">
-            <legend class="px-1 text-body-sm text-muted">
+          <!--
+            `aria-labelledby` on a plain <p> rather than a <legend>: the hint is a full sentence and
+            wraps to two lines at narrow widths, where a legend renders THROUGH the fieldset's top
+            border. The grouping semantics are preserved without the rendering artefact.
+          -->
+          <fieldset
+            class="space-y-4 rounded-lg border border-default/60 p-4"
+            aria-labelledby="contact-method-hint"
+          >
+            <p id="contact-method-hint" class="text-body-sm text-muted">
               {{ t('contact.form.contactMethodHint') }}
-            </legend>
+            </p>
 
             <UFormField name="email" :label="t('contact.form.email')">
               <UInput id="contact-email" v-model="state.email" type="email" autocomplete="email" :maxlength="CONTACT_LIMITS.email" class="w-full" />
             </UFormField>
 
             <UFormField name="nationalNumber" :label="t('contact.form.phone')">
-              <div class="flex gap-2">
+              <!--
+                `min-w-0` on the number wrapper is load-bearing: a flex item defaults to
+                `min-width: auto`, so the select's long option text ("United Arab Emirates (+971)")
+                won out at 390px and squeezed the input to a few pixels. The select is also capped
+                so it can never take more than half the row.
+              -->
+              <div class="flex flex-wrap gap-2 sm:flex-nowrap">
                 <!--
                   A native select over eight options (D13-6): an international-phone-input component
                   plus its country metadata is an order of magnitude larger than this route's
@@ -339,7 +354,7 @@ useSeoMeta({
                 <select
                   id="contact-dial-code"
                   v-model="state.dialCode"
-                  class="rounded-md border-0 bg-default px-2.5 py-1.5 text-base/5 text-highlighted ring ring-inset ring-accented focus-visible:outline-3 focus-visible:outline-primary/25 md:text-sm"
+                  class="w-full shrink-0 rounded-md border-0 bg-default px-2.5 py-1.5 text-base/5 text-highlighted ring ring-inset ring-accented focus-visible:outline-3 focus-visible:outline-primary/25 sm:w-auto sm:max-w-[50%] md:text-sm"
                 >
                   <option v-for="option in dialOptions" :key="option.value" :value="option.value">
                     {{ option.label }}
@@ -352,7 +367,7 @@ useSeoMeta({
                   inputmode="tel"
                   autocomplete="tel"
                   :dir="isOtherCountry ? 'ltr' : undefined"
-                  class="w-full"
+                  class="w-full min-w-0 flex-1"
                 />
               </div>
             </UFormField>

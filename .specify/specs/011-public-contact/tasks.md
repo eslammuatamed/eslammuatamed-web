@@ -67,6 +67,15 @@
 - [ ] T082 Delete `.omc/research/contact-copy-inventory-and-api-correction.md` **after** T004 captured its content
 - [ ] T083 Clean up worktrees, disposable DB, temp env; verify all pre-existing dirty state and stashes preserved
 
+## Open defects — must be fixed before the browser lane runs
+
+- [ ] **F-6 (new, observed 2026-08-02).** After a failed submit leaves the pair error on `email`,
+  subsequently filling the phone does not clear it and the resubmit stays blocked. A phone-only
+  submission from a CLEAN page load works correctly (verified in a browser), so this is stale
+  cross-field error state, not the pair rule itself: `superRefine` is an object-level check and
+  `UForm` appears to retain the issue keyed to `email` until a full re-validation. Reproduce:
+  submit empty → fill name/subject/message/phone → submit. Not yet diagnosed; not worked around.
+
 ## Not in this slice
 
 Dashboard inbox (Web PR 2) · integrated Contact closeout · issue #30 · `og:image` ·
