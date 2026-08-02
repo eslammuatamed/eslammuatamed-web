@@ -592,22 +592,42 @@ describe('contact page — email or phone', () => {
   // USelectMenu is non-native: its list lives in a portal and only exists once opened, so the
   // offered set is asserted on DIAL_CODES in the utils spec. Here we assert what the page renders —
   // the trigger, its default selection, and that no BROWSER-DEFAULT control was left behind.
-  it('renders a non-native selector defaulting to Egypt', async () => {
+  // The country selector is the ONE native control on this page — a deliberate, recorded exception
+  // (reka-ui's Select cost 21.3 KB gz on a route with a frozen 250 KB budget, for eight options).
+  // It is styled to match UInput exactly and the browser keeps ownership of the option picker.
+  it('offers the seven markets plus an Other country option, defaulting to Egypt', async () => {
     const wrapper = await mountSuspended(ContactPage)
-    const trigger = wrapper.find('#contact-dial-code')
-    expect(trigger.exists()).toBe(true)
-    expect(trigger.element.tagName).not.toBe('SELECT')
-    expect(wrapper.text()).toContain(translate('contact.methods.countries.+20'))
+    const select = wrapper.find('#contact-dial-code')
+    expect(select.element.tagName).toBe('SELECT')
+    const options = select.findAll('option')
+    expect(options).toHaveLength(8)
+    expect(options[0]!.text()).toContain('+20')
+    expect(options[7]!.text()).toBe(translate('contact.form.otherCountry'))
+    expect((select.element as HTMLSelectElement).value).toBe('+20')
+  })
+
+  it('styles the native select away from its browser default and hides the chevron', async () => {
+    const wrapper = await mountSuspended(ContactPage)
+    const select = wrapper.find('#contact-dial-code')
+    // `appearance-none` is what removes the platform arrow; the rest mirrors UInput's tokens.
+    expect(select.classes()).toContain('appearance-none')
+    expect(select.classes()).toContain('rounded-md')
+    expect(select.classes()).toContain('bg-default')
+    expect(select.classes()).toContain('ring-accented')
+    // Inline-end padding reserves room for the decorative chevron, logical so it flips in RTL.
+    expect(select.classes()).toContain('pe-9')
+    const chevron = wrapper.find('#contact-dial-code + svg')
+    expect(chevron.attributes('aria-hidden')).toBe('true')
+    expect(chevron.classes()).toContain('pointer-events-none')
   })
 
   it('leaves no raw native form control in the page', async () => {
     const wrapper = await mountSuspended(ContactPage)
-    // No VISIBLE browser-default select. reka-ui (which backs USelect) renders a hidden native
-    // <select> so the control still participates in form submission and autofill — that one is
-    // aria-hidden and is not what the visitor sees or operates.
-    for (const native of wrapper.findAll('select')) {
-      expect(native.attributes('aria-hidden')).toBe('true')
-    }
+    // Exactly ONE native control: the country selector, and it is styled away from its default.
+    const selects = wrapper.findAll('select')
+    expect(selects).toHaveLength(1)
+    expect(selects[0]!.attributes('id')).toBe('contact-dial-code')
+    expect(selects[0]!.classes()).toContain('appearance-none')
     // Every VISIBLE control the visitor types into is a Nuxt UI primitive — those carry `data-slot`,
     // a hand-rolled control would not. The honeypot is excluded (deliberately a bare hidden input),
     // and so are any internal inputs USelectMenu renders for its own trigger plumbing.

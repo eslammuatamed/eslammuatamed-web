@@ -456,19 +456,52 @@ useSeoMeta({
               <div class="flex flex-col gap-2 sm:flex-row">
                 <label for="contact-dial-code" class="sr-only">{{ t('contact.form.countryCode') }}</label>
                 <!--
-                  `USelect`, not `USelectMenu`: both are non-native reka-ui primitives with the same
-                  visual language, but SelectMenu also ships combobox/search machinery this field has
-                  no use for, and it cost ~17 KB gz that the 250 KB route budget does not have.
+                  A NATIVE <select>, fully styled — the one native control on this page, and a
+                  deliberate exception recorded here.
+
+                  `USelect` is a reka-ui Select: a custom listbox, popper and focus-guard stack that
+                  cost 21.3 KB gz on a route with a frozen 250 KB budget, for a fixed list of eight
+                  dialing codes. That is disproportionate, so the browser keeps ownership of the
+                  option picker and only the CLOSED control is styled. Nothing here reimplements a
+                  listbox, combobox, popover or keyboard navigation — the platform already does all
+                  of it, correctly, on every device.
+
+                  The class list mirrors `UInput`'s rendered `size="lg"` output token for token, so
+                  the two controls are the same height, radius, surface, ring and focus treatment.
+                  `appearance-none` removes the platform arrow; the chevron below replaces it.
+                  `pe-9` reserves inline-end room for that chevron and is logical, so it moves to the
+                  correct side in RTL without a second rule.
                 -->
-                <USelect
-                  id="contact-dial-code"
-                  v-model="state.dialCode"
-                  :items="dialOptions"
-                  value-key="value"
-                  size="lg"
-                  :aria-label="t('contact.form.countryCode')"
-                  class="w-full sm:w-[15rem] sm:shrink-0"
-                />
+                <div class="relative w-full sm:w-[15rem] sm:shrink-0">
+                  <select
+                    id="contact-dial-code"
+                    v-model="state.dialCode"
+                    autocomplete="tel-country-code"
+                    class="w-full appearance-none rounded-md border-0 bg-default px-3 py-2 pe-9 text-base/5 text-highlighted ring ring-inset ring-accented transition-colors outline-primary/25 hover:ring-inverted/20 focus-visible:outline-3 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-75 md:text-sm"
+                  >
+                    <option v-for="option in dialOptions" :key="option.value" :value="option.value">
+                      {{ option.label }}
+                    </option>
+                  </select>
+                  <!--
+                    Decorative only: `aria-hidden` keeps it out of the accessibility tree and
+                    `pointer-events-none` keeps every click on the select itself. `end-3` is
+                    logical, so it sits on the correct side in both directions. Drawn as a bare
+                    inline SVG rather than an icon component — no new import, no icon runtime.
+                  -->
+                  <svg
+                    class="pointer-events-none absolute end-3 top-1/2 size-4 -translate-y-1/2 text-dimmed"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="m6 9 6 6 6-6" />
+                  </svg>
+                </div>
                 <UInput
                   id="contact-phone"
                   v-model="state.nationalNumber"
