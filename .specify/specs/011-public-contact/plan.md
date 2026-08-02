@@ -61,39 +61,29 @@ locales, and `Intl.RelativeTimeFormat('ar')` defaults to Eastern Arabic digits (
 would render `/ar/contact` inconsistent with every other number on the site.
 `app/utils/format.ts` already pins `latn` for the same reason; this follows it.
 
-## 6. Approved EN/AR copy — `contact.*` (37) + `seo.contact.*` (2)
+## 6. Approved EN/AR copy — `contact.*` (51) + `seo.contact.*` (2)
 
-Both locale files receive identical key sets. Owner-corrected values are marked ★.
-
-### Page shell
+Revised by the owner's phone/composition directive. `contact.fallback.*` is **retired** — the
+standalone "Prefer email?" card is replaced by the left column's compact `contact.methods.*` list.
+`contact.form.legend` is retired with it. `All fields are required.` is **removed as now-false**.
 
 | Key | EN | AR |
 |---|---|---|
-| `contact.title` | Contact | تواصل معي |
-| `contact.description` | Tell me about the role, the project, or the problem — I read every message myself. | أخبرني عن الوظيفة أو المشروع أو المشكلة — أقرأ كل رسالة بنفسي. |
+| `contact.title` | Let’s talk about your next product or role | لنتحدث عن مشروعك أو فرصتك القادمة |
+| `contact.description` | Share the context and a way to reach you, or contact me directly by email, phone, or WhatsApp. | شارك التفاصيل ووسيلة مناسبة للتواصل معك، أو تواصل معي مباشرة عبر البريد أو الهاتف أو واتساب. |
 | `contact.breadcrumbLabel` | Breadcrumb | مسار التنقّل |
-
-### Form chrome and fields
-
-| Key | EN | AR |
-|---|---|---|
-| `contact.form.legend` | Send a message | أرسل رسالة |
 | `contact.form.name` | Name | الاسم |
 | `contact.form.email` | Email | البريد الإلكتروني |
 | `contact.form.subject` | Subject | الموضوع |
 | `contact.form.body` | Message | الرسالة |
-| `contact.form.requiredHint` | All fields are required. | جميع الحقول مطلوبة. |
+| `contact.form.requiredHint` | Name, subject, and message are required. Add either an email address or phone number. | الاسم والموضوع والرسالة مطلوبة. أضف البريد الإلكتروني أو رقم الهاتف. |
 | `contact.form.submit` | Send message | إرسال الرسالة |
 | `contact.form.submitting` | Sending… | جارٍ الإرسال… |
 | `contact.form.websiteLabel` | Website | الموقع الإلكتروني |
-
-`submitting` also covers the time-trap wait — deliberately no separate string.
-`websiteLabel` labels the honeypot, which is hidden and never announced.
-
-### Validation
-
-| Key | EN | AR |
-|---|---|---|
+| `contact.form.phone` | Phone number | رقم الهاتف |
+| `contact.form.contactMethodHint` | Add an email address or phone number so I can reach you. | أضف بريدًا إلكترونيًا أو رقم هاتف حتى أتمكن من التواصل معك. |
+| `contact.form.countryCode` | Country or dialing code | الدولة أو مفتاح الاتصال |
+| `contact.form.otherCountry` | Other country | دولة أخرى |
 | `contact.errors.nameRequired` | Enter your name. | أدخل اسمك. |
 | `contact.errors.nameTooLong` | Name must be 200 characters or fewer. | يجب ألّا يزيد الاسم عن 200 حرف. |
 | `contact.errors.emailRequired` | Enter your email address. | أدخل بريدك الإلكتروني. |
@@ -103,56 +93,41 @@ Both locale files receive identical key sets. Owner-corrected values are marked 
 | `contact.errors.subjectTooLong` | Subject must be 300 characters or fewer. | يجب ألّا يزيد الموضوع عن 300 حرف. |
 | `contact.errors.bodyRequired` | Enter your message. | أدخل نص الرسالة. |
 | `contact.errors.bodyTooLong` | Message must be 5000 characters or fewer. | يجب ألّا تزيد الرسالة عن 5000 حرف. |
-
-`emailInvalid` reuses the exact wording already shipped at `auth.errorEmail`.
-
-### Submission outcomes
-
-| Key | EN | AR |
-|---|---|---|
-| ★ `contact.success.title` | Message received | تم استلام الرسالة |
-| ★ `contact.success.body` | Thanks — your submission has been received. | شكرًا لك — تم استلام رسالتك. |
+| `contact.errors.contactMethodRequired` | Enter an email address or phone number. | أدخل بريدًا إلكترونيًا أو رقم هاتف. |
+| `contact.errors.phoneInvalid` | Enter a valid international phone number. | أدخل رقم هاتف دوليًا صحيحًا. |
+| `contact.success.title` | Message received | تم استلام الرسالة |
+| `contact.success.body` | Thanks — your submission has been received. | شكرًا لك — تم استلام رسالتك. |
 | `contact.error.validationTitle` | Check the form | راجع النموذج |
 | `contact.error.validationBody` | Some fields need attention before this can be sent. | بعض الحقول تحتاج إلى تصحيح قبل الإرسال. |
 | `contact.error.rateLimitTitle` | Too many messages | عدد كبير من الرسائل |
 | `contact.error.rateLimitBody` | You've sent several messages recently. Please try again later, or email me directly. | لقد أرسلت عدة رسائل مؤخرًا. يُرجى المحاولة لاحقًا، أو مراسلتي مباشرة عبر البريد. |
-| ★ `contact.error.rateLimitBodyWithRetryAfter` | You've sent several messages recently. Try again {retryAfter}, or email me directly. | لقد أرسلت عدة رسائل مؤخرًا. حاول مرة أخرى {retryAfter}، أو راسلني مباشرة عبر البريد. |
+| `contact.error.rateLimitBodyWithRetryAfter` | You've sent several messages recently. Try again {retryAfter}, or email me directly. | لقد أرسلت عدة رسائل مؤخرًا. حاول مرة أخرى {retryAfter}، أو راسلني مباشرة عبر البريد. |
 | `contact.error.serverTitle` | The message didn't go through | تعذّر إرسال الرسالة |
 | `contact.error.serverBody` | Something went wrong on my side, not yours. Try again, or email me directly. | حدث خطأ من جانبي، لا من جانبك. حاول مرة أخرى، أو راسلني مباشرة عبر البريد. |
 | `contact.error.networkTitle` | Couldn't reach the server | تعذّر الوصول إلى الخادم |
 | `contact.error.networkBody` | Check your connection and try again, or email me directly. | تحقّق من اتصالك وحاول مرة أخرى، أو راسلني مباشرة عبر البريد. |
-
-★ The success pair was corrected by the owner because the client cannot distinguish a
-persisted message from a neutral spam receipt (§4 of `spec.md`).
-★ `rateLimitBodyWithRetryAfter` renamed from `…Countdown` — there is no live countdown.
-
-### Fallback and accessibility
-
-| Key | EN | AR |
-|---|---|---|
-| `contact.fallback.heading` | Prefer email? | تفضّل البريد الإلكتروني؟ |
-| ★ `contact.fallback.body` | You can email me directly instead. | يمكنك مراسلتي مباشرة عبر البريد بدلًا من ذلك. |
-| `contact.fallback.action` | Email me directly | راسلني مباشرة |
 | `contact.a11y.formLabel` | Contact form | نموذج التواصل |
 | `contact.a11y.statusLabel` | Submission status | حالة الإرسال |
+| `contact.methods.heading` | Reach me directly | تواصل معي مباشرة |
+| `contact.methods.email` | Email | البريد الإلكتروني |
+| `contact.methods.phone` | Phone | الهاتف |
+| `contact.methods.whatsapp` | WhatsApp | واتساب |
+| `contact.methods.countries.+20` | Egypt | مصر |
+| `contact.methods.countries.+966` | Saudi Arabia | السعودية |
+| `contact.methods.countries.+971` | United Arab Emirates | الإمارات |
+| `contact.methods.countries.+965` | Kuwait | الكويت |
+| `contact.methods.countries.+974` | Qatar | قطر |
+| `contact.methods.countries.+973` | Bahrain | البحرين |
+| `contact.methods.countries.+968` | Oman | عُمان |
+| `contact.whatsappMessage` | Hi Eslam, I found you through your portfolio and would like to discuss a project or work opportunity. | مرحبًا إسلام، وصلت إليك من خلال موقعك وأرغب في التحدث معك بخصوص مشروع أو فرصة عمل. |
 
-### SEO
-
-| Key | EN | AR |
-|---|---|---|
-| `seo.contact.title` | Contact | تواصل معي |
-| `seo.contact.description` | Get in touch with Eslam Muatamed about a role, a project, or an engineering problem. | تواصل مع إسلام معتمد بخصوص وظيفة أو مشروع أو مشكلة هندسية. |
-
-### Reused unchanged
-
-`nav.contact`, `nav.home`, `common.retry`, `common.loading`, `state.error`, `state.offline`,
-`a11y.skipToContent`, `a11y.primaryNav`, `a11y.footerNav`, `footer.*`, `error.*`.
-`home.contact.*` and `projects.contact.*` already ship and are **not modified**.
+`seo.contact.title` / `seo.contact.description` are unchanged from the previous revision.
 
 ### No i18n key (API-supplied, rendered verbatim)
 
-`settings.availabilityStatus` (per-locale; omitted when null) and `settings.contactEmail`
-(block omitted when null). Their absence from this inventory is correct.
+`settings.availabilityStatus`, `settings.contactEmail`, `settings.contactPhone`,
+`settings.whatsappPhone`. Each direct-method row is gated on its OWN field; nothing is inferred
+between `contactPhone` and `whatsappPhone`, and neither number is hard-coded.
 
 ## 7. Approved dashboard copy — DEFERRED to Web PR 2, not implemented here
 

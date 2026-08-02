@@ -125,14 +125,67 @@ afterEach(() => {
   vi.useRealTimers()
 })
 
-describe('contact page — direct-email fallback (FR-PUB-053)', () => {
+describe('contact page — direct methods (FR-PUB-053, D10-16)', () => {
   it('renders a mailto for contactEmail', async () => {
     const wrapper = await mountSuspended(ContactPage)
     expect(wrapper.html()).toContain('mailto:contact@eslammuatamed.com')
   })
 
-  // The single permitted source. professionalEmail is present in the fixture precisely so that a
-  // regression substituting it would be caught rather than silently pass.
+  it('renders a tel: action for contactPhone', async () => {
+    const wrapper = await mountSuspended(ContactPage)
+    expect(wrapper.html()).toContain('tel:+201002785408')
+  })
+
+  it('renders a wa.me action with the localized message URL-encoded', async () => {
+    const wrapper = await mountSuspended(ContactPage)
+    const html = wrapper.html()
+    // wa.me takes the number WITHOUT the leading plus.
+    expect(html).toContain('https://wa.me/201002785408')
+    expect(html).toContain(encodeURIComponent(translate('contact.whatsappMessage')).slice(0, 40))
+  })
+
+  it('formats the displayed number for humans while dialling the E.164 value', async () => {
+    const wrapper = await mountSuspended(ContactPage)
+    expect(wrapper.text()).toContain('+20 100 278 5408')
+    expect(wrapper.html()).toContain('tel:+201002785408')
+  })
+
+  // Each row is gated on ITS OWN field — never inferred from the other (D10-16).
+  it('shows email only when the other two are null', async () => {
+    settingsRef.value = settings({ contactPhone: null, whatsappPhone: null })
+    const wrapper = await mountSuspended(ContactPage)
+    expect(wrapper.html()).toContain('mailto:')
+    expect(wrapper.html()).not.toContain('tel:')
+    expect(wrapper.html()).not.toContain('wa.me')
+  })
+
+  it('shows a call action without WhatsApp when whatsappPhone is null', async () => {
+    settingsRef.value = settings({ whatsappPhone: null })
+    const wrapper = await mountSuspended(ContactPage)
+    expect(wrapper.html()).toContain('tel:+201002785408')
+    expect(wrapper.html()).not.toContain('wa.me')
+  })
+
+  it('shows WhatsApp without a call action when contactPhone is null', async () => {
+    settingsRef.value = settings({ contactPhone: null })
+    const wrapper = await mountSuspended(ContactPage)
+    expect(wrapper.html()).toContain('wa.me/201002785408')
+    expect(wrapper.html()).not.toContain('tel:')
+  })
+
+  // The two settings may legitimately differ; each row must show and link its OWN number.
+  it('never displays the call number on the WhatsApp row when the two differ', async () => {
+    settingsRef.value = settings({
+      contactPhone: '+201002785408',
+      whatsappPhone: '+966512345678'
+    })
+    const wrapper = await mountSuspended(ContactPage)
+    expect(wrapper.html()).toContain('tel:+201002785408')
+    expect(wrapper.html()).toContain('wa.me/966512345678')
+    expect(wrapper.text()).toContain('+20 100 278 5408')
+    expect(wrapper.text()).toContain('+966 512 345 678')
+  })
+
   it('never falls back to professionalEmail when contactEmail is null', async () => {
     settingsRef.value = settings({ contactEmail: null })
     const wrapper = await mountSuspended(ContactPage)
@@ -140,18 +193,21 @@ describe('contact page — direct-email fallback (FR-PUB-053)', () => {
     expect(wrapper.html()).not.toContain('hello@eslammuatamed.com')
   })
 
-  it('omits the whole fallback block when contactEmail is null', async () => {
-    settingsRef.value = settings({ contactEmail: null })
+  it('renders no direct-method rows at all when every field is null', async () => {
+    settingsRef.value = settings({ contactEmail: null, contactPhone: null, whatsappPhone: null })
     const wrapper = await mountSuspended(ContactPage)
-    expect(wrapper.text()).not.toContain(translate('contact.fallback.heading'))
+    const html = wrapper.html()
+    expect(html).not.toContain('mailto:')
+    expect(html).not.toContain('tel:')
+    expect(html).not.toContain('wa.me')
+    expect(html).not.toContain('null')
   })
 })
 
 describe('contact page — availability note', () => {
-  it('renders availabilityStatus verbatim on success when present', async () => {
+  it('renders availabilityStatus verbatim beside the direct methods when present', async () => {
     settingsRef.value = settings({ availabilityStatus: 'Open to frontend opportunities' })
     const wrapper = await mountSuspended(ContactPage)
-    await fillAndSubmit(wrapper)
     expect(wrapper.text()).toContain('Open to frontend opportunities')
   })
 
@@ -448,5 +504,90 @@ describe('contact page — Arabic', () => {
     await fillAndSubmit(wrapper)
     expect(wrapper.text()).toContain('خلال 5 دقائق')
     expect(wrapper.text()).not.toMatch(/[٠-٩]/)
+  })
+})
+
+
+// Email-or-phone (D10-16) and the E.164 the client composes from the selector (D13-6).
+describe('contact page — email or phone', () => {
+  it('submits email only, omitting phone from the payload entirely', async () => {
+    const wrapper = await mountSuspended(ContactPage)
+    await fillAndSubmit(wrapper)
+    const [, options] = post.mock.calls[0] as [string, { body: Record<string, unknown> }]
+    expect(options.body.email).toBe('alex@example.com')
+    // Omitted, not sent blank: the API distinguishes "not supplied" from "supplied and empty".
+    expect(options.body).not.toHaveProperty('phone')
+  })
+
+  it('submits phone only, omitting email from the payload entirely', async () => {
+    const wrapper = await mountSuspended(ContactPage)
+    await wrapper.find('input[name="nationalNumber"]').setValue('100 278 5408')
+    await fillAndSubmit(wrapper, { email: '' })
+    const [, options] = post.mock.calls[0] as [string, { body: Record<string, unknown> }]
+    expect(options.body).not.toHaveProperty('email')
+    expect(options.body.phone).toBe('+201002785408')
+  })
+
+  it('composes E.164 from the selected dialing code, dropping the local trunk zero', async () => {
+    const wrapper = await mountSuspended(ContactPage)
+    await wrapper.find('input[name="nationalNumber"]').setValue('010 0278 5408')
+    await fillAndSubmit(wrapper, { email: '' })
+    const [, options] = post.mock.calls[0] as [string, { body: { phone: string } }]
+    expect(options.body.phone).toBe('+201002785408')
+  })
+
+  it('sends both when both are supplied', async () => {
+    const wrapper = await mountSuspended(ContactPage)
+    await wrapper.find('input[name="nationalNumber"]').setValue('1002785408')
+    await fillAndSubmit(wrapper)
+    const [, options] = post.mock.calls[0] as [string, { body: Record<string, unknown> }]
+    expect(options.body.email).toBe('alex@example.com')
+    expect(options.body.phone).toBe('+201002785408')
+  })
+
+  it('blocks submission when neither method is supplied', async () => {
+    const wrapper = await mountSuspended(ContactPage)
+    await fillAndSubmit(wrapper, { email: '' })
+    expect(post).not.toHaveBeenCalled()
+    expect(wrapper.text()).toContain(translate('contact.errors.contactMethodRequired'))
+  })
+
+  // A value the visitor actually typed is judged on its own merits, even when the other is valid.
+  it('blocks a malformed email even though a valid phone is present', async () => {
+    const wrapper = await mountSuspended(ContactPage)
+    await wrapper.find('input[name="nationalNumber"]').setValue('1002785408')
+    await fillAndSubmit(wrapper, { email: 'not-an-email' })
+    expect(post).not.toHaveBeenCalled()
+    expect(wrapper.text()).toContain(translate('contact.errors.emailInvalid'))
+  })
+
+  it('blocks an implausible phone even though a valid email is present', async () => {
+    const wrapper = await mountSuspended(ContactPage)
+    await wrapper.find('input[name="nationalNumber"]').setValue('12')
+    await fillAndSubmit(wrapper)
+    expect(post).not.toHaveBeenCalled()
+    expect(wrapper.text()).toContain(translate('contact.errors.phoneInvalid'))
+  })
+
+  it('offers the seven markets plus an Other country option', async () => {
+    const wrapper = await mountSuspended(ContactPage)
+    const options = wrapper.findAll('#contact-dial-code option')
+    expect(options).toHaveLength(8)
+    expect(options[0]!.text()).toContain('+20')
+    expect(options[7]!.text()).toBe(translate('contact.form.otherCountry'))
+  })
+
+  it('labels the dialing-code select and the number field separately', async () => {
+    const wrapper = await mountSuspended(ContactPage)
+    expect(wrapper.find('label[for="contact-dial-code"]').exists()).toBe(true)
+    expect(wrapper.find('label[for="contact-phone"]').exists()).toBe(true)
+    expect(wrapper.find('#contact-phone').attributes('inputmode')).toBe('tel')
+    expect(wrapper.find('#contact-phone').attributes('autocomplete')).toBe('tel')
+  })
+
+  it('does not claim every field is required', async () => {
+    const wrapper = await mountSuspended(ContactPage)
+    expect(wrapper.text()).not.toContain('All fields are required')
+    expect(wrapper.text()).toContain(translate('contact.form.requiredHint'))
   })
 })

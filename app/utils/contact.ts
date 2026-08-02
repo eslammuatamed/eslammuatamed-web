@@ -106,3 +106,60 @@ export const CONTACT_LIMITS = {
   subject: 300,
   body: 5000
 } as const
+
+// ── phone composition (D13-6) ─────────────────────────────────────────────────────────────────
+//
+// Deliberately hand-rolled rather than an international-phone-input component: `/contact` measured
+// 245.8 KB gz against the frozen 250 KB budget, and such a component plus its country metadata is
+// an order of magnitude larger than the remaining headroom. What the client owes is a well-formed
+// CANDIDATE; the API decides validity (D10-16), so no per-country national-number rules live here.
+
+/** The `value` used by the "Other country" option — the visitor types the full international number. */
+export const OTHER_DIAL_CODE = 'other'
+
+/**
+ * The explicit markets, in the order they are offered. Egypt leads because it is the owner's own
+ * market and the sensible default; the rest are the GCC. Everywhere else is served by
+ * `OTHER_DIAL_CODE` rather than by shipping a ~250-entry list for a portfolio's realistic audience.
+ */
+export const DIAL_CODES = ['+20', '+966', '+971', '+965', '+974', '+973', '+968'] as const
+
+export type DialCode = (typeof DIAL_CODES)[number] | typeof OTHER_DIAL_CODE
+
+/**
+ * Builds the E.164 candidate actually submitted as `phone`.
+ *
+ * For an explicit market the national part is stripped to digits and appended to the chosen prefix.
+ * A leading trunk `0` is dropped — writing `010 0278 5408` is how the number is said locally, but
+ * E.164 has no trunk prefix, and leaving it produces a number that looks right and is not.
+ *
+ * For `OTHER_DIAL_CODE` the visitor's own text is normalized as-is; they are asked to include the
+ * `+`, and if they do not, the result fails validation rather than being guessed at.
+ *
+ * Returns `null` when nothing usable was entered, so the caller can treat "no phone" and "a bad
+ * phone" as the different things they are.
+ */
+export function composeE164(dialCode: DialCode, nationalInput: string): string | null {
+  const raw = nationalInput.trim()
+  if (raw === '') return null
+
+  if (dialCode === OTHER_DIAL_CODE) {
+    const compact = raw.replace(/[^\d+]/g, '')
+    const normalized = compact.startsWith('+') ? `+${compact.slice(1).replace(/\+/g, '')}` : compact
+    return normalized === '' ? raw : normalized
+  }
+
+  const digits = raw.replace(/\D/g, '').replace(/^0+/, '')
+  return digits === '' ? raw : `${dialCode}${digits}`
+}
+
+/**
+ * A deliberately shallow shape check: `+`, a non-zero leading digit, and a plausible total length.
+ *
+ * This exists to give immediate feedback on an obviously wrong entry, not to adjudicate. It must
+ * stay permissive — a client that rejected more than the API would turn a valid number into an
+ * error the visitor cannot resolve, and D13-6 is explicit that the API is authoritative.
+ */
+export function isPlausibleE164(value: string): boolean {
+  return /^\+[1-9]\d{6,14}$/.test(value)
+}

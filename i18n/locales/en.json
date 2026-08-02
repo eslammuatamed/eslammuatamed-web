@@ -204,19 +204,22 @@
     "errorBody": "The request did not complete. This is usually temporary."
   },
   "contact": {
-    "title": "Contact",
-    "description": "Tell me about the role, the project, or the problem — I read every message myself.",
+    "title": "Let’s talk about your next product or role",
+    "description": "Share the context and a way to reach you, or contact me directly by email, phone, or WhatsApp.",
     "breadcrumbLabel": "Breadcrumb",
     "form": {
-      "legend": "Send a message",
       "name": "Name",
       "email": "Email",
       "subject": "Subject",
       "body": "Message",
-      "requiredHint": "All fields are required.",
+      "requiredHint": "Name, subject, and message are required. Add either an email address or phone number.",
       "submit": "Send message",
       "submitting": "Sending…",
-      "websiteLabel": "Website"
+      "websiteLabel": "Website",
+      "phone": "Phone number",
+      "contactMethodHint": "Add an email address or phone number so I can reach you.",
+      "countryCode": "Country or dialing code",
+      "otherCountry": "Other country"
     },
     "errors": {
       "nameRequired": "Enter your name.",
@@ -227,7 +230,9 @@
       "subjectRequired": "Enter a subject.",
       "subjectTooLong": "Subject must be 300 characters or fewer.",
       "bodyRequired": "Enter your message.",
-      "bodyTooLong": "Message must be 5000 characters or fewer."
+      "bodyTooLong": "Message must be 5000 characters or fewer.",
+      "contactMethodRequired": "Enter an email address or phone number.",
+      "phoneInvalid": "Enter a valid international phone number."
     },
     "success": {
       "title": "Message received",
@@ -244,15 +249,26 @@
       "networkTitle": "Couldn't reach the server",
       "networkBody": "Check your connection and try again, or email me directly."
     },
-    "fallback": {
-      "heading": "Prefer email?",
-      "body": "You can email me directly instead.",
-      "action": "Email me directly"
-    },
     "a11y": {
       "formLabel": "Contact form",
       "statusLabel": "Submission status"
-    }
+    },
+    "methods": {
+      "heading": "Reach me directly",
+      "email": "Email",
+      "phone": "Phone",
+      "whatsapp": "WhatsApp",
+      "countries": {
+        "+20": "Egypt",
+        "+966": "Saudi Arabia",
+        "+971": "United Arab Emirates",
+        "+965": "Kuwait",
+        "+974": "Qatar",
+        "+973": "Bahrain",
+        "+968": "Oman"
+      }
+    },
+    "whatsappMessage": "Hi Eslam, I found you through your portfolio and would like to discuss a project or work opportunity."
   },
   "article": {
     "back": "Back to blog",
