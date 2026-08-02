@@ -336,7 +336,7 @@ useSeoMeta({
           v-if="outcome === 'success'"
           role="status"
           aria-live="polite"
-          class="flex min-h-[28rem] flex-col items-center justify-center px-2 text-center"
+          class="flex min-h-[34rem] flex-col items-center justify-center px-2 text-center"
         >
           <UIcon name="i-lucide-circle-check" class="size-11 text-success" aria-hidden="true" />
           <!--
