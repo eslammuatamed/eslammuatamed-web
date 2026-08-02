@@ -21,7 +21,20 @@ const { t, locale } = useI18n()
 const api = useApi()
 const localePath = useLocalePath()
 
-const { data: settings } = await useSiteSettings()
+// Deliberately NOT awaited, and this is load-bearing rather than a style choice.
+//
+// `await` in `<script setup>` makes the component async, which puts it behind its own Suspense
+// boundary. Vue derives `useId()` values from that boundary, so the server and the client generated
+// DIFFERENT id prefixes for this page (`v-0-1-*` server, `v-0-0-*` client). `UFormField` renders
+// `<label :for="useId()">` while its control resolves its own id, so after hydration every label
+// pointed at an element that no longer existed: clicking a label did nothing and every field was
+// announced as unlabelled. Lighthouse caught it as accessibility 92 (EN) / 96 (AR) against the
+// required 100; there was no hydration warning, because the markup shape matched — only the ids
+// disagreed.
+//
+// Nothing here needs to block setup: `useAsyncData` resolves during SSR and rehydrates from the
+// payload, and every read below goes through a computed on the reactive ref.
+const { data: settings } = useSiteSettings()
 
 // ── copy-visible contract ─────────────────────────────────────────────────────────────────────
 // The direct-email fallback has exactly ONE source (owner decision): `contactEmail`. Never
@@ -310,20 +323,29 @@ useSeoMeta({
         class="mt-6 space-y-5"
         @submit="onSubmit"
       >
+        <!--
+          Every control carries an EXPLICIT `id`. `useFormField` writes a control's `id` prop into
+          the same ref `UFormField` renders as `<label :for>`, so both sides resolve from one stable
+          value. Left to the generated ids, this page's SSR pass produced `v-0-1-*` while hydration
+          produced `v-0-0-*` for the controls only — the labels kept pointing at elements that no
+          longer existed, so clicking a label did nothing and every field was announced unlabelled.
+          Lighthouse scored accessibility 92 (EN) / 96 (AR) against the required 100, with no Vue
+          hydration warning, because only the id VALUES disagreed and the markup shape matched.
+        -->
         <UFormField name="name" :label="t('contact.form.name')" required>
-          <UInput v-model="state.name" autocomplete="name" :maxlength="CONTACT_LIMITS.name" class="w-full" />
+          <UInput id="contact-name" v-model="state.name" autocomplete="name" :maxlength="CONTACT_LIMITS.name" class="w-full" />
         </UFormField>
 
         <UFormField name="email" :label="t('contact.form.email')" required>
-          <UInput v-model="state.email" type="email" autocomplete="email" :maxlength="CONTACT_LIMITS.email" class="w-full" />
+          <UInput id="contact-email" v-model="state.email" type="email" autocomplete="email" :maxlength="CONTACT_LIMITS.email" class="w-full" />
         </UFormField>
 
         <UFormField name="subject" :label="t('contact.form.subject')" required>
-          <UInput v-model="state.subject" autocomplete="off" :maxlength="CONTACT_LIMITS.subject" class="w-full" />
+          <UInput id="contact-subject" v-model="state.subject" autocomplete="off" :maxlength="CONTACT_LIMITS.subject" class="w-full" />
         </UFormField>
 
         <UFormField name="body" :label="t('contact.form.body')" required>
-          <UTextarea v-model="state.body" :rows="8" autocomplete="off" :maxlength="CONTACT_LIMITS.body" class="w-full" />
+          <UTextarea id="contact-body" v-model="state.body" :rows="8" autocomplete="off" :maxlength="CONTACT_LIMITS.body" class="w-full" />
         </UFormField>
 
         <!--

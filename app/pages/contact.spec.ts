@@ -32,7 +32,7 @@ mockNuxtImport('useSchemaOrg', () => () => undefined)
 mockNuxtImport('defineWebPage', () => (input: unknown) => input)
 mockNuxtImport('defineBreadcrumb', () => (input: unknown) => input)
 mockNuxtImport('useSeoMeta', () => () => undefined)
-mockNuxtImport('useSiteSettings', () => async () => ({ data: settingsRef }))
+mockNuxtImport('useSiteSettings', () => () => ({ data: settingsRef }))
 
 const localeFile = (code: string) =>
   JSON.parse(readFileSync(resolve(process.cwd(), `i18n/locales/${code}.json`), 'utf8')) as Record<string, unknown>
@@ -196,6 +196,51 @@ describe('contact page — submission payload', () => {
     const [, options] = post.mock.calls[0] as [string, { body: { elapsedMs: number } }]
     expect(Number.isInteger(options.body.elapsedMs)).toBe(true)
     expect(options.body.elapsedMs).toBeGreaterThanOrEqual(3000)
+  })
+})
+
+// Regression guard for a real defect this slice shipped and Lighthouse caught: with Nuxt UI's
+// GENERATED ids, the SSR pass produced `v-0-1-*` and hydration produced `v-0-0-*` for the controls
+// only, so every `<label for>` pointed at an element that no longer existed — clicking a label did
+// nothing and each field was announced unlabelled (accessibility 92 EN / 96 AR against a required
+// 100, with no Vue hydration warning because only the id values differed).
+//
+// Passing an explicit `id` makes `useFormField` write it into the same ref the label renders, so
+// both sides resolve from one stable value. These assertions fail if the explicit ids are ever
+// removed and the page drifts back onto generated ones.
+describe('contact page — label association (a11y regression guard)', () => {
+  it('gives every visible control a stable, non-generated id', async () => {
+    const wrapper = await mountSuspended(ContactPage)
+    for (const [field, id] of Object.entries({
+      name: 'contact-name',
+      email: 'contact-email',
+      subject: 'contact-subject',
+      body: 'contact-body'
+    })) {
+      const control = wrapper.find(`input[name="${field}"], textarea[name="${field}"]`)
+      expect(control.attributes('id')).toBe(id)
+      expect(control.attributes('id')).not.toMatch(/^v-\d/)
+    }
+  })
+
+  it('points every label at a control that actually exists', async () => {
+    const wrapper = await mountSuspended(ContactPage)
+    const labels = wrapper.findAll('label')
+    expect(labels.length).toBeGreaterThanOrEqual(5)
+    for (const label of labels) {
+      const target = label.attributes('for')
+      expect(target).toBeDefined()
+      expect(wrapper.find(`#${target}`).exists()).toBe(true)
+    }
+  })
+
+  it('leaves no visible control unlabelled', async () => {
+    const wrapper = await mountSuspended(ContactPage)
+    for (const field of ['name', 'email', 'subject', 'body']) {
+      const control = wrapper.find(`input[name="${field}"], textarea[name="${field}"]`)
+      const id = control.attributes('id')
+      expect(wrapper.find(`label[for="${id}"]`).exists()).toBe(true)
+    }
   })
 })
 
