@@ -10,7 +10,7 @@ import type { SiteSettings } from '~/types/models'
 
 const props = defineProps<{ settings: SiteSettings | null | undefined }>()
 
-const { t, locale } = useI18n()
+const { t } = useI18n()
 
 const email = computed(() => props.settings?.contactEmail ?? null)
 const phone = computed(() => props.settings?.contactPhone ?? null)
@@ -69,13 +69,17 @@ const sameLine = computed(() => {
 
 const availability = computed(() => props.settings?.availabilityStatus ?? null)
 
-// `dir="ltr"` on the rendered numbers only: a phone number is a left-to-right sequence even inside
-// an RTL paragraph, and without this the `+` lands on the wrong end on /ar.
-const numberDir = computed(() => (locale.value === 'ar' ? 'ltr' : undefined))
+// Phone numbers are rendered inside `<bdi>` rather than a `dir="ltr"` span.
+//
+// Both isolate the number so the `+` and the digit groups keep their left-to-right order inside an
+// RTL paragraph — but `dir="ltr"` also makes that element's own box align its content to the LEFT,
+// which is what made the number look detached and drifting away from the Arabic column. `<bdi>` is
+// the element HTML provides for exactly this: it isolates the bidi algorithm for its contents and
+// nothing else, so the line still starts where the RTL column starts.
 </script>
 
 <template>
-  <section v-if="email || phone || whatsapp || availability" class="mt-10">
+  <section v-if="email || phone || whatsapp || availability" class="mt-10 text-start">
     <h2 class="text-body-sm font-medium uppercase tracking-wide text-muted">
       {{ t('contact.methods.heading') }}
     </h2>
@@ -92,7 +96,7 @@ const numberDir = computed(() => (locale.value === 'ar' ? 'ltr' : undefined))
         >
           <span class="flex flex-col items-start text-start">
             <span class="text-body-sm text-muted">{{ t('contact.methods.email') }}</span>
-            <span class="text-highlighted">{{ email }}</span>
+            <span class="text-highlighted"><bdi>{{ email }}</bdi></span>
           </span>
         </UButton>
       </li>
@@ -103,14 +107,14 @@ const numberDir = computed(() => (locale.value === 'ar' ? 'ltr' : undefined))
         have to pick one of the two behaviours and silently drop the other. Labels are visible text
         rather than icon-only, so the choice is legible without relying on icon literacy.
       -->
-      <li v-if="sameLine" class="px-3 py-2">
+      <li v-if="sameLine" class="px-3 py-2 text-start">
         <p class="text-body-sm text-muted">
           {{ t('contact.methods.combined') }}
         </p>
-        <p :dir="numberDir" class="mt-0.5 text-highlighted">
-          {{ displayPhone }}
+        <p class="mt-0.5 text-highlighted">
+          <bdi>{{ displayPhone }}</bdi>
         </p>
-        <div class="mt-2 flex flex-wrap gap-2">
+        <div class="mt-2.5 flex flex-wrap justify-start gap-2">
           <UButton
             :to="`tel:${phone}`"
             :external="true"
@@ -148,7 +152,7 @@ const numberDir = computed(() => (locale.value === 'ar' ? 'ltr' : undefined))
         >
           <span class="flex flex-col items-start text-start">
             <span class="text-body-sm text-muted">{{ t('contact.methods.phone') }}</span>
-            <span :dir="numberDir" class="text-highlighted">{{ displayPhone }}</span>
+            <span class="text-highlighted"><bdi>{{ displayPhone }}</bdi></span>
           </span>
         </UButton>
       </li>
@@ -166,7 +170,7 @@ const numberDir = computed(() => (locale.value === 'ar' ? 'ltr' : undefined))
         >
           <span class="flex flex-col items-start text-start">
             <span class="text-body-sm text-muted">{{ t('contact.methods.whatsapp') }}</span>
-            <span :dir="numberDir" class="text-highlighted">{{ displayWhatsapp }}</span>
+            <span class="text-highlighted"><bdi>{{ displayWhatsapp }}</bdi></span>
           </span>
         </UButton>
       </li>
