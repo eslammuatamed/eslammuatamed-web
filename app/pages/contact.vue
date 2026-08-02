@@ -336,25 +336,29 @@ useSeoMeta({
           v-if="outcome === 'success'"
           role="status"
           aria-live="polite"
-          class="py-6 text-center"
+          class="flex min-h-[28rem] flex-col items-center justify-center px-2 text-center"
         >
-          <UIcon name="i-lucide-circle-check" class="size-10 text-success" aria-hidden="true" />
-          <!-- `tabindex="-1"` so focus can land here; it is the correct destination now that the
-               form it replaced is gone. -->
+          <UIcon name="i-lucide-circle-check" class="size-11 text-success" aria-hidden="true" />
+          <!--
+            `tabindex="-1"` so focus can land here: the form it replaced is gone, so this heading is
+            the correct destination rather than leaving the visitor where a control used to be.
+          -->
           <h2
             ref="successHeading"
             tabindex="-1"
-            class="mt-4 text-h3 text-highlighted outline-none"
+            class="mt-5 text-h3 text-highlighted outline-none"
           >
             {{ t('contact.success.title') }}
           </h2>
-          <p class="mt-2 text-muted">
+          <p class="mt-2 max-w-sm text-balance text-muted">
             {{ t('contact.success.body') }}
           </p>
           <UButton
-            class="mt-6"
-            color="neutral"
-            variant="outline"
+            class="mt-7"
+            size="lg"
+            color="primary"
+            variant="soft"
+            icon="i-lucide-rotate-ccw"
             :label="t('contact.success.again')"
             @click="startAnother"
           />

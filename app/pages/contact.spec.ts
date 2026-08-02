@@ -857,3 +857,80 @@ describe('contact page — success state', () => {
     expect(wrapper.text()).not.toContain(translate('contact.success.title'))
   })
 })
+
+
+// Identical owner numbers render as ONE item with two actions (owner directive). The settings stay
+// two independent fields — this is a rendering decision, not a contract change.
+describe('contact page — combined phone/WhatsApp item', () => {
+  // Scoped to the direct-methods list: the FORM also has a "Phone number" label, so a page-wide
+  // text search for "Phone" would match it and prove nothing about the methods list.
+  const methods = (w: Awaited<ReturnType<typeof mountSuspended>>) => w.find('section ul').text()
+  // Item COUNT is the precise assertion: "Phone & WhatsApp" contains the substring "Phone", so a
+  // negative text search can never distinguish a combined item from a standalone one.
+  const methodItems = (w: Awaited<ReturnType<typeof mountSuspended>>) => w.findAll('section ul > li').length
+
+  it('renders one combined item when both numbers are the same line', async () => {
+    const wrapper = await mountSuspended(ContactPage)
+    const text = wrapper.text()
+    expect(text).toContain(translate('contact.methods.combined'))
+    // The number is printed exactly once, not once per channel.
+    expect(text.split('+20 100 278 5408').length - 1).toBe(1)
+    // Two items only: email + the one combined line — not three.
+    expect(methodItems(wrapper)).toBe(2)
+  })
+
+  it('keeps Call and WhatsApp independently usable, with visible labels', async () => {
+    const wrapper = await mountSuspended(ContactPage)
+    expect(wrapper.text()).toContain(translate('contact.methods.call'))
+    expect(wrapper.text()).toContain(translate('contact.methods.whatsapp'))
+    expect(wrapper.html()).toContain('tel:+201002785408')
+    expect(wrapper.html()).toContain('wa.me/201002785408')
+  })
+
+  // Comparison is on the canonical E.164 form, so formatting differences do not split the item.
+  it('treats differently-formatted identical numbers as one line', async () => {
+    settingsRef.value = settings({ contactPhone: '+201002785408', whatsappPhone: '+20 100 278 5408' })
+    const wrapper = await mountSuspended(ContactPage)
+    expect(wrapper.text()).toContain(translate('contact.methods.combined'))
+    expect(methodItems(wrapper)).toBe(2)
+  })
+
+  it('renders separate items when the numbers differ', async () => {
+    settingsRef.value = settings({ contactPhone: '+201002785408', whatsappPhone: '+966512345678' })
+    const wrapper = await mountSuspended(ContactPage)
+    const text = wrapper.text()
+    expect(text).not.toContain(translate('contact.methods.combined'))
+    // Three items: email, phone, WhatsApp.
+    expect(methodItems(wrapper)).toBe(3)
+    expect(methods(wrapper)).toContain(translate('contact.methods.phone'))
+    expect(text).toContain('+20 100 278 5408')
+    expect(text).toContain('+966 512 345 678')
+    expect(wrapper.html()).toContain('tel:+201002785408')
+    expect(wrapper.html()).toContain('wa.me/966512345678')
+  })
+
+  it('renders Phone only when whatsappPhone is null', async () => {
+    settingsRef.value = settings({ whatsappPhone: null })
+    const wrapper = await mountSuspended(ContactPage)
+    expect(wrapper.text()).not.toContain(translate('contact.methods.combined'))
+    expect(wrapper.html()).toContain('tel:+201002785408')
+    expect(wrapper.html()).not.toContain('wa.me')
+  })
+
+  it('renders WhatsApp only when contactPhone is null', async () => {
+    settingsRef.value = settings({ contactPhone: null })
+    const wrapper = await mountSuspended(ContactPage)
+    expect(wrapper.text()).not.toContain(translate('contact.methods.combined'))
+    expect(wrapper.html()).toContain('wa.me/201002785408')
+    expect(wrapper.html()).not.toContain('tel:')
+  })
+
+  it('renders neither when both are null', async () => {
+    settingsRef.value = settings({ contactPhone: null, whatsappPhone: null })
+    const wrapper = await mountSuspended(ContactPage)
+    const html = wrapper.html()
+    expect(html).not.toContain('tel:')
+    expect(html).not.toContain('wa.me')
+    expect(wrapper.text()).not.toContain(translate('contact.methods.combined'))
+  })
+})

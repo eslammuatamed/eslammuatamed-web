@@ -54,6 +54,19 @@ const whatsappUrl = computed(() => {
   return `https://wa.me/${digits}?text=${encodeURIComponent(t('contact.whatsappMessage'))}`
 })
 
+// Are the two numbers the same LINE, regardless of how each was written? Compared on the canonical
+// E.164 form, so `+20 100 278 5408` and `+201002785408` are recognised as one number.
+//
+// The settings stay two independent fields (D10-16) — nothing here collapses the contract. This is
+// purely a rendering decision: showing the same number twice under two headings reads like two ways
+// to reach someone when it is one, so the two are merged into a single item carrying BOTH actions.
+const sameLine = computed(() => {
+  if (!phone.value || !whatsapp.value) return false
+  const a = normalizePhone(OTHER_DIAL_CODE, phone.value)
+  const b = normalizePhone(OTHER_DIAL_CODE, whatsapp.value)
+  return a !== null && a === b
+})
+
 const availability = computed(() => props.settings?.availabilityStatus ?? null)
 
 // `dir="ltr"` on the rendered numbers only: a phone number is a left-to-right sequence even inside
@@ -84,7 +97,47 @@ const numberDir = computed(() => (locale.value === 'ar' ? 'ltr' : undefined))
         </UButton>
       </li>
 
-      <li v-if="phone">
+      <!--
+        One line, two actions. The number is printed ONCE and each action is a separate, explicitly
+        labelled control — the number itself is not a link, because a single tappable number would
+        have to pick one of the two behaviours and silently drop the other. Labels are visible text
+        rather than icon-only, so the choice is legible without relying on icon literacy.
+      -->
+      <li v-if="sameLine" class="px-3 py-2">
+        <p class="text-body-sm text-muted">
+          {{ t('contact.methods.combined') }}
+        </p>
+        <p :dir="numberDir" class="mt-0.5 text-highlighted">
+          {{ displayPhone }}
+        </p>
+        <div class="mt-2 flex flex-wrap gap-2">
+          <UButton
+            :to="`tel:${phone}`"
+            :external="true"
+            size="xs"
+            color="neutral"
+            variant="outline"
+            icon="i-lucide-phone"
+            :label="t('contact.methods.call')"
+            :aria-label="`${t('contact.methods.call')}: ${displayPhone}`"
+          />
+          <UButton
+            v-if="whatsappUrl"
+            :to="whatsappUrl"
+            :external="true"
+            target="_blank"
+            rel="noopener"
+            size="xs"
+            color="neutral"
+            variant="outline"
+            icon="i-simple-icons-whatsapp"
+            :label="t('contact.methods.whatsapp')"
+            :aria-label="`${t('contact.methods.whatsapp')}: ${displayPhone}`"
+          />
+        </div>
+      </li>
+
+      <li v-if="phone && !sameLine">
         <UButton
           :to="`tel:${phone}`"
           :external="true"
@@ -100,7 +153,7 @@ const numberDir = computed(() => (locale.value === 'ar' ? 'ltr' : undefined))
         </UButton>
       </li>
 
-      <li v-if="whatsappUrl">
+      <li v-if="whatsappUrl && !sameLine">
         <UButton
           :to="whatsappUrl"
           :external="true"
@@ -117,6 +170,7 @@ const numberDir = computed(() => (locale.value === 'ar' ? 'ltr' : undefined))
           </span>
         </UButton>
       </li>
+
     </ul>
 
     <!--

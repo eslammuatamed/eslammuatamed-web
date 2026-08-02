@@ -269,7 +269,9 @@
         "+974": "Qatar",
         "+973": "Bahrain",
         "+968": "Oman"
-      }
+      },
+      "combined": "Phone & WhatsApp",
+      "call": "Call"
     },
     "whatsappMessage": "Hi Eslam, I found you through your portfolio and would like to discuss a project or work opportunity."
   },
