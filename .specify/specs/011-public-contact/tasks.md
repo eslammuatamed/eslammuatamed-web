@@ -67,9 +67,28 @@
 - [ ] T082 Delete `.omc/research/contact-copy-inventory-and-api-correction.md` **after** T004 captured its content
 - [ ] T083 Clean up worktrees, disposable DB, temp env; verify all pre-existing dirty state and stashes preserved
 
+## Status at Web head `c5832cee` (2026-08-02)
+
+- Implementation **complete** and owner-approved visually (composition, native select, combined
+  Phone & WhatsApp item, success state, mobile header, Arabic RTL polish).
+- PR **#31 open, NOT merged**. Awaiting the owner's explicit merge approval.
+- Budgets green: `/contact` and `/ar/contact` **232.2 KB gz / 250**, app-owned 75 579 B / 101 KiB,
+  CSS 29.23 KB / 30, bundle isolation and logical-properties clean.
+- Lint, typecheck, e2e typecheck and **784 unit/component tests** green.
+- **OUTSTANDING — the complete final matrix has not been run at this head.** It was started at
+  `0d3feca` and stopped when the Arabic RTL polish changed the head. Still to run at `c5832cee`:
+  full browser suite, repeat-flake sweep (`--repeat-each=3`, CI workers, 0 retries), full unfiltered
+  axe matrix, real disposable-API proof, Lighthouse 3×/route/profile with median gates, exact-head CI.
+- Dashboard Inbox (Web PR 2) **not started**. Issue #30 open and untouched.
+
 ## Open defects — must be fixed before the browser lane runs
 
-- [ ] **F-6 (new, observed 2026-08-02).** After a failed submit leaves the pair error on `email`,
+- [x] **F-6 — FIXED.** Root cause: `UForm._validate({name})` replaces the error list filtered to the
+  changed field, and `input` only revalidates an already-blurred field, so a cross-field issue keyed
+  to `email` was never re-judged when the phone changed. The invariant is now a computed over current
+  form values rather than a stored form error. Regression-tested in component and browser lanes.
+
+- [x] ~~**F-6 (original report).**~~ After a failed submit leaves the pair error on `email`,
   subsequently filling the phone does not clear it and the resubmit stays blocked. A phone-only
   submission from a CLEAN page load works correctly (verified in a browser), so this is stale
   cross-field error state, not the pair rule itself: `superRefine` is an object-level check and
