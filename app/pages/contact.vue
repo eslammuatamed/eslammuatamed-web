@@ -267,11 +267,20 @@ useSeoMeta({
       <p class="mt-2 text-muted">
         {{ t('contact.fallback.body') }}
       </p>
+      <!--
+        `color="neutral" variant="outline"`, matching the home page's secondary email CTA. The
+        obvious `variant="subtle"` renders the primary violet as TEXT on a tinted surface, which
+        measures 3.21:1 against the dark background — below the 4.5:1 WCAG AA minimum, and a real
+        Lighthouse failure (EN accessibility 96 against the required 100). This is also the correct
+        semantic: the form is the primary action on this page and the direct email is the fallback.
+      -->
       <UButton
         class="mt-4"
-        variant="subtle"
+        color="neutral"
+        variant="outline"
         icon="i-lucide-mail"
         :to="`mailto:${contactEmail}`"
+        :external="true"
         :label="t('contact.fallback.action')"
         :aria-label="`${t('contact.fallback.action')}: ${contactEmail}`"
       />
