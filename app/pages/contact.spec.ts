@@ -589,12 +589,31 @@ describe('contact page — email or phone', () => {
     expect(wrapper.text()).toContain(translate('contact.errors.phoneInvalid'))
   })
 
-  it('offers the seven markets plus an Other country option', async () => {
+  // USelectMenu is non-native: its list lives in a portal and only exists once opened, so the
+  // offered set is asserted on DIAL_CODES in the utils spec. Here we assert what the page renders —
+  // the trigger, its default selection, and that no BROWSER-DEFAULT control was left behind.
+  it('renders a non-native selector defaulting to Egypt', async () => {
     const wrapper = await mountSuspended(ContactPage)
-    const options = wrapper.findAll('#contact-dial-code option')
-    expect(options).toHaveLength(8)
-    expect(options[0]!.text()).toContain('+20')
-    expect(options[7]!.text()).toBe(translate('contact.form.otherCountry'))
+    const trigger = wrapper.find('#contact-dial-code')
+    expect(trigger.exists()).toBe(true)
+    expect(trigger.element.tagName).not.toBe('SELECT')
+    expect(wrapper.text()).toContain(translate('contact.methods.countries.+20'))
+  })
+
+  it('leaves no raw native form control in the page', async () => {
+    const wrapper = await mountSuspended(ContactPage)
+    // No VISIBLE browser-default select. reka-ui (which backs USelect) renders a hidden native
+    // <select> so the control still participates in form submission and autofill — that one is
+    // aria-hidden and is not what the visitor sees or operates.
+    for (const native of wrapper.findAll('select')) {
+      expect(native.attributes('aria-hidden')).toBe('true')
+    }
+    // Every VISIBLE control the visitor types into is a Nuxt UI primitive — those carry `data-slot`,
+    // a hand-rolled control would not. The honeypot is excluded (deliberately a bare hidden input),
+    // and so are any internal inputs USelectMenu renders for its own trigger plumbing.
+    for (const id of ['contact-name', 'contact-subject', 'contact-email', 'contact-phone', 'contact-body']) {
+      expect(wrapper.find(`#${id}`).attributes('data-slot')).toBeDefined()
+    }
   })
 
   it('labels the dialing-code select and the number field separately', async () => {

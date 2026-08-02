@@ -219,7 +219,8 @@
       "phone": "رقم الهاتف",
       "contactMethodHint": "أضف بريدًا إلكترونيًا أو رقم هاتف حتى أتمكن من التواصل معك.",
       "countryCode": "الدولة أو مفتاح الاتصال",
-      "otherCountry": "دولة أخرى"
+      "otherCountry": "دولة أخرى",
+      "otherCountryHint": "أدرج مفتاح الدولة مبتدئًا بعلامة +."
     },
     "errors": {
       "nameRequired": "أدخل اسمك.",

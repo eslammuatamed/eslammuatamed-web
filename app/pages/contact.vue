@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import * as z from 'zod'
 import type { FormError, FormSubmitEvent } from '@nuxt/ui'
 import type { Envelope } from '~/types/models'
 
@@ -29,40 +28,33 @@ const { data: settings } = useSiteSettings()
 // Mirrors the API (D10-15 trimming, D10-16 pair rule). `email` and `phone` are individually optional
 // but `superRefine` requires at least one — and a SUPPLIED value is still format-checked, so a
 // mistyped address is an error rather than something quietly ignored because a phone is present.
-// The form's shape, declared explicitly rather than inferred from the schema. The schema needs a
-// sibling field (`dialCode`) to judge the phone, and inferring `state` from the schema while the
-// schema reads `state` is a type cycle — so the interface is the single source of the shape and
-// `superRefine` reads the sibling from the value under validation instead.
+// The form's shape. `zod` is deliberately NOT used on this route — see `validateContactForm`.
 interface ContactForm {
   name: string
   email: string
-  dialCode: string
+  dialCode: DialCode
   nationalNumber: string
   subject: string
   body: string
 }
 
-// Per-field rules ONLY. The email-or-phone invariant is deliberately NOT here — see
-// `contactMethodMissing` below for why a cross-field rule cannot live in the schema safely.
-//
-// `email` and `phone` are individually optional; a SUPPLIED value is still format-checked, so a
-// mistyped address is an error rather than something quietly ignored because the other is fine.
-const schema = z.object({
-  name: z.string().trim().min(1, t('contact.errors.nameRequired')).max(CONTACT_LIMITS.name, t('contact.errors.nameTooLong')),
-  email: z.string().trim().max(CONTACT_LIMITS.email, t('contact.errors.emailTooLong'))
-    .refine(value => value === '' || z.email().safeParse(value).success, t('contact.errors.emailInvalid')),
-  dialCode: z.string(),
-  nationalNumber: z.string(),
-  subject: z.string().trim().min(1, t('contact.errors.subjectRequired')).max(CONTACT_LIMITS.subject, t('contact.errors.subjectTooLong')),
-  body: z.string().trim().min(1, t('contact.errors.bodyRequired')).max(CONTACT_LIMITS.body, t('contact.errors.bodyTooLong'))
-}).superRefine((value, ctx) => {
-  // Phone validity needs BOTH the dialing code and the number, so it is an object-level check —
-  // but it stays keyed to `nationalNumber` because it is that field the visitor must correct.
-  const normalized = normalizePhone(value.dialCode as DialCode, value.nationalNumber)
-  if (normalized !== null && !validatePhone(value.dialCode as DialCode, normalized)) {
-    ctx.addIssue({ code: 'custom', path: ['nationalNumber'], message: t('contact.errors.phoneInvalid') })
-  }
-})
+// Feature-local validation via UForm's `validate` prop instead of a schema library. `USelectMenu`
+// — required for the approved control appearance — pushed this route to 281.0 KB gz against the
+// frozen 250 KB budget, and the pre-agreed remedy is to drop zod rather than the control or the
+// threshold. UFormField, error rendering, focus management and the aria associations are unchanged;
+// only the rule engine differs.
+const validateForm = (values: ContactForm): ContactFieldError[] =>
+  validateContactForm(values, {
+    nameRequired: t('contact.errors.nameRequired'),
+    nameTooLong: t('contact.errors.nameTooLong'),
+    emailInvalid: t('contact.errors.emailInvalid'),
+    emailTooLong: t('contact.errors.emailTooLong'),
+    phoneInvalid: t('contact.errors.phoneInvalid'),
+    subjectRequired: t('contact.errors.subjectRequired'),
+    subjectTooLong: t('contact.errors.subjectTooLong'),
+    bodyRequired: t('contact.errors.bodyRequired'),
+    bodyTooLong: t('contact.errors.bodyTooLong')
+  })
 
 const emptyForm = (): ContactForm => ({
   name: '',
@@ -190,13 +182,16 @@ async function onSubmit(event: FormSubmitEvent<ContactForm>): Promise<void> {
     await api<Envelope<{ received: boolean }>>('/contact', {
       method: 'POST',
       body: {
-        name: event.data.name,
+        // Trimmed explicitly. zod's `.trim()` used to transform the validated output; the
+        // feature-local validator only INSPECTS values, so the payload has to do it itself or the
+        // API would receive the padding the visitor typed.
+        name: event.data.name.trim(),
         // Omitted rather than sent empty: the API distinguishes "not supplied" from "supplied and
         // blank", and sending `''` would turn a phone-only submission into a malformed-email 422.
         ...(email === '' ? {} : { email }),
         ...(phone === null ? {} : { phone }),
-        subject: event.data.subject,
-        body: event.data.body,
+        subject: event.data.subject.trim(),
+        body: event.data.body.trim(),
         website: companyUrl.value,
         elapsedMs
       }
@@ -392,7 +387,7 @@ useSeoMeta({
 
         <UForm
           ref="form"
-          :schema="schema"
+          :validate="validateForm"
           :state="state"
           :aria-label="t('contact.a11y.formLabel')"
           class="mt-5 space-y-5"
@@ -406,26 +401,19 @@ useSeoMeta({
             hydration warning, because only the id VALUES disagreed.
           -->
           <UFormField name="name" :label="t('contact.form.name')" required>
-            <UInput id="contact-name" v-model="state.name" autocomplete="name" :maxlength="CONTACT_LIMITS.name" class="w-full" />
+            <UInput id="contact-name" v-model="state.name" size="lg" autocomplete="name" :maxlength="CONTACT_LIMITS.name" class="w-full" />
           </UFormField>
 
           <UFormField name="subject" :label="t('contact.form.subject')" required>
-            <UInput id="contact-subject" v-model="state.subject" autocomplete="off" :maxlength="CONTACT_LIMITS.subject" class="w-full" />
+            <UInput id="contact-subject" v-model="state.subject" size="lg" autocomplete="off" :maxlength="CONTACT_LIMITS.subject" class="w-full" />
           </UFormField>
 
           <!--
-            The email/phone pair, grouped under one hint so the at-least-one rule is stated before
-            the visitor can trip it rather than only afterwards as an error.
+            The email/phone pair. A hint plus two fields — deliberately NOT a bordered card: a
+            second card inside the form panel competes with the panel itself, and the grouping is
+            already carried by the hint, the spacing and the `aria-labelledby` association.
           -->
-          <!--
-            `aria-labelledby` on a plain <p> rather than a <legend>: the hint is a full sentence and
-            wraps to two lines at narrow widths, where a legend renders THROUGH the fieldset's top
-            border. The grouping semantics are preserved without the rendering artefact.
-          -->
-          <fieldset
-            class="space-y-4 rounded-lg border border-default/60 p-4"
-            aria-labelledby="contact-method-hint"
-          >
+          <div class="space-y-4" role="group" aria-labelledby="contact-method-hint">
             <p id="contact-method-hint" class="text-body-sm text-muted">
               {{ t('contact.form.contactMethodHint') }}
             </p>
@@ -435,6 +423,7 @@ useSeoMeta({
                 id="contact-email"
                 v-model="state.email"
                 type="email"
+                size="lg"
                 autocomplete="email"
                 :maxlength="CONTACT_LIMITS.email"
                 :aria-describedby="showContactMethodError ? 'contact-method-error' : undefined"
@@ -442,59 +431,63 @@ useSeoMeta({
               />
             </UFormField>
 
+            <UFormField
+              name="nationalNumber"
+              :label="t('contact.form.phone')"
+              :description="isOtherCountry ? t('contact.form.otherCountryHint') : undefined"
+            >
+              <!--
+                Stacked below `sm`, one row above it. `min-w-0` on the number wrapper is
+                load-bearing: a flex item defaults to `min-width: auto`, so the selector's longest
+                label ("United Arab Emirates (+971)") would otherwise win the row and crush the
+                input. The selector is given a fixed basis wide enough for name + code + indicator.
+              -->
+              <div class="flex flex-col gap-2 sm:flex-row">
+                <label for="contact-dial-code" class="sr-only">{{ t('contact.form.countryCode') }}</label>
+                <!--
+                  `USelect`, not `USelectMenu`: both are non-native reka-ui primitives with the same
+                  visual language, but SelectMenu also ships combobox/search machinery this field has
+                  no use for, and it cost ~17 KB gz that the 250 KB route budget does not have.
+                -->
+                <USelect
+                  id="contact-dial-code"
+                  v-model="state.dialCode"
+                  :items="dialOptions"
+                  value-key="value"
+                  size="lg"
+                  :aria-label="t('contact.form.countryCode')"
+                  class="w-full sm:w-[15rem] sm:shrink-0"
+                />
+                <UInput
+                  id="contact-phone"
+                  v-model="state.nationalNumber"
+                  type="tel"
+                  size="lg"
+                  inputmode="tel"
+                  autocomplete="tel"
+                  dir="ltr"
+                  class="w-full min-w-0 sm:flex-1"
+                />
+              </div>
+            </UFormField>
+
             <!--
-              The shared invariant's message lives HERE, driven by a computed over current form
-              values (F-6) rather than by UForm's name-keyed error array — so it clears the instant
-              either method is filled and returns if both are emptied, with no stale state possible.
+              The shared invariant's message, driven by a computed over current form values (F-6)
+              rather than by UForm's name-keyed error array — so it clears the instant either method
+              is filled and returns if both are emptied, with no stale state possible.
             -->
             <p
               v-if="showContactMethodError"
               id="contact-method-error"
               role="alert"
-              class="text-body-sm text-error"
+              class="text-body-sm text-error-700 dark:text-error"
             >
               {{ t('contact.errors.contactMethodRequired') }}
             </p>
-
-            <UFormField name="nationalNumber" :label="t('contact.form.phone')">
-              <!--
-                `min-w-0` on the number wrapper is load-bearing: a flex item defaults to
-                `min-width: auto`, so the select's long option text ("United Arab Emirates (+971)")
-                won out at 390px and squeezed the input to a few pixels. The select is also capped
-                so it can never take more than half the row.
-              -->
-              <div class="flex flex-wrap gap-2 sm:flex-nowrap">
-                <!--
-                  A native select over eight options (D13-6): an international-phone-input component
-                  plus its country metadata is an order of magnitude larger than this route's
-                  remaining budget headroom. It carries its own label because a control the visitor
-                  must operate is not adequately described by the number field's label.
-                -->
-                <label for="contact-dial-code" class="sr-only">{{ t('contact.form.countryCode') }}</label>
-                <select
-                  id="contact-dial-code"
-                  v-model="state.dialCode"
-                  class="w-full shrink-0 rounded-md border-0 bg-default px-2.5 py-1.5 text-base/5 text-highlighted ring ring-inset ring-accented focus-visible:outline-3 focus-visible:outline-primary/25 sm:w-auto sm:max-w-[50%] md:text-sm"
-                >
-                  <option v-for="option in dialOptions" :key="option.value" :value="option.value">
-                    {{ option.label }}
-                  </option>
-                </select>
-                <UInput
-                  id="contact-phone"
-                  v-model="state.nationalNumber"
-                  type="tel"
-                  inputmode="tel"
-                  autocomplete="tel"
-                  :dir="isOtherCountry ? 'ltr' : undefined"
-                  class="w-full min-w-0 flex-1"
-                />
-              </div>
-            </UFormField>
-          </fieldset>
+          </div>
 
           <UFormField name="body" :label="t('contact.form.body')" required>
-            <UTextarea id="contact-body" v-model="state.body" :rows="6" autocomplete="off" :maxlength="CONTACT_LIMITS.body" class="w-full" />
+            <UTextarea id="contact-body" v-model="state.body" size="lg" :rows="5" autoresize :maxrows="12" autocomplete="off" :maxlength="CONTACT_LIMITS.body" class="w-full" />
           </UFormField>
 
           <!--

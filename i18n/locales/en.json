@@ -219,7 +219,8 @@
       "phone": "Phone number",
       "contactMethodHint": "Add an email address or phone number so I can reach you.",
       "countryCode": "Country or dialing code",
-      "otherCountry": "Other country"
+      "otherCountry": "Other country",
+      "otherCountryHint": "Include the country code, starting with +."
     },
     "errors": {
       "nameRequired": "Enter your name.",

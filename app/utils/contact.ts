@@ -251,3 +251,92 @@ export function validatePhone(dialCode: DialCode, normalized: string): boolean {
 export function isPlausibleE164(value: string): boolean {
   return /^\+[1-9]\d{6,14}$/.test(value)
 }
+
+// ── feature-local validation (D13-6 fallback) ─────────────────────────────────────────────────
+//
+// Replaces zod on this route. Not a style preference: `USelectMenu` — required for the approved
+// control appearance — pushed `/contact` to 281.0 KB gz against the frozen 250 KB budget, and the
+// pre-agreed remedy is to drop the schema library rather than the control or the threshold.
+//
+// UForm's `validate` prop takes exactly this shape, so `UFormField`, error rendering, focus
+// management and every accessibility association are untouched — only the rule ENGINE changes.
+
+export interface ContactFormValues {
+  readonly name: string
+  readonly email: string
+  readonly dialCode: string
+  readonly nationalNumber: string
+  readonly subject: string
+  readonly body: string
+}
+
+export interface ContactFieldError {
+  readonly name: string
+  readonly message: string
+}
+
+/** The localized strings the validator needs, passed in so this stays pure and Nuxt-free. */
+export interface ContactMessages {
+  readonly nameRequired: string
+  readonly nameTooLong: string
+  readonly emailInvalid: string
+  readonly emailTooLong: string
+  readonly phoneInvalid: string
+  readonly subjectRequired: string
+  readonly subjectTooLong: string
+  readonly bodyRequired: string
+  readonly bodyTooLong: string
+}
+
+/**
+ * Mirrors the API exactly (D10-15 trimming, D10-16 per-field rules).
+ *
+ * The email-or-phone GROUP rule is deliberately absent: it is derived reactively in the page, not
+ * filed under a field name, because UForm replaces the error list per validated field and a
+ * cross-field issue keyed to one name goes stale the moment the other changes (F-6).
+ */
+export function validateContactForm(
+  values: ContactFormValues,
+  messages: ContactMessages
+): ContactFieldError[] {
+  const errors: ContactFieldError[] = []
+  const name = values.name.trim()
+  const subject = values.subject.trim()
+  const body = values.body.trim()
+  const email = values.email.trim()
+
+  if (name === '') errors.push({ name: 'name', message: messages.nameRequired })
+  else if (name.length > CONTACT_LIMITS.name) errors.push({ name: 'name', message: messages.nameTooLong })
+
+  if (subject === '') errors.push({ name: 'subject', message: messages.subjectRequired })
+  else if (subject.length > CONTACT_LIMITS.subject) errors.push({ name: 'subject', message: messages.subjectTooLong })
+
+  if (body === '') errors.push({ name: 'body', message: messages.bodyRequired })
+  else if (body.length > CONTACT_LIMITS.body) errors.push({ name: 'body', message: messages.bodyTooLong })
+
+  // A supplied value is judged on its own merits; an absent one is simply absent (D10-16).
+  if (email !== '') {
+    if (email.length > CONTACT_LIMITS.email) errors.push({ name: 'email', message: messages.emailTooLong })
+    else if (!isPlausibleEmail(email)) errors.push({ name: 'email', message: messages.emailInvalid })
+  }
+
+  if (values.nationalNumber.trim() !== '') {
+    const normalized = normalizePhone(values.dialCode as DialCode, values.nationalNumber)
+    if (normalized === null || !validatePhone(values.dialCode as DialCode, normalized)) {
+      errors.push({ name: 'nationalNumber', message: messages.phoneInvalid })
+    }
+  }
+
+  return errors
+}
+
+/**
+ * Deliberately permissive: one `@`, something either side, a dot in the domain, no whitespace.
+ *
+ * Email syntax is famously not a regex, and the API's `@IsEmail()` is authoritative. A client
+ * stricter than the server would reject a deliverable address the visitor cannot then fix — the
+ * same asymmetry D13-6 rejects for phone numbers.
+ */
+export function isPlausibleEmail(value: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
+}
