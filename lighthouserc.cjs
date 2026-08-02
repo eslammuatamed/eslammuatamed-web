@@ -49,9 +49,9 @@ const urls = [
   'http://127.0.0.1:3000/blog/staying-inside-performance-budget-nuxt',
   'http://127.0.0.1:3000/ar/blog/albaqaa-dimn-mizaniyat-ada-nuxt',
   // web-005 Projects. Doc 20 §5's matrix is "four pages (home, article, project, contact) x both
-  // locales"; the project pages now exist, so D20-8's deferral is closed for them. `/contact` remains
-  // deferred with its slice. Slugs are the Prism contract examples, which the mock serves for ANY
-  // slug — the gate must not depend on staging data.
+  // locales"; the project pages now exist, so D20-8's deferral is closed for them. Slugs are the
+  // Prism contract examples, which the mock serves for ANY slug — the gate must not depend on
+  // staging data.
   'http://127.0.0.1:3000/projects',
   'http://127.0.0.1:3000/ar/projects',
   'http://127.0.0.1:3000/projects/content-platform-api',
@@ -69,7 +69,13 @@ const urls = [
   // exactly as `npm run lhci:assert` defines it (D20-13). Governed by D20-21, recorded in doc 20
   // first.
   'http://127.0.0.1:3000/resume',
-  'http://127.0.0.1:3000/ar/resume'
+  'http://127.0.0.1:3000/ar/resume',
+  // web-005 Contact slice (011). Added to the COLLECTION only — every threshold stays exactly as
+  // `npm run lhci:assert` defines it (D20-13). Governed by D20-22, recorded in doc 20 first. With
+  // these two URLs, §5's four-page matrix (home, article, project, contact x both locales) is
+  // COMPLETE and D20-8's deferral is fully closed.
+  'http://127.0.0.1:3000/contact',
+  'http://127.0.0.1:3000/ar/contact'
 ]
 
 module.exports = {
