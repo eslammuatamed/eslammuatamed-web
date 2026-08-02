@@ -84,6 +84,8 @@ const settings = (overrides: Partial<SiteSettings> = {}): SiteSettings =>
     profileLinks: [{ label: 'GitHub', url: 'https://github.com/eslammuatamed' }],
     professionalEmail: 'hello@eslammuatamed.com',
     contactEmail: 'contact@eslammuatamed.com',
+    contactPhone: '+201002785408',
+    whatsappPhone: '+201002785408',
     resumeAsset: null,
     portraitAssetId: null,
     portrait: null,

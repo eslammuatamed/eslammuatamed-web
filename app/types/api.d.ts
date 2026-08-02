@@ -1093,6 +1093,16 @@ export interface components {
              * @example contact@eslammuatamed.com
              */
             contactEmail: string | null;
+            /**
+             * @description Public contact number in E.164 for a call action; null when not published. Display grouping is a rendering concern this contract does not carry.
+             * @example +201002785408
+             */
+            contactPhone: string | null;
+            /**
+             * @description Public WhatsApp number in E.164; null when not published. Independent of contactPhone — never infer one from the other.
+             * @example +201002785408
+             */
+            whatsappPhone: string | null;
             /** @description Markdown source. */
             aboutBio: string | null;
             /** @description Markdown source. */
@@ -1136,6 +1146,10 @@ export interface components {
             portrait: components["schemas"]["PublicMediaImageDescriptor"] | null;
             professionalEmail: string | null;
             contactEmail: string | null;
+            /** @example +201002785408 */
+            contactPhone: string | null;
+            /** @example +201002785408 */
+            whatsappPhone: string | null;
             /** @example 2023 */
             careerStartYear: number | null;
             /** @example 11 */
@@ -1206,6 +1220,16 @@ export interface components {
             professionalEmail?: string | null;
             /** @example contact@eslammuatamed.com */
             contactEmail?: string | null;
+            /**
+             * @description Public contact number in E.164; null withdraws it.
+             * @example +201002785408
+             */
+            contactPhone?: string | null;
+            /**
+             * @description Public WhatsApp number in E.164; null withdraws it. Independent of contactPhone.
+             * @example +201002785408
+             */
+            whatsappPhone?: string | null;
             /**
              * @description Career start year; set together with careerStartMonth.
              * @example 2023
@@ -2456,10 +2480,15 @@ export interface components {
              */
             name: string;
             /**
-             * @description Trimmed of surrounding whitespace before validation, so a padded but otherwise valid address is accepted (D10-15).
+             * @description Optional. Trimmed before validation. At least one of `email` or `phone` is required; a supplied but malformed value is rejected rather than ignored (D10-16).
              * @example alex@example.com
              */
-            email: string;
+            email?: string;
+            /**
+             * @description Optional. E.164 international format — the API stores an international number, never a display-formatted one; human spacing is normalized away before validation. At least one of `email` or `phone` is required (D10-16).
+             * @example +201002785408
+             */
+            phone?: string;
             /**
              * @description Trimmed of surrounding whitespace before validation; a value empty after trimming is rejected (D10-15).
              * @example Project inquiry
@@ -2486,8 +2515,16 @@ export interface components {
             id: string;
             /** @example Alex Morgan */
             name: string;
-            /** @example alex@example.com */
-            email: string;
+            /**
+             * @description The visitor email, or null when they supplied only a phone number (D10-16).
+             * @example alex@example.com
+             */
+            email: string | null;
+            /**
+             * @description The visitor phone in E.164, or null when they supplied only an email address (D10-16).
+             * @example +201002785408
+             */
+            phone: string | null;
             /** @example Project inquiry */
             subject: string;
             /** @example I'd like to discuss a Nuxt build. */

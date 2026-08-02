@@ -42,6 +42,8 @@ function settings(overrides: Partial<SiteSettings> = {}): SiteSettings {
     portrait: null,
     professionalEmail: null,
     contactEmail: null,
+    contactPhone: '+201002785408',
+    whatsappPhone: '+201002785408',
     aboutBio: 'Bio.',
     engineeringPhilosophy: 'Philosophy.',
     currentFocus: 'Focus.',
