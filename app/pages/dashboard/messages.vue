@@ -145,12 +145,27 @@ function rowActions(message: ContactMessage) {
 }
 
 // Re-read whenever view or page changes — including via Back/Forward, which changes the query.
-// The mutation error is cleared too: it describes an action taken against the list being left, so
-// carrying it into the next view would attach a stale failure to rows it never touched.
-watch([view, page], () => {
+watch([view, page], () => void load(view.value, page.value), { immediate: true })
+
+/**
+ * Transient per-interaction feedback is cleared by ANY navigation, which here means a change to the
+ * view, the page, OR the selected message — `?message=` is a real navigation with its own history
+ * entry, not a lesser kind of state change.
+ *
+ * Both of these outlive their context otherwise. A failed archive on message A would keep its banner
+ * on screen while the reader opened message B and C, attaching a stale failure to rows it never
+ * touched; and "Number copied" would still be showing under B's actions within the two-second
+ * window, for a number that was copied from A.
+ *
+ * Only the FAILURE path can reach here with state set: `mutate` clears the error before each attempt
+ * and changes the route only after a success, so this never wipes a message the reader has not had
+ * the chance to see.
+ */
+watch([view, page, selectedId], () => {
   updateError.value = false
-  void load(view.value, page.value)
-}, { immediate: true })
+  clearTimeout(copyResetTimer)
+  copyState.value = 'idle'
+})
 
 /**
  * "Opening an unread message requests mark read" (owner decision 6) is keyed on the message becoming
