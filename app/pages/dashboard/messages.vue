@@ -37,16 +37,15 @@ const updateError = ref(false)
  * clear and would resurrect what was just cleared, so every async write captures a token first and
  * commits only if it still matches.
  *
- * `contextSeq` — bumped by view, page OR selection. Guards per-interaction feedback (the error
- * banner, the copy confirmation) and `closeDetail`, all of which belong to one message.
+ * `contextSeq` guards PER-INTERACTION state — the error banner, the copy confirmation and
+ * `closeDetail` — all of which belong to one message and are meaningless once the reader has moved.
  *
- * `listSeq` — bumped by view or page ONLY. The list depends on those and never on which message is
- * open, so refreshing it must NOT be cancelled merely because the reader opened a different message
- * — that would leave the mutated row showing its old read state. Keeping the two separate is what
- * makes both cases right; one combined token would have to be wrong for one of them.
+ * The LIST is deliberately NOT guarded by it. List freshness is a data question, not an interaction
+ * one: a mutation changes what belongs in both the source and the destination view, so the refresh
+ * has to follow the reader rather than be cancelled by them. Ordering safety for that refresh comes
+ * from `load()`'s own token, which lets the newest request win, not from cancelling here.
  */
 let contextSeq = 0
-let listSeq = 0
 const busyId = ref<string | null>(null)
 const copyState = ref<'idle' | 'ok' | 'fail'>('idle')
 
@@ -101,22 +100,28 @@ function goToPage(next: number): void {
 async function mutate(message: ContactMessage, body: { isRead?: boolean, isArchived?: boolean }): Promise<void> {
   if (!online.value) return
   const ctx = contextSeq
-  const list = listSeq
   busyId.value = message.id
   updateError.value = false
   try {
     await patch(message.id, body)
 
-    // The badge is GLOBAL state this mutation genuinely changed, so it refreshes regardless of
-    // where the reader has since navigated.
-    await refreshUnread()
-
-    // The list, by contrast, belongs to a view. If the reader has moved to another view or page,
-    // that list is not this mutation's to touch: the view/page watcher has already issued its own
-    // load, and refetching here would additionally reset the new view's `pending`/`failed` state —
-    // wiping, for instance, an error-with-retry the reader is currently looking at.
-    if (list !== listSeq) return
-    await load(view.value, page.value)
+    // Refresh the CURRENT list — whichever one it now is — plus the global badge.
+    //
+    // Archive and unarchive change membership of BOTH lists, so if the reader has moved to the
+    // destination view it is precisely the list that needs refetching. Skipping it there is a real
+    // bug, not a safe no-op: archive in Inbox, switch to Archived, and the watcher's load races the
+    // patch. It can resolve while the message is still unarchived on the server, so the destination
+    // renders WITHOUT the message that was just archived and nothing refetches it.
+    //
+    // Reading `view`/`page` here rather than from the captured token is deliberate: the refresh
+    // targets where the reader is now, which is the list the mutation just changed. `load()` carries
+    // its own monotonic token, so this and the watcher's request cannot land out of order — the
+    // newest always wins.
+    //
+    // This does reset the destination's `pending`/`failed` state, which is the honest consequence of
+    // the list having genuinely changed; a briefly-cleared error banner is a far smaller cost than a
+    // silently missing message.
+    await Promise.all([load(view.value, page.value), refreshUnread()])
 
     // An archived/unarchived message leaves the current view; keeping it selected would show a row
     // that is no longer in the list it came from. Skipped if the reader already navigated — closing
@@ -187,10 +192,7 @@ function rowActions(message: ContactMessage) {
 }
 
 // Re-read whenever view or page changes — including via Back/Forward, which changes the query.
-watch([view, page], () => {
-  listSeq += 1
-  void load(view.value, page.value)
-}, { immediate: true })
+watch([view, page], () => void load(view.value, page.value), { immediate: true })
 
 /**
  * Transient per-interaction feedback is cleared by ANY navigation, which here means a change to the

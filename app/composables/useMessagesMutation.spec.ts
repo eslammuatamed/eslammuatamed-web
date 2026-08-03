@@ -37,7 +37,6 @@ function createFlow(deps: {
   closeDetail: () => void
 }) {
   let contextSeq = 0
-  let listSeq = 0
   const view = ref('inbox')
   const page = ref(1)
   const selectedId = ref<string | null>('a')
@@ -47,7 +46,6 @@ function createFlow(deps: {
   /** Reader changes view or page — both tokens move; the watcher also reloads. */
   function navigateView(next: string) {
     view.value = next
-    listSeq += 1
     contextSeq += 1
     updateError.value = false
   }
@@ -61,14 +59,11 @@ function createFlow(deps: {
 
   async function mutate(id: string, body: { isArchived?: boolean }) {
     const ctx = contextSeq
-    const list = listSeq
     busyId.value = id
     updateError.value = false
     try {
       await deps.patch()
-      await deps.refreshUnread()
-      if (list !== listSeq) return
-      await deps.load(view.value, page.value)
+      await Promise.all([deps.load(view.value, page.value), deps.refreshUnread()])
       if (ctx !== contextSeq) return
       if (body.isArchived !== undefined && selectedId.value === id) deps.closeDetail()
     } catch {
@@ -97,16 +92,20 @@ beforeEach(() => {
 const flow = () => createFlow({ patch: () => patchGate.promise, load, refreshUnread, closeDetail })
 
 describe('mutation vs navigation — list ownership', () => {
-  it('does NOT refresh the list after the reader changed view', async () => {
+  it('refreshes the DESTINATION list after the reader changed view', async () => {
     const f = flow()
     const running = f.mutate('a', { isArchived: true })
     f.navigateView('archived')
     patchGate.resolve({})
     await running
 
-    // The view/page watcher owns the new list. Refetching here would also reset that view's
-    // pending/failed state — wiping, for instance, an error-with-retry now on screen.
-    expect(load).not.toHaveBeenCalled()
+    // The regression this pins: the watcher's load for Archived races the patch and can resolve
+    // while the message is still unarchived on the server, so the destination renders WITHOUT it.
+    // Skipping the refresh here left that list permanently missing the message just archived.
+    expect(load).toHaveBeenCalledTimes(1)
+    // ...and it targets where the reader NOW is, not where the mutation started.
+    expect(load).toHaveBeenCalledWith('archived', 1)
+    // The detail still is not closed — that is per-interaction state the reader has moved past.
     expect(closeDetail).not.toHaveBeenCalled()
   })
 
@@ -215,26 +214,33 @@ describe('messages.vue — guards are ordered, not merely present', () => {
     return i
   }
 
-  it('refreshes the badge before the list guard — the badge is global', () => {
-    expect(at('await refreshUnread()')).toBeLessThan(at('if (list !== listSeq) return'))
+  it('refreshes badge and list together, before any interaction guard', () => {
+    expect(at('refreshUnread()')).toBeLessThan(at('if (ctx !== contextSeq) return'))
   })
 
-  it('checks the list token BEFORE loading, not after', () => {
-    expect(at('if (list !== listSeq) return')).toBeLessThan(at('await load(view.value, page.value)'))
+  it('refreshes the list unconditionally — freshness follows the reader', () => {
+    // No token may gate the refresh: archive/unarchive changes BOTH lists, so the destination is
+    // exactly the one that needs refetching. Ordering safety comes from load()'s own token.
+    expect(mutateBody).not.toContain('listSeq')
+    expect(at('await Promise.all([load(view.value, page.value), refreshUnread()])'))
+      .toBeLessThan(at('if (ctx !== contextSeq) return'))
   })
 
   it('checks the interaction token BEFORE closing the detail', () => {
     expect(at('if (ctx !== contextSeq) return')).toBeLessThan(at('closeDetail()'))
   })
 
-  it('captures both tokens before the first await', () => {
+  it('captures the interaction token before the first await', () => {
+    // Captured after an await, it would read the value the navigation already moved.
     expect(at('const ctx = contextSeq')).toBeLessThan(at('await patch('))
-    expect(at('const list = listSeq')).toBeLessThan(at('await patch('))
   })
 
-  it('bumps listSeq only in the view/page watcher, never on selection alone', () => {
-    // A selection-only change must not invalidate the list, or a mutated row keeps its old state.
-    const selectionWatcher = source.slice(source.indexOf('watch([view, page, selectedId]'))
-    expect(selectionWatcher).not.toContain('listSeq')
+  it('keeps list freshness out of the interaction token entirely', () => {
+    // `contextSeq` must gate only per-interaction state. If it ever gated the list, a mutated row
+    // would keep its stale read state as soon as the reader opened a different message.
+    const start = source.indexOf('watch([view, page, selectedId]')
+    // Bound the slice to the watcher's own body; running to end-of-file would sweep in the template.
+    const selectionWatcher = source.slice(start, source.indexOf('\n})', start))
+    expect(selectionWatcher).not.toContain('load(')
   })
 })
