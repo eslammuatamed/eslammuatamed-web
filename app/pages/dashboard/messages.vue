@@ -32,12 +32,21 @@ const selectedId = computed(() => (typeof route.query.message === 'string' ? rou
 const online = ref(true)
 const updateError = ref(false)
 /**
- * Monotonic navigation token. Clearing transient state when the route changes is NOT sufficient on
- * its own: an async action already in flight resolves AFTER the clear and would resurrect exactly
- * what was just cleared. Every async write therefore captures this token first and commits only if
- * it still matches — the result must prove it belongs to the context that asked for it.
+ * Two monotonic tokens, because two different things go stale at different rates. Clearing state on
+ * navigation is not sufficient on its own: an async action already in flight resolves AFTER the
+ * clear and would resurrect what was just cleared, so every async write captures a token first and
+ * commits only if it still matches.
+ *
+ * `contextSeq` — bumped by view, page OR selection. Guards per-interaction feedback (the error
+ * banner, the copy confirmation) and `closeDetail`, all of which belong to one message.
+ *
+ * `listSeq` — bumped by view or page ONLY. The list depends on those and never on which message is
+ * open, so refreshing it must NOT be cancelled merely because the reader opened a different message
+ * — that would leave the mutated row showing its old read state. Keeping the two separate is what
+ * makes both cases right; one combined token would have to be wrong for one of them.
  */
 let contextSeq = 0
+let listSeq = 0
 const busyId = ref<string | null>(null)
 const copyState = ref<'idle' | 'ok' | 'fail'>('idle')
 
@@ -92,11 +101,23 @@ function goToPage(next: number): void {
 async function mutate(message: ContactMessage, body: { isRead?: boolean, isArchived?: boolean }): Promise<void> {
   if (!online.value) return
   const ctx = contextSeq
+  const list = listSeq
   busyId.value = message.id
   updateError.value = false
   try {
     await patch(message.id, body)
-    await Promise.all([load(view.value, page.value), refreshUnread()])
+
+    // The badge is GLOBAL state this mutation genuinely changed, so it refreshes regardless of
+    // where the reader has since navigated.
+    await refreshUnread()
+
+    // The list, by contrast, belongs to a view. If the reader has moved to another view or page,
+    // that list is not this mutation's to touch: the view/page watcher has already issued its own
+    // load, and refetching here would additionally reset the new view's `pending`/`failed` state —
+    // wiping, for instance, an error-with-retry the reader is currently looking at.
+    if (list !== listSeq) return
+    await load(view.value, page.value)
+
     // An archived/unarchived message leaves the current view; keeping it selected would show a row
     // that is no longer in the list it came from. Skipped if the reader already navigated — closing
     // a detail they have since replaced would yank the message they are now reading.
@@ -166,7 +187,10 @@ function rowActions(message: ContactMessage) {
 }
 
 // Re-read whenever view or page changes — including via Back/Forward, which changes the query.
-watch([view, page], () => void load(view.value, page.value), { immediate: true })
+watch([view, page], () => {
+  listSeq += 1
+  void load(view.value, page.value)
+}, { immediate: true })
 
 /**
  * Transient per-interaction feedback is cleared by ANY navigation, which here means a change to the
