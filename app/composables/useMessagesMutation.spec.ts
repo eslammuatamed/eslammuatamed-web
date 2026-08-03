@@ -244,3 +244,103 @@ describe('messages.vue — guards are ordered, not merely present', () => {
     expect(selectionWatcher).not.toContain('load(')
   })
 })
+
+/**
+ * Responsive list presentation (owner decision 12). Structural rules that make two presentations of
+ * one list safe — asserted against `messages.vue` itself, because each is a property of the markup
+ * that a behavioural test on one presentation cannot see.
+ */
+describe('messages.vue — responsive list structure', () => {
+  const src = readFileSync(resolve(process.cwd(), 'app/pages/dashboard/messages.vue'), 'utf8')
+  const template = src.slice(src.indexOf('<template>'))
+
+  it('switches presentation with CSS, never a JS viewport branch', () => {
+    expect(template).toContain('hidden sm:block')
+    expect(template).toContain('sm:hidden')
+    // A hydration-sensitive branch would render the wrong presentation on first paint.
+    expect(src).not.toMatch(/window\.(innerWidth|matchMedia)/)
+    expect(src).not.toMatch(/useMediaQuery|useBreakpoints/)
+  })
+
+  it('emits no id attributes, so the duplicated rows cannot collide', () => {
+    expect(template).not.toMatch(/\sid="/)
+    expect(template).not.toMatch(/:id="/)
+  })
+
+  it('keeps the actions menu OUTSIDE the card opener', () => {
+    const card = template.slice(template.indexOf('<article'), template.indexOf('</article>'))
+    const opener = card.slice(card.indexOf('<button'), card.indexOf('</button>'))
+    // The menu must not live inside the opener, or activating it would also open the detail.
+    expect(opener).not.toContain('UDropdownMenu')
+    expect(card).toContain('UDropdownMenu')
+  })
+
+  it('gives the card opener an accessible name with state, sender and subject', () => {
+    const card = template.slice(template.indexOf('<article'), template.indexOf('</article>'))
+    expect(card).toMatch(/:aria-label=.*message\.name.*message\.subject/s)
+  })
+
+  it('applies dir="auto" to every visitor-controlled field in the card', () => {
+    const card = template.slice(template.indexOf('<article'), template.indexOf('</article>'))
+    // Sender, subject and preview each render visitor text and each needs its own dir="auto";
+    // the element that OWNS the text must carry it, so one shared ancestor would not do.
+    for (const field of ['message.name', 'message.subject', 'message.body']) {
+      const owner = card.split('<span').find(chunk => chunk.includes(`{{ ${field} }}`))
+        ?? card.split('<span').find(chunk => chunk.includes(`>{{ ${field} }}`))
+      expect(owner, `no span renders ${field}`).toBeDefined()
+      expect(owner, `${field} is not dir="auto"`).toContain('dir="auto"')
+    }
+  })
+
+  it('renders the preview as plain text — no Markdown or HTML path', () => {
+    expect(template).not.toContain('v-html')
+    // Assert on IMPORTS, not prose: the file's own comments legitimately mention Markdown while
+    // explaining why none is used, and matching those would be checking the documentation.
+    const imports = src.split('\n').filter(l => /^\s*import\s/.test(l)).join('\n')
+    expect(imports).not.toMatch(/markdown|shiki|marked|dompurify/i)
+    expect(template).not.toMatch(/ContentProse|content-prose/)
+  })
+
+  it('wraps unbroken strings in the card rather than overflowing', () => {
+    const card = template.slice(template.indexOf('<article'), template.indexOf('</article>'))
+    expect(card).toContain('[overflow-wrap:anywhere]')
+  })
+
+  it('shows unread with a text label, not colour alone', () => {
+    const card = template.slice(template.indexOf('<article'), template.indexOf('</article>'))
+    expect(card).toContain("t('dashboard.messages.status.unread')")
+    expect(card).toContain('aria-hidden="true"')
+  })
+
+  it('reuses the one data path — no second fetch or mutation in the card', () => {
+    const card = template.slice(template.indexOf('<article'), template.indexOf('</article>'))
+    expect(card).toContain('openMessage(message, $event)')
+    expect(card).toContain('rowActions(message)')
+    // exactly one list source and one mutation helper in the whole template
+    expect(template.match(/useMessages\(/g)).toBeNull()
+  })
+})
+
+/**
+ * Focus restoration must key on the ELEMENT, never the message id: both presentations are in the
+ * DOM with one hidden by CSS, so an id lookup can resolve to the hidden counterpart and focus is
+ * lost silently.
+ */
+describe('messages.vue — focus restoration targets the exact opener', () => {
+  const src = readFileSync(resolve(process.cwd(), 'app/pages/dashboard/messages.vue'), 'utf8')
+
+  it('stores the opener element from the event, not a selector', () => {
+    expect(src).toContain('event?.currentTarget')
+    expect(src).not.toMatch(/querySelector\(.*message\.id/)
+    expect(src).not.toMatch(/getElementById/)
+  })
+
+  it('both presentations pass the event to openMessage', () => {
+    expect(src.match(/openMessage\((?:row\.original|message), \$event\)/g)).toHaveLength(2)
+  })
+
+  it('refocuses only a still-connected element', () => {
+    // A mutation re-renders the list; focusing a detached node drops focus to <body>.
+    expect(src).toContain('isConnected')
+  })
+})

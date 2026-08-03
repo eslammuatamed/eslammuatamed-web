@@ -129,6 +129,36 @@ Rendered strictly from what exists — either field may be `null`, never both.
 - **No** Markdown, HTML, `v-html`, Shiki or markdown-it on any dashboard path. The forbidden-module gate independently proves this.
 - Chrome is English-only; visitor values are not: `name`, `subject`, `body` carry `dir="auto"`; `email` and `phone` are isolated LTR (`dir="ltr"` with isolation) so a `+` prefix cannot be reordered inside RTL text.
 
+## 9a. Responsive list presentation (owner decision 12)
+
+**One data flow, two presentations.** `useMessages()` and `useUnreadCount()` are untouched: the card
+list renders the same `items` array, calls the same `openMessage`/`mutate`, and opens the same
+slideover keyed by `?message=`. Nothing about `loadSeq`, `contextSeq`, request dedup, confirmed
+mutations, pagination or filters changes — this is presentation only.
+
+**Switching is CSS, not JavaScript.** The table wrapper is `hidden sm:block` and the card list is
+`sm:hidden`. `display: none` removes the inactive presentation from the accessibility tree and from
+the focus order, so the two cannot both be reachable. A JS viewport branch was rejected: it would be
+hydration-sensitive and could render the wrong presentation on first paint.
+
+**No nested interactive controls.** Each card is an `<article>` containing exactly two siblings — one
+full-width opener `<button>` carrying the whole content, and a separately-focusable `UDropdownMenu`
+trigger positioned over the card's trailing corner. The opener therefore never contains the menu, and
+using the menu never opens the detail.
+
+**No ids are emitted** by either presentation, so the duplicated rows cannot collide.
+
+## 9b. Focus restoration (owner decision 12)
+
+The opener ELEMENT is stored, never the message id. With both presentations in the DOM and one
+hidden by CSS, a lookup by id could resolve to the hidden counterpart and focus would vanish — the
+failure mode this rule exists to prevent.
+
+`openMessage(message, event)` captures `event.currentTarget` in a non-reactive variable. When the
+selection clears, that exact element is refocused **only if it is still `isConnected`** — a mutation
+re-renders the list and can replace the node, in which case the stored reference is stale and focus
+is left where the overlay put it rather than thrown at a detached element.
+
 ## 10. Bundle isolation strategy
 
 - `UTable`, `UPagination` and `USlideover` are reached only from dashboard routes, which are `ssr: false` and code-split — measured landing in a `isDynamicEntry: true` chunk, absent from every static/entry chunk.

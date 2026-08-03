@@ -70,6 +70,15 @@ matrix.
 - [ ] T064 Archived view retention notice (approved wording)
 - [ ] T065 Contact affordances: `Reply by email` (guarded `mailto:`, `Re:` prefill, no-composer hint); `Call` + `Copy number`; **no** WhatsApp; phone-only and email-only render nothing broken or empty
 
+## Phase G2 — responsive list (owner decision 12, approved after visual review)
+
+- [ ] T066 Table wrapper `hidden sm:block`; card list `sm:hidden` — CSS only, no JS viewport branch
+- [ ] T067 Card = `<article>` with ONE full-width opener button + sibling `UDropdownMenu`; no nesting
+- [ ] T068 Opener accessible name carries state, sender and subject; keyboard-activatable
+- [ ] T069 Store the opener ELEMENT for focus return; never look it up by message id
+- [ ] T069a Assert no duplicate ids and no document overflow at 320/360/390 and 200% zoom
+- [ ] T069b Cards reuse the same list state, slideover and mutations — no second data path
+
 ## Phase H — budgets, isolation, a11y
 
 - [ ] T070 Implement the D20-23 closure (**seed, then static closure** — never expand the entry's `dynamicImports` route map); add `/dashboard`, `/dashboard/login`, `/dashboard/messages`

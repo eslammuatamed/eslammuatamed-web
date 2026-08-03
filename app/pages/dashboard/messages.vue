@@ -81,9 +81,70 @@ function closeDetail(): void {
   setQuery({ message: undefined })
 }
 
-function openMessage(message: ContactMessage): void {
+/**
+ * The exact element that opened the detail, so focus can return to IT.
+ *
+ * Stored as an element rather than a message id on purpose: the table and the card list both exist
+ * in the DOM with one hidden by CSS, so a lookup by id could resolve to the hidden counterpart and
+ * focus would vanish. Non-reactive — it is an imperative handle, not render state.
+ */
+let lastOpener: HTMLElement | null = null
+/**
+ * Which PRESENTATION the reader opened from, so the opener can be re-acquired if its node dies.
+ *
+ * Opening an unread message marks it read, which reloads the list and can replace the very node
+ * that was clicked — measured: focus then lands on `<body>`. Re-acquiring by message id ALONE is
+ * forbidden, because the table and the card list both exist in the DOM and the id would match the
+ * hidden counterpart. Scoping the lookup by presentation makes that impossible by construction.
+ *
+ * `data-*` attributes rather than `id`, so the two presentations cannot collide.
+ */
+let lastOpenerKey: { presentation: 'card' | 'row', id: string } | null = null
+
+function openMessage(message: ContactMessage, event?: Event): void {
+  const el = (event?.currentTarget as HTMLElement | null) ?? null
+  lastOpener = el
+  const presentation = el?.dataset.opener
+  lastOpenerKey = presentation === 'card' || presentation === 'row'
+    ? { presentation, id: message.id }
+    : null
   setQuery({ message: message.id })
 }
+
+/**
+ * Return focus to the opener when the detail closes.
+ *
+ * The wait is load-bearing. This watcher fires as soon as the query changes, but the overlay is
+ * still closing and performs its OWN focus restoration when it unmounts — which lands after ours and
+ * overwrites it, leaving focus on `<body>`. So we wait for the dialog to actually leave the DOM
+ * before claiming focus. Measured: without the wait, focus returned to neither the card nor the row.
+ *
+ * Guarded on `isConnected` because a mutation re-renders the list and can replace that node;
+ * focusing a detached element silently drops focus instead of restoring it.
+ */
+watch(selectedId, async (id, previous) => {
+  if (id !== null || previous === null) return
+  const el = lastOpener
+  const key = lastOpenerKey
+  lastOpener = null
+  lastOpenerKey = null
+  if (!el && !key) return
+
+  for (let frame = 0; frame < 40 && document.querySelector('[role=dialog]'); frame += 1) {
+    await new Promise(resolve => requestAnimationFrame(resolve))
+  }
+
+  if (el?.isConnected) {
+    el.focus()
+    return
+  }
+  // The node was replaced by the re-render. Re-acquire it WITHIN the same presentation only.
+  if (!key) return
+  const replacement = document.querySelector<HTMLElement>(
+    `[data-opener="${key.presentation}"][data-message="${key.id}"]`
+  )
+  replacement?.focus()
+})
 
 function selectView(next: 'inbox' | 'archived'): void {
   setQuery({ view: next, page: undefined, message: undefined })
@@ -371,7 +432,11 @@ onMounted(() => {
     </div>
 
     <template v-else>
-      <UTable :data="items" :columns="columns" :aria-label="t('dashboard.messages.tableLabel')">
+      <!-- DESKTOP: the existing table, unchanged. `hidden sm:block` rather than a JS viewport branch
+           — `display:none` removes the inactive presentation from the accessibility tree and the
+           focus order, so the two can never both be reachable, and nothing depends on hydration. -->
+      <div class="hidden sm:block">
+        <UTable :data="items" :columns="columns" :aria-label="t('dashboard.messages.tableLabel')">
         <template #status-cell="{ row }">
           <!-- Unread is never colour-only: dot + text label, both present. -->
           <span class="flex items-center gap-2">
@@ -401,9 +466,11 @@ onMounted(() => {
           <button
             type="button"
             dir="auto"
+            data-opener="row"
+            :data-message="row.original.id"
             class="block w-44 max-w-full truncate text-start text-sm sm:w-64 lg:w-80 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
             :class="row.original.isRead ? 'text-default' : 'font-semibold text-highlighted'"
-            @click="openMessage(row.original)"
+            @click="openMessage(row.original, $event)"
           >
             {{ row.original.subject }}
           </button>
@@ -429,7 +496,77 @@ onMounted(() => {
             </UDropdownMenu>
           </div>
         </template>
-      </UTable>
+        </UTable>
+      </div>
+
+      <!-- MOBILE: one compact card per message. Same `items`, same `openMessage`, same slideover —
+           presentation only. Each card is an <article> with exactly TWO interactive siblings: a
+           full-width opener and the actions menu. The opener never contains the menu, so using the
+           menu cannot open the detail. No `id` is emitted by either presentation, so the duplicated
+           rows cannot collide. -->
+      <ul class="flex flex-col gap-2 sm:hidden">
+        <li v-for="message in items" :key="message.id">
+          <article class="relative rounded-control border border-default bg-default">
+            <button
+              type="button"
+              data-opener="card"
+              :data-message="message.id"
+              class="block w-full rounded-control p-3 pe-11 text-start focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              :aria-label="`${message.isRead ? t('dashboard.messages.status.read') : t('dashboard.messages.status.unread')}, ${message.name}: ${message.subject}`"
+              @click="openMessage(message, $event)"
+            >
+              <span class="flex items-center justify-between gap-2">
+                <span class="flex items-center gap-1.5">
+                  <span
+                    aria-hidden="true"
+                    class="size-2 shrink-0 rounded-full"
+                    :class="message.isRead ? 'bg-transparent ring-1 ring-muted' : 'bg-primary-600'"
+                  />
+                  <span class="text-xs" :class="message.isRead ? 'text-muted' : 'font-semibold text-highlighted'">
+                    {{ message.isRead ? t('dashboard.messages.status.read') : t('dashboard.messages.status.unread') }}
+                  </span>
+                </span>
+                <time :datetime="message.createdAt" class="shrink-0 text-xs text-muted">
+                  {{ formatDate(message.createdAt) }}
+                </time>
+              </span>
+
+              <span dir="auto" class="mt-1.5 block truncate text-xs text-muted">{{ message.name }}</span>
+
+              <!-- The subject is the strongest element in the card and gets two readable lines.
+                   `line-clamp-2`, NOT hand-rolled `-webkit-box` utilities: `block` and
+                   `[display:-webkit-box]` set the same property, so whichever the stylesheet emits
+                   last wins and the clamp silently did not apply. Measured — an Arabic preview
+                   rendered eight lines and dominated the card. -->
+              <span
+                dir="auto"
+                class="mt-0.5 line-clamp-2 text-sm/5 [overflow-wrap:anywhere]"
+                :class="message.isRead ? 'text-default' : 'font-semibold text-highlighted'"
+              >{{ message.subject }}</span>
+
+              <!-- Plain-text preview, clamped to two lines. Same safe rendering as the detail body:
+                   no Markdown, no HTML, long URLs and unbroken strings wrap. -->
+              <span
+                dir="auto"
+                class="mt-1 line-clamp-2 text-xs/5 text-muted [overflow-wrap:anywhere]"
+              >{{ message.body }}</span>
+            </button>
+
+            <div class="absolute end-1.5 top-1.5">
+              <UDropdownMenu :items="rowActions(message)">
+                <UButton
+                  color="neutral"
+                  variant="ghost"
+                  icon="i-lucide-ellipsis-vertical"
+                  size="sm"
+                  :disabled="!online || busyId === message.id"
+                  :aria-label="t('dashboard.messages.rowActions')"
+                />
+              </UDropdownMenu>
+            </div>
+          </article>
+        </li>
+      </ul>
 
       <div v-if="totalPages > 1" class="mt-4 flex justify-center">
         <UPagination
