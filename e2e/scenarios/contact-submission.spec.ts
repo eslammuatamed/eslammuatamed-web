@@ -273,6 +273,23 @@ test.describe('contact direct methods and locale', () => {
     await page.goto('/ar/contact')
     await expect(page.locator('html')).toHaveAttribute('dir', 'rtl')
     await expect(page.getByRole('heading', { level: 1 })).toContainText('لنتحدث')
-    await expect(page.locator('a[href^="tel:"]')).toContainText('+20 100 278 5408')
+
+    // The fixture gives `contactPhone` and `whatsappPhone` the SAME line, so the combined item
+    // prints the number ONCE and carries Call and WhatsApp as separate labelled actions beside it
+    // (D10-16). Asserting the number as the `tel:` anchor's own text would assert the pre-combined
+    // markup this design replaced; what has to hold is that the number is still printed in full and
+    // that each action still carries it in its accessible name.
+    await expect(page.locator('main')).toContainText('+20 100 278 5408')
+    await expect(page.locator('a[href^="tel:"]')).toHaveAttribute('aria-label', /\+20 100 278 5408$/)
+    await expect(page.locator('a[href*="wa.me/"]')).toHaveAttribute('aria-label', /\+20 100 278 5408$/)
+
+    // Left-to-right is a RENDERING guarantee, so it is asserted on the computed style rather than on
+    // the wrapper element: any element that isolates the bidi algorithm satisfies it, and swapping
+    // `<bdi>` for an equivalent must not fail this test. Without isolation the leading `+` reorders
+    // against the RTL paragraph — which is the defect this assertion exists to catch.
+    const isolated = await page
+      .getByText('+20 100 278 5408', { exact: true })
+      .evaluateAll(nodes => nodes.some(node => /isolate/.test(getComputedStyle(node).unicodeBidi)))
+    expect(isolated).toBe(true)
   })
 })
