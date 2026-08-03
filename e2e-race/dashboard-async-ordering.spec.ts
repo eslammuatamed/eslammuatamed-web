@@ -111,7 +111,7 @@ test('2 — unarchive, then navigate to Inbox before the mutation lands', async 
   await expect.poll(async () => await badge(page)).toBe(dbUnreadCount() === 0 ? null : String(dbUnreadCount()))
 })
 
-test('3 — several navigations during one mutation, GETs released out of order', async ({ page, coordinator }) => {
+test('3 — several navigations during one mutation, responses COMPLETING out of order', async ({ page, coordinator }) => {
   const { inbox } = resetMessages()
   const target = inbox[0]!
   await page.goto('/dashboard/messages')
@@ -123,33 +123,47 @@ test('3 — several navigations during one mutation, GETs released out of order'
   await page.locator('[role=menuitem]', { hasText: 'Archive' }).click()
   await coordinator.waitUntilHeld('PATCH')
 
-  // Inbox -> Archived -> Inbox, holding BOTH intermediate list reads so they can be released
-  // in the wrong order on purpose.
-  coordinator.holdNext('GET list isArchived=true')
+  // Inbox -> Archived -> Inbox. Each list read EXECUTES against the real API at the moment the tab
+  // is clicked, but its real response is parked so the test — not the network — decides which one
+  // COMPLETES first. Controlling dispatch order alone would leave completion order to chance, which
+  // is the very race this scenario exists to eliminate.
+  coordinator.holdResponseNext('GET list isArchived=true')
   await page.locator('button[role=tab]', { hasText: 'Archived' }).click()
-  await coordinator.waitUntilHeld('GET list isArchived=true')
+  await coordinator.waitUntilResponseParked('GET list isArchived=true')
 
-  coordinator.holdNext('GET list isArchived=false')
+  coordinator.holdResponseNext('GET list isArchived=false')
   await page.locator('button[role=tab]', { hasText: 'Inbox' }).click()
-  await coordinator.waitUntilHeld('GET list isArchived=false')
+  await coordinator.waitUntilResponseParked('GET list isArchived=false')
 
-  // Release the NEWER (Inbox) request first, then the older (Archived) one. The stale Archived
-  // response must not commit over the current Inbox view.
-  await coordinator.release('GET list isArchived=false')
-  await coordinator.release('GET list isArchived=true')
+  // Deliver the NEWER (Inbox) response first...
+  await coordinator.deliverResponse('GET list isArchived=false')
+  await expect.poll(async () => (await renderedSubjects(page)).length, { timeout: 15_000 })
+    .toBeGreaterThan(0)
 
+  // ...then the OLDER (Archived) one, which now genuinely completes LAST. This is the assertion the
+  // previous version of this test only appeared to make.
+  await coordinator.deliverResponse('GET list isArchived=true')
+  await page.waitForTimeout(800)
+
+  // The stale Archived rows must not have committed over the current Inbox view.
+  const afterStale = await renderedSubjects(page)
+  expect(afterStale.every(sub => sub.startsWith('Inbox msg'))).toBe(true)
+  expect(afterStale.some(sub => sub.startsWith('Archived msg'))).toBe(false)
+  expect(new URL(page.url()).searchParams.get('view')).toBe('inbox')
+
+  // The ordering log proves the older response really was delivered after the newer one.
+  const delivered = coordinator.ordering().filter(l => l.startsWith('DELIVERED'))
+  expect(delivered).toEqual([
+    'DELIVERED GET list isArchived=false page=1',
+    'DELIVERED GET list isArchived=true page=1'
+  ])
+
+  // And the mutation still refreshes the final destination once it lands.
   await coordinator.release('PATCH')
   await expect.poll(() => dbRow(target.id)?.isArchived, { timeout: 15_000 }).toBe(true)
-
-  // The final URL-selected view wins, and the archived message is NOT in it.
+  await expect.poll(async () => await renderedSubjects(page), { timeout: 15_000 })
+    .not.toContain(target.subject)
   expect(new URL(page.url()).searchParams.get('view')).toBe('inbox')
-  await page.waitForTimeout(1500)
-  const rows = await renderedSubjects(page)
-  expect(rows).not.toContain(target.subject)
-  // The older Archived response never leaked its rows into the Inbox view.
-  expect(rows.every(s => s.startsWith('Inbox msg'))).toBe(true)
-  // The mutation still refreshed the final destination: the archived row is gone from Inbox.
-  expect(rows).toHaveLength(2)
   await expect.poll(async () => await badge(page)).toBe(dbUnreadCount() === 0 ? null : String(dbUnreadCount()))
 })
 

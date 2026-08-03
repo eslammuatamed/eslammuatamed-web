@@ -1,6 +1,6 @@
 import { execFileSync } from 'node:child_process'
 import process from 'node:process'
-import type { Page, Route, Request } from '@playwright/test'
+import type { APIResponse, Page, Route, Request } from '@playwright/test'
 import { expect, test as base } from '@playwright/test'
 
 /**
@@ -80,6 +80,23 @@ export function dbRow(id: string): { isRead: boolean, isArchived: boolean } | nu
 type Held = { route: Route, request: Request, release: () => void }
 
 /**
+ * A request that has ALREADY EXECUTED against the real API, whose real response is parked awaiting
+ * delivery to the page.
+ *
+ * This is the difference between controlling DISPATCH order and controlling COMPLETION order.
+ * `route.continue()` only decides when a request leaves the browser; the response then arrives
+ * whenever the network decides, so "release A then B" does not establish which one COMPLETES first.
+ * For an out-of-order test that distinction is the entire point — otherwise the test is itself
+ * relying on winning the race it claims to have eliminated.
+ *
+ * `route.fetch()` performs the genuine request and returns the genuine response; `route.fulfill({
+ * response })` hands that same response to the page unmodified. Nothing is fabricated — the payload
+ * is the real server's, and the request really hit the real API at the moment it was executed, which
+ * is what makes it observe the pre-mutation state.
+ */
+type HeldResponse = { route: Route, request: Request, response: APIResponse, deliver: () => void }
+
+/**
  * Controls when real admin requests execute.
  *
  * `hold()` parks a matching request; `release()` lets it run against the real API. Anything not held
@@ -88,7 +105,9 @@ type Held = { route: Route, request: Request, release: () => void }
 export class RequestCoordinator {
   readonly log: string[] = []
   private held: Held[] = []
+  private heldResponses: HeldResponse[] = []
   private holdMatchers: Array<{ label: string, match: (r: Request) => boolean }> = []
+  private responseMatchers: Array<{ label: string, match: (r: Request) => boolean }> = []
 
   private constructor(private readonly page: Page) {}
 
@@ -96,6 +115,19 @@ export class RequestCoordinator {
     const c = new RequestCoordinator(page)
     await page.route('**/api/v1/admin/messages**', async (route, request) => {
       const label = c.describe(request)
+      // Response-order control takes precedence: execute the real request NOW, park its real
+      // response, and deliver it only when the test says so.
+      const responseMatcher = c.responseMatchers.find(m => m.match(request))
+      if (responseMatcher) {
+        c.responseMatchers = c.responseMatchers.filter(m => m !== responseMatcher)
+        const response = await route.fetch()
+        c.log.push(`EXECUTED-RESPONSE-PARKED ${label}`)
+        await new Promise<void>((resolve) => {
+          c.heldResponses.push({ route, request, response, deliver: resolve })
+        })
+        return
+      }
+
       const matcher = c.holdMatchers.find(m => m.match(request))
       if (!matcher) {
         c.log.push(`pass-through ${label}`)
@@ -120,6 +152,39 @@ export class RequestCoordinator {
     const page = url.searchParams.get('page') ?? '1'
     if (perPage === '1') return 'GET badge-count'
     return `GET list isArchived=${archived} page=${page}`
+  }
+
+  /**
+   * Let the next matching request EXECUTE against the real API immediately, but park its real
+   * response until `deliverResponse` is called. Use this when the test must control which response
+   * COMPLETES first, not merely which request is sent first.
+   */
+  holdResponseNext(needle: string): void {
+    this.responseMatchers.push({ label: needle, match: r => this.describe(r).includes(needle) })
+  }
+
+  /** Wait until a matching request has executed and its response is parked. */
+  async waitUntilResponseParked(needle: string): Promise<void> {
+    await expect
+      .poll(() => this.heldResponses.some(h => this.describe(h.request).includes(needle)), {
+        timeout: 15_000,
+        message: `no parked response matching "${needle}"; log so far:\n${this.log.join('\n')}`
+      })
+      .toBe(true)
+  }
+
+  /**
+   * Deliver a parked REAL response to the page, and wait for the page to consume it. Delivery order
+   * across several parked responses is therefore exactly the order these calls are made.
+   */
+  async deliverResponse(needle: string): Promise<void> {
+    await this.waitUntilResponseParked(needle)
+    const idx = this.heldResponses.findIndex(h => this.describe(h.request).includes(needle))
+    const [entry] = this.heldResponses.splice(idx, 1)
+    if (!entry) return
+    this.log.push(`DELIVERED ${this.describe(entry.request)}`)
+    await entry.route.fulfill({ response: entry.response })
+    entry.deliver()
   }
 
   /** Park the next request whose description contains `needle`. */
@@ -164,6 +229,13 @@ export class RequestCoordinator {
    * exactly as closing the page would.
    */
   async drain(): Promise<void> {
+    while (this.heldResponses.length > 0) {
+      const [entry] = this.heldResponses.splice(0, 1)
+      if (!entry) break
+      this.log.push(`ABORTED-AT-TEARDOWN ${this.describe(entry.request)}`)
+      await entry.route.abort('failed').catch(() => undefined)
+      entry.deliver()
+    }
     while (this.held.length > 0) {
       const [entry] = this.held.splice(0, 1)
       if (!entry) break
