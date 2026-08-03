@@ -1,15 +1,17 @@
 import type { ContactMessage, Paginated } from '~/types/models'
 import { ApiError } from '~/utils/api-error'
 
-/** The two top-level views (owner decision 4). There is no All/Unread/Read filter. */
-export type MessagesView = 'inbox' | 'archived'
+import type { MessagesQuery } from '~/utils/messages-query'
+
+/**
+ * The two top-level views (owner decision 4), derived from the canonical route-query schema so the
+ * allowed set is declared exactly once. `isMessagesView` used to live here and was removed with the
+ * Zod-first policy: two validators for one value is how a URL and a page come to disagree.
+ */
+export type MessagesView = MessagesQuery['view']
 
 /** The API default; max 50. Explicit rather than implicit so the URL and the request agree. */
 export const MESSAGES_PER_PAGE = 12
-
-export function isMessagesView(value: unknown): value is MessagesView {
-  return value === 'inbox' || value === 'archived'
-}
 
 /**
  * Messages list + triage mutations.

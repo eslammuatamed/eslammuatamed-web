@@ -159,6 +159,24 @@ selection clears, that exact element is refocused **only if it is still `isConne
 re-renders the list and can replace the node, in which case the stored reference is stale and focus
 is left where the overlay put it rather than thrown at a detached element.
 
+## 9c. Nuxt UI-first and Zod-first (owner decision 13)
+
+**`UCard` is the mobile card surface.** It supplies border, radius, surface and dark-mode states, so
+none of that is recreated locally; only compact padding is overridden via `ui`. It stays
+**presentational** — the card is not itself a link or button — and renders `as="article"` so the
+semantic wrapper the a11y structure depends on is unchanged. `UPageCard` is deliberately not used:
+this is application data, not a marketing card.
+
+**One canonical Zod route-query schema** (`app/utils/messages-query.ts`) owns `view`, `page` and
+`message`. It is **total** — every input yields a valid result, so no consumer branches on failure —
+and **pure**: it normalises on read and never rewrites the URL, which is what prevents a
+normalisation from re-triggering the watcher that read it. `isMessagesView` was deleted with it: two
+validators for one value is how a URL and a page come to disagree.
+
+**The API contract stays compile-time.** Generated types remain the response contract; response
+shapes are not re-declared as Zod schemas, and mutations carrying no user-entered payload get no
+artificial schema.
+
 ## 10. Bundle isolation strategy
 
 - `UTable`, `UPagination` and `USlideover` are reached only from dashboard routes, which are `ssr: false` and code-split — measured landing in a `isDynamicEntry: true` chunk, absent from every static/entry chunk.

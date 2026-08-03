@@ -79,6 +79,15 @@ matrix.
 - [ ] T069a Assert no duplicate ids and no document overflow at 320/360/390 and 200% zoom
 - [ ] T069b Cards reuse the same list state, slideover and mutations — no second data path
 
+## Phase G3 — Nuxt UI / Zod architecture (owner decision 13)
+
+- [x] T069c `UCard` replaces the bespoke card surface; presentational only, `as="article"`, `ui` padding override
+- [x] T069d Canonical Zod route-query schema for `view` / `page` / `message`; total, pure, no URL rewrite
+- [x] T069e `isMessagesView` deleted — one validator, not two
+- [x] T069f Login form audited: already `UForm` + `UFormField` + Zod with typed `z.output` — no gap
+- [ ] T069g **BLOCKED** — `/dashboard/messages` 295.5 KB gz exceeds the D20-23 280 KB ceiling (UCard +0.4, Zod +17.4). Owner decision required on a Dashboard-only threshold
+- [ ] T069h Propose the doc 11 §4 amendment covering route/query parsing (currently forms-only)
+
 ## Phase H — budgets, isolation, a11y
 
 - [ ] T070 Implement the D20-23 closure (**seed, then static closure** — never expand the entry's `dynamicImports` route map); add `/dashboard`, `/dashboard/login`, `/dashboard/messages`

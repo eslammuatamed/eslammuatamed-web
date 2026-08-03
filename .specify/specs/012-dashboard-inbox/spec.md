@@ -53,6 +53,7 @@ WhatsApp action on a visitor number; any API change; issue #30; Skills taxonomy;
 | 9 | **Archive and retention** — archive is not deletion; **no confirmation modal**; confirmed archive/unarchive mutations. The **Archived view** shows exactly: `Archived messages are retained for 12 months from the date they were archived.` — not on every archive click. The obsolete `archiveConfirm.*` keys are removed. |
 | 10 | **Copy** — dashboard chrome is **English-only in v1**; the previous bilingual inventory is **not** carried forward. A dashboard-owned English inventory is created (§7). No fabricated Arabic dashboard strings to satisfy parity tooling; the parity boundary is scoped and documented, and **no public parity check is weakened**. |
 | 12 | **Responsive list presentation** (approved 2026-08-03, after the visual review found the subject column unreadable at 320px). **`sm` and above keep the existing `UTable`, unchanged**; **below `sm` the list renders as compact message cards**. Both presentations consume the **same list state** and open the **same URL-driven `USlideover`** — there is no second fetch, mutation or unread-count path. No horizontal scrolling for the list, and desktop columns are not reproduced inside the card. Unread stays identifiable without colour alone. |
+| 13 | **Nuxt UI-first components and Zod-first validation** (owner, 2026-08-04). Already governed platform-wide by **doc 11 §3** (Nuxt UI-first, with its standing mapping table) and **doc 11 §4** (`UForm` + a **Zod** schema). This slice applies them: the mobile card surface is **`UCard`** rather than a bespoke container, and route/query parsing goes through **one canonical Zod schema**. Budgets do not justify replacing a maintainable Nuxt UI component or Zod with a bespoke alternative for marginal bytes. Generated API types remain the response contract — response shapes are **not** re-declared as Zod schemas, and mutations with no user-entered payload get no artificial schema. **Doc 11 §4 is scoped to FORMS; route/query parsing is not yet covered there — a docs-first amendment is proposed, not assumed (see §11).** |
 | 11 | **Offline and error states** — persistent offline banner, mutations disabled offline, **no offline queue**. Required states: session loading · list loading · initial empty Inbox · empty Archived · API error with retry · `401` → session recovery/login · `403` → permission state · mutation failure · offline · stale URL-selected message. |
 
 ## 4. Current API surface (verified, not assumed)
@@ -180,5 +181,17 @@ Every decision that previously blocked this slice is resolved:
 | Retention wording | Exact string, **in the Archived view only** (§6 of `plan.md`) |
 | Detail request | **None** while list rows carry the full body |
 
-**No owner decision remains outstanding for implementation.** The next owner gate is the
-**visual review**, before the full Lighthouse / repeat-flake / final CI matrix.
+### §11 — outstanding after the Nuxt UI / Zod architecture review
+
+1. **`/dashboard/messages` exceeds the D20-23 280 KB gz ceiling: 295.5 KB.** Attribution is exact —
+   `UCard` **+0.4 KB**, the Zod route-query schema **+17.4 KB**. Public routes, CSS and isolation are
+   unaffected. The owner directed that neither approved architecture choice be reverted for budget
+   pressure, so the breach stands pending a Dashboard-only threshold decision.
+2. **Proposed docs-first amendment (not applied):** doc 11 §4 currently mandates Zod for **forms**
+   only. Route/query parsing with Zod is a genuine extension of scope and should be recorded there
+   rather than living only in this feature. Smallest change: one bullet in doc 11 §4.
+3. **`zod/mini` measured as an option:** 290.3 KB — 5.2 KB cheaper, still over 280, and materially
+   less ergonomic (`z.catch(z.pipe(z.transform(…), …))` instead of chained `.catch()`). Recorded so
+   the trade-off is priced, not assumed.
+
+**No other owner decision blocks implementation.**

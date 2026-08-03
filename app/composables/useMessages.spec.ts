@@ -4,7 +4,8 @@ import { mockNuxtImport } from '@nuxt/test-utils/runtime'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import process from 'node:process'
-import { callTel, isMessagesView, replyMailto, useMessages, MESSAGES_PER_PAGE } from './useMessages'
+import { callTel, replyMailto, useMessages, MESSAGES_PER_PAGE } from './useMessages'
+import { parseMessagesQuery } from '~/utils/messages-query'
 
 const holder = vi.hoisted(() => ({ api: null as unknown }))
 mockNuxtImport('useApi', () => () => holder.api)
@@ -47,13 +48,15 @@ describe('callTel', () => {
   })
 })
 
-describe('isMessagesView — exactly two views (owner decision 4)', () => {
+describe('view validation lives in ONE place (Zod-first policy)', () => {
+  // `isMessagesView` was removed; the route-query schema is the single validator. These assert the
+  // same governed rule through the canonical parser rather than a second copy of it.
   it.each(['inbox', 'archived'])('accepts %s', (v) => {
-    expect(isMessagesView(v)).toBe(true)
+    expect(parseMessagesQuery({ view: v }).view).toBe(v)
   })
 
-  it.each(['all', 'unread', 'read', '', undefined, null, 1])('rejects %s', (v) => {
-    expect(isMessagesView(v)).toBe(false)
+  it.each(['all', 'unread', 'read', ''])('falls back to inbox for %s', (v) => {
+    expect(parseMessagesQuery({ view: v }).view).toBe('inbox')
   })
 })
 

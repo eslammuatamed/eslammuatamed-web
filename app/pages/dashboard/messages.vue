@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import type { TableColumn } from '@nuxt/ui'
 import type { ContactMessage } from '~/types/models'
-import { callTel, isMessagesView, replyMailto, useMessages, MESSAGES_PER_PAGE } from '~/composables/useMessages'
+import { callTel, replyMailto, useMessages, MESSAGES_PER_PAGE } from '~/composables/useMessages'
+import { parseMessagesQuery } from '~/utils/messages-query'
 
 /**
  * Dashboard Inbox (FR-DSH-060, flow F-D5).
@@ -21,12 +22,16 @@ const { refresh: refreshUnread, ensureFresh } = useUnreadCount()
 
 useHead({ title: () => `${t('dashboard.messages.title')} · ${t('dashboard.title')}` })
 
-const view = computed(() => (isMessagesView(route.query.view) ? route.query.view : 'inbox'))
-const page = computed(() => {
-  const raw = Number(route.query.page)
-  return Number.isInteger(raw) && raw >= 1 ? raw : 1
-})
-const selectedId = computed(() => (typeof route.query.message === 'string' ? route.query.message : null))
+/**
+ * ONE canonical parse of the route query (Zod-first Dashboard validation policy). Every read below
+ * derives from it, so `view`, `page` and `message` cannot be normalised one way here and another way
+ * in a handler. The schema is total — it defaults rather than throwing — and never rewrites the URL,
+ * which is what keeps normalisation from re-triggering the watcher that reads it.
+ */
+const parsedQuery = computed(() => parseMessagesQuery(route.query))
+const view = computed(() => parsedQuery.value.view)
+const page = computed(() => parsedQuery.value.page)
+const selectedId = computed(() => parsedQuery.value.message ?? null)
 
 /** Offline is a first-class state: mutations are disabled and no queue is kept (owner decision 11). */
 const online = ref(true)
@@ -506,7 +511,15 @@ onMounted(() => {
            rows cannot collide. -->
       <ul class="flex flex-col gap-2 sm:hidden">
         <li v-for="message in items" :key="message.id">
-          <article class="relative rounded-control border border-default bg-default">
+          <!-- `UCard` supplies the surface, border, radius and dark-mode states (Nuxt UI-first
+               policy); only the compact padding is overridden, so none of that is recreated with
+               local styles. It stays PRESENTATIONAL — the card is not itself a link or button.
+               `as="article"` keeps the semantic wrapper the a11y structure relies on. -->
+          <UCard
+            as="article"
+            class="relative"
+            :ui="{ body: 'p-0 sm:p-0' }"
+          >
             <button
               type="button"
               data-opener="card"
@@ -564,7 +577,7 @@ onMounted(() => {
                 />
               </UDropdownMenu>
             </div>
-          </article>
+          </UCard>
         </li>
       </ul>
 
