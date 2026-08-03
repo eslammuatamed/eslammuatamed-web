@@ -9,10 +9,16 @@ export interface ApiRequestOptions extends NitroFetchOptions<string> {
    *
    * Public content composables pass the ROUTE-resolved locale (`useRouteLocale()`), because during
    * the D03-13 deferred locale commit the reactive UI locale still holds the OUTGOING language while
-   * the incoming page is already fetching its content. Omit it — as dashboard, auth and mutation
-   * callers do — to keep the previous behaviour of using the current UI locale.
+   * the incoming page is already fetching its content. Omit it to use the current UI locale.
+   *
+   * **`false` means "send no locale at all"**, which is what ADMIN reads require. The admin DTOs are
+   * validated with `forbidNonWhitelisted`, and none of them declares `locale` — messages are
+   * locale-agnostic — so an unsolicited `?locale=` is a **422**, not a harmless extra parameter.
+   * Omitting the option is therefore not the same as opting out: the default still sends the UI
+   * locale. This is explicit rather than inferred from an `/admin/` prefix, so a caller states its
+   * intent instead of relying on a path convention that a future route could silently break.
    */
-  locale?: string
+  locale?: string | false
 }
 
 /**
@@ -55,7 +61,7 @@ export function useApi() {
     // building, otherwise the current UI locale, which is correct everywhere except inside the D03-13
     // deferred locale commit. Resolved here rather than in `onRequest` so there is exactly one place
     // the parameter can come from. An explicit `query.locale` still wins, as it always did.
-    const localized: NitroFetchOptions<string> = method === 'GET'
+    const localized: NitroFetchOptions<string> = method === 'GET' && locale !== false
       ? { ...fetchOptions, query: { locale: locale ?? $i18n.locale.value, ...fetchOptions.query } }
       : fetchOptions
 

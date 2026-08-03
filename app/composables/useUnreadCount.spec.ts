@@ -35,6 +35,11 @@ describe('useUnreadCount — request shape', () => {
     await fetchCount()
 
     expect(api).toHaveBeenCalledWith('/admin/messages', {
+      // `locale: false` is load-bearing, not decoration. The admin DTOs are validated with
+      // `forbidNonWhitelisted` and none declares `locale`, so `useApi`'s default of appending the
+      // UI locale to every GET turns an admin read into a 422. Caught at the visual gate against
+      // the real API; pinned here so it cannot regress silently.
+      locale: false,
       query: { isRead: false, isArchived: false, perPage: 1 }
     })
     expect(count.value).toBe(7)

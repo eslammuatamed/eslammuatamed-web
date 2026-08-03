@@ -101,7 +101,7 @@ describe('dashboard copy is English-only by decision', () => {
   })
 
   it('ships no All/Unread/Read filter copy — two views only', () => {
-    const view = (localeFile('en').dashboard?.messages as Record<string, Record<string, unknown>>)?.view
+    const view = (localeFile('en').dashboard?.messages as Record<string, Record<string, unknown>>)?.view ?? {}
     expect(Object.keys(view)).toEqual(expect.arrayContaining(['inbox', 'archived']))
     expect(view).not.toHaveProperty('all')
     expect(view).not.toHaveProperty('unread')

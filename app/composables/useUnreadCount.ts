@@ -41,6 +41,7 @@ export function useUnreadCount() {
     if (inFlight) return inFlight
 
     inFlight = api<Paginated<ContactMessage>>('/admin/messages', {
+      locale: false,
       query: { isRead: false, isArchived: false, perPage: 1 }
     })
       .then((res) => {

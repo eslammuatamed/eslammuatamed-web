@@ -44,6 +44,7 @@ export function useMessages() {
     failed.value = false
     try {
       const res = await api<Paginated<ContactMessage>>('/admin/messages', {
+        locale: false,
         query: { isArchived: view === 'archived', page, perPage: MESSAGES_PER_PAGE }
       })
       items.value = [...res.data]

@@ -68,7 +68,6 @@ function closeDetail(): void {
 
 function openMessage(message: ContactMessage): void {
   setQuery({ message: message.id })
-  if (!message.isRead) void markRead(message)
 }
 
 function selectView(next: 'inbox' | 'archived'): void {
@@ -141,6 +140,23 @@ function rowActions(message: ContactMessage) {
 
 // Re-read whenever view or page changes — including via Back/Forward, which changes the query.
 watch([view, page], () => void load(view.value, page.value), { immediate: true })
+
+/**
+ * "Opening an unread message requests mark read" (owner decision 6) is keyed on the message becoming
+ * VISIBLE, not on the click that usually causes it. A deep link, a reload and a Back/Forward all
+ * open the detail without a click, and marking read only on click would give the same visible state
+ * two different meanings depending on how the reader arrived.
+ *
+ * Guarded on the id so re-running the effect for an already-handled message cannot re-issue the
+ * mutation, and confirmed like every other write — a failure leaves the message unread.
+ */
+const autoReadRequestedFor = ref<string | null>(null)
+watch(selected, (message) => {
+  if (!message || message.isRead) return
+  if (autoReadRequestedFor.value === message.id) return
+  autoReadRequestedFor.value = message.id
+  void markRead(message)
+})
 
 onMounted(() => {
   online.value = navigator.onLine
@@ -271,21 +287,26 @@ onMounted(() => {
         </template>
 
         <template #name-cell="{ row }">
-          <span dir="auto" class="block max-w-48 truncate">{{ row.original.name }}</span>
+          <span dir="auto" class="block max-w-28 truncate sm:max-w-40 lg:max-w-48">{{ row.original.name }}</span>
         </template>
 
         <template #subject-cell="{ row }">
           <!-- The row's ONE interactive control. Per-row actions live in the trailing menu, so no
-               interactive element is nested inside another. -->
-          <UButton
-            variant="link"
-            color="neutral"
-            class="max-w-80 truncate p-0 text-start"
-            :class="row.original.isRead ? '' : 'font-semibold'"
+               interactive element is nested inside another.
+               A PLAIN <button> rather than UButton: `truncate` is `overflow+text-overflow+nowrap` on
+               the element that owns the text, and UButton renders an inline-flex box whose child span
+               is a separate formatting context — the text then hard-clips with no ellipsis. One
+               element that both owns the text and carries the width constraint is what makes the
+               ellipsis appear. -->
+          <button
+            type="button"
+            dir="auto"
+            class="block w-44 max-w-full truncate text-start text-sm sm:w-64 lg:w-80 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            :class="row.original.isRead ? 'text-default' : 'font-semibold text-highlighted'"
             @click="openMessage(row.original)"
           >
-            <span dir="auto">{{ row.original.subject }}</span>
-          </UButton>
+            {{ row.original.subject }}
+          </button>
         </template>
 
         <template #createdAt-cell="{ row }">
