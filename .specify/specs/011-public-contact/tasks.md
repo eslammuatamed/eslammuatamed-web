@@ -67,18 +67,43 @@
 - [ ] T082 Delete `.omc/research/contact-copy-inventory-and-api-correction.md` **after** T004 captured its content
 - [ ] T083 Clean up worktrees, disposable DB, temp env; verify all pre-existing dirty state and stashes preserved
 
-## Status at Web head `c5832cee` (2026-08-02)
+## Status at Web head `31f0ac0` (2026-08-03) — final matrix COMPLETE
 
-- Implementation **complete** and owner-approved visually (composition, native select, combined
-  Phone & WhatsApp item, success state, mobile header, Arabic RTL polish).
-- PR **#31 open, NOT merged**. Awaiting the owner's explicit merge approval.
-- Budgets green: `/contact` and `/ar/contact` **232.2 KB gz / 250**, app-owned 75 579 B / 101 KiB,
-  CSS 29.23 KB / 30, bundle isolation and logical-properties clean.
-- Lint, typecheck, e2e typecheck and **784 unit/component tests** green.
-- **OUTSTANDING — the complete final matrix has not been run at this head.** It was started at
-  `0d3feca` and stopped when the Arabic RTL polish changed the head. Still to run at `c5832cee`:
-  full browser suite, repeat-flake sweep (`--repeat-each=3`, CI workers, 0 retries), full unfiltered
-  axe matrix, real disposable-API proof, Lighthouse 3×/route/profile with median gates, exact-head CI.
+- Implementation **complete** and owner-approved visually. PR **#31 open, NOT merged**. Awaiting the
+  owner's explicit merge approval. Nothing deployed; no branch promoted.
+- **Final matrix run at `31f0ac0`.** Lint, typecheck, e2e typecheck clean (0 TS errors).
+  **784** unit/component. Full browser suite. Repeat sweep `--repeat-each=3`, workers 2, retries 0:
+  **751 passed / 2 failed / 753**, Contact **54 executions, 0 failures** across all 3 repetitions.
+- **Both sweep failures are pre-existing issue #30**, proven by differential rather than by signature
+  matching: base `acdbda8` and head run under the identical command, worker count, retry policy,
+  Node v24.15.0 / npm 11.13.0, lockfile md5 `39994207e350be88a5db7da5613d0bc2`, Playwright 1.62.0,
+  same idle host, run sequentially. Base 646/648 with the SAME two failures at the SAME repeat index
+  (`harness.spec.ts:37` axe colour-contrast repeat2; `locale-head-contract.spec.ts:80` hydration
+  repeat2). Base contains no Contact code and no shared-header change, so neither is attributable to
+  this branch; head is not measurably worse (0.27% vs 0.31%).
+- **Full unfiltered WCAG 2.2 AA axe matrix: 40/40 clean** — EN/AR × desktop/mobile × light/dark ×
+  idle/validation/server-error/rate-limit/success. No horizontal overflow at 320/360/390, both locales.
+- **One Contact blocker found and fixed at this head.** The dark success-state `Send another message`
+  label measured **3.08:1** (`#7f22fe` on `#1a1129`) against the 4.5:1 AA minimum for 14px normal
+  text. Deterministic, not the issue-#30 transitional-opacity artifact: identical at 400 ms and
+  3000 ms settle, no compositing ancestor, reproduced through the app's own colour-mode path with no
+  class injection. `variant="soft"` occurs exactly once in the app, so it was Contact-introduced. No
+  gate covered it — the axe lane and Lighthouse both run the default light scheme. Corrected
+  owner-approved with `dark:text-primary-300`: now **9.79:1**; light mode provably unchanged
+  (still violet-600 `#7f22fe` on `#efe6fc` = 4.88:1).
+- Budgets re-measured after the fix: `/contact` and `/ar/contact` **232.2 KB gz / 250**, app-owned
+  **75 601 B / 101 KiB**, CSS **29.24 KB / 30**, Arabic fonts 117.6 KB / 130; bundle isolation
+  (44 chunks) and logical-properties clean. Home, About, Résumé, Experience unchanged.
+- Lighthouse 3 runs per route/profile, all medians within doc 20 §1.
+- Real disposable-API + DB proof against API `dev` `9a79bbe`: nullable settings, the five owner-number
+  shapes, every submission shape, normalization, trimming, blank→null, one row per valid request,
+  honeypot and time-trap not persisted, the `contact_messages_contact_method_present` CHECK rejecting
+  both-absent/blank/whitespace, and the inbox read/archive/unarchive lifecycle. No PII in any log.
+  DB dropped, rows deleted, servers stopped.
+- **GitHub PR merge-ref CI green at `8dfa847`** (= merge of `31f0ac0` into `acdbda8`). GitHub's
+  `pull_request` event fetches only `refs/remotes/pull/31/merge`, so **head-SHA CI is structurally
+  unavailable** for this branch — the merge-ref result must not be relabelled as exact-head CI.
+- No threshold changed, no retry added, no timeout raised, no assertion weakened.
 - Dashboard Inbox (Web PR 2) **not started**. Issue #30 open and untouched.
 
 ## Open defects — must be fixed before the browser lane runs
