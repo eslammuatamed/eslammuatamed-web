@@ -266,6 +266,10 @@ onMounted(() => {
 
     <!-- Exactly two views (owner decision 4). Real tablist semantics so arrow keys work. -->
     <div class="mb-4 flex items-center gap-2" role="tablist" :aria-label="t('dashboard.messages.view.label')">
+      <!-- The ACTIVE tab is white on the default primary (500), which measures 3.98:1 at this
+           small size — under the 4.5:1 WCAG AA minimum. The 600 shade is 5.89:1, matching the
+           unread badge and the violet the Contact slice standardised on. Caught by axe on the
+           Archived view during the visual review. -->
       <UButton
         v-for="tab in (['inbox', 'archived'] as const)"
         :key="tab"
@@ -274,6 +278,7 @@ onMounted(() => {
         :color="view === tab ? 'primary' : 'neutral'"
         :variant="view === tab ? 'solid' : 'ghost'"
         size="sm"
+        :ui="view === tab ? { base: 'bg-primary-600 text-white hover:bg-primary-700' } : undefined"
         @click="selectView(tab)"
       >
         {{ t(`dashboard.messages.view.${tab}`) }}
@@ -319,6 +324,7 @@ onMounted(() => {
         variant="subtle"
         icon="i-lucide-triangle-alert"
         class="mb-4"
+        :ui="{ title: 'text-error-700 dark:text-error-300' }"
         :title="t('dashboard.messages.updateErrorTitle')"
         :description="t('dashboard.messages.updateErrorBody')"
       />
@@ -328,11 +334,16 @@ onMounted(() => {
       <USkeleton v-for="i in 6" :key="i" class="h-12 w-full" />
     </div>
 
+    <!-- The subtle error title defaults to the 500 red, which measures 3.15:1 on its own tinted
+         background — under the 4.5:1 AA minimum. The 700 shade is 5.32:1; the dark-mode counterpart
+         keeps the same relationship against the dark surface. Caught by axe during the visual
+         review, and applied to BOTH error alerts so they cannot drift apart. -->
     <UAlert
       v-else-if="forbidden"
       color="error"
       variant="subtle"
       icon="i-lucide-lock"
+      :ui="{ title: 'text-error-700 dark:text-error-300' }"
       :title="t('dashboard.messages.forbiddenTitle')"
       :description="t('dashboard.messages.forbiddenBody')"
     />

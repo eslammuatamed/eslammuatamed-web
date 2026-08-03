@@ -57,11 +57,16 @@ const route = useRoute()
 
             <!-- Badge slot. Rendered only when the model supplies a value, so "not loaded yet"
                  (null) and "nothing unread" (0 -> null) both render nothing rather than a 0. -->
+            <!-- `bg-primary-600`, not the default `primary` (500): white on the 500 shade measures
+                 3.98:1 at this 12px size, under the 4.5:1 WCAG AA minimum. The 600 shade is
+                 5.89:1 and is the same violet the Contact slice standardised on for exactly this
+                 reason. Caught by axe during the visual review. -->
             <UBadge
               v-if="item.badge?.value"
               color="primary"
               variant="solid"
               size="sm"
+              :ui="{ base: 'bg-primary-600 text-white' }"
               :aria-label="t('dashboard.messages.unreadBadgeLabel', { count: item.badge.value })"
             >
               {{ item.badge.value }}
