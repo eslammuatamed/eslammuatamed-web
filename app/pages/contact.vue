@@ -353,8 +353,16 @@ useSeoMeta({
           <p class="mt-2 max-w-sm text-balance text-muted">
             {{ t('contact.success.body') }}
           </p>
+          <!--
+            The dark-mode text shade is explicit. `variant="soft"` paints `text-primary` on
+            `bg-primary/10`, and in dark mode that composites to violet-600 `#7f22fe` on `#1a1129`
+            — 3.08:1, under the 4.5:1 WCAG 2.2 AA minimum for 14px normal text. The lighter step
+            restores compliance without changing the hue, the variant or the composition. Same
+            shape as the `text-error-700 dark:text-error` pairing the error panel below already
+            uses for soft-on-tint text.
+          -->
           <UButton
-            class="mt-7"
+            class="mt-7 dark:text-primary-300"
             size="lg"
             color="primary"
             variant="soft"
