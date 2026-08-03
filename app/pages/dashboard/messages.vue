@@ -268,8 +268,13 @@ onMounted(() => {
     <div class="mb-4 flex items-center gap-2" role="tablist" :aria-label="t('dashboard.messages.view.label')">
       <!-- The ACTIVE tab is white on the default primary (500), which measures 3.98:1 at this
            small size — under the 4.5:1 WCAG AA minimum. The 600 shade is 5.89:1, matching the
-           unread badge and the violet the Contact slice standardised on. Caught by axe on the
-           Archived view during the visual review. -->
+           unread badge and the violet the Contact slice standardised on.
+           `active:` MUST be overridden explicitly. tailwind-merge treats `active:bg-*` as a
+           different group from `bg-*` and `hover:bg-*`, so the component's own
+           `active:bg-primary/75` survives an override of the other two — and being the 500 shade at
+           75% alpha it composites LIGHTER, reproducing the identical 3.99:1 failure in the pressed
+           state. Verified by sampling the rendered pixel in each state, because `getComputedStyle`
+           reports the uncomposited `oklab(… / 0.75)` and cannot be contrast-checked directly. -->
       <UButton
         v-for="tab in (['inbox', 'archived'] as const)"
         :key="tab"
@@ -278,7 +283,7 @@ onMounted(() => {
         :color="view === tab ? 'primary' : 'neutral'"
         :variant="view === tab ? 'solid' : 'ghost'"
         size="sm"
-        :ui="view === tab ? { base: 'bg-primary-600 text-white hover:bg-primary-700' } : undefined"
+        :ui="view === tab ? { base: 'bg-primary-600 text-white hover:bg-primary-700 active:bg-primary-700' } : undefined"
         @click="selectView(tab)"
       >
         {{ t(`dashboard.messages.view.${tab}`) }}
