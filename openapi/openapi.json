@@ -5461,7 +5461,18 @@
             }
           },
           "429": {
-            "description": "Contact rate limit exceeded (3 / hour or 10 / day per IP).",
+            "description": "Contact rate limit exceeded (3 / hour or 10 / day per IP). Carries `Retry-After` in seconds.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying (delta-seconds, never an HTTP-date). Exposed via CORS so browser clients can read it.",
+                "schema": {
+                  "type": "integer",
+                  "format": "int32",
+                  "minimum": 1,
+                  "example": 3600
+                }
+              }
+            },
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -6709,6 +6720,18 @@
             "example": "contact@eslammuatamed.com",
             "description": "Public website contact address."
           },
+          "contactPhone": {
+            "type": "string",
+            "nullable": true,
+            "example": "+201002785408",
+            "description": "Public contact number in E.164 for a call action; null when not published. Display grouping is a rendering concern this contract does not carry."
+          },
+          "whatsappPhone": {
+            "type": "string",
+            "nullable": true,
+            "example": "+201002785408",
+            "description": "Public WhatsApp number in E.164; null when not published. Independent of contactPhone — never infer one from the other."
+          },
           "aboutBio": {
             "type": "string",
             "nullable": true,
@@ -6753,6 +6776,8 @@
           "portrait",
           "professionalEmail",
           "contactEmail",
+          "contactPhone",
+          "whatsappPhone",
           "aboutBio",
           "engineeringPhilosophy",
           "currentFocus",
@@ -6852,6 +6877,16 @@
             "type": "string",
             "nullable": true
           },
+          "contactPhone": {
+            "type": "string",
+            "nullable": true,
+            "example": "+201002785408"
+          },
+          "whatsappPhone": {
+            "type": "string",
+            "nullable": true,
+            "example": "+201002785408"
+          },
           "careerStartYear": {
             "type": "number",
             "nullable": true,
@@ -6908,6 +6943,8 @@
           "portrait",
           "professionalEmail",
           "contactEmail",
+          "contactPhone",
+          "whatsappPhone",
           "careerStartYear",
           "careerStartMonth",
           "googleSiteVerification",
@@ -7021,6 +7058,18 @@
             "type": "string",
             "nullable": true,
             "example": "contact@eslammuatamed.com"
+          },
+          "contactPhone": {
+            "type": "string",
+            "nullable": true,
+            "example": "+201002785408",
+            "description": "Public contact number in E.164; null withdraws it."
+          },
+          "whatsappPhone": {
+            "type": "string",
+            "nullable": true,
+            "example": "+201002785408",
+            "description": "Public WhatsApp number in E.164; null withdraws it. Independent of contactPhone."
           },
           "careerStartYear": {
             "type": "number",
@@ -9764,26 +9813,38 @@
           "name": {
             "type": "string",
             "example": "Alex Morgan",
-            "maxLength": 200
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Trimmed of surrounding whitespace before validation; a value empty after trimming is rejected (D10-15)."
           },
           "email": {
             "type": "string",
             "example": "alex@example.com",
-            "maxLength": 320
+            "maxLength": 320,
+            "description": "Optional. Trimmed before validation. At least one of `email` or `phone` is required; a supplied but malformed value is rejected rather than ignored (D10-16)."
+          },
+          "phone": {
+            "type": "string",
+            "example": "+201002785408",
+            "description": "Optional. E.164 international format — the API stores an international number, never a display-formatted one; human spacing is normalized away before validation. At least one of `email` or `phone` is required (D10-16)."
           },
           "subject": {
             "type": "string",
             "example": "Project inquiry",
-            "maxLength": 300
+            "minLength": 1,
+            "maxLength": 300,
+            "description": "Trimmed of surrounding whitespace before validation; a value empty after trimming is rejected (D10-15)."
           },
           "body": {
             "type": "string",
             "example": "I'd like to discuss a Nuxt build.",
-            "maxLength": 5000
+            "minLength": 1,
+            "maxLength": 5000,
+            "description": "Trimmed of surrounding whitespace before validation; a value empty after trimming is rejected (D10-15)."
           },
           "website": {
             "type": "string",
-            "description": "Anti-spam honeypot — leave empty. Any value flags the submission as spam. Never persisted.",
+            "description": "Anti-spam honeypot — leave empty. Any value flags the submission as spam. Never trimmed, never persisted.",
             "example": ""
           },
           "elapsedMs": {
@@ -9794,7 +9855,6 @@
         },
         "required": [
           "name",
-          "email",
           "subject",
           "body"
         ]
@@ -9812,7 +9872,15 @@
           },
           "email": {
             "type": "string",
-            "example": "alex@example.com"
+            "nullable": true,
+            "example": "alex@example.com",
+            "description": "The visitor email, or null when they supplied only a phone number (D10-16)."
+          },
+          "phone": {
+            "type": "string",
+            "nullable": true,
+            "example": "+201002785408",
+            "description": "The visitor phone in E.164, or null when they supplied only an email address (D10-16)."
           },
           "subject": {
             "type": "string",
@@ -9859,6 +9927,7 @@
           "id",
           "name",
           "email",
+          "phone",
           "subject",
           "body",
           "isRead",

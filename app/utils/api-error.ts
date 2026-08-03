@@ -11,8 +11,22 @@ export class ApiError extends Error {
   readonly detail?: string
   readonly instance?: string
   readonly fieldErrors: readonly FieldError[]
+  /**
+   * Raw `Retry-After` from a throttled response, when the browser could read it.
+   *
+   * Carried on the error rather than left in the response because the throttle is only ever
+   * observed here. It stays a RAW string: the header is contract-documented as delta-seconds
+   * (D10-15) but arrives from the network, so parsing and validating it belongs to the consumer
+   * that renders it, not to this shape. `undefined` is a real runtime state, not a defensive
+   * branch — before D10-15 added `Retry-After` to the CORS exposed-header allowlist, browser JS
+   * read `null` for it on every cross-origin 429.
+   */
+  readonly retryAfter?: string
 
-  constructor(problem: Pick<ProblemDetail, 'title' | 'status' | 'type'> & Partial<ProblemDetail>) {
+  constructor(
+    problem: Pick<ProblemDetail, 'title' | 'status' | 'type'> & Partial<ProblemDetail>,
+    options: { retryAfter?: string } = {}
+  ) {
     super(problem.title)
     this.name = 'ApiError'
     this.status = problem.status
@@ -20,6 +34,7 @@ export class ApiError extends Error {
     this.detail = problem.detail
     this.instance = problem.instance
     this.fieldErrors = problem.errors ?? []
+    this.retryAfter = options.retryAfter
   }
 
   /** First message per field — maps a 422 onto UForm's field-error shape (doc 11 §4). */
@@ -58,16 +73,29 @@ export function toApiError(error: unknown): ApiError {
 
   const shaped = error as { data?: unknown; message?: string }
   const status = statusOf(error)
+  const options = { retryAfter: retryAfterOf(error) }
 
   if (isProblemDetail(shaped.data)) {
-    return new ApiError({ ...shaped.data, status: shaped.data.status || status })
+    return new ApiError({ ...shaped.data, status: shaped.data.status || status }, options)
   }
 
   return new ApiError({
     type: 'about:blank',
     title: shaped.message ?? 'Request failed',
     status
-  })
+  }, options)
+}
+
+/**
+ * Reads `Retry-After` off an ofetch `FetchError`'s response.
+ *
+ * Returns `undefined` when there is no response (a transport failure) or the header is absent —
+ * which, on a cross-origin 429, is also what a browser sees whenever the server has not listed the
+ * header in `Access-Control-Expose-Headers`.
+ */
+function retryAfterOf(error: unknown): string | undefined {
+  const response = (error as { response?: { headers?: Headers } }).response
+  return response?.headers?.get('retry-after') ?? undefined
 }
 
 /**

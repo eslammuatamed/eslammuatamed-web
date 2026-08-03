@@ -62,9 +62,13 @@ import {
 } from './lib/route-assets.mjs'
 
 /**
- * The public surface. `/contact` remains an accepted web-005 404 until its own slice; the Projects
- * routes shipped with the Projects slice and are measured here. Detail slugs are the Prism contract
- * examples — the preview serves the committed contract, so the gate never depends on staging data.
+ * The public surface. The Projects routes shipped with the Projects slice and are measured here.
+ * Detail slugs are the Prism contract examples — the preview serves the committed contract, so the
+ * gate never depends on staging data.
+ *
+ * With `/contact` added by the Contact slice (D20-22), doc 20 §5's four-page matrix is COMPLETE:
+ * no mandatory public route is left unmeasured, and the deferral this comment carried since D20-8
+ * is closed.
  */
 const ROUTES = [
   '/',
@@ -85,7 +89,13 @@ const ROUTES = [
   '/ar/about',
   // web-005 Profile, Resume slice (010) — D20-21.
   '/resume',
-  '/ar/resume'
+  '/ar/resume',
+  // web-005 Contact slice (011) — D20-22, completing §5's four-page matrix. This is the one route
+  // whose payload risk was known before it was built (a validation library entering a public client
+  // bundle), so the per-route byte budget is the measurement that matters most here. Existing
+  // thresholds, no Contact-specific relaxation.
+  '/contact',
+  '/ar/contact'
 ]
 
 const BASE = process.env.ROUTE_SIZE_BASE ?? 'http://127.0.0.1:3000'

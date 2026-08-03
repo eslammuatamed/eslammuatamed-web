@@ -119,6 +119,8 @@ export const SITE_SETTINGS: Record<Locale, SiteSettings> = {
     currentFocus: 'Building bilingual web products and developing this platform in the open.',
     professionalEmail: 'hello@eslammuatamed.com',
     contactEmail: 'contact@eslammuatamed.com',
+    contactPhone: '+201002785408',
+    whatsappPhone: '+201002785408',
     portraitAssetId: PORTRAIT_ID,
     portrait: portraitImage(PORTRAIT_ID, 'Eslam Muatamed, photographed against a plain wall'),
     availableLocales: ['en', 'ar']
@@ -145,6 +147,8 @@ export const SITE_SETTINGS: Record<Locale, SiteSettings> = {
     currentFocus: 'أبني منتجات ويب ثنائية اللغة، وأطوّر هذه المنصة بشكل مفتوح.',
     professionalEmail: 'hello@eslammuatamed.com',
     contactEmail: 'contact@eslammuatamed.com',
+    contactPhone: '+201002785408',
+    whatsappPhone: '+201002785408',
     portraitAssetId: PORTRAIT_ID,
     portrait: portraitImage(PORTRAIT_ID, 'إسلام معتمد، صورة أمام جدار سادة'),
     availableLocales: ['en', 'ar']

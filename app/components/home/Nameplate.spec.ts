@@ -35,6 +35,8 @@ const base = (overrides: Partial<SiteSettings> = {}): SiteSettings => ({
   currentFocus: null,
   professionalEmail: null,
   contactEmail: null,
+  contactPhone: '+201002785408',
+  whatsappPhone: '+201002785408',
   portraitAssetId: null,
   portrait: null,
   availableLocales: ['en'],

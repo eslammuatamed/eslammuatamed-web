@@ -231,6 +231,66 @@ export function resolveRequest(url: string): Reply {
 }
 
 /**
+ * `POST /contact` scenario resolution (011).
+ *
+ * THE SELECTOR IS A REQUEST HEADER, deliberately — not the subject or any other visible form field.
+ * Subject is content a real visitor writes, and selecting server behaviour from it would mean a
+ * production message could change what the API does. `x-contact-scenario` is attached by the
+ * `ssr-scenarios` Playwright project only, via `setExtraHTTPHeaders`, and cannot reach the real API:
+ * the contract, scenario and real-API lanes are separate projects with separate `baseURL`s.
+ *
+ * The default with no header is the neutral 2xx receipt, which is what the API returns for BOTH a
+ * stored message and a silently dropped one (D02-1) — so the happy path here is the honest one.
+ */
+export function resolveContactPost(
+  scenario: string | undefined,
+  instance: string
+): { readonly reply: Reply, readonly headers?: Record<string, string> } {
+  switch (scenario) {
+    case 'validation':
+      return {
+        reply: {
+          kind: 'problem',
+          status: 422,
+          body: {
+            ...problem(422, 'Unprocessable Entity', 'Validation failed.', instance),
+            errors: [
+              { field: 'email', message: 'Enter a valid email address.' },
+              { field: 'phone', message: 'Provide a valid international phone number in E.164 format, or an email address.' }
+            ]
+          }
+        }
+      }
+    case 'throttled':
+      // Seconds, per doc 19 §6 / D10-15. CORS-exposed above, so the browser can actually read it.
+      return {
+        reply: { kind: 'problem', status: 429, body: problem(429, 'Too Many Requests', 'Rate limit exceeded.', instance) },
+        headers: { 'retry-after': '3600' }
+      }
+    case 'throttled-no-retry-after':
+      // The state the copy must degrade to a static message for.
+      return {
+        reply: { kind: 'problem', status: 429, body: problem(429, 'Too Many Requests', 'Rate limit exceeded.', instance) }
+      }
+    case 'throttled-bad-retry-after':
+      // Present but unparseable: must degrade exactly like an absent one, never render "NaN".
+      return {
+        reply: { kind: 'problem', status: 429, body: problem(429, 'Too Many Requests', 'Rate limit exceeded.', instance) },
+        headers: { 'retry-after': 'soon' }
+      }
+    case 'server-error':
+      return {
+        reply: { kind: 'problem', status: 500, body: problem(500, 'Internal Server Error', 'Something went wrong.', instance) }
+      }
+    case 'network-failure':
+      // The socket dies mid-request, exactly as the GET destroy scenario does.
+      return { reply: { kind: 'destroy' } }
+    default:
+      return { reply: json({ data: { received: true } }) }
+  }
+}
+
+/**
  * Create the server. Not started — the caller binds the port, so tests can use an ephemeral one and
  * the CLI below can use the port `ci-preview.mjs` assigns.
  */
@@ -251,8 +311,12 @@ function corsHeaders(origin: string | undefined): Record<string, string> {
   return {
     'access-control-allow-origin': origin ?? '*',
     'access-control-allow-credentials': 'true',
-    'access-control-allow-methods': 'GET, OPTIONS',
-    'access-control-allow-headers': 'authorization, content-type',
+    'access-control-allow-methods': 'GET, POST, OPTIONS',
+    'access-control-allow-headers': 'authorization, content-type, x-contact-scenario',
+    // `Retry-After` is only readable cross-origin when it is named here (D10-15). Without this the
+    // 429-with-countdown scenario would be indistinguishable from the 429-without one, and the lane
+    // would silently prove nothing.
+    'access-control-expose-headers': 'Retry-After',
     // The response varies by request origin, so it must never be cached across origins.
     vary: 'Origin'
   }
@@ -265,6 +329,34 @@ export function createScenarioServer(): http.Server {
     if (request.method === 'OPTIONS') {
       response.writeHead(204, cors)
       response.end()
+      return
+    }
+
+    // The one mutating route this backend serves (011). The body is drained but never inspected for
+    // routing — see resolveContactPost for why the selector is a header.
+    if (request.method === 'POST' && request.url?.startsWith(`${API_PREFIX}/contact`)) {
+      const scenario = request.headers['x-contact-scenario']
+      request.resume()
+      request.on('end', () => {
+        const { reply, headers } = resolveContactPost(
+          typeof scenario === 'string' ? scenario : undefined,
+          `${API_PREFIX}/contact`
+        )
+        if (reply.kind === 'destroy') {
+          request.socket.destroy()
+          return
+        }
+        const contentType = reply.kind === 'problem' ? 'application/problem+json' : 'application/json'
+        const payload = JSON.stringify(reply.body)
+        response.writeHead(reply.status, {
+          ...cors,
+          ...headers,
+          'content-type': `${contentType}; charset=utf-8`,
+          'content-length': Buffer.byteLength(payload),
+          'cache-control': 'no-store'
+        })
+        response.end(payload)
+      })
       return
     }
 
