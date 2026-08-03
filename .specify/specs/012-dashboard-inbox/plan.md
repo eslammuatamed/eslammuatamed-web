@@ -31,7 +31,6 @@ interface DashboardNavItem {
   to: string             // must be a route that EXISTS
   icon: string
   badge?: Ref<number>    // optional slot; rendered only when > 0
-  roles?: string[]       // courtesy gating only (D11-2)
 }
 interface DashboardNavGroup { key: string; items: DashboardNavItem[] }
 ```
@@ -46,6 +45,10 @@ Initial model renders **only existing destinations** — no disabled or placehol
 Doc 04's remaining groups (Content, Library, System) are **absent from the model**, not
 rendered-disabled. They are added by appending to this array when their routes exist.
 
+**No `roles` field.** Owner decision 2 forbids inferring a grant from a role name, so the model
+carries no role predicate at all — a documented-but-unused field would invite exactly the
+duplication the decision rules out. Navigation is filtered by **route existence only**.
+
 **Active state** uses `useRoute()` path matching with exact-match for `/dashboard` (so Overview
 does not stay active on every child route) and prefix-match for section roots.
 `aria-current="page"` marks the active item; styling never relies on colour alone.
@@ -54,8 +57,8 @@ does not stay active on every child route) and prefix-match for section roots.
 
 - Route protection: `definePageMeta({ layout: 'dashboard', middleware: 'auth' })` — per page, never global (doc 11 §1).
 - **401:** already handled inside `useApi` — one silent refresh retry, then redirect to `/dashboard/login`. This slice adds nothing.
-- **403:** rendered as the explicit forbidden state (§6 of spec). Never an empty list. The nav item may still be visible; the API's decision is authoritative and the page states it honestly.
-- **Role gating** is courtesy only and derives from `auth.user.role.name` — the session carries no permission list.
+- **403:** rendered as the explicit forbidden state (spec §6). Never an empty list. The nav item **stays visible** — visibility is not an authorization claim, and the honest way to represent an unknown grant is to attempt the call and render the answer.
+- **No role-based gating in this slice.** The session carries no permission list, and decision 2 forbids inferring `messages.read` from a role name. OWNER-only cosmetic gating is retained only where something is already governed OWNER-only; nothing here is.
 
 ## 4. List data flow
 
@@ -64,6 +67,7 @@ does not stay active on every child route) and prefix-match for section roots.
 ```
 
 - `useMessages()` wraps `useApi()` and reads `GET /admin/messages` with `isArchived` fixed by the view (`false` for Inbox, `true` for Archived) and `page`/`perPage` from the URL.
+- **Exactly two views.** `isRead` is never sent as a filter — decision 4 ships Inbox and Archived only. Read state is *displayed*, not filtered on.
 - **Ordering is never re-sorted client-side** — the API guarantees unread-first, then newest-first.
 - `perPage` = 12 (the API default; max 50) — an explicit constant, not an implicit default.
 - URL is the single source of truth for view, page and selection, so every state is deep-linkable and Back/Forward correct.
@@ -143,10 +147,21 @@ Rendered strictly from what exists — either field may be `null`, never both.
 
 ## 12. Copy plan
 
-English-only. Reuse the EN half of the 48 owner-approved `dashboard.messages.*` keys from
-`011-public-contact/plan.md §7`, **minus** the four `archiveConfirm.*` keys (decision 6),
-**plus** new keys pending approval (spec §10.3): `detail.phone`, `actions.call`,
-`actions.copyNumber`, a copy-confirmation, the Archived-view retention notice, and
-`dashboard.nav.*` for Overview and the Communication group.
+**English-only, dashboard-owned.** The bilingual 011 inventory is **not** carried forward. A new
+`dashboard.*` English inventory covers shell navigation · Inbox/Archived tabs · headings and
+descriptions · unread/read states · loading · initial empty · view-empty · error + retry ·
+forbidden · mark read/unread · archive/unarchive · Reply by email · Call · Copy number · copy
+success/failure · retention text · pagination · stale selected-message notice · offline.
 
-An assertion guards that **no `dashboard.*` key is added to `ar.json`** in this slice.
+Removed: the four `archiveConfirm.*` keys (decision 9) and `filter.unread` / `filter.read`
+(decision 4). Added: `detail.phone`, `actions.call`, `actions.copyNumber` and copy feedback.
+
+**Exact retention string, rendered in the Archived view only:**
+
+> `Archived messages are retained for 12 months from the date they were archived.`
+
+**Parity boundary.** Verified: there is **no whole-file EN/AR parity gate** in this repository —
+parity is asserted per page spec over that page's owned namespaces. English-only `dashboard.*`
+keys therefore break nothing and **no public parity check is weakened**. The dashboard spec states
+the boundary explicitly, and asserts that **no `dashboard.*` key exists in `ar.json`**, so the
+English-only decision is enforced rather than merely intended.

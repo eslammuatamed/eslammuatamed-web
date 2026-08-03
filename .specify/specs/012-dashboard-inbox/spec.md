@@ -10,7 +10,8 @@ dashboard route).
 (`openapi.json` `3347f6253d2b…`). **No contract change** — the Web already carries this exact
 `openapi/openapi.json`, so **no doc 16 §3 adoption commit is required**.
 **Governed by:** doc 02 (FR-DSH-060), doc 04 (IA), doc 05 (F-D5), doc 11 §1/§2/§3, doc 13,
-doc 19 §6, doc 21, doc 20 §1/§5 (**a new budget decision is REQUIRED — see §9**).
+doc 19 §6, doc 21, and **doc 20 v1.16.0 §1.1–§1.3 / D20-23** (authenticated dashboard budgets),
+merged to Docs `main` **`470447501363fbc733e2833ec8b9b0275dbbce72`**.
 
 ## 1. Why this slice exists
 
@@ -41,15 +42,17 @@ WhatsApp action on a visitor number; any API change; issue #30; Skills taxonomy;
 
 | # | Decision |
 |---|---|
-| 1 | **Durable shell, not a temporary one.** Build the reusable dashboard shell (desktop sidebar, mobile drawer, active-route state, grouped navigation model, optional badge slot per item, authenticated header, content area, role-based Web gating per D11-2 with the API remaining authoritative). **Render only destinations that exist** — no disabled or placeholder links for future modules. Future governed IA groups must be addable through the navigation model **without replacing the shell**. |
-| 2 | **Single-route Messages page.** `/dashboard/messages` with `UTable` for the list (where appropriate and within budget) and `USlideover` for detail. The selected message is represented in the URL via a stable query parameter. Back/Forward closes and reopens the selection correctly; a direct reload with a valid parameter restores detail state when possible. **The list response already carries the full body — no redundant detail request** unless verification proves the list contract insufficient. |
-| 3 | **Read state is confirmed, never optimistic.** Opening an unread message requests `mark read`; the UI shows it read **only after the mutation succeeds**. On failure: keep the previous unread state, show a recoverable error, and **never silently hide the unread badge**. An explicit `Mark unread` action exists for read messages. Mark read, mark unread, archive and unarchive are all confirmed mutations. |
-| 4 | **Derived unread badge — no new endpoint.** Count comes from `GET /admin/messages?isRead=false&isArchived=false&perPage=1` via `meta.total`: active, unarchived, unread only. Hidden at zero; bounded display (`99+`); fetched on authenticated shell initialization; refreshed after every successful read/unread/archive/unarchive mutation and when returning to Messages if stale. **No polling. No sockets.** |
-| 5 | **Contact affordances.** With an email: `Reply by email` via a safe `mailto:` handoff prefilled `Re: <original subject>` — no composer, and no claim that a reply was sent from the dashboard. With a phone: `Call` and `Copy number`, the number kept internally LTR and isolated. **No WhatsApp action** — the Contact contract does not establish that a visitor's number is a WhatsApp number. Phone-only messages get Call + Copy as primary actions and render **no** disabled/broken Reply action. Email-only messages render **no** empty phone UI. |
-| 6 | **Archive is not deletion.** No confirmation modal per archive action; confirmed mutations with normal recoverable feedback. The **Archived view** carries concise copy that archived messages remain governed by the documented 12-month retention policy. |
-| 7 | **Plain text only.** Visitor content renders as plain text — no Markdown, HTML, `v-html`, syntax highlighting, Shiki or markdown-it. Bodies preserve line breaks via a safe `pre-wrap` treatment, wrap long words and URLs, never overflow, and preserve the stored text exactly. Dashboard chrome is **English-only**. Visitor values may be Arabic or mixed: name/subject/body use `dir="auto"`; email and phone are isolated LTR. |
-| 8 | **Minimal first version.** Inbox and Archived views, API-guaranteed unread-first ordering, pagination, clear read/unread styling, and loading / initial-empty / filtered-empty / recoverable-error / forbidden states. Only API-supported filters. No bulk actions, tags, assignments, notes, search, CRM, reply history or real-time updates. |
-| 9 | **Dashboard routes get a real budget.** `/dashboard`, `/dashboard/login` and `/dashboard/messages` join the governed measurement matrix. The public 250 KB threshold is **not** reused by default; a bounded dashboard threshold is proposed from measured attribution (§9). No existing public threshold is raised, no route is omitted to avoid a failure, and no essential first-view control is lazy-loaded merely to manipulate the metric. |
+| 1 | **Durable shell** — desktop sidebar, mobile drawer, dashboard header, active-route state, declarative navigation groups/items, optional badge slot, **one shared navigation renderer for desktop and mobile**, route content area. Initial visible destinations **only**: Overview → `/dashboard`; Communication → Messages → `/dashboard/messages`. **No disabled future links.** |
+| 2 | **Auth/authz UX.** Existing auth middleware and session boot on every dashboard route; the API stays authoritative. Because the session exposes a role but **not** permission grants: do not infer `messages.read` from role names, do not duplicate a permission matrix, show Messages to authenticated sessions, render a proper forbidden state on `403`, and keep OWNER-only cosmetic gating only where already governed OWNER-only. **No API permission-list endpoint in this slice.** |
+| 3 | **URL state** — `/dashboard/messages?view=<inbox\|archived>&page=<n>&message=<id>`. Default `view=inbox`, `page=1`. Back/Forward restores list *and* detail. Closing detail removes **only** `message`. Reload restores the selection when present in the loaded page. Invalid/stale ids are removed safely with a **non-destructive notice**. Filter and pagination stay in the URL. **No redundant detail request** while list rows carry the full body. |
+| 4 | **Two views only** — Inbox (all unarchived, API unread-first order preserved) and Archived. **No** All/Unread/Read filters, search, bulk actions, tags, assignments, notes or CRM. Read/unread stays visible via row styling, status text/badge and actions, and **never depends on colour alone**. |
+| 5 | **List and detail UI** — `UTable`, `UPagination`, `USlideover`, trailing per-row `UDropdownMenu`; **no nested interactive controls inside an interactive row**. The slideover shows subject, sender name, timestamp, read/unread state, email when present, phone when present, plain-text body, contact actions, read/unread action and archive/unarchive action. Visitor fields: name/subject/body `dir="auto"`; email/phone isolated LTR; body plain text with `white-space: pre-wrap` and safe wrapping of long words and URLs. **No Markdown, HTML, `v-html`, Shiki or markdown-it.** |
+| 6 | **Read/unread flow** — opening an unread message requests `mark read`; the read state is **not visually committed until the API succeeds**. On failure: retain unread state, **retain the unread badge count**, show a recoverable error, keep the detail usable. Read messages offer `Mark unread`. All four mutations are **confirmed/pessimistic** with **no optimistic cache surgery**; the affected list and unread count refresh after success. |
+| 7 | **Unread badge** — `GET /admin/messages?isRead=false&isArchived=false&perPage=1` → `meta.total`. Active unarchived unread only; hidden at zero; `99+` above 99; fetched during authenticated shell initialization; **state shared between shell and page**; simultaneous requests deduplicated by a single in-flight promise (or equivalent single-owner mechanism); refreshed after successful mutations and on stale return to Messages. **No polling, no sockets.** |
+| 8 | **Contact actions** — email present: `Reply by email` via a safe `mailto:` with subject `Re: <original subject>` and an **empty body**; no composer; no claim a reply was sent. Phone present: `Call` and `Copy number`, LTR isolation preserved, **accessible copy-success feedback**. **No WhatsApp for visitor-submitted numbers.** Phone-only: Call + Copy, **no disabled email action**. Email-only: **no empty phone UI**. |
+| 9 | **Archive and retention** — archive is not deletion; **no confirmation modal**; confirmed archive/unarchive mutations. The **Archived view** shows exactly: `Archived messages are retained for 12 months from the date they were archived.` — not on every archive click. The obsolete `archiveConfirm.*` keys are removed. |
+| 10 | **Copy** — dashboard chrome is **English-only in v1**; the previous bilingual inventory is **not** carried forward. A dashboard-owned English inventory is created (§7). No fabricated Arabic dashboard strings to satisfy parity tooling; the parity boundary is scoped and documented, and **no public parity check is weakened**. |
+| 11 | **Offline and error states** — persistent offline banner, mutations disabled offline, **no offline queue**. Required states: session loading · list loading · initial empty Inbox · empty Archived · API error with retry · `401` → session recovery/login · `403` → permission state · mutation failure · offline · stale URL-selected message. |
 
 ## 4. Current API surface (verified, not assumed)
 
@@ -69,13 +72,21 @@ Enumerated from the committed contract — exactly three operations:
 
 ## 5. Permissions — what the Web can and cannot do
 
-`AuthUserEntity` exposes only `role: { id, name }`. **There is no permission list on the
-session**, so the Web cannot evaluate `messages.read` / `messages.update` directly. Per
-**D11-2**, client-side gating is courtesy only and limited to "which role sees which menu";
-the API is the authoritative authorizer.
+`AuthUserEntity` exposes only `role: { id, name }`. **There is no permission list on the session**,
+so the Web cannot evaluate `messages.read` / `messages.update` — and, by owner decision, **must not
+try**:
 
-Consequently: navigation visibility and action affordances gate on **role name**, and a `403`
-from the API is rendered as an honest forbidden state — never as an empty list.
+- **Do not infer `messages.read` from a role name.** A role name is not a grant.
+- **Do not duplicate a permission matrix in the Web.**
+- **Messages is shown to every authenticated session.** Visibility is not an authorization claim.
+- **API `403` renders a proper forbidden state** — never an empty list, never a hidden nav item.
+- **OWNER-only cosmetic gating is retained only where something is already explicitly governed
+  OWNER-only.** Nothing in this slice is, so this slice adds none.
+- **No API permission-list endpoint is added in this slice.**
+
+This follows **D11-2**: client-side gating is courtesy only; the API is the authoritative
+authorizer, and the honest way to represent an unknown grant is to attempt the call and render the
+answer.
 
 ## 6. States
 
@@ -90,90 +101,83 @@ from the API is rendered as an honest forbidden state — never as an empty list
 | Offline | Dashboard offline banner per doc 05 §4; mutations disabled with an explanation |
 | Mutation failure | Previous state retained, recoverable error announced; the unread badge is never silently hidden |
 
-## 7. Copy
+## 7. Copy — dashboard-owned English inventory
 
-48 `dashboard.messages.*` keys were owner-approved during 011 and recorded in
-`011-public-contact/plan.md §7`. **Three deltas require attention (see §10):** the approved set
-is bilingual while decision 7 makes the dashboard English-only; the approved
-`archiveConfirm.*` group implements a per-action modal that decision 6 removes; and the set has
-**no phone keys**, which decision 5 now requires.
+**The dashboard is English-only in v1.** The bilingual `dashboard.messages.*` inventory recorded
+during 011 is **not carried forward**; this slice creates a dashboard-owned **English** inventory
+covering: shell navigation · Inbox and Archived tabs · headings and descriptions · unread/read
+states · loading · initial empty · view-empty · error + retry · forbidden · mark read/unread ·
+archive/unarchive · Reply by email · Call · Copy number · copy success/failure · retention text ·
+pagination · stale selected-message notice · offline.
+
+- The four `archiveConfirm.*` keys are **removed** — decision 9 drops the modal.
+- `filter.unread` / `filter.read` are **removed** — decision 4 ships two views only.
+- Phone keys are **added**: `detail.phone`, `actions.call`, `actions.copyNumber`, copy feedback.
+- **No fabricated Arabic dashboard strings** are added to satisfy parity tooling.
+
+**Locale-parity boundary (decision 10).** Verified: the repository has **no whole-file EN/AR parity
+gate**. Parity is asserted **per page spec over that page's owned namespaces** (e.g. `contact.spec.ts`
+declares `OWNED = ['contact.', 'seo.contact.', 'nav.', 'brand.']`). Adding English-only `dashboard.*`
+keys therefore breaks nothing, and **no public parity check is weakened**. The dashboard spec states
+the boundary explicitly — public namespaces remain strictly bilingual; `dashboard.*` is
+English-only by decision.
 
 ## 8. Non-goals
 
-Reply composer · SMTP · bulk actions · tags · assignments · internal notes · search · CRM ·
-reply history · real-time / sockets · WhatsApp on a visitor number · delete · any API change ·
-Arabic dashboard chrome · issue #30 · Skills taxonomy · promotion to `main` · deployment.
+Reply composer · SMTP · bulk actions · tags · assignments · internal notes · search · CRM · reply
+history · real-time / sockets · WhatsApp on a visitor number · delete · any API change · Arabic
+dashboard chrome · All/Unread/Read filters · an API permission-list endpoint · issue #30 · Skills
+taxonomy · promotion to `main` · deployment.
 
-## 9. Route budget — measured, and blocked on an owner decision
+## 9. Route budget — governed by D20-23
 
-**The existing gate cannot honestly measure dashboard routes today.** `check-route-size.mjs`
-collects each route's assets from its **rendered HTML**, but `nuxt.config.ts` sets
-`'/dashboard/**': { ssr: false }`, so the server returns a bare SPA shell and the dashboard's
-real chunks are fetched by the client router **after hydration**. Measured directly, both
-dashboard routes report **1 asset / 204.5 KB gz / 6 192 B app-owned** — identical to each
-other, because that number is the shared entry chunk and nothing route-specific. Adding the
-routes to `ROUTES` unchanged would produce a passing number that does not measure what it
-claims — exactly the "confidently wrong number" the gate's own design rejects.
+**Governed, not proposed.** Doc 20 **v1.16.0 §1.1–§1.3 (D20-23)** is merged to Docs `main`
+`4704475`. This slice implements it.
 
-**Measured attribution** (production build at Web `76f8fa6`, gzip, `ANALYZE_BUNDLE=1` Rollup
-provenance — chunk closure computed from the sidecar, not from filenames):
-
-| Component | Measured |
+| Budget (per measured dashboard route) | Limit |
 |---|---|
-| Shared SPA entry (not dashboard-owned) | **205.1 KB gz** |
-| `dashboard.vue` layout chunk | 0.7 KB gz |
-| `/dashboard` page chunk | 0.4 KB gz |
-| `/dashboard/login` page chunk | 18.5 KB gz |
-| **`UTable` + `UPagination` + `USlideover` probe chunk** | **24.7 KB gz** |
-| Probe closure excluding entry (the honest incremental cost) | **33.6 KB gz** |
-| **Projected `/dashboard/messages` first view (skeleton, no page logic)** | **238.7 KB gz** |
+| Total initial JavaScript | **≤ 280 KB gz** |
+| App-owned Rollup rendered bytes | **≤ 101 KiB (103,424 B)** |
+| CSS | **≤ 30 KB gz** |
+| Dashboard ↔ public isolation | **Mandatory, release-blocking** |
 
-Two findings follow:
+Measured routes: `/dashboard/login`, `/dashboard`, `/dashboard/messages`.
 
-1. **238.7 KB gz is a floor, not an estimate of the finished route.** The probe carries no page
-   logic, no shell/sidebar, no states, no composables and no i18n. The finished route will sit
-   materially above it, so reusing the public 250 KB ceiling would leave roughly 11 KB of
-   headroom for the entire feature — which is why decision 9 forbids reusing it by default.
-2. **Adding a dashboard route consumes *public* headroom.** One extra route grew every public
-   route by ~0.9 KB gz (router manifest in the shared entry): `/projects` moved
-   **246.9 → 247.8 KB gz** against a frozen 250 KB ceiling, leaving **2.2 KB**. This is the
-   tightest constraint in the repository and it is not a dashboard budget problem — it is a
-   public-route one.
+**Measurement method (§1.2).** The public HTML-asset reader cannot see these routes —
+`/dashboard/**` is `ssr: false`, so every dashboard route reports the same ~204.5 KB gz shared entry
+and nothing route-specific. Dashboard routes are measured by a **deterministic Rollup chunk-graph
+closure**.
 
-**Isolation holds:** TanStack table code landed **only** in a dynamic-entry chunk
-(`isDynamicEntry: true`) and appears in no static or entry chunk, so `UTable` does not ship to
-public routes.
+> **Implementation rule — seed, then static closure.** The seed set is: shared client entry +
+> dashboard layout entry + the route page dynamic entry + auth/session middleware and store chunks.
+> The closure then follows **static `imports`** transitively from the seed. `dynamicImports` are
+> followed **only** from seed members where the target is required for initial usable state, and are
+> **never** expanded transitively from the entry's route map — the entry's `dynamicImports` lists
+> *every* page chunk in the application, so a naive transitive expansion would pull the whole bundle
+> into every dashboard route and fail the gate for the wrong reason.
+>
+> **Ground truths at Web `76f8fa6`** — the closure implementation must reproduce these, or the
+> algorithm is wrong: `/dashboard` ≈ 205.1 + 0.7 + 0.4 KB gz; `/dashboard/login` ≈ 223.2 KB gz.
 
-**Proposal (requires owner approval — see §10).** Introduce an authenticated-dashboard budget
-class in doc 20 §1 with its own threshold, separate from the public gate:
+**Public-route impact (§1.3).** The ~0.9 KB gz router-manifest growth is **accepted for this
+slice**; the 250 KB public ceiling is **not** raised. `/projects` (≈ 247.8 KB gz) is the **watch
+route**. Any public increase beyond the attributable manifest effect is investigated; public
+functionality is **not** pre-emptively stripped while a route is inside budget.
 
-- **Total JS per authenticated dashboard route ≤ 280 KB gz** — the measured 238.7 KB floor plus
-  bounded headroom for the shell, page logic and states, while remaining a real constraint.
-- **App-owned rendered bytes ≤ 101 KiB**, reusing the existing D20-12 metric unchanged (this is
-  a project-owned-growth metric, not the public transfer threshold, so reusing it is not the
-  reuse decision 9 forbids).
-- **Method fix:** the gate must resolve a client-only route's chunk set from the Rollup sidecar's
-  `dynamicImports`/`imports` closure rather than from rendered HTML. Without this the number is
-  not measurable, and the gate's own contract is to exit `2` (infrastructure) rather than report
-  a figure it cannot justify.
+## 10. Owner decisions — resolved
 
-## 10. Owner decisions still required
+Every decision that previously blocked this slice is resolved:
 
-1. **The doc 20 dashboard budget decision** (§9) — a new budget class, threshold and measurement
-   method for authenticated routes. Introducing it is an architectural decision, so per decision
-   9 step 6 this slice **stops here** and no Docs change has been made.
-2. **The `/projects` 2.2 KB public headroom** — adding the Messages route consumes public
-   budget. Accept the reduced headroom, or direct a separate remediation? No existing threshold
-   may be raised.
-3. **Copy deltas** — (a) confirm the dashboard is English-only, leaving the approved Arabic
-   halves recorded but unshipped; (b) confirm removal of the four `archiveConfirm.*` keys per
-   decision 6; (c) approve **new** phone keys, which the 011 set does not contain:
-   `detail.phone`, `actions.call`, `actions.copyNumber`, a copy-confirmation string, and the
-   Archived-view retention notice. Nav keys for the shell (`Overview`, the `Communication`
-   group label) are also new.
-4. **Retention wording placement** — the approved `archiveConfirm.body` states archiving starts
-   the 12-month clock. That is **factually supported** by the contract (`archivedAt` is set on
-   archive and is the documented purge basis), but decision 6 moves the message to the Archived
-   view. Confirm the wording to use there.
-5. **Filter set** — decision 8 requires Inbox and Archived. The 011-approved copy also includes
-   Unread and Read filters, both API-supported. Ship all four, or only the two required?
+| Was blocking | Resolution |
+|---|---|
+| Dashboard budget class + method | **D20-23 merged** (Docs `4704475`) — 280 KB gz / 101 KiB / 30 KB gz + closure method |
+| `/projects` public headroom | **Accepted** for this slice; 250 KB not raised; `/projects` is the watch route |
+| Shell scope | **Durable shell**, initial destinations Overview + Communication → Messages only |
+| Role gating | **No role inference**; Messages visible to any authenticated session; 403 renders forbidden |
+| Filter set | **Two views only** — Inbox and Archived |
+| Copy | Dashboard-owned **English** inventory; `archiveConfirm.*` removed; phone keys added |
+| Retention wording | Exact string, **in the Archived view only** (§6 of `plan.md`) |
+| Detail request | **None** while list rows carry the full body |
+
+**No owner decision remains outstanding for implementation.** The next owner gate is the
+**visual review**, before the full Lighthouse / repeat-flake / final CI matrix.

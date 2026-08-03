@@ -1,23 +1,24 @@
 # Feature 012 — Tasks
 
-**Status: SPECIFICATION ONLY.** No production code is written until the owner resolves the
-decisions in `spec.md §10` — in particular the doc 20 dashboard budget decision (T070 cannot
-pass without it).
+**Status: IN IMPLEMENTATION to the visual-review gate.** The doc 20 budget decision **D20-23** is
+merged (Docs `main` `4704475`), so Phase A is closed and no owner decision blocks implementation.
+The next owner gate is the **visual review**, before the full Lighthouse / repeat-flake / final CI
+matrix.
 
-## Phase A — gates before code
+## Phase A — gates before code (CLOSED)
 
-- [ ] T001 Owner resolves `spec.md §10.1` — doc 20 authenticated-route budget class, threshold and measurement method
-- [ ] T002 Owner resolves §10.2 — `/projects` public headroom (2.2 KB gz) after the Messages route is added
-- [ ] T003 Owner approves the §10.3 copy deltas (English-only; drop `archiveConfirm.*`; new phone + nav keys)
-- [ ] T004 Owner confirms §10.4 retention wording for the Archived view and §10.5 filter set
-- [ ] T005 Docs-first: land the approved doc 20 decision via the Docs workflow **before** any budget-affecting code
-- [ ] T006 Confirm contract still `3347f625…` at implementation start (no doc 16 §3 adoption expected)
+- [x] T001 Doc 20 authenticated-route budget class, threshold and measurement method — **D20-23 merged**, Docs `main` `4704475`
+- [x] T002 `/projects` public headroom — **accepted** for this slice; 250 KB not raised; `/projects` is the watch route
+- [x] T003 Copy deltas — English-only; `archiveConfirm.*` removed; `filter.unread`/`filter.read` removed; phone + nav keys added
+- [x] T004 Retention wording fixed and placed in the Archived view only; filter set fixed at two views
+- [x] T005 Docs-first landed **before** any budget-affecting code
+- [x] T006 Contract confirmed `3347f625…` — no doc 16 §3 adoption required
 
 ## Phase B — copy
 
 - [ ] T010 Add approved English `dashboard.messages.*` keys to `i18n/locales/en.json`
 - [ ] T011 Add `dashboard.nav.*` keys (Overview, Communication group)
-- [ ] T012 Assert **no** `dashboard.*` key enters `ar.json` in this slice
+- [ ] T012 Assert **no** `dashboard.*` key enters `ar.json`; document the parity boundary in the test (no whole-file gate exists; no public parity check is weakened)
 - [ ] T013 Assert no key references a route that does not exist
 
 ## Phase C — durable dashboard shell
@@ -45,7 +46,7 @@ pass without it).
 - [ ] T040 `useMessages()` — list read, view/page from URL, `perPage` explicit
 - [ ] T041 `app/pages/dashboard/messages.vue` with `auth` middleware and dashboard layout
 - [ ] T042 `UTable` columns (from, subject, received, status) + `UPagination`
-- [ ] T043 Inbox and Archived views via `isArchived`; never re-sort client-side
+- [ ] T043 Exactly two views (Inbox / Archived) via `isArchived`; `isRead` never sent as a filter; never re-sort client-side
 - [ ] T044 Read/unread styling that is not colour-only
 - [ ] T045 Per-row actions in a trailing `UDropdownMenu` — no nested interactive controls in a row
 - [ ] T046 States: loading skeleton, initial empty, filtered empty, error+retry, forbidden (403)
@@ -71,8 +72,9 @@ pass without it).
 
 ## Phase H — budgets, isolation, a11y
 
-- [ ] T070 Extend the route gate to resolve client-only routes from the Rollup sidecar closure (spec §9); add `/dashboard`, `/dashboard/login`, `/dashboard/messages`
-- [ ] T071 Assert the approved dashboard threshold; re-measure every public route for no regression against frozen ceilings
+- [ ] T070 Implement the D20-23 closure (**seed, then static closure** — never expand the entry's `dynamicImports` route map); add `/dashboard`, `/dashboard/login`, `/dashboard/messages`
+- [ ] T070a **Trust gate:** reproduce the `76f8fa6` ground truths (`/dashboard` ≈ 206.2, `/dashboard/login` ≈ 223.2 KB gz) and prove via a synthetic chunk-graph fixture that a dashboard-only chunk raises the dashboard closure while public closures stay unchanged. **Do not continue if the measurement is not trustworthy.**
+- [ ] T071 Assert the D20-23 class (≤ 280 KB gz / ≤ 101 KiB / ≤ 30 KB gz); re-measure every public route against frozen ceilings; record the exact router-manifest delta
 - [ ] T072 `check-forbidden-modules.mjs` — no Markdown/editor weight in any client chunk
 - [ ] T073 Confirm table code stays in a dynamic chunk, absent from entry/static chunks
 - [ ] T074 Full axe pass incl. 200 % zoom, reduced motion, long Arabic/mixed-language content
