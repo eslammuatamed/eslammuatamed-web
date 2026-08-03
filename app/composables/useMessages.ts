@@ -38,7 +38,16 @@ export function useMessages() {
   const forbidden = ref(false)
   const failed = ref(false)
 
+  /**
+   * Monotonic request token. Responses are not guaranteed to arrive in the order they were asked
+   * for: switch Inbox -> Archived quickly and a slow Inbox response can land AFTER the Archived one,
+   * leaving Inbox rows on screen under the Archived view — stale DATA, not merely stale feedback.
+   * Only the newest request may write, so a superseded response is discarded rather than displayed.
+   */
+  let loadSeq = 0
+
   async function load(view: MessagesView, page: number): Promise<void> {
+    const seq = ++loadSeq
     pending.value = true
     forbidden.value = false
     failed.value = false
@@ -47,10 +56,14 @@ export function useMessages() {
         locale: false,
         query: { isArchived: view === 'archived', page, perPage: MESSAGES_PER_PAGE }
       })
+      if (seq !== loadSeq) return
       items.value = [...res.data]
       total.value = res.meta.total
       totalPages.value = res.meta.totalPages
     } catch (error) {
+      // A superseded request's failure is not this view's failure — it must not clear the newer
+      // request's rows or raise an error state the reader would attach to the wrong list.
+      if (seq !== loadSeq) return
       // A failed load must not leave the previous page's rows on screen pretending to be current.
       items.value = []
       total.value = 0
@@ -58,7 +71,9 @@ export function useMessages() {
       if (error instanceof ApiError && error.status === 403) forbidden.value = true
       else failed.value = true
     } finally {
-      pending.value = false
+      // Only the newest request owns `pending`; a superseded one clearing it would say "loaded"
+      // while the current request is still in flight.
+      if (seq === loadSeq) pending.value = false
     }
   }
 

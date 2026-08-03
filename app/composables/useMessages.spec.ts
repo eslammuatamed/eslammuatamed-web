@@ -1,9 +1,13 @@
 // @vitest-environment nuxt
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
+import { mockNuxtImport } from '@nuxt/test-utils/runtime'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import process from 'node:process'
-import { callTel, isMessagesView, replyMailto, MESSAGES_PER_PAGE } from './useMessages'
+import { callTel, isMessagesView, replyMailto, useMessages, MESSAGES_PER_PAGE } from './useMessages'
+
+const holder = vi.hoisted(() => ({ api: null as unknown }))
+mockNuxtImport('useApi', () => () => holder.api)
 
 describe('replyMailto — the guard that makes mailto:null impossible', () => {
   it('returns null when there is no email — a phone-only message is a supported shape', () => {
@@ -106,5 +110,65 @@ describe('dashboard copy is English-only by decision', () => {
     expect(view).not.toHaveProperty('all')
     expect(view).not.toHaveProperty('unread')
     expect(view).not.toHaveProperty('read')
+  })
+})
+
+/**
+ * Out-of-order responses. Regression for a real race: responses are not guaranteed to arrive in the
+ * order they were requested, so a slow Inbox response could land after a fast Archived one and leave
+ * Inbox rows on screen under the Archived view. That is stale DATA, not stale feedback.
+ */
+describe('useMessages — only the newest request may write', () => {
+  const page = (subject: string) => ({
+    data: [{ id: 'x', name: 'n', email: null, phone: '+20100', subject, body: 'b', isRead: false, isArchived: false, archivedAt: null, meta: {}, createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z' }],
+    meta: { page: 1, perPage: 12, total: 1, totalPages: 1 }
+  })
+
+  function deferred<T>() {
+    let resolve!: (v: T) => void
+    let reject!: (e: unknown) => void
+    const promise = new Promise<T>((res, rej) => { resolve = res; reject = rej })
+    return { promise, resolve, reject }
+  }
+
+  it('discards a superseded response that arrives last', async () => {
+    const slowInbox = deferred<ReturnType<typeof page>>()
+    const fastArchived = deferred<ReturnType<typeof page>>()
+    holder.api = vi.fn()
+      .mockReturnValueOnce(slowInbox.promise)
+      .mockReturnValueOnce(fastArchived.promise)
+
+    const { items, load, pending } = useMessages()
+    const first = load('inbox', 1)
+    const second = load('archived', 1)
+
+    fastArchived.resolve(page('ARCHIVED'))
+    await second
+    expect(items.value[0]?.subject).toBe('ARCHIVED')
+
+    // The superseded Inbox response lands last and must be ignored.
+    slowInbox.resolve(page('INBOX'))
+    await first
+    expect(items.value[0]?.subject).toBe('ARCHIVED')
+    expect(pending.value).toBe(false)
+  })
+
+  it('a superseded FAILURE does not clear the current rows or raise an error state', async () => {
+    const slow = deferred<ReturnType<typeof page>>()
+    const fast = deferred<ReturnType<typeof page>>()
+    holder.api = vi.fn().mockReturnValueOnce(slow.promise).mockReturnValueOnce(fast.promise)
+
+    const { items, failed, load } = useMessages()
+    const first = load('inbox', 1)
+    const second = load('archived', 1)
+
+    fast.resolve(page('CURRENT'))
+    await second
+
+    slow.reject(new Error('superseded'))
+    await first
+
+    expect(items.value[0]?.subject).toBe('CURRENT')
+    expect(failed.value).toBe(false)
   })
 })

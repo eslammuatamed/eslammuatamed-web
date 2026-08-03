@@ -31,6 +31,13 @@ const selectedId = computed(() => (typeof route.query.message === 'string' ? rou
 /** Offline is a first-class state: mutations are disabled and no queue is kept (owner decision 11). */
 const online = ref(true)
 const updateError = ref(false)
+/**
+ * Monotonic navigation token. Clearing transient state when the route changes is NOT sufficient on
+ * its own: an async action already in flight resolves AFTER the clear and would resurrect exactly
+ * what was just cleared. Every async write therefore captures this token first and commits only if
+ * it still matches — the result must prove it belongs to the context that asked for it.
+ */
+let contextSeq = 0
 const busyId = ref<string | null>(null)
 const copyState = ref<'idle' | 'ok' | 'fail'>('idle')
 
@@ -84,18 +91,26 @@ function goToPage(next: number): void {
  */
 async function mutate(message: ContactMessage, body: { isRead?: boolean, isArchived?: boolean }): Promise<void> {
   if (!online.value) return
+  const ctx = contextSeq
   busyId.value = message.id
   updateError.value = false
   try {
     await patch(message.id, body)
     await Promise.all([load(view.value, page.value), refreshUnread()])
     // An archived/unarchived message leaves the current view; keeping it selected would show a row
-    // that is no longer in the list it came from.
+    // that is no longer in the list it came from. Skipped if the reader already navigated — closing
+    // a detail they have since replaced would yank the message they are now reading.
+    if (ctx !== contextSeq) return
     if (body.isArchived !== undefined && selectedId.value === message.id) closeDetail()
   } catch {
+    // A failure that lands after the reader moved on belongs to a context they have left; raising
+    // it now would attach the banner to a message or list it never concerned.
+    if (ctx !== contextSeq) return
     updateError.value = true
   } finally {
-    busyId.value = null
+    // `busyId` is always released — it gates a control, so leaving it set would strand a row
+    // disabled — but only if a newer mutation has not already taken ownership of it.
+    if (busyId.value === message.id) busyId.value = null
   }
 }
 
@@ -109,12 +124,18 @@ const unarchive = (m: ContactMessage) => mutate(m, { isArchived: false })
 // longer had a component. Replacing the pending timer and clearing it on unmount fixes both.
 let copyResetTimer: ReturnType<typeof setTimeout> | undefined
 async function copyNumber(phone: string): Promise<void> {
+  const ctx = contextSeq
+  let outcome: 'ok' | 'fail'
   try {
     await navigator.clipboard.writeText(phone)
-    copyState.value = 'ok'
+    outcome = 'ok'
   } catch {
-    copyState.value = 'fail'
+    outcome = 'fail'
   }
+  // The clipboard write is async, so the reader can open another message before it settles. Without
+  // this the confirmation would appear under a message whose number was never copied.
+  if (ctx !== contextSeq) return
+  copyState.value = outcome
   clearTimeout(copyResetTimer)
   copyResetTimer = setTimeout(() => (copyState.value = 'idle'), 2000)
 }
@@ -162,6 +183,7 @@ watch([view, page], () => void load(view.value, page.value), { immediate: true }
  * the chance to see.
  */
 watch([view, page, selectedId], () => {
+  contextSeq += 1
   updateError.value = false
   clearTimeout(copyResetTimer)
   copyState.value = 'idle'
