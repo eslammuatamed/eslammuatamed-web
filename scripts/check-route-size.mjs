@@ -52,8 +52,10 @@ import { spawn } from 'node:child_process'
 import { readFile, access, readdir } from 'node:fs/promises'
 import { gzipSync } from 'node:zlib'
 import process from 'node:process'
+import { DASHBOARD_ROUTES, resolveDashboardClosure } from './lib/dashboard-closure.mjs'
 import {
   BUDGET,
+  DASHBOARD_BUDGET,
   attributeRenderedBytes,
   budgetVerdict,
   collectRouteAssets,
@@ -158,7 +160,64 @@ async function loadChunkMeta() {
     }
     byAsset.set(`/${chunk.fileName}`, { modules: chunk.modules })
   }
+  // The dashboard closure (D20-23) needs the chunk GRAPH — imports/dynamicImports/isEntry — which
+  // the per-asset attribution map deliberately drops. Carried as a non-enumerable property so the
+  // existing `[...byAsset.keys()]` staleness check and every other consumer are untouched.
+  Object.defineProperty(byAsset, 'rawChunks', { value: parsed.chunks, enumerable: false })
   return byAsset
+}
+
+/**
+ * Measure one authenticated dashboard route by the doc 20 §1.2 client-build closure.
+ *
+ * The HTML path above cannot see these routes: `/dashboard/**` is `ssr: false`, so the server sends
+ * a bare SPA shell and every dashboard route would report the same shared entry. Same gate, same
+ * exit-code contract, different METHOD — chosen by what can actually observe the route.
+ */
+async function measureDashboardRoute(meta, pageModule) {
+  const { files, seed, missing } = resolveDashboardClosure(meta.rawChunks, pageModule)
+  if (missing.length > 0) {
+    throw new InfraError(
+      `dashboard closure for ${pageModule} could not be resolved (${missing.join('; ')}) — `
+      + 'refusing to report a number the method cannot justify. '
+      + 'Rebuild with: ANALYZE_BUNDLE=1 npm run build'
+    )
+  }
+
+  const js = { assets: [], raw: 0, gz: 0 }
+  const assetPaths = []
+  for (const file of files) {
+    const assetPath = `/${file}`
+    const sizes = await assetSizes(assetPath)
+    if (!sizes) throw new InfraError(`chunk in the dashboard closure is missing from the build: ${assetPath}`)
+    if (!meta.has(assetPath)) {
+      throw new InfraError(`no Rollup provenance for ${assetPath} — ${META_PATH} is stale; rebuild with ANALYZE_BUNDLE=1 npm run build`)
+    }
+    assetPaths.push(assetPath)
+    js.assets.push({ asset: assetPath, ...sizes })
+    js.raw += sizes.raw
+    js.gz += sizes.gz
+  }
+
+  // The dashboard shares the one global stylesheet the CSS gate already measures, so it is read
+  // from the emitted CSS rather than from a route's HTML (which carries none for a client-only SPA).
+  const cssFiles = (await readdir(`${PUBLIC_DIR}/_nuxt`).catch(() => [])).filter(n => n.endsWith('.css'))
+  let css = { raw: 0, gz: 0, count: cssFiles.length }
+  for (const file of cssFiles) {
+    const sizes = await assetSizes(`/_nuxt/${file}`)
+    if (sizes) css = { ...css, raw: css.raw + sizes.raw, gz: css.gz + sizes.gz }
+  }
+
+  const attribution = attributeRenderedBytes(assetPaths, meta)
+  return {
+    js,
+    css,
+    seed,
+    ...attribution,
+    appVerdict: budgetVerdict(attribution.totals.app, DASHBOARD_BUDGET.appRenderedBytes),
+    totalVerdict: budgetVerdict(js.gz, DASHBOARD_BUDGET.totalJsBytes),
+    cssVerdict: budgetVerdict(css.gz, DASHBOARD_BUDGET.cssBytes)
+  }
 }
 
 /**
@@ -331,6 +390,24 @@ async function main() {
     rows.push({ route, ...(await measureRoute(html, meta)) })
   }
 
+  // Authenticated dashboard routes — doc 20 §1.1/§1.2 (D20-23). Measured by the client-build
+  // closure, not by rendered HTML, and asserted against the dashboard class. A route missing its
+  // page chunk is an infrastructure failure inside measureDashboardRoute, never a silent pass.
+  const dashboardRows = []
+  for (const { route, pageModule } of DASHBOARD_ROUTES) {
+    const built = await measureDashboardRoute(meta, pageModule).catch(error => {
+      if (error instanceof InfraError && /page chunk/.test(error.message)) return null
+      throw error
+    })
+    // A dashboard route that does not exist yet is skipped with an explicit line rather than
+    // counted as passing — a route that is never measured has no effective budget (D20-23).
+    if (!built) {
+      console.log(`\n  (skipped ${route} — no page chunk in this build; the route does not exist yet)`)
+      continue
+    }
+    dashboardRows.push({ route, ...built })
+  }
+
   const header = `${'route'.padEnd(44)}${'assets'.padStart(7)}${'raw'.padStart(11)}${'gz'.padStart(10)}${'≤250KB'.padStart(8)}${'app rendered'.padStart(14)}${'≤101KB'.padStart(8)}`
   console.log(header)
   console.log('─'.repeat(header.length))
@@ -353,6 +430,35 @@ async function main() {
       + `${row.totals.app} B`.padStart(14)
       + (row.appVerdict === 'PASS' ? '✓' : '✗').padStart(8)
     )
+  }
+
+  if (dashboardRows.length > 0) {
+    console.log(`\nAuthenticated dashboard routes — doc 20 §1.1/§1.2 (D20-23), client-build closure`)
+    console.log(`Budget: total JS ≤ ${kb(DASHBOARD_BUDGET.totalJsBytes)} gz  ·  app-owned ≤ ${kb(DASHBOARD_BUDGET.appRenderedBytes)}  ·  CSS ≤ ${kb(DASHBOARD_BUDGET.cssBytes)} gz`)
+    const dashHeader = `${'route'.padEnd(44)}${'assets'.padStart(7)}${'raw'.padStart(11)}${'gz'.padStart(10)}${'≤280KB'.padStart(8)}${'app rendered'.padStart(14)}${'≤101KB'.padStart(8)}`
+    console.log(dashHeader)
+    console.log('─'.repeat(dashHeader.length))
+    for (const row of dashboardRows) {
+      if (row.totalVerdict === 'FAIL') breach = true
+      if (row.cssVerdict === 'FAIL') breach = true
+      if (row.appVerdict === 'FAIL') breach = true
+      if (row.unclassifiedModules.length) breach = true
+
+      console.log(
+        row.route.padEnd(44)
+        + String(row.js.assets.length).padStart(7)
+        + kb(row.js.raw).padStart(11)
+        + kb(row.js.gz).padStart(10)
+        + (row.totalVerdict === 'PASS' ? '✓' : '✗').padStart(8)
+        + `${row.totals.app} B`.padStart(14)
+        + (row.appVerdict === 'PASS' ? '✓' : '✗').padStart(8)
+      )
+    }
+    console.log('\n  Closure seed per route (entry · layout · page · auth) — provenance, not filenames:')
+    for (const row of dashboardRows) {
+      console.log(`  ${row.route.padEnd(24)} entry=${row.seed.entry}  layout=${row.seed.layout}  page=${row.seed.page}`)
+      if (row.seed.auth.length) console.log(`  ${''.padEnd(24)} auth=${row.seed.auth.join(', ')}`)
+    }
   }
 
   console.log('\nExact rendered-byte ownership per route (Rollup renderedLength, integer bytes —')

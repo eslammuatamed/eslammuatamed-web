@@ -251,6 +251,31 @@ export const BUDGET = {
 }
 
 /**
+ * Authenticated dashboard routes — doc 20 §1.1 (D20-23). A separate budget CLASS, not a relaxation
+ * of the public one: the dashboard is a single-operator tool behind a login, never indexed, not a
+ * conversion surface, and legitimately carries interaction weight (data tables, overlays) no public
+ * route may.
+ *
+ * The ceiling is measured, not chosen: at Web `76f8fa6` the shared entry is 205.1 KB gz and a
+ * `UTable` + `UPagination` + `USlideover` closure adds 33.6 KB gz, putting `/dashboard/messages` at
+ * ≈238.7 KB gz before any page logic exists. 280 KB gz leaves ≈41 KB of bounded headroom while
+ * still breaking on a careless import.
+ *
+ * `appRenderedBytes` and `cssBytes` are D20-12's and §1's numbers UNCHANGED — app-owned measures
+ * project-owned growth, a concern identical on both sides of the login, and the dashboard shares
+ * the one global stylesheet. Only the transfer ceiling differs, and only because it governs a
+ * different product.
+ *
+ * Like the public limits, these are doc 20 verbatim. Re-baselining requires an owner decision and a
+ * decision-log entry there — never an edit here.
+ */
+export const DASHBOARD_BUDGET = {
+  totalJsBytes: 280 * KB,
+  appRenderedBytes: BUDGET.appRenderedBytes,
+  cssBytes: BUDGET.cssBytes
+}
+
+/**
  * The frozen limit, re-derived from its inputs so the constant above cannot drift from the
  * documented formula unnoticed. Exported for the test that pins it.
  * @param {number} baselineMaxBytes
