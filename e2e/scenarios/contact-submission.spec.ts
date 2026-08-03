@@ -283,13 +283,37 @@ test.describe('contact direct methods and locale', () => {
     await expect(page.locator('a[href^="tel:"]')).toHaveAttribute('aria-label', /\+20 100 278 5408$/)
     await expect(page.locator('a[href*="wa.me/"]')).toHaveAttribute('aria-label', /\+20 100 278 5408$/)
 
-    // Left-to-right is a RENDERING guarantee, so it is asserted on the computed style rather than on
-    // the wrapper element: any element that isolates the bidi algorithm satisfies it, and swapping
-    // `<bdi>` for an equivalent must not fail this test. Without isolation the leading `+` reorders
-    // against the RTL paragraph — which is the defect this assertion exists to catch.
-    const isolated = await page
+    // Left-to-right is asserted as a RENDERED OUTCOME rather than as a mechanism: the leading `+`
+    // must be PAINTED to the left of the final digit. Asserting the wrapper element, or even its
+    // computed `unicode-bidi`, is weaker than it looks — `unicode-bidi: isolate; direction: rtl`
+    // satisfies an isolation check while still throwing the `+` to the right-hand side inside this
+    // RTL column, which is the exact defect c5832ce fixed. Geometry cannot be satisfied that way,
+    // and it stays true for any wrapper that achieves the same result.
+    const painted = await page
       .getByText('+20 100 278 5408', { exact: true })
-      .evaluateAll(nodes => nodes.some(node => /isolate/.test(getComputedStyle(node).unicodeBidi)))
-    expect(isolated).toBe(true)
+      .evaluateAll((elements) => {
+        for (const element of elements) {
+          const text = Array.from(element.childNodes).find(
+            (node): node is Text => node.nodeType === 3 && (node.textContent ?? '').trim().length > 0
+          )
+          if (!text) continue
+
+          const head = document.createRange()
+          head.setStart(text, 0)
+          head.setEnd(text, 1)
+          const tail = document.createRange()
+          tail.setStart(text, text.data.length - 1)
+          tail.setEnd(text, text.data.length)
+
+          return {
+            head: head.getBoundingClientRect().left,
+            tail: tail.getBoundingClientRect().left
+          }
+        }
+        return null
+      })
+
+    if (!painted) throw new Error('the number did not render as a text run of its own')
+    expect(painted.head).toBeLessThan(painted.tail)
   })
 })
