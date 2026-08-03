@@ -67,10 +67,24 @@
 - [ ] T082 Delete `.omc/research/contact-copy-inventory-and-api-correction.md` **after** T004 captured its content
 - [ ] T083 Clean up worktrees, disposable DB, temp env; verify all pre-existing dirty state and stashes preserved
 
-## Status at Web head `31f0ac0` (2026-08-03) — final matrix COMPLETE
+## Status — MERGED to `dev` at `890366a` (2026-08-03)
 
-- Implementation **complete** and owner-approved visually. PR **#31 open, NOT merged**. Awaiting the
-  owner's explicit merge approval. Nothing deployed; no branch promoted.
+- PR **#31 is MERGED** (squash, `2026-08-03T05:48:18Z`), merging head `2056712` into `dev`. The
+  resulting Web `dev` commit is **`890366a303ff58e1040466d155b42ea88ce9de2c`**. The Contact public
+  Web implementation is **complete on `dev`**.
+- **Nothing was deployed** and `dev` was **not promoted to `main`** (`main` unchanged at `6898cf8`).
+  Deployment runs only from `main`, so a `dev` merge cannot trigger one.
+- **Post-merge CI run `30788194072` is green** — `push` event on `dev` at head SHA exactly
+  `890366a`. This **supersedes** the pre-merge note below: exact-head CI was structurally
+  unavailable for the *PR* branch, but the post-merge push run *is* exact-head CI on the merged
+  commit, so **T075 is satisfied**.
+- Dashboard Inbox (Web PR 2) **not started**. Issue **#30 remains open and untouched**.
+
+### Pre-merge verification record (historical — kept as evidence, at head `31f0ac0`)
+
+The matrix below was run at Web head `31f0ac0` *before* the merge. It is retained as the
+verification evidence that supported the owner's merge approval; its SHAs are historical and are
+**not** the current state of `dev`.
 - **Final matrix run at `31f0ac0`.** Lint, typecheck, e2e typecheck clean (0 TS errors).
   **784** unit/component. Full browser suite. Repeat sweep `--repeat-each=3`, workers 2, retries 0:
   **751 passed / 2 failed / 753**, Contact **54 executions, 0 failures** across all 3 repetitions.
@@ -101,10 +115,11 @@
   both-absent/blank/whitespace, and the inbox read/archive/unarchive lifecycle. No PII in any log.
   DB dropped, rows deleted, servers stopped.
 - **GitHub PR merge-ref CI green at `8dfa847`** (= merge of `31f0ac0` into `acdbda8`). GitHub's
-  `pull_request` event fetches only `refs/remotes/pull/31/merge`, so **head-SHA CI is structurally
-  unavailable** for this branch — the merge-ref result must not be relabelled as exact-head CI.
+  `pull_request` event fetches only `refs/remotes/pull/31/merge`, so head-SHA CI was structurally
+  unavailable *for the PR branch* — the merge-ref result must not be relabelled as exact-head CI.
+  **Superseded after the merge:** post-merge run `30788194072` is a `push` event at head `890366a`
+  and therefore *is* exact-head CI on the merged commit (see the current status above).
 - No threshold changed, no retry added, no timeout raised, no assertion weakened.
-- Dashboard Inbox (Web PR 2) **not started**. Issue #30 open and untouched.
 
 ## Open defects — must be fixed before the browser lane runs
 
