@@ -174,7 +174,7 @@ async function loadChunkMeta() {
  * a bare SPA shell and every dashboard route would report the same shared entry. Same gate, same
  * exit-code contract, different METHOD — chosen by what can actually observe the route.
  */
-async function measureDashboardRoute(meta, pageModule) {
+async function measureDashboardRoute(meta, pageModule, html) {
   const { files, seed, missing } = resolveDashboardClosure(meta.rawChunks, pageModule)
   if (missing.length > 0) {
     throw new InfraError(
@@ -199,13 +199,20 @@ async function measureDashboardRoute(meta, pageModule) {
     js.gz += sizes.gz
   }
 
-  // The dashboard shares the one global stylesheet the CSS gate already measures, so it is read
-  // from the emitted CSS rather than from a route's HTML (which carries none for a client-only SPA).
-  const cssFiles = (await readdir(`${PUBLIC_DIR}/_nuxt`).catch(() => [])).filter(n => n.endsWith('.css'))
-  let css = { raw: 0, gz: 0, count: cssFiles.length }
-  for (const file of cssFiles) {
-    const sizes = await assetSizes(`/_nuxt/${file}`)
-    if (sizes) css = { ...css, raw: css.raw + sizes.raw, gz: css.gz + sizes.gz }
+  // CSS comes from THIS ROUTE'S rendered shell, exactly as the public gate does it.
+  //
+  // A `ssr: false` route still returns an app-shell document carrying its stylesheet links — the
+  // part of the HTML that IS trustworthy here — even though its JS is fetched after hydration.
+  // The earlier version instead summed every `.css` file in the build on the assumption that there
+  // is "one global stylesheet". That assumption is not enforced anywhere: the moment the build emits
+  // a second stylesheet the dashboard CSS figure silently becomes a whole-bundle total attributed to
+  // one route, which is the confidently-wrong number this gate exists to refuse.
+  const cssAssets = collectRouteAssets(html, 'css')
+  let css = { raw: 0, gz: 0, count: cssAssets.length }
+  for (const asset of cssAssets) {
+    const sizes = await assetSizes(asset)
+    if (!sizes) throw new InfraError(`stylesheet referenced by the route is missing from the build: ${asset}`)
+    css = { ...css, raw: css.raw + sizes.raw, gz: css.gz + sizes.gz }
   }
 
   const attribution = attributeRenderedBytes(assetPaths, meta)
@@ -390,22 +397,27 @@ async function main() {
     rows.push({ route, ...(await measureRoute(html, meta)) })
   }
 
-  // Authenticated dashboard routes — doc 20 §1.1/§1.2 (D20-23). Measured by the client-build
-  // closure, not by rendered HTML, and asserted against the dashboard class. A route missing its
-  // page chunk is an infrastructure failure inside measureDashboardRoute, never a silent pass.
+  // Authenticated dashboard routes — doc 20 §1.1/§1.2 (D20-23). JS comes from the client-build
+  // closure (rendered HTML cannot see a `ssr: false` route's chunks); CSS comes from that route's
+  // own shell document, as for public routes.
+  //
+  // There is NO skip path. D20-23 names these three routes, so each one must produce a number:
+  // an unresolvable closure raises an InfraError and the gate exits 2. The earlier version caught
+  // "no page chunk" and skipped with a log line, which was written when `/dashboard/messages` did
+  // not exist yet — but it cannot distinguish "route not built yet" from "chunking changed and the
+  // page chunk can no longer be found", so it would have dropped a governed route from measurement
+  // while the gate still exited 0. A route that is never measured has no effective budget.
   const dashboardRows = []
   for (const { route, pageModule } of DASHBOARD_ROUTES) {
-    const built = await measureDashboardRoute(meta, pageModule).catch(error => {
-      if (error instanceof InfraError && /page chunk/.test(error.message)) return null
-      throw error
-    })
-    // A dashboard route that does not exist yet is skipped with an explicit line rather than
-    // counted as passing — a route that is never measured has no effective budget (D20-23).
-    if (!built) {
-      console.log(`\n  (skipped ${route} — no page chunk in this build; the route does not exist yet)`)
-      continue
+    let res
+    try {
+      res = await fetch(`${BASE}${route}`, { signal: AbortSignal.timeout(20_000) })
+    } catch (error) {
+      throw new InfraError(`${route} could not be fetched: ${error.message}`)
     }
-    dashboardRows.push({ route, ...built })
+    if (!res.ok) throw new InfraError(`${route} returned HTTP ${res.status}; cannot measure`)
+    const dashHtml = await res.text()
+    dashboardRows.push({ route, ...(await measureDashboardRoute(meta, pageModule, dashHtml)) })
   }
 
   const header = `${'route'.padEnd(44)}${'assets'.padStart(7)}${'raw'.padStart(11)}${'gz'.padStart(10)}${'≤250KB'.padStart(8)}${'app rendered'.padStart(14)}${'≤101KB'.padStart(8)}`
@@ -454,6 +466,13 @@ async function main() {
         + (row.appVerdict === 'PASS' ? '✓' : '✗').padStart(8)
       )
     }
+    console.log('\n  CSS per dashboard route (from the route\'s own shell document, not a build-wide glob):')
+    for (const row of dashboardRows) {
+      console.log(
+        `  ${row.cssVerdict === 'PASS' ? '✓' : '✗'} ${row.route.padEnd(24)} ${kb(row.css.gz)} gz / ${kb(DASHBOARD_BUDGET.cssBytes)}  (${row.css.count} file${row.css.count === 1 ? '' : 's'})`
+      )
+    }
+
     console.log('\n  Closure seed per route (entry · layout · page · auth) — provenance, not filenames:')
     for (const row of dashboardRows) {
       console.log(`  ${row.route.padEnd(24)} entry=${row.seed.entry}  layout=${row.seed.layout}  page=${row.seed.page}`)

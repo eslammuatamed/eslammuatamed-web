@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { resolveDashboardClosure, findPageChunk, indexChunksByFile } from './dashboard-closure.mjs'
+import { resolveDashboardClosure, findPageChunk, indexChunksByFile, DASHBOARD_ROUTES } from './dashboard-closure.mjs'
 
 /**
  * Trust gate for the D20-23 closure (doc 20 §1.2).
@@ -151,5 +151,38 @@ describe('dashboard closure — detects route-owned chunks, keeps public isolate
     for (const publicChunk of ['_nuxt/public-blog.js', '_nuxt/public-projects.js', '_nuxt/public-home.js']) {
       expect(grown.files).not.toContain(publicChunk)
     }
+  })
+})
+
+/**
+ * Regressions found by review of the first implementation. Both were cases where the gate would
+ * report a number it could not justify — the exact failure mode its design rejects.
+ */
+describe('dashboard closure — governed routes must always be measurable', () => {
+  it('names exactly the three routes D20-23 governs', () => {
+    expect(DASHBOARD_ROUTES.map(r => r.route)).toEqual([
+      '/dashboard/login', '/dashboard', '/dashboard/messages'
+    ])
+  })
+
+  /**
+   * `missing` is the signal the caller turns into an exit-2 infrastructure failure. It must be
+   * populated whenever a governed route's page chunk cannot be resolved — a chunking change that
+   * hides the page chunk has to FAIL, not quietly drop the route from the report while the gate
+   * still exits 0.
+   */
+  it('reports a missing page chunk rather than returning a smaller closure', () => {
+    const g = graph()
+    delete g[4] // the /dashboard/messages page chunk disappears, as a chunking change could cause
+    const { missing, seed } = resolveDashboardClosure(g, 'app/pages/dashboard/messages.vue')
+    expect(seed.page).toBeNull()
+    expect(missing.join(' ')).toMatch(/page chunk/)
+  })
+
+  it('reports a missing client entry too', () => {
+    const g = graph()
+    g[0] = { ...g[0], isEntry: false }
+    const { missing } = resolveDashboardClosure(g, 'app/pages/dashboard/messages.vue')
+    expect(missing.join(' ')).toMatch(/client entry/)
   })
 })

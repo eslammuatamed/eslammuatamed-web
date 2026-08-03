@@ -104,6 +104,10 @@ const markUnread = (m: ContactMessage) => mutate(m, { isRead: false })
 const archive = (m: ContactMessage) => mutate(m, { isArchived: true })
 const unarchive = (m: ContactMessage) => mutate(m, { isArchived: false })
 
+// A single tracked timer. Two copies in quick succession previously left the FIRST timer running,
+// so it cleared the second copy's feedback early; and an unmount mid-window wrote to a ref that no
+// longer had a component. Replacing the pending timer and clearing it on unmount fixes both.
+let copyResetTimer: ReturnType<typeof setTimeout> | undefined
 async function copyNumber(phone: string): Promise<void> {
   try {
     await navigator.clipboard.writeText(phone)
@@ -111,8 +115,10 @@ async function copyNumber(phone: string): Promise<void> {
   } catch {
     copyState.value = 'fail'
   }
-  setTimeout(() => (copyState.value = 'idle'), 2000)
+  clearTimeout(copyResetTimer)
+  copyResetTimer = setTimeout(() => (copyState.value = 'idle'), 2000)
 }
+onUnmounted(() => clearTimeout(copyResetTimer))
 
 const dateFormatter = computed(() => new Intl.DateTimeFormat(locale.value === 'ar' ? 'ar' : 'en', {
   dateStyle: 'medium', timeStyle: 'short'
@@ -139,7 +145,12 @@ function rowActions(message: ContactMessage) {
 }
 
 // Re-read whenever view or page changes — including via Back/Forward, which changes the query.
-watch([view, page], () => void load(view.value, page.value), { immediate: true })
+// The mutation error is cleared too: it describes an action taken against the list being left, so
+// carrying it into the next view would attach a stale failure to rows it never touched.
+watch([view, page], () => {
+  updateError.value = false
+  void load(view.value, page.value)
+}, { immediate: true })
 
 /**
  * "Opening an unread message requests mark read" (owner decision 6) is keyed on the message becoming
@@ -151,6 +162,16 @@ watch([view, page], () => void load(view.value, page.value), { immediate: true }
  * mutation, and confirmed like every other write — a failure leaves the message unread.
  */
 const autoReadRequestedFor = ref<string | null>(null)
+
+// Reset when the detail CLOSES, so the guard scopes to one opening rather than to the page's
+// lifetime. Without this the ref keeps the last id forever: open an unread message (auto-read),
+// `Mark as unread`, close, reopen — and the reopen would not mark it read, because the guard still
+// matched. Scoping it to the open/close cycle keeps both behaviours right: no duplicate request
+// while a message is open, and no permanently-disarmed auto-read afterwards.
+watch(selectedId, (id) => {
+  if (id === null) autoReadRequestedFor.value = null
+})
+
 watch(selected, (message) => {
   if (!message || message.isRead) return
   if (autoReadRequestedFor.value === message.id) return
