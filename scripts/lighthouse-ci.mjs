@@ -38,11 +38,13 @@
  */
 import { execFileSync, spawn } from 'node:child_process'
 import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import process from 'node:process'
 import { assertH2, createEphemeralCert, startH2Proxy } from './lib/h2-proxy.mjs'
 import { assertCleanSourceState, governedBuildEnv, headSha, validateProvenance, writeReportProvenance } from './lib/build-provenance.mjs'
 import { assertCollectionUsedH2, formatProtocolSummary } from './lib/lh-protocol.mjs'
+import { browserProfileDir, trackProcessTree } from './lib/process-tree.mjs'
 import { createResourceGuard } from './lib/lifecycle-guard.mjs'
 
 const WEB_PORT = Number(process.env.CI_PREVIEW_PORT ?? 3000)
@@ -65,71 +67,87 @@ let cleanupPromise = null
 /** Has this child already exited (and been reaped by Node)? */
 const hasExited = child => child.exitCode !== null || child.signalCode !== null
 
-/**
- * Is any process still in this group?
- *
- * Signal 0 performs the permission and existence check without delivering anything, so this asks
- * the kernel directly rather than inferring liveness from the leader.
- */
+/** Is any process still in this group? Signal 0 checks existence without delivering anything. */
 function groupAlive(pid) {
   try { process.kill(-pid, 0); return true } catch { return false }
 }
 
-/** Which processes are still in the group — for the warning only, queried BY GROUP, never by name. */
-function groupSurvivors(pid) {
-  try {
-    return execFileSync('ps', ['-o', 'pid=,args=', '-g', String(pid)], { encoding: 'utf8' }).trim()
-  } catch { return '(none reported)' }
-}
-
 /**
- * Wait until the whole group is gone AND the leader has been reaped. Bounded; false on timeout.
+ * Terminate a child, its process GROUP, and every descendant that escaped that group.
  *
- * Waiting on the leader alone is not enough, and that is the subtle part: `npm exec` can exit the
- * moment it is signalled while `lhci` and Chrome are still running underneath it. Returning then
- * would declare teardown complete over a live process group.
+ * Escalation is bounded and only ever targets processes recorded as ours — the group we created and
+ * the descendants we walked — never a process-name pattern, which could match unrelated work.
  */
-async function waitForGroupGone(child, ms) {
-  const deadline = Date.now() + ms
-  while (Date.now() < deadline) {
-    if (!groupAlive(child.pid) && hasExited(child)) return true
-    await new Promise(r => setTimeout(r, 100))
-  }
-  return false
-}
-
-/**
- * Terminate a child AND EVERYTHING IT SPAWNED, with bounded escalation.
- *
- * Signalling the child alone is not enough, and this was observed rather than theorised: `npx lhci
- * autorun` is only the root of a tree — `npm exec` → `sh -c lhci` → `lhci autorun` → `lhci collect`
- * → Chrome. A `SIGTERM` to the root left every descendant running, including a headless Chrome
- * still holding its own `--user-data-dir`, long after the run was over.
- *
- * Children are therefore spawned DETACHED, which makes each one a process-GROUP LEADER, and the
- * negative PID signals the whole group. Escalation only ever targets that same group — never a
- * process-name pattern, which could match an unrelated developer process.
- */
-async function terminateTree(child, label) {
+async function terminateTree(child, label, tracker) {
   if (!child) return
-  if (hasExited(child) && !groupAlive(child.pid)) return
 
-  const signalGroup = signal => {
-    try {
-      process.kill(-child.pid, signal)
-    } catch {
-      // Not a group leader (or already fully reaped) — fall back to the child itself.
-      try { child.kill(signal) } catch { /* already gone */ }
+  // Profiles are read while their owners are still alive — /proc/<pid>/cmdline vanishes with them.
+  const profiles = (tracker ? tracker.liveDescendants() : [])
+    .map(pid => browserProfileDir(pid, join(tmpdir(), 'lighthouse.')))
+    .filter(Boolean)
+
+  /**
+   * Ownership is re-derived BEFORE EVERY SIGNAL, never cached.
+   *
+   * Termination spans up to ten seconds — SIGTERM, wait, SIGKILL, wait. A group that was provably
+   * ours when the first signal went out can empty in that window, and `child.pid` can then be
+   * recycled by an unrelated process that becomes a group leader. Escalating on a stale answer
+   * would send SIGKILL to a stranger's process group. The same applies to each recorded descendant,
+   * which is re-validated against its start time on every pass.
+   */
+  const groupIsOurs = () => (tracker ? tracker.groupIsOurs() : !hasExited(child))
+  const currentStrays = () => (tracker ? tracker.liveDescendants() : [])
+
+  if (!groupIsOurs() && currentStrays().length === 0) {
+    tracker?.stop()
+    return
+  }
+
+  const signalAll = signal => {
+    if (groupIsOurs()) {
+      try {
+        process.kill(-child.pid, signal)
+      } catch {
+        // No group to signal; fall back to the handle, which is a no-op once Node has reaped it.
+        try { child.kill(signal) } catch { /* already gone */ }
+      }
+    }
+    for (const pid of currentStrays()) {
+      try { process.kill(pid, signal) } catch { /* already gone */ }
     }
   }
 
-  signalGroup('SIGTERM')
-  if (await waitForGroupGone(child, 5000)) return
+  const treeGone = () => {
+    const groupGone = !groupIsOurs() || !groupAlive(child.pid)
+    return groupGone && hasExited(child) && currentStrays().length === 0
+  }
 
-  console.log(`[lighthouse:ci] ${label} tree still alive after SIGTERM — escalating to SIGKILL`)
-  signalGroup('SIGKILL')
-  if (!await waitForGroupGone(child, 5000)) {
-    console.error(`[lighthouse:ci] WARNING: ${label} tree (group ${child.pid}) survived SIGKILL:\n${groupSurvivors(child.pid)}`)
+  const waitFor = async ms => {
+    const deadline = Date.now() + ms
+    while (Date.now() < deadline) {
+      if (treeGone()) return true
+      await new Promise(r => setTimeout(r, 100))
+    }
+    return false
+  }
+
+  try {
+    signalAll('SIGTERM')
+    if (!await waitFor(5000)) {
+      console.log(`[lighthouse:ci] ${label} tree still alive after SIGTERM — escalating to SIGKILL`)
+      signalAll('SIGKILL')
+      if (!await waitFor(5000)) {
+        console.error(`[lighthouse:ci] WARNING: ${label} tree survived SIGKILL (root ${child.pid}, strays ${currentStrays().join(', ') || 'none'})`)
+      }
+    }
+  } finally {
+    // Tracking stops only once termination is over: it is what keeps identity checks honest.
+    tracker?.stop()
+  }
+
+  // The throwaway browser profiles go with the browsers that owned them.
+  for (const dir of new Set(profiles)) {
+    try { rmSync(dir, { recursive: true, force: true }) } catch { /* best effort */ }
   }
 }
 
@@ -204,8 +222,11 @@ async function run(cmd, args, env = {}) {
     // directly, so teardown MUST kill it explicitly — which is exactly the controlled path
     // `terminateTree` implements, rather than racing the signal.
     const child = spawn(cmd, args, { stdio: 'inherit', detached: true, env: { ...process.env, ...env } })
+    // Tracking starts NOW, not at teardown: Chrome appears minutes later and must be recorded while
+    // its parent link still exists.
+    const tracker = trackProcessTree(child.pid)
     // Registered WITH its disposer, so teardown never has to know how to kill it.
-    guard.register('child', child, c => terminateTree(c, 'matrix child'))
+    guard.register('child', child, c => terminateTree(c, 'matrix child', tracker))
 
     // The slot is deliberately NOT cleared when the leader exits. `npm exec` exits while `lhci` and
     // Chrome are still running underneath it, so dropping the handle here would discard the only
@@ -343,11 +364,14 @@ async function main() {
 
   guard.assertRunning()
   console.log('[lighthouse:ci] starting Nitro preview + contract mock…')
-  await guard.own('preview', spawn('node', ['scripts/ci-preview.mjs'], {
+  const preview = spawn('node', ['scripts/ci-preview.mjs'], {
     stdio: ['ignore', 'inherit', 'inherit'],
     detached: true,
     env: { ...process.env, CI_PREVIEW_PORT: String(WEB_PORT), CI_MOCK_PORT: String(API_PORT) }
-  }), child => terminateTree(child, 'preview'))
+  })
+  // Tracked from the moment it exists, for the same reason as the matrix child.
+  const previewTracker = trackProcessTree(preview.pid)
+  await guard.own('preview', preview, child => terminateTree(child, 'preview', previewTracker))
   await waitForPort(WEB_PORT, 'nitro preview')
 
   guard.assertRunning()

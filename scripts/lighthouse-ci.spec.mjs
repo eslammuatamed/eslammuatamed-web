@@ -87,7 +87,7 @@ beforeEach(async () => {
   // The REAL orchestrator and the REAL libraries it exercises.
   mkdirSync(join(sandbox, 'scripts', 'lib'), { recursive: true })
   copyFileSync(join(REAL_SCRIPTS, 'lighthouse-ci.mjs'), join(sandbox, 'scripts', 'lighthouse-ci.mjs'))
-  for (const lib of ['h2-proxy.mjs', 'build-provenance.mjs', 'lh-protocol.mjs', 'lifecycle-guard.mjs']) {
+  for (const lib of ['h2-proxy.mjs', 'build-provenance.mjs', 'lh-protocol.mjs', 'lifecycle-guard.mjs', 'process-tree.mjs']) {
     copyFileSync(join(REAL_SCRIPTS, 'lib', lib), join(sandbox, 'scripts', 'lib', lib))
   }
 
@@ -121,6 +121,43 @@ import { mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 const mode = process.env.FAKE_LHCI_MODE ?? 'ok'
 if (mode === 'fail') process.exit(1)
+if (mode === 'detached-browser-then-exit') {
+  // The combination that defeats a teardown-time walk entirely: a DETACHED descendant (own process
+  // group, like Chrome) whose parent then EXITS, reparenting it to init. By teardown there is no
+  // group link and no parent link left -- it can only be killed if it was recorded while its parent
+  // was still alive.
+  const { spawn } = await import('node:child_process')
+  const { existsSync } = await import('node:fs')
+  const browser = spawn(process.execPath, ['-e',
+    'process.on("SIGTERM", () => {});'
+    + ' require("node:fs").writeFileSync(process.env.FAKE_GRANDCHILD_PIDFILE, String(process.pid));'
+    + ' setInterval(() => {}, 1000)'
+  ], { stdio: 'ignore', detached: true })
+  browser.unref()
+  const deadline = Date.now() + 10000
+  while (!existsSync(process.env.FAKE_GRANDCHILD_PIDFILE) && Date.now() < deadline) {
+    await new Promise(r => setTimeout(r, 50))
+  }
+  // Give the tracker a sample while the parent link still exists, then abandon it.
+  await new Promise(r => setTimeout(r, 1500))
+  process.exit(9)
+}
+if (mode === 'detached-browser') {
+  // Reproduces chrome-launcher: it spawns Chrome with detached:true, making it the leader of its
+  // OWN process group, so a signal to THIS group never reaches it. It also ignores SIGTERM here, so
+  // only per-PID escalation ends it.
+  const { spawn } = await import('node:child_process')
+  const browser = spawn(process.execPath, ['-e',
+    'process.on("SIGTERM", () => {});'
+    + ' require("node:fs").writeFileSync(process.env.FAKE_GRANDCHILD_PIDFILE, String(process.pid));'
+    + ' setInterval(() => {}, 1000)'
+  ], { stdio: 'ignore', detached: true })
+  // Deliberately NOT unref()'d: the child handle is what keeps this leader alive. unref()ing it
+  // emptied the event loop, so the leader exited 0 immediately and the run failed for an unrelated
+  // reason -- the test then measured nothing it claimed to.
+  void browser
+  await new Promise(() => {})
+}
 if (mode === 'orphan-exit') {
   // The FAILURE-path shape: the leader exits non-zero straight away while a descendant keeps
   // running. No signal is involved -- run() simply rejects, and cleanup must still be holding the
@@ -138,6 +175,10 @@ if (mode === 'orphan-exit') {
   while (!existsSync(process.env.FAKE_GRANDCHILD_PIDFILE) && Date.now() < deadline) {
     await new Promise(r => setTimeout(r, 50))
   }
+  // Stay alive briefly so the descendant is observable, as in a real run where Chrome is up for
+  // minutes before lhci exits. Exiting within a single sample interval would test a window that
+  // does not occur in practice.
+  await new Promise(r => setTimeout(r, 1200))
   void child
   process.exit(7)
 }
@@ -454,6 +495,45 @@ describe('governed orchestrator — interruption', () => {
     }
     expect(await until(() => portIsFree(webPort))).toBe(true)
     expect(await until(() => portIsFree(apiPort))).toBe(true)
+  }, 60_000)
+
+  it('34 — a DETACHED descendant survives its parent EXITING and is still killed', async () => {
+    // No signal at all. The leader exits non-zero, so its detached descendant is reparented to init:
+    // no process group link, no parent link. Only the rolling record taken while the leader lived
+    // can still identify it. This is the case a teardown-time /proc walk cannot see.
+    const before = certDirs()
+    const grandchildPid = join(sandbox, 'grandchild.pid')
+    const { done } = runOrchestrator({ FAKE_LHCI_MODE: 'detached-browser-then-exit' })
+    const { code, out, pidfile } = await done
+
+    expect(code).toBe(1) // a genuine failure, not an interruption
+    expect(out).toMatch(/exited 9/)
+
+    const descendant = Number(readFileSync(grandchildPid, 'utf8'))
+    expect(Number.isFinite(descendant)).toBe(true)
+    expect(descendant).toBeGreaterThan(0)
+    expect(out).toMatch(/escalating to SIGKILL/)
+    expect(await until(async () => !isAlive(descendant))).toBe(true)
+
+    expect(certDirs().filter(d => !before.includes(d))).toHaveLength(0)
+    expect(await until(async () => !isAlive(previewPid(pidfile)))).toBe(true)
+    expect(await until(() => portIsFree(webPort))).toBe(true)
+  }, 60_000)
+
+  it('33 — a DETACHED descendant that escapes the process group is still killed', async () => {
+    // The real defect, reproduced: chrome-launcher spawns Chrome detached, so it sits in its own
+    // process group. Signalling the lhci group cleaned up everything EXCEPT Chrome — observed live
+    // as nine surviving Chrome processes after ports, certificate and lhci were all gone.
+    const { code, out, pidfile, before, descendant } = await runAndSignal('SIGTERM', 'detached-browser')
+    expect(Number.isFinite(descendant)).toBe(true)
+    expect(descendant).toBeGreaterThan(0)
+    expect(code).toBe(130)
+    // Escalation had to happen: it ignores SIGTERM and is outside the group.
+    expect(out).toMatch(/escalating to SIGKILL/)
+    expect(await until(async () => !isAlive(descendant))).toBe(true)
+    expect(certDirs().filter(d => !before.includes(d))).toHaveLength(0)
+    expect(await until(async () => !isAlive(previewPid(pidfile)))).toBe(true)
+    expect(await until(() => portIsFree(webPort))).toBe(true)
   }, 60_000)
 
   it('32 — FAILURE PATH: a leader that exits non-zero still has its orphaned tree killed', async () => {
