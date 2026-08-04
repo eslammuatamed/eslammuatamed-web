@@ -28,6 +28,7 @@
     "lhci:desktop": "LHCI_PROFILE=desktop lhci autorun --collect.settings.preset=desktop",
     "lhci:assert": "node scripts/check-lighthouse-medians.mjs",
     "test:e2e": "playwright test",
+    "test:e2e:repeat": "node scripts/repeat-flake-sweep.mjs",
     "test:e2e:ui": "playwright test --ui",
     "typecheck:e2e": "tsc --noEmit -p e2e/tsconfig.json"
   },
