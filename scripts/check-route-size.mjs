@@ -604,7 +604,8 @@ async function main() {
 
     console.log('\n  Closure seed per route (entry · layout · page · auth) — provenance, not filenames:')
     for (const row of dashboardRows) {
-      console.log(`  ${row.route.padEnd(24)} entry=${row.seed.entry}  layout=${row.seed.layout}  page=${row.seed.page}`)
+      console.log(`  ${row.route.padEnd(24)} entry=${row.seed.entry}  page=${row.seed.page}`)
+      if (row.seed.layout.length) console.log(`  ${''.padEnd(24)} layouts=${row.seed.layout.join(', ')}`)
       if (row.seed.auth.length) console.log(`  ${''.padEnd(24)} auth=${row.seed.auth.join(', ')}`)
     }
   }

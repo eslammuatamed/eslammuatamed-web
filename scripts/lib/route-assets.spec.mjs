@@ -490,10 +490,12 @@ describe('dashboardTotalVerdict — doc 20 §1.1 two-tier ceiling (D20-24)', () 
     expect(BUDGET.totalJsBytes).toBe(250 * KB)
   })
 
-  it('classifies the measured routes at Web 80ee17ba as recorded in D20-24', () => {
-    expect(dashboardTotalVerdict(250_011)).toBe('PASS') // /dashboard/login   244.2 KB gz
-    expect(dashboardTotalVerdict(223_553)).toBe('PASS') // /dashboard         218.3 KB gz
-    expect(dashboardTotalVerdict(302_582)).toBe('PASS') // /dashboard/messages 295.5 KB gz
+  it('classifies the measured routes under the CORRECTED closure', () => {
+    expect(dashboardTotalVerdict(256_497)).toBe('PASS') // /dashboard/login   250.5 KB gz
+    expect(dashboardTotalVerdict(229_657)).toBe('PASS') // /dashboard         224.3 KB gz
+    // The correction moved this route from an unqualified pass into the governed warning band.
+    // It still PASSES the gate; it may no longer be reported as if it were under the target.
+    expect(dashboardTotalVerdict(308_718)).toBe('WARN') // /dashboard/messages 301.5 KB gz
   })
 
   it('would have warned, not blocked, had the zod/mini variant shipped', () => {
@@ -504,10 +506,10 @@ describe('dashboardTotalVerdict — doc 20 §1.1 two-tier ceiling (D20-24)', () 
 })
 
 describe('DASHBOARD_ACCEPTED_BASELINE_BYTES — reporting input, never a gate', () => {
-  it('records the accepted baselines measured at Web 80ee17ba', () => {
-    expect(DASHBOARD_ACCEPTED_BASELINE_BYTES['/dashboard/login']).toBe(250_011)
-    expect(DASHBOARD_ACCEPTED_BASELINE_BYTES['/dashboard']).toBe(223_553)
-    expect(DASHBOARD_ACCEPTED_BASELINE_BYTES['/dashboard/messages']).toBe(302_582)
+  it('records the accepted baselines re-measured under the corrected closure', () => {
+    expect(DASHBOARD_ACCEPTED_BASELINE_BYTES['/dashboard/login']).toBe(256_497)
+    expect(DASHBOARD_ACCEPTED_BASELINE_BYTES['/dashboard']).toBe(229_657)
+    expect(DASHBOARD_ACCEPTED_BASELINE_BYTES['/dashboard/messages']).toBe(308_718)
   })
 
   it('every recorded baseline is itself within the hard ceiling', () => {

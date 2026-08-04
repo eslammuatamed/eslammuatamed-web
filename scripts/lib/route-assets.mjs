@@ -304,13 +304,19 @@ export const DASHBOARD_BUDGET = {
  * requirement in the warning band. It is a REPORTING input, never a gate: nothing passes or fails
  * because of it, so it can never quietly become a second threshold.
  *
- * Recorded at Web `80ee17ba`, the head at which D20-24 was taken. A route absent from this map is
- * reported as having no previously accepted baseline rather than being given a fabricated one.
+ * RE-MEASURED under the CORRECTED closure. The previous figures (250_011 / 223_553 / 302_582) were
+ * produced by a seed that omitted the shell's layout and middleware maps, so they understated every
+ * dashboard route — `/dashboard/messages` by 6,114 B gz. Leaving them here would have made the
+ * correction itself look like a 6 KB regression, which is the opposite of what this map is for.
+ * The measurement method changed; no threshold did.
+ *
+ * A route absent from this map is reported as having no previously accepted baseline rather than
+ * being given a fabricated one.
  */
 export const DASHBOARD_ACCEPTED_BASELINE_BYTES = {
-  '/dashboard/login': 250_011,
-  '/dashboard': 223_553,
-  '/dashboard/messages': 302_582
+  '/dashboard/login': 256_497,
+  '/dashboard': 229_657,
+  '/dashboard/messages': 308_718
 }
 
 /**

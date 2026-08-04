@@ -30,15 +30,37 @@
  */
 
 /**
- * A module id belongs to the route's seed when it matches one of these shapes. Ordered and
- * explicit — nothing joins the seed by falling through, mirroring `classifyModuleId`'s doctrine
- * that unrecognised input must be reported rather than absorbed.
+ * THE SEED IS THE APP SHELL, NOT THE ROUTE'S OWN LAYOUT.
+ *
+ * The first version of this seed took only the layout the route declares (`dashboard.vue`) and the
+ * auth pair. Measured against an authenticated cold trace, that undercounted `/dashboard/messages`
+ * by seven assets / 6,114 B gz, and the gate reported a route inside the D20-24 warning band as an
+ * unqualified pass. The cause is structural, not a missing filename:
+ *
+ * Nuxt's client entry has ZERO static imports. Layouts and named middleware are compiled into two
+ * ROUTE-INDEPENDENT async maps inside that entry — every layout in `app/layouts/`, every middleware
+ * in `app/middleware/` — and the build declares the whole set as `<link rel="prefetch">` in the
+ * shell HTML. That prefetch set is byte-identical for `/dashboard`, `/dashboard/login` and
+ * `/dashboard/messages`: it is shell weight that EVERY dashboard cold load pays, which is precisely
+ * why the public gate's read-the-HTML method cannot recover it (all three routes return one shell).
+ *
+ * So the seed is stated BY CATEGORY — all layouts, all middleware — never by naming the chunks that
+ * were found missing. Enumerating those seven would satisfy today's tests and silently undercount
+ * again the first time a layout, a middleware or a shared component is added.
+ *
+ * WHAT IS DELIBERATELY NOT COUNTED. A chunk fetched by the RUNTIME because a `NuxtLink` to another
+ * route is on screen (measured: `app/pages/dashboard/index.vue`, prefetched from the sidebar link)
+ * belongs to that other route's closure, not this one — it is absent from the shell prefetch list,
+ * and the route is usable without it. Assets first requested by a later user interaction are
+ * likewise out: the static-only walk below cannot reach them, because interaction paths are
+ * `dynamicImports`.
  */
 const SEED_MODULE_PATTERNS = {
-  layout: [/app\/layouts\/dashboard\.vue/],
-  // Auth/session code required before the page is usable. The middleware decides whether the route
-  // renders at all and the store holds the token it decides on, so neither is optional weight.
-  auth: [/app\/middleware\/auth\.ts/, /app\/stores\/auth\.ts/]
+  // Every layout, not just the one this route declares — the entry's layout map is route-independent.
+  layout: [/^app\/layouts\/[^/]+\.vue$/],
+  // Every named middleware, for the same reason, plus the session store the auth middleware decides
+  // on. The middleware decides whether the route renders at all, so neither is optional weight.
+  auth: [/^app\/middleware\/[^/]+\.ts$/, /^app\/stores\/auth\.ts$/]
 }
 
 /** Strip Rollup's query suffix (`?vue&type=script…`) so a module matches its source path. */
@@ -104,17 +126,21 @@ export function resolveDashboardClosure(chunks, pageModule) {
   const byFile = indexChunksByFile(chunks)
 
   const entry = [...byFile.values()].find(c => c.isEntry) ?? null
-  const layout = chunksMatching(byFile, SEED_MODULE_PATTERNS.layout)[0] ?? null
+  const layoutChunks = chunksMatching(byFile, SEED_MODULE_PATTERNS.layout)
   const page = findPageChunk(byFile, pageModule)
   const authChunks = chunksMatching(byFile, SEED_MODULE_PATTERNS.auth)
 
-  const seed = [entry, layout, page, ...authChunks].filter(Boolean)
+  const seed = [entry, page, ...layoutChunks, ...authChunks].filter(Boolean)
 
   // Report what could not be resolved instead of quietly measuring a smaller route. The caller
   // turns a missing entry or page into an infrastructure failure (exit 2), never a passing number.
+  //
+  // No layout chunk at all means the layout map stopped being resolvable — the exact shape of the
+  // defect this seed was widened to fix — so it fails loudly rather than measuring a shell-less route.
   const missing = []
   if (!entry) missing.push('client entry')
   if (!page) missing.push(`page chunk for ${pageModule}`)
+  if (layoutChunks.length === 0) missing.push('layout chunks')
 
   // Transitive STATIC closure from the seed. `dynamicImports` are deliberately not traversed —
   // see the header: the entry's dynamic map is the whole application.
@@ -134,7 +160,7 @@ export function resolveDashboardClosure(chunks, pageModule) {
     files: [...files].sort(),
     seed: {
       entry: entry?.fileName ?? null,
-      layout: layout?.fileName ?? null,
+      layout: layoutChunks.map(c => c.fileName).sort(),
       page: page?.fileName ?? null,
       auth: authChunks.map(c => c.fileName).sort()
     },
