@@ -21,6 +21,7 @@
  * The readers are injectable so the identity rules can be tested without spawning anything.
  */
 import { readdirSync, readFileSync } from 'node:fs'
+import { basename, dirname, isAbsolute, resolve } from 'node:path'
 
 /** Default /proc readers. Replaced in tests. */
 export const procReaders = {
@@ -103,19 +104,37 @@ export function descendantPids(root, readers = procReaders) {
   return found
 }
 
+/** The prefix the browser launcher gives its throwaway profile directories. */
+export const PROFILE_PREFIX = 'lighthouse.'
+
 /**
  * A process's throwaway browser profile, if it has one created for this measurement.
  *
- * Matched on the flag we know the launcher passes, and only ever under the OS temp directory — so
- * teardown removes profiles belonging to browsers it owned, never a real user profile.
+ * The return value is handed to a RECURSIVE DELETE, so containment is enforced rather than
+ * asserted. A `startsWith` test on the raw string is not enough: `/tmp/lighthouse.x/../../home/me`
+ * begins with the temp prefix and yet resolves to a home directory, which teardown would then
+ * delete. The path is therefore RESOLVED first — collapsing `..` — and accepted only when it is a
+ * DIRECT child of the temp root whose name carries the launcher's prefix. Anything else, including
+ * a nested path or one that escapes upward, is refused.
  */
-export function browserProfileDir(pid, tmpPrefix, readers = procReaders) {
+export function browserProfileDir(pid, tmpRoot, readers = procReaders) {
   const raw = readers.readCmdline(pid)
   if (raw === null) return null
   const flag = raw.split('\0').find(a => a.startsWith('--user-data-dir='))
   if (!flag) return null
-  const dir = flag.slice('--user-data-dir='.length)
-  return dir.startsWith(tmpPrefix) ? dir : null
+
+  const value = flag.slice('--user-data-dir='.length)
+
+  // Rejected BEFORE resolving. `resolve()` is relative to THIS process's working directory, so a
+  // relative value like `lighthouse.x` would become `/tmp/lighthouse.x` whenever the orchestrator
+  // happened to be running from /tmp — making acceptance depend on our cwd rather than on the
+  // value. Only an absolute path can be reasoned about at all.
+  if (value === '' || !isAbsolute(value)) return null
+
+  const resolved = resolve(value)
+  if (dirname(resolved) !== resolve(tmpRoot)) return null
+  if (!basename(resolved).startsWith(PROFILE_PREFIX)) return null
+  return resolved
 }
 
 /**

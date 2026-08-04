@@ -185,21 +185,61 @@ describe('process identity — proving GROUP ownership', () => {
   })
 })
 
-describe('process identity — browser profiles', () => {
-  const TMP = '/tmp/lighthouse.'
+describe('process identity — browser profiles are contained, not just prefixed', () => {
+  // The return value is handed to a RECURSIVE DELETE, so this is the one place a wrong answer
+  // destroys data rather than leaking it. Containment is enforced, never assumed.
+  const TMP = '/tmp'
+  const cmd = dir => ({ 13: { ppid: 1, startedAt: 'd', cmdline: `chrome\0--user-data-dir=${dir}\0about:blank` } })
 
-  it('12 — finds the throwaway profile a browser was given', () => {
-    const readers = fakeProc({ 13: { ppid: 1, startedAt: 'd', cmdline: 'chrome\0--user-data-dir=/tmp/lighthouse.AbC123\0about:blank' } })
-    expect(browserProfileDir(13, TMP, readers)).toBe('/tmp/lighthouse.AbC123')
+  it('12 — accepts the throwaway profile the launcher created', () => {
+    expect(browserProfileDir(13, TMP, fakeProc(cmd('/tmp/lighthouse.AbC123')))).toBe('/tmp/lighthouse.AbC123')
   })
 
-  it('13 — REFUSES a profile outside the temp prefix, so a real user profile is never removed', () => {
-    const readers = fakeProc({ 13: { ppid: 1, startedAt: 'd', cmdline: 'chrome\0--user-data-dir=/home/someone/.config/google-chrome\0' } })
-    expect(browserProfileDir(13, TMP, readers)).toBeNull()
+  it('13 — REFUSES a real user profile outside the temp root', () => {
+    expect(browserProfileDir(13, TMP, fakeProc(cmd('/home/someone/.config/google-chrome')))).toBeNull()
   })
 
   it('14 — a process with no profile flag yields null', () => {
     const readers = fakeProc({ 13: { ppid: 1, startedAt: 'd', cmdline: 'node\0script.mjs\0' } })
     expect(browserProfileDir(13, TMP, readers)).toBeNull()
+  })
+
+  it('19 — TRAVERSAL: a path that escapes upward is refused even though it starts with the prefix', () => {
+    // `/tmp/lighthouse.x/../../home/me` passes a naive startsWith test and resolves to /home/me.
+    // Accepting it would make teardown recursively delete a home directory.
+    expect(browserProfileDir(13, TMP, fakeProc(cmd('/tmp/lighthouse.x/../../home/me')))).toBeNull()
+    expect(browserProfileDir(13, TMP, fakeProc(cmd('/tmp/lighthouse.x/../../../etc')))).toBeNull()
+  })
+
+  it('20 — a NESTED path under a valid profile is refused; only the profile root itself is removable', () => {
+    expect(browserProfileDir(13, TMP, fakeProc(cmd('/tmp/lighthouse.AbC123/Default/Cookies')))).toBeNull()
+  })
+
+  it('21 — a sibling that merely shares the prefix string is refused', () => {
+    // `/tmp/lighthouse.evil` IS a legitimate shape; `/tmplighthouse.x` is not a child of /tmp.
+    expect(browserProfileDir(13, TMP, fakeProc(cmd('/tmpevil/lighthouse.x')))).toBeNull()
+    expect(browserProfileDir(13, TMP, fakeProc(cmd('/tmp/notlighthouse.x')))).toBeNull()
+  })
+
+  it('22 — the temp root itself is never returned', () => {
+    expect(browserProfileDir(13, TMP, fakeProc(cmd('/tmp')))).toBeNull()
+    expect(browserProfileDir(13, TMP, fakeProc(cmd('/tmp/lighthouse.x/..')))).toBeNull()
+  })
+
+  it('23 — an empty or RELATIVE value is refused, whatever the working directory', () => {
+    expect(browserProfileDir(13, TMP, fakeProc(cmd('')))).toBeNull()
+    expect(browserProfileDir(13, TMP, fakeProc(cmd('lighthouse.x')))).toBeNull()
+
+    // Pinned from INSIDE the temp root, because that is where a relative value would resolve to a
+    // valid-looking profile. Asserting this only from the repository directory proved nothing: the
+    // result depended on cwd, not on the value.
+    const cwd = process.cwd()
+    try {
+      process.chdir(TMP)
+      expect(browserProfileDir(13, TMP, fakeProc(cmd('lighthouse.x')))).toBeNull()
+      expect(browserProfileDir(13, TMP, fakeProc(cmd('./lighthouse.x')))).toBeNull()
+    } finally {
+      process.chdir(cwd)
+    }
   })
 })

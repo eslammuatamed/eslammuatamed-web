@@ -83,7 +83,7 @@ async function terminateTree(child, label, tracker) {
 
   // Profiles are read while their owners are still alive — /proc/<pid>/cmdline vanishes with them.
   const profiles = (tracker ? tracker.liveDescendants() : [])
-    .map(pid => browserProfileDir(pid, join(tmpdir(), 'lighthouse.')))
+    .map(pid => browserProfileDir(pid, tmpdir()))
     .filter(Boolean)
 
   /**
