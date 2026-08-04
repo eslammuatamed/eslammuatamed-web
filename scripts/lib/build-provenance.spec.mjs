@@ -4,8 +4,8 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
-  BUILD_ENV_ALLOWLIST, GENERATOR, MARKER_VERSION,
-  assertCleanSourceState, envFingerprint, gitStatusEntries,
+  BUILD_ENV_ALLOWLIST, GENERATOR, GOVERNED_ENV_DEFAULTS, MARKER_VERSION,
+  assertCleanSourceState, envFingerprint, gitStatusEntries, governedBuildEnv,
   outputFingerprint, readProvenance, validateProvenance, writeProvenance
 } from './build-provenance.mjs'
 
@@ -204,6 +204,23 @@ describe('provenance — marker validation', () => {
     expect(absent.presence.ANALYZE_BUNDLE).toBe('absent')
     expect(empty.presence.ANALYZE_BUNDLE).toBe('empty')
     expect(absent.hash).not.toBe(empty.hash)
+  })
+
+  it('10c — a marker written by the BUILD CHILD validates in the ORCHESTRATOR (regression)', () => {
+    // The build runs as a CHILD PROCESS with the D23-8 placeholders applied. The first end-to-end
+    // run failed here: the orchestrator fingerprinted its own bare environment, computed a different
+    // hash from the one the build had just recorded, and rejected its own freshly built artifact.
+    // `governedBuildEnv()` is the single resolver both sides now go through.
+    const ambient = { NODE_ENV: 'production' }
+
+    // Why the resolver is needed at all: the bare environment really does fingerprint differently.
+    expect(envFingerprint(ambient).hash).not.toBe(envFingerprint(governedBuildEnv(ambient)).hash)
+
+    writeProvenance({ cwd: repo, outputDir: OUT(), env: governedBuildEnv(ambient) })
+    expect(validateProvenance({ cwd: repo, outputDir: OUT(), env: governedBuildEnv(ambient) }).valid).toBe(true)
+
+    // And the placeholders are genuinely applied rather than silently absent.
+    expect(governedBuildEnv(ambient).NUXT_PUBLIC_SITE_URL).toBe(GOVERNED_ENV_DEFAULTS.NUXT_PUBLIC_SITE_URL)
   })
 
   it('11 — a CHANGED output asset is rejected', () => {

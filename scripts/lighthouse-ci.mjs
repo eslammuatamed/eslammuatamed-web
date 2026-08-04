@@ -41,7 +41,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync } 
 import { join } from 'node:path'
 import process from 'node:process'
 import { assertH2, createEphemeralCert, startH2Proxy } from './lib/h2-proxy.mjs'
-import { assertCleanSourceState, headSha, validateProvenance, writeReportProvenance } from './lib/build-provenance.mjs'
+import { assertCleanSourceState, governedBuildEnv, headSha, validateProvenance, writeReportProvenance } from './lib/build-provenance.mjs'
 import { assertCollectionUsedH2, formatProtocolSummary } from './lib/lh-protocol.mjs'
 
 const WEB_PORT = Number(process.env.CI_PREVIEW_PORT ?? 3000)
@@ -158,15 +158,11 @@ async function ensureGovernedBuild() {
   for (const failure of first.failures) console.log(`   · ${failure}`)
   quarantine(headSha().slice(0, 12))
 
-  // The same build-time placeholders CI uses (D23-8). They are baked into canonical/og:url and the
-  // sitemap, never into anything performance is measured on, and `npm run build` refuses to fall
-  // back to localhost — so without them a clean checkout could not build at all. They are part of
-  // the governed environment fingerprint, so a run that used different ones cannot masquerade as
-  // this one.
-  await run('npm', ['run', 'build'], {
-    NUXT_PUBLIC_SITE_URL: process.env.NUXT_PUBLIC_SITE_URL ?? 'https://example.com',
-    NUXT_PUBLIC_API_BASE: process.env.NUXT_PUBLIC_API_BASE ?? 'https://example.com/api/v1'
-  })
+  // The build runs with EXACTLY the environment the fingerprint describes. Resolving it in one
+  // shared place (`governedBuildEnv`) is load-bearing: the build is a child process, so applying
+  // the D23-8 placeholders only to the child while fingerprinting the parent's bare environment
+  // made the orchestrator reject its own freshly built artifact.
+  await run('npm', ['run', 'build'], governedBuildEnv())
 
   const after = validateProvenance()
   if (!after.valid) {
