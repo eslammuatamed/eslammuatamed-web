@@ -681,3 +681,263 @@ test.describe('Mutations, contact shapes, required states and accessibility', ()
   })
 })
 
+
+/**
+ * FOCUS RESTORATION AFTER A GOVERNED SLIDEOVER CLOSE.
+ *
+ * The invariant is single and absolute: closing the detail must NEVER leave focus on `<body>`.
+ * Restoring to the exact opener is the preferred outcome, but the opener genuinely ceases to exist
+ * in several ordinary flows — auto-read re-sorts the message off the current page, archiving removes
+ * it, the reader pages or switches view while the detail is open. In every one of those the fallback
+ * is the labelled list region, which names the CURRENT view so a screen reader announces where focus
+ * landed.
+ *
+ * What the fallback must NOT be: the hidden desktop/mobile counterpart, an arbitrary first message,
+ * or an opener belonging to a page or view the reader has already left.
+ */
+type FocusInfo = {
+  isBody: boolean
+  tag: string | null
+  messageId: string | null
+  presentation: string | null
+  role: string | null
+  ariaLabel: string | null
+  visible: boolean
+}
+
+async function focusInfo(page: Page): Promise<FocusInfo> {
+  return page.evaluate(() => {
+    const el = document.activeElement as HTMLElement | null
+    return {
+      isBody: el === document.body || el === null,
+      tag: el?.tagName?.toLowerCase() ?? null,
+      messageId: el?.getAttribute?.('data-message') ?? null,
+      presentation: el?.getAttribute?.('data-opener') ?? null,
+      role: el?.getAttribute?.('role') ?? null,
+      ariaLabel: el?.getAttribute?.('aria-label') ?? null,
+      // Proves the fallback is never the `display:none` counterpart of the other breakpoint.
+      visible: el ? (typeof el.checkVisibility === 'function' ? el.checkVisibility({ checkVisibilityCSS: true }) : el.offsetParent !== null) : false
+    }
+  })
+}
+
+/** Settled focus after the overlay has left the DOM — polled, because restoration waits for that. */
+async function settledFocus(page: Page): Promise<FocusInfo> {
+  let last: FocusInfo = await focusInfo(page)
+  await expect.poll(async () => {
+    last = await focusInfo(page)
+    return last.isBody
+  }, { timeout: 10_000, message: 'focus must never settle on <body> after a governed close' }).toBe(false)
+  return last
+}
+
+async function closeDetail(page: Page) {
+  await page.keyboard.press('Escape')
+  await expect(slideover(page)).toHaveCount(0)
+}
+
+test.describe('Focus restoration and its fallback', () => {
+  test.beforeEach(async ({ page }) => {
+    await resetBackend(page)
+    await signIn(page)
+  })
+
+  test('opener remains present — desktop table restores the EXACT opener', async ({ page }) => {
+    await seedSinglePage(page)
+    await page.setViewportSize(DESKTOP)
+    await page.goto('/dashboard/messages')
+    await listSettled(page)
+
+    const opener = tableOpeners(page).nth(1)
+    const id = await opener.getAttribute('data-message')
+    await opener.click()
+    await expect(slideover(page)).toBeVisible()
+    await closeDetail(page)
+
+    const focus = await settledFocus(page)
+    expect(focus.messageId, 'the exact opener must win when it survives').toBe(id)
+    expect(focus.presentation).toBe('row')
+    expect(focus.visible).toBe(true)
+  })
+
+  test('opener remains present — mobile UCard list restores the EXACT opener', async ({ page }) => {
+    await seedSinglePage(page)
+    await page.setViewportSize(MOBILE)
+    await page.goto('/dashboard/messages')
+    await listSettled(page)
+
+    const opener = page.locator('[data-opener="card"]').first()
+    const id = await opener.getAttribute('data-message')
+    await opener.click()
+    await expect(slideover(page)).toBeVisible()
+    await closeDetail(page)
+
+    const focus = await settledFocus(page)
+    expect(focus.messageId).toBe(id)
+    // Never the desktop counterpart, which is in the DOM but `display:none` at this width.
+    expect(focus.presentation, 'must not focus the hidden desktop row').toBe('card')
+    expect(focus.visible).toBe(true)
+  })
+
+  test('opener is REPLACED but the message stays on the page — re-acquired, not dropped', async ({ page }) => {
+    // A single-page fixture keeps the message on screen while auto-read re-renders the row, so the
+    // clicked node is replaced by a fresh one carrying the same identity.
+    await seedSinglePage(page)
+    await page.setViewportSize(DESKTOP)
+    await page.goto('/dashboard/messages')
+    await listSettled(page)
+
+    const opener = tableOpeners(page).first()
+    const id = await opener.getAttribute('data-message')
+    await opener.click()
+    await expect(slideover(page)).toBeVisible()
+    await closeDetail(page)
+
+    const focus = await settledFocus(page)
+    expect(focus.messageId, 'the replacement node for the same message must take focus').toBe(id)
+    expect(focus.presentation).toBe('row')
+  })
+
+  test('opener moves OFF the page after auto-read sorting — falls back to the list region', async ({ page }) => {
+    // The full fixture is 17 inbox rows at 12 per page, ordered unread-first. Opening an unread
+    // message on page 1 marks it read, which sorts it behind every remaining unread one and pushes
+    // it onto page 2. The opener then genuinely does not exist on the current page.
+    await page.setViewportSize(DESKTOP)
+    await page.goto('/dashboard/messages')
+    await listSettled(page)
+
+    const opener = tableOpeners(page).first()
+    const id = await opener.getAttribute('data-message')
+    await opener.click()
+    await expect(slideover(page)).toBeVisible()
+    await closeDetail(page)
+
+    const focus = await settledFocus(page)
+    expect(focus.messageId, 'the vanished opener must not be re-invented').toBeNull()
+    expect(focus.tag).toBe('section')
+    expect(focus.ariaLabel, 'the fallback must name the current view').toMatch(/inbox/i)
+    expect(focus.visible).toBe(true)
+
+    // And specifically NOT an arbitrary neighbouring message.
+    const rowIds = await page.locator('[data-opener="row"]').evaluateAll(
+      els => els.map(e => e.getAttribute('data-message'))
+    )
+    expect(rowIds, 'sanity: the opened message really did leave page 1').not.toContain(id)
+  })
+
+  test('opener DISAPPEARS after archive — falls back to the list region', async ({ page }) => {
+    await seedSinglePage(page)
+    await page.setViewportSize(DESKTOP)
+    await page.goto('/dashboard/messages')
+    await listSettled(page)
+
+    await tableOpeners(page).first().click()
+    await expect(slideover(page)).toBeVisible()
+
+    // Archive from inside the detail: the message leaves the Inbox list entirely.
+    await page.locator('[role=dialog] button').filter({ hasText: /archive/i }).first().click()
+    await expect(slideover(page)).toHaveCount(0)
+
+    const focus = await settledFocus(page)
+    expect(focus.tag).toBe('section')
+    expect(focus.ariaLabel).toMatch(/inbox/i)
+  })
+
+  test('unarchive from the Archived view — falls back to the Archived list region', async ({ page }) => {
+    await seedSinglePage(page)
+    await page.setViewportSize(DESKTOP)
+    await page.goto('/dashboard/messages?view=archived')
+    await listSettled(page)
+
+    await tableOpeners(page).first().click()
+    await expect(slideover(page)).toBeVisible()
+    await page.locator('[role=dialog] button').filter({ hasText: /unarchive|restore/i }).first().click()
+    await expect(slideover(page)).toHaveCount(0)
+
+    const focus = await settledFocus(page)
+    expect(focus.tag).toBe('section')
+    expect(focus.ariaLabel, 'the fallback must name the ARCHIVED list, not the Inbox').toMatch(/archived/i)
+  })
+
+  test('PAGE changes while the detail is open — no focus restore to the old page’s opener', async ({ page }) => {
+    // The detail is MODAL, so the pagination control and the view tabs cannot be clicked while it is
+    // open. The only way page or view changes underneath an open detail is history navigation — which
+    // is precisely the contract this page is built on: the URL is the single source of truth, so Back
+    // and Forward move view/page/selection together. A single `history.go(-2)` is one such step.
+    await page.setViewportSize(DESKTOP)
+    await page.goto('/dashboard/messages')
+    await listSettled(page)
+
+    // page 1 -> page 2 -> open a message there. Three history entries.
+    // The UPagination root, not the sidebar nav — both are `<nav>`.
+    await page.locator('nav[data-slot=root] button').filter({ hasText: /^2$/ }).first().click()
+    await expect.poll(() => query(page).get('page')).toBe('2')
+    await listSettled(page)
+
+    const opener = tableOpeners(page).first()
+    const id = await opener.getAttribute('data-message')
+    await opener.click()
+    await expect(slideover(page)).toBeVisible()
+
+    // One step back over BOTH the selection and the page change: the detail closes and the list is
+    // page 1, where the opener never existed.
+    await page.evaluate(() => history.go(-2))
+    await expect(slideover(page)).toHaveCount(0)
+    await expect.poll(() => query(page).get('page')).toBeNull()
+    await listSettled(page)
+
+    const focus = await settledFocus(page)
+    expect(focus.messageId, 'an opener from page 2 is not a valid target on page 1').not.toBe(id)
+    expect(focus.tag).toBe('section')
+    expect(focus.visible).toBe(true)
+  })
+
+  test('VIEW changes while the detail is open — no focus restore to the old view’s opener', async ({ page }) => {
+    await seedSinglePage(page)
+    await page.setViewportSize(DESKTOP)
+    await page.goto('/dashboard/messages')
+    await listSettled(page)
+
+    // inbox -> archived -> open a message there.
+    await page.locator('[role=tab]').filter({ hasText: /archived/i }).click()
+    await expect.poll(() => query(page).get('view')).toBe('archived')
+    await listSettled(page)
+
+    const opener = tableOpeners(page).first()
+    const id = await opener.getAttribute('data-message')
+    await opener.click()
+    await expect(slideover(page)).toBeVisible()
+
+    // Back over the selection AND the view switch in one step: the reader is in the Inbox again.
+    await page.evaluate(() => history.go(-2))
+    await expect(slideover(page)).toHaveCount(0)
+    await expect.poll(() => query(page).get('view')).toBeNull()
+    await listSettled(page)
+
+    const focus = await settledFocus(page)
+    expect(focus.messageId, 'an Archived opener is not a valid target in the Inbox').not.toBe(id)
+    expect(focus.tag).toBe('section')
+    expect(focus.ariaLabel, 'the fallback must name the list the reader is now in').toMatch(/inbox/i)
+  })
+
+  test('a deep-linked detail with no opener at all still never lands on <body>', async ({ page }) => {
+    await seedSinglePage(page)
+    await page.setViewportSize(DESKTOP)
+    await page.goto(`/dashboard/messages?message=${MSG.both}`)
+    await expect(slideover(page)).toBeVisible()
+    await closeDetail(page)
+
+    const focus = await settledFocus(page)
+    expect(focus.tag).toBe('section')
+  })
+
+  test('the fallback region is programmatic-only — it is not a keyboard tab stop', async ({ page }) => {
+    await seedSinglePage(page)
+    await page.setViewportSize(DESKTOP)
+    await page.goto('/dashboard/messages')
+    await listSettled(page)
+
+    const tabindex = await page.locator('section[aria-label]').first().getAttribute('tabindex')
+    expect(tabindex, 'tabindex=-1 only, so no keyboard user gains a stop').toBe('-1')
+  })
+})

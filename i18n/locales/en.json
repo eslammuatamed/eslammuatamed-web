@@ -329,6 +329,7 @@
       "rowActions": "Message actions",
       "open": "Open",
       "tableLabel": "Contact messages",
+      "listRegionLabel": "{view} messages",
       "pagination": {
         "label": "Pagination",
         "page": "Page {page} of {pages}"

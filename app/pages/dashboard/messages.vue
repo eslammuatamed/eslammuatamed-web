@@ -136,14 +136,43 @@ let lastOpener: HTMLElement | null = null
  *
  * `data-*` attributes rather than `id`, so the two presentations cannot collide.
  */
-let lastOpenerKey: { presentation: 'card' | 'row', id: string } | null = null
+let lastOpenerKey: { presentation: 'card' | 'row', id: string, view: 'inbox' | 'archived', page: number } | null = null
+
+/**
+ * The always-present fallback: the labelled list region (see the template).
+ */
+const listRegion = useTemplateRef<HTMLElement>('listRegion')
+
+/** Names the CURRENT view, so restored focus announces which list the reader is back in. */
+const listRegionLabel = computed(() => t('dashboard.messages.listRegionLabel', {
+  view: t(`dashboard.messages.view.${view.value}`)
+}))
+
+/**
+ * Visible AND focusable, not merely attached.
+ *
+ * `isConnected` alone is not enough: the table and the card list are BOTH in the DOM at every
+ * breakpoint with one `display:none`, so a node can be connected and still be the hidden
+ * counterpart — focusing it silently drops focus to `<body>`, which is the exact failure this
+ * whole path exists to prevent. `checkVisibility` resolves `display:none` on any ancestor;
+ * `offsetParent` is the fallback for engines without it.
+ */
+function isFocusable(el: HTMLElement | null | undefined): el is HTMLElement {
+  if (!el?.isConnected) return false
+  if (el.hasAttribute('disabled') || el.getAttribute('aria-hidden') === 'true') return false
+  return typeof el.checkVisibility === 'function'
+    ? el.checkVisibility({ checkVisibilityCSS: true })
+    : el.offsetParent !== null
+}
 
 function openMessage(message: ContactMessage, event?: Event): void {
   const el = (event?.currentTarget as HTMLElement | null) ?? null
   lastOpener = el
   const presentation = el?.dataset.opener
+  // The view and page are captured WITH the opener: restoring focus to a control that belongs to a
+  // list the reader has since navigated away from would be worse than the fallback, not better.
   lastOpenerKey = presentation === 'card' || presentation === 'row'
-    ? { presentation, id: message.id }
+    ? { presentation, id: message.id, view: view.value, page: page.value }
     : null
   setQuery({ message: message.id })
 }
@@ -165,22 +194,37 @@ watch(selectedId, async (id, previous) => {
   const key = lastOpenerKey
   lastOpener = null
   lastOpenerKey = null
-  if (!el && !key) return
+  // NOT an early return when there is no opener: a deep-linked `?message=` open has none, and
+  // closing it must still land somewhere real.
 
   for (let frame = 0; frame < 40 && document.querySelector('[role=dialog]'); frame += 1) {
     await new Promise(resolve => requestAnimationFrame(resolve))
   }
 
-  if (el?.isConnected) {
+  // An opener that belongs to a list the reader has since left is NOT a valid target, however alive
+  // its node still is. Paging or switching view while the detail is open lands here.
+  const sameList = key !== null && key.view === view.value && key.page === page.value
+
+  if (sameList && isFocusable(el)) {
     el.focus()
     return
   }
-  // The node was replaced by the re-render. Re-acquire it WITHIN the same presentation only.
-  if (!key) return
-  const replacement = document.querySelector<HTMLElement>(
-    `[data-opener="${key.presentation}"][data-message="${key.id}"]`
-  )
-  replacement?.focus()
+  // The node was replaced by the re-render. Re-acquire it WITHIN the same presentation only — never
+  // by message id alone, which would match the hidden counterpart.
+  if (sameList && key) {
+    const replacement = document.querySelector<HTMLElement>(
+      `[data-opener="${key.presentation}"][data-message="${key.id}"]`
+    )
+    if (isFocusable(replacement)) {
+      replacement.focus()
+      return
+    }
+  }
+
+  // Nothing valid left: the message was re-sorted off the page by auto-read, archived away, or the
+  // reader changed view/page. Focus the labelled list region rather than an arbitrary first message
+  // — an arbitrary row is a silent, wrong claim about where the reader was.
+  listRegion.value?.focus()
 })
 
 function selectView(next: 'inbox' | 'archived'): void {
@@ -433,6 +477,24 @@ onMounted(() => {
       />
     </div>
 
+    <!-- THE FOCUS FALLBACK TARGET, and the reason it wraps the whole v-if chain rather than the
+         table or the card list. Closing the detail must never drop focus on `<body>`, but the exact
+         opener can genuinely cease to exist — auto-read re-sorts the message off the page, archive
+         removes it, the reader pages or switches view while the detail is open. The fallback has to
+         exist in EVERY one of those end states, including the empty and error ones, so it wraps all
+         of them.
+         One element, not one per breakpoint: the table and the card list are both in the DOM with
+         one `display:none`, so a per-presentation target could be the hidden counterpart. This one
+         is always the visible one because it is the only one.
+         `tabindex="-1"` is programmatic-focus only — it is NOT in the tab order, so no keyboard user
+         gains a stop. The label names the CURRENT view, so a screen reader announces "Inbox
+         messages"/"Archived messages" and the reader knows where focus went. -->
+    <section
+      ref="listRegion"
+      tabindex="-1"
+      :aria-label="listRegionLabel"
+      class="focus:outline-none"
+    >
     <div v-if="pending" class="flex flex-col gap-2" :aria-label="t('dashboard.messages.loading')" aria-busy="true">
       <USkeleton v-for="i in 6" :key="i" class="h-12 w-full" />
     </div>
@@ -622,6 +684,7 @@ onMounted(() => {
         />
       </div>
     </template>
+    </section>
 
     <USlideover
       v-model:open="detailOpen"
