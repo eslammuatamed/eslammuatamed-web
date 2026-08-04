@@ -37,6 +37,48 @@ hotfix/<slug>   (branch from main)
 - **Never reset or force-push the shared `dev` branch**, and never recreate it.
 - **A zero-file content diff is not sufficient** — `dev` and `main` must also share ancestry (`git merge-base --is-ancestor origin/main origin/dev` is true after a sync). This synchronization rule applies **independently per repository**; coordinated API/Web releases still go **API first, then Web**.
 
+## Performance verification — governed Lighthouse (doc 20 §5.1, D20-25)
+
+**One command, everywhere:**
+
+```bash
+npm run build          # governed Lighthouse measures the real .output
+npm run lighthouse:ci  # THE canonical entry point — local, PR CI, dev push and dev→main promotion
+```
+
+That single command owns the whole lifecycle: it starts the Nitro preview and the Prism contract
+mock, generates an ephemeral localhost certificate, brings up a local **HTTPS/HTTP/2** frontend,
+**asserts the browser-facing protocol before** the expensive matrix runs, collects the unchanged
+mobile and desktop matrices, asserts the unchanged medians, then tears down every process, port and
+key — on success, on failure and on Ctrl-C.
+
+**Why HTTP/2.** Production serves HTTP/2 (Cloudflare → Caddy → Nitro). The gate used to point
+Lighthouse straight at Nitro over HTTP/1.1, whose six-connection limit serialises requests HTTP/2
+multiplexes. Measured at Web `9876279` with byte-identical assets, that alone moved `/ar` from a
+4441 ms LCP median to 3389 ms. **Nitro may stay HTTP/1.1 behind the frontend** — only what the
+browser negotiates is governed.
+
+**Requirements:** Node per `.nvmrc`/`package.json` engines, an installed Chrome/Chromium (CI's
+`ubuntu-latest` ships one), and `openssl` on `PATH` for the ephemeral certificate. No production
+credentials and no VPS access are needed.
+
+**Ports and reports.** The preview uses `CI_PREVIEW_PORT`/`CI_MOCK_PORT` (default 3000/3001); the
+HTTP/2 frontend takes an OS-assigned free port by default, overridable with `LH_H2_PORT`, so
+parallel runs do not collide. Reports land in `.lighthouseci/mobile` and `.lighthouseci/desktop`.
+
+**Certificates are never committed.** They are generated per run into the OS temp directory,
+localhost-scoped, removed on exit, and `.gitignore` carries `*.pem` as a backstop. Chrome is given
+`--ignore-certificate-errors-spki-list=<that key>` — trust for exactly this certificate, never a
+blanket certificate-error bypass.
+
+**Non-governed escape hatches.** `lhci:collect:*-nongoverned` and `lhci:assert-nongoverned` exist for
+low-level debugging only. They are **not** the gate, CI never calls them, and `lighthouserc.cjs`
+throws unless `LH_BASE_URL` is set — so running `lhci` by hand cannot silently reintroduce HTTP/1.1
+measurement.
+
+**Diagnostic only:** Lighthouse against the public production domain. Real RTT and edge-cache state
+make it non-deterministic, so it never gates a PR.
+
 ## Documentation & Handoff Gate (required before delivery)
 Every feature's **final task** is the mandatory **Documentation & Handoff Gate** — canonical rule **doc 16 §5.1 / D16-8** ([`16-development-conventions.md`](../eslammuatamed-docs/docs/16-development-conventions.md)). Until it passes, the feature must **not** be pushed, PR'd, merged to `dev`, promoted to `main`, or deployed — "not requested" is never a reason to skip it. The Arabic module docs and SpecKit closeout are always required; other doc changes may be justified. The full rule lives in doc 16 and is **not restated here**.
 

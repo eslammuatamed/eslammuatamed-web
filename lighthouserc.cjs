@@ -43,54 +43,64 @@
 // evidence. Separate directories make that impossible rather than merely unlikely.
 const profile = process.env.LHCI_PROFILE === 'desktop' ? 'desktop' : 'mobile'
 
+// D20-25: governed collection happens through the local HTTP/2 frontend that
+// `scripts/lighthouse-ci.mjs` owns. `LH_BASE_URL` is set by that orchestrator; running `lhci`
+// directly is NON-GOVERNED and fails fast rather than silently measuring HTTP/1.1 again.
+const BASE = process.env.LH_BASE_URL
+if (!BASE) {
+  throw new Error(
+    'LH_BASE_URL is not set. Governed Lighthouse runs through `npm run lighthouse:ci`, which starts\n'
+    + 'the HTTP/2 frontend and asserts the protocol first (doc 20 §5.1, D20-25). Invoking `lhci`\n'
+    + 'directly would measure Nitro over HTTP/1.1 and overstate LCP on every route.'
+  )
+}
+
 const urls = [
-  'http://127.0.0.1:3000/',
-  'http://127.0.0.1:3000/ar',
-  'http://127.0.0.1:3000/blog/staying-inside-performance-budget-nuxt',
-  'http://127.0.0.1:3000/ar/blog/albaqaa-dimn-mizaniyat-ada-nuxt',
+  `${BASE}/`,
+  `${BASE}/ar`,
+  `${BASE}/blog/staying-inside-performance-budget-nuxt`,
+  `${BASE}/ar/blog/albaqaa-dimn-mizaniyat-ada-nuxt`,
   // web-005 Projects. Doc 20 §5's matrix is "four pages (home, article, project, contact) x both
   // locales"; the project pages now exist, so D20-8's deferral is closed for them. Slugs are the
   // Prism contract examples, which the mock serves for ANY slug — the gate must not depend on
   // staging data.
-  'http://127.0.0.1:3000/projects',
-  'http://127.0.0.1:3000/ar/projects',
-  'http://127.0.0.1:3000/projects/content-platform-api',
-  'http://127.0.0.1:3000/ar/projects/content-platform-api',
+  `${BASE}/projects`,
+  `${BASE}/ar/projects`,
+  `${BASE}/projects/content-platform-api`,
+  `${BASE}/ar/projects/content-platform-api`,
   // web-005 Profile, Experience slice (008). Adding URLs to the COLLECTION only — every threshold
   // stays exactly as `npm run lhci:assert` defines it (D20-13). A new public route that is never
   // measured is a budget that silently does not apply to it.
-  'http://127.0.0.1:3000/experience',
-  'http://127.0.0.1:3000/ar/experience',
+  `${BASE}/experience`,
+  `${BASE}/ar/experience`,
   // web-005 Profile, About slice (009). Added to the COLLECTION only — every threshold stays exactly
   // as `npm run lhci:assert` defines it (D20-13). Governed by D20-19, recorded in doc 20 first.
-  'http://127.0.0.1:3000/about',
-  'http://127.0.0.1:3000/ar/about',
+  `${BASE}/about`,
+  `${BASE}/ar/about`,
   // web-005 Profile, Resume slice (010). Added to the COLLECTION only — every threshold stays
   // exactly as `npm run lhci:assert` defines it (D20-13). Governed by D20-21, recorded in doc 20
   // first.
-  'http://127.0.0.1:3000/resume',
-  'http://127.0.0.1:3000/ar/resume',
+  `${BASE}/resume`,
+  `${BASE}/ar/resume`,
   // web-005 Contact slice (011). Added to the COLLECTION only — every threshold stays exactly as
   // `npm run lhci:assert` defines it (D20-13). Governed by D20-22, recorded in doc 20 first. With
   // these two URLs, §5's four-page matrix (home, article, project, contact x both locales) is
   // COMPLETE and D20-8's deferral is fully closed.
-  'http://127.0.0.1:3000/contact',
-  'http://127.0.0.1:3000/ar/contact'
+  `${BASE}/contact`,
+  `${BASE}/ar/contact`
 ]
 
 module.exports = {
   ci: {
     collect: {
       // The built artifact behind a contract mock — no dependency on staging (see ci-preview.mjs).
-      startServerCommand: 'node scripts/ci-preview.mjs',
-      startServerReadyPattern: 'ci-preview\\] listening',
-      startServerReadyTimeout: 60000,
+      // Lifecycle (preview, cert, HTTP/2 frontend, teardown) belongs to scripts/lighthouse-ci.mjs.
       url: urls,
       // Three runs per URL; assertions below use the median so one noisy sample cannot fail the
       // build or, just as importantly, pass it.
       numberOfRuns: 3,
       settings: {
-        chromeFlags: '--no-sandbox --headless=new',
+        chromeFlags: process.env.LH_CHROME_FLAGS ?? '--no-sandbox --headless=new',
         // Default (mobile) profile. The desktop pass runs the same config with
         // `--collect.settings.preset=desktop` via `npm run lhci:desktop`. The assertion step reads
         // the profile back from each report's own `configSettings.formFactor`, so this flag can
