@@ -721,14 +721,31 @@ async function focusInfo(page: Page): Promise<FocusInfo> {
   })
 }
 
-/** Settled focus after the overlay has left the DOM — polled, because restoration waits for that. */
+/**
+ * Focus once it has SETTLED, which is not the same as focus once it is first acceptable.
+ *
+ * The failure mode being guarded against is a LATE overwrite: `USlideover` performs its own focus
+ * restoration when it unmounts, and that lands after ours — the original defect was precisely our
+ * value being replaced by the overlay's, which resolved to a detached node and therefore `<body>`.
+ * A poll that stops the instant it sees a non-body value cannot tell "landed correctly" from
+ * "landed correctly, then was stolen", so it would go green on the exact bug it is here to catch.
+ *
+ * So: poll until focus is off `<body>`, then hold and re-check that it is STILL off `<body>` and
+ * still the same element.
+ */
 async function settledFocus(page: Page): Promise<FocusInfo> {
   let last: FocusInfo = await focusInfo(page)
   await expect.poll(async () => {
     last = await focusInfo(page)
     return last.isBody
   }, { timeout: 10_000, message: 'focus must never settle on <body> after a governed close' }).toBe(false)
-  return last
+
+  // Long enough to cover the overlay's own post-unmount restoration, which is what used to win.
+  await page.waitForTimeout(600)
+  const after = await focusInfo(page)
+  expect(after.isBody, 'focus was restored and then STOLEN back to <body>').toBe(false)
+  expect(after.messageId, 'focus must not drift to a different element after settling').toBe(last.messageId)
+  return after
 }
 
 async function closeDetail(page: Page) {
