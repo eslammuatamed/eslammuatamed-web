@@ -121,7 +121,27 @@ import { mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 const mode = process.env.FAKE_LHCI_MODE ?? 'ok'
 if (mode === 'fail') process.exit(1)
-if (mode === 'hang') { setTimeout(() => {}, 300000); await new Promise(() => {}) }
+if (mode === 'orphan') {
+  // The scenario a leader-only wait cannot catch: the ROOT exits the instant it is signalled, while
+  // a descendant IGNORES SIGTERM and keeps running. Waiting on the leader would declare teardown
+  // finished over a live group; only a group-wide check plus SIGKILL escalation actually ends it.
+  const { spawn } = await import('node:child_process')
+  const { writeFileSync: wf } = await import('node:fs')
+  const stubborn = spawn(process.execPath,
+    ['-e', 'process.on("SIGTERM", () => {}); setInterval(() => {}, 1000)'], { stdio: 'ignore' })
+  wf(process.env.FAKE_GRANDCHILD_PIDFILE, String(stubborn.pid))
+  process.on('SIGTERM', () => process.exit(143))
+  await new Promise(() => {})
+}
+if (mode === 'hang') {
+  // Stands in for the real tree: npx -> sh -c lhci -> lhci collect -> Chrome. A teardown that only
+  // signals THIS process leaves the grandchild running, which is the defect under test.
+  const { spawn } = await import('node:child_process')
+  const { writeFileSync: wf } = await import('node:fs')
+  const grandchild = spawn(process.execPath, ['-e', 'setInterval(() => {}, 1000)'], { stdio: 'ignore' })
+  wf(process.env.FAKE_GRANDCHILD_PIDFILE, String(grandchild.pid))
+  await new Promise(() => {})
+}
 const profile = process.env.LHCI_PROFILE ?? 'mobile'
 const base = process.env.LH_BASE_URL
 const dir = join('.lighthouseci', profile)
@@ -189,6 +209,7 @@ function runOrchestrator(env = {}, { onData } = {}) {
       // Sandbox-local temp: the certificate assertions must see only THIS run's key material.
       TMPDIR: join(sandbox, 'tmp'),
       FAKE_PREVIEW_PIDFILE: pidfile,
+      FAKE_GRANDCHILD_PIDFILE: join(sandbox, 'grandchild.pid'),
       ...env
     }
   })
@@ -326,47 +347,74 @@ describe('governed orchestrator — failure paths all clean up', () => {
 })
 
 describe('governed orchestrator — interruption', () => {
-  it('27 — SIGTERM during the matrix cleans up and exits 130', async () => {
+  /**
+   * Start a run and signal it only once its matrix child has REALLY started.
+   *
+   * Signalling on the "collecting MOBILE matrix" log line raced the child: the orchestrator prints
+   * that before it spawns `npx`, so the signal could land before the child existed and there would
+   * be no tree to tear down. Waiting for the child's own pidfile is an observable condition, not a
+   * delay.
+   */
+  async function runAndSignal(signal, mode = 'hang') {
     const before = certDirs()
-    let signalled = false
-    const { done } = runOrchestrator({ FAKE_LHCI_MODE: 'hang' }, {
-      onData: (text, child) => {
-        if (!signalled && text.includes('collecting MOBILE matrix')) { signalled = true; child.kill('SIGTERM') }
-      }
-    })
-    const { code, out, pidfile } = await done
-    expect(signalled).toBe(true)
+    const grandchildPid = join(sandbox, 'grandchild.pid')
+    const { child, done } = runOrchestrator({ FAKE_LHCI_MODE: mode })
+    const started = await until(() => existsSync(grandchildPid))
+    expect(started).toBe(true)
+    child.kill(signal)
+    const result = await done
+    return { ...result, before, descendant: Number(readFileSync(grandchildPid, 'utf8')) }
+  }
+
+  it('27 — SIGTERM during the matrix cleans up and exits 130, killing the WHOLE tree', async () => {
+    const { code, out, pidfile, before, descendant } = await runAndSignal('SIGTERM')
     expect(code).toBe(130)
     expect(out).toMatch(/cleanup \(SIGTERM\)/)
     expect(certDirs().filter(d => !before.includes(d))).toHaveLength(0)
     expect(await until(async () => !isAlive(previewPid(pidfile)))).toBe(true)
     expect(await until(() => portIsFree(webPort))).toBe(true)
+
+    // The descendant, not just the root. In the real run this is a headless Chrome holding its own
+    // --user-data-dir; signalling only `npx` left it running.
+    expect(descendant).toBeGreaterThan(0)
+    expect(await until(async () => !isAlive(descendant))).toBe(true)
   }, 60_000)
 
-  it('28 — SIGINT during the matrix cleans up and exits 130', async () => {
-    const before = certDirs()
-    let signalled = false
-    const { done } = runOrchestrator({ FAKE_LHCI_MODE: 'hang' }, {
-      onData: (text, child) => {
-        if (!signalled && text.includes('collecting MOBILE matrix')) { signalled = true; child.kill('SIGINT') }
-      }
-    })
-    const { code, out, pidfile } = await done
+  it('28 — SIGINT during the matrix cleans up and exits 130, killing the WHOLE tree', async () => {
+    const { code, out, pidfile, before, descendant } = await runAndSignal('SIGINT')
     expect(code).toBe(130)
     expect(out).toMatch(/cleanup \(SIGINT\)/)
     expect(certDirs().filter(d => !before.includes(d))).toHaveLength(0)
     expect(await until(async () => !isAlive(previewPid(pidfile)))).toBe(true)
+    expect(await until(async () => !isAlive(descendant))).toBe(true)
   }, 60_000)
 
   it('29 — cleanup is idempotent: a second signal does not re-run teardown or change the exit code', async () => {
-    const { done } = runOrchestrator({ FAKE_LHCI_MODE: 'hang' }, {
-      onData: (text, child) => {
-        if (text.includes('collecting MOBILE matrix')) { child.kill('SIGTERM'); child.kill('SIGTERM') }
-      }
-    })
+    const grandchildPid = join(sandbox, 'grandchild.pid')
+    const { child, done } = runOrchestrator({ FAKE_LHCI_MODE: 'hang' })
+    expect(await until(() => existsSync(grandchildPid))).toBe(true)
+    child.kill('SIGTERM')
+    child.kill('SIGTERM')
     const { code, out } = await done
     expect(code).toBe(130)
-    // The guard means teardown is logged exactly once no matter how many signals arrive.
+    // Teardown is logged exactly once no matter how many signals arrive — and, just as importantly,
+    // every caller AWAITS that one teardown instead of racing past it (see `cleanup`).
     expect(out.match(/\[lighthouse:ci\] cleanup \(/g) ?? []).toHaveLength(1)
+  }, 60_000)
+
+  it('30 — a FAST-EXITING leader does not end teardown while its tree is still alive', async () => {
+    // The exact case a leader-only wait cannot catch: the ROOT exits the instant it is signalled,
+    // while a descendant IGNORES SIGTERM. `npm exec` really does behave this way, so waiting on the
+    // leader would report teardown complete over a live group. Only a group-wide check plus SIGKILL
+    // escalation actually ends it.
+    const { code, out, pidfile, before, descendant } = await runAndSignal('SIGTERM', 'orphan')
+    expect(code).toBe(130)
+    // Escalation genuinely happened: SIGTERM alone did not clear the group.
+    expect(out).toMatch(/escalating to SIGKILL/)
+    expect(descendant).toBeGreaterThan(0)
+    expect(await until(async () => !isAlive(descendant))).toBe(true)
+    expect(certDirs().filter(d => !before.includes(d))).toHaveLength(0)
+    expect(await until(async () => !isAlive(previewPid(pidfile)))).toBe(true)
+    expect(await until(() => portIsFree(webPort))).toBe(true)
   }, 60_000)
 })

@@ -55,22 +55,101 @@ const PORT_TIMEOUT_MS = Number(process.env.LH_PORT_TIMEOUT_MS ?? 120_000)
 
 /** Everything we own, torn down in reverse order exactly once. */
 const owned = { preview: null, proxy: null, cert: null, child: null }
-let cleanedUp = false
+let cleanupPromise = null
 
-async function cleanup(reason) {
-  if (cleanedUp) return
-  cleanedUp = true
+/** Has this child already exited (and been reaped by Node)? */
+const hasExited = child => child.exitCode !== null || child.signalCode !== null
+
+/**
+ * Is any process still in this group?
+ *
+ * Signal 0 performs the permission and existence check without delivering anything, so this asks
+ * the kernel directly rather than inferring liveness from the leader.
+ */
+function groupAlive(pid) {
+  try { process.kill(-pid, 0); return true } catch { return false }
+}
+
+/** Which processes are still in the group — for the warning only, queried BY GROUP, never by name. */
+function groupSurvivors(pid) {
+  try {
+    return execFileSync('ps', ['-o', 'pid=,args=', '-g', String(pid)], { encoding: 'utf8' }).trim()
+  } catch { return '(none reported)' }
+}
+
+/**
+ * Wait until the whole group is gone AND the leader has been reaped. Bounded; false on timeout.
+ *
+ * Waiting on the leader alone is not enough, and that is the subtle part: `npm exec` can exit the
+ * moment it is signalled while `lhci` and Chrome are still running underneath it. Returning then
+ * would declare teardown complete over a live process group.
+ */
+async function waitForGroupGone(child, ms) {
+  const deadline = Date.now() + ms
+  while (Date.now() < deadline) {
+    if (!groupAlive(child.pid) && hasExited(child)) return true
+    await new Promise(r => setTimeout(r, 100))
+  }
+  return false
+}
+
+/**
+ * Terminate a child AND EVERYTHING IT SPAWNED, with bounded escalation.
+ *
+ * Signalling the child alone is not enough, and this was observed rather than theorised: `npx lhci
+ * autorun` is only the root of a tree — `npm exec` → `sh -c lhci` → `lhci autorun` → `lhci collect`
+ * → Chrome. A `SIGTERM` to the root left every descendant running, including a headless Chrome
+ * still holding its own `--user-data-dir`, long after the run was over.
+ *
+ * Children are therefore spawned DETACHED, which makes each one a process-GROUP LEADER, and the
+ * negative PID signals the whole group. Escalation only ever targets that same group — never a
+ * process-name pattern, which could match an unrelated developer process.
+ */
+async function terminateTree(child, label) {
+  if (!child) return
+  if (hasExited(child) && !groupAlive(child.pid)) return
+
+  const signalGroup = signal => {
+    try {
+      process.kill(-child.pid, signal)
+    } catch {
+      // Not a group leader (or already fully reaped) — fall back to the child itself.
+      try { child.kill(signal) } catch { /* already gone */ }
+    }
+  }
+
+  signalGroup('SIGTERM')
+  if (await waitForGroupGone(child, 5000)) return
+
+  console.log(`[lighthouse:ci] ${label} tree still alive after SIGTERM — escalating to SIGKILL`)
+  signalGroup('SIGKILL')
+  if (!await waitForGroupGone(child, 5000)) {
+    console.error(`[lighthouse:ci] WARNING: ${label} tree (group ${child.pid}) survived SIGKILL:\n${groupSurvivors(child.pid)}`)
+  }
+}
+
+/**
+ * Tear everything down exactly once, and let EVERY caller await that one teardown.
+ *
+ * Memoising the promise rather than setting a "done" flag is load-bearing. With a flag, a second
+ * caller returns instantly while the first teardown is still running — and the signal path and the
+ * failure path do both fire, because killing the matrix child is itself what rejects `run()`. The
+ * second caller then reached `process.exit()` mid-teardown and the ephemeral private key survived.
+ */
+function cleanup(reason) {
+  if (cleanupPromise) return cleanupPromise
+  cleanupPromise = doCleanup(reason)
+  return cleanupPromise
+}
+
+async function doCleanup(reason) {
   if (reason) console.log(`\n[lighthouse:ci] cleanup (${reason})`)
-  // The in-flight child (an `lhci` matrix, or the build) goes first: on SIGTERM it would otherwise
-  // outlive this process and keep driving Chrome against a frontend that is being torn down.
-  if (owned.child) {
-    try { owned.child.kill('SIGTERM') } catch { /* already gone */ }
-  }
+  // The in-flight child (an `lhci` matrix, or the build) goes first, as a whole process tree: it
+  // would otherwise outlive this process and keep driving Chrome against a frontend being torn down.
+  await terminateTree(owned.child, 'matrix child')
   try { if (owned.proxy) await owned.proxy.close() } catch { /* best effort */ }
-  if (owned.preview) {
-    // The preview owns a process GROUP (Nitro + Prism); signalling the leader alone orphans children.
-    try { process.kill(-owned.preview.pid, 'SIGTERM') } catch { /* already gone */ }
-  }
+  // The preview owns a process GROUP (Nitro + Prism); signalling the leader alone orphans children.
+  await terminateTree(owned.preview, 'preview')
   for (const port of [WEB_PORT, API_PORT]) {
     try {
       const pid = execFileSync('bash', ['-c',
@@ -83,8 +162,22 @@ async function cleanup(reason) {
   try { owned.cert?.dispose() } catch { /* best effort */ }
 }
 
+/**
+ * Which signal, if any, is tearing this run down.
+ *
+ * Set SYNCHRONOUSLY, before any await, so it is already true by the time killing the matrix child
+ * makes `run()` reject. Without it the two paths race: teardown kills the child, the rejected
+ * promise reaches the failure handler, and `exit(1)` lands before the signal handler's `exit(130)`.
+ * An interrupted run would then be indistinguishable from a real failure.
+ */
+let terminatedBy = null
+
 for (const sig of ['SIGINT', 'SIGTERM']) {
-  process.on(sig, async () => { await cleanup(sig); process.exit(130) })
+  process.on(sig, async () => {
+    terminatedBy = sig
+    await cleanup(sig)
+    process.exit(130)
+  })
 }
 
 /**
@@ -97,7 +190,14 @@ for (const sig of ['SIGINT', 'SIGTERM']) {
  */
 function run(cmd, args, env = {}) {
   return new Promise((resolve, reject) => {
-    const child = spawn(cmd, args, { stdio: 'inherit', env: { ...process.env, ...env } })
+    // `detached: true` makes the child a process-GROUP LEADER. That is what lets teardown signal
+    // the whole tree it goes on to spawn (`npm exec` → `sh -c lhci` → `lhci` → Chrome) with a single
+    // negative-PID signal. Without it, only the root would be signalled and Chrome would be orphaned.
+    //
+    // The trade-off is deliberate: a detached child no longer receives the terminal's Ctrl-C
+    // directly, so teardown MUST kill it explicitly — which is exactly the controlled path
+    // `terminateTree` implements, rather than racing the signal.
+    const child = spawn(cmd, args, { stdio: 'inherit', detached: true, env: { ...process.env, ...env } })
     owned.child = child
     const done = fn => (...a) => { owned.child = null; fn(...a) }
     child.on('error', done(reject))
@@ -291,6 +391,12 @@ async function main() {
 main()
   .then(async () => { await cleanup('success'); console.log('\n✓ governed Lighthouse complete over HTTP/2'); process.exit(0) })
   .catch(async (err) => {
+    // An interruption is not a failure. When a signal is tearing the run down, the child we just
+    // killed rejects here first — reporting that as a build failure, with exit 1, would be a lie.
+    if (terminatedBy) {
+      await cleanup(terminatedBy)
+      process.exit(130)
+    }
     console.error(`\n✗ [lighthouse:ci] ${err.message ?? err}`)
     await cleanup('failure')
     process.exit(1)
