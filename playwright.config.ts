@@ -136,6 +136,13 @@ export default defineConfig({
       // tests within a FILE — so the lane is kept to a SINGLE spec file, which is what actually
       // makes it serial. This is a property of the shared mutable backend, not a flake workaround:
       // nothing is retried anywhere in this config.
+      //
+      // ONE CAVEAT, MEASURED. Playwright groups work by (file, repeatEachIndex), so `--repeat-each`
+      // splits the repeat copies of this file across workers and they then race on the one mutable
+      // backend. Observed: `--repeat-each=3 --workers=2` produced 10 dashboard failures, while the
+      // identical `--repeat-each=3 --workers=1` produced 0 — the difference is interference, not
+      // product behaviour. A repeat sweep over this project must therefore pass `--workers=1`;
+      // the normal `npm run test:e2e` invocation is unaffected because each test runs once.
       fullyParallel: false,
       use: { ...devices['Desktop Chrome'], baseURL: `http://127.0.0.1:${DASHBOARD_PORT}` }
     }

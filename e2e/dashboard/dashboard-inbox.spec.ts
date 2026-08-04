@@ -385,19 +385,25 @@ test.describe('URL contract and detail selection', () => {
     await page.goto('/dashboard/messages')
     await listSettled(page)
 
-    let opened = false
-    for (let i = 0; i < 60 && !opened; i++) {
+    // Tab to the first row opener, then activate it ONCE.
+    //
+    // The activation is deliberately outside the search loop. An earlier version checked
+    // `isVisible()` immediately after Enter, which is an instant read: if the overlay had not
+    // rendered yet the loop tabbed again, focus moved INTO the dialog's focus trap, and no
+    // subsequent Tab could ever land back on a row opener — a self-inflicted race that failed
+    // roughly one run in a hundred and twenty-six. Waiting for the overlay is the assertion.
+    let reached = false
+    for (let i = 0; i < 60 && !reached; i++) {
       await page.keyboard.press('Tab')
-      const onOpener = await page.evaluate(() => {
+      reached = await page.evaluate(() => {
         const el = document.activeElement
         return !!el?.closest('table tbody tr') && el.tagName === 'BUTTON'
       })
-      if (onOpener) {
-        await page.keyboard.press('Enter')
-        opened = await slideover(page).isVisible().catch(() => false)
-      }
     }
-    expect(opened, 'the inbox must be operable with the keyboard alone').toBe(true)
+    expect(reached, 'a row opener must be reachable by Tab alone').toBe(true)
+
+    await page.keyboard.press('Enter')
+    await expect(slideover(page), 'Enter on a focused row opener must open the detail').toBeVisible()
   })
 
   /**
