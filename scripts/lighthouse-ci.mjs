@@ -43,6 +43,7 @@ import process from 'node:process'
 import { assertH2, createEphemeralCert, startH2Proxy } from './lib/h2-proxy.mjs'
 import { assertCleanSourceState, governedBuildEnv, headSha, validateProvenance, writeReportProvenance } from './lib/build-provenance.mjs'
 import { assertCollectionUsedH2, formatProtocolSummary } from './lib/lh-protocol.mjs'
+import { createResourceGuard } from './lib/lifecycle-guard.mjs'
 
 const WEB_PORT = Number(process.env.CI_PREVIEW_PORT ?? 3000)
 const API_PORT = Number(process.env.CI_MOCK_PORT ?? 3001)
@@ -53,8 +54,12 @@ const H2_PORT = Number(process.env.LH_H2_PORT ?? 0)
 // startup-failure path in seconds instead of minutes.
 const PORT_TIMEOUT_MS = Number(process.env.LH_PORT_TIMEOUT_MS ?? 120_000)
 
-/** Everything we own, torn down in reverse order exactly once. */
-const owned = { preview: null, proxy: null, cert: null, child: null }
+/**
+ * Everything we own, torn down in reverse order exactly once, plus the two acquisition guards that
+ * stop startup from creating resources teardown has already finished with. See lib/lifecycle-guard.
+ */
+const guard = createResourceGuard(['preview', 'proxy', 'cert', 'child'])
+const { owned } = guard
 let cleanupPromise = null
 
 /** Has this child already exited (and been reaped by Node)? */
@@ -144,12 +149,15 @@ function cleanup(reason) {
 
 async function doCleanup(reason) {
   if (reason) console.log(`\n[lighthouse:ci] cleanup (${reason})`)
+  // Every release goes through the guard, which disposes each slot exactly once. Startup may be
+  // releasing the same resource concurrently — a socket that finished binding after the signal
+  // arrived, say — and whoever reaches it first wins; the other simply awaits that same disposal.
+  //
   // The in-flight child (an `lhci` matrix, or the build) goes first, as a whole process tree: it
   // would otherwise outlive this process and keep driving Chrome against a frontend being torn down.
-  await terminateTree(owned.child, 'matrix child')
-  try { if (owned.proxy) await owned.proxy.close() } catch { /* best effort */ }
-  // The preview owns a process GROUP (Nitro + Prism); signalling the leader alone orphans children.
-  await terminateTree(owned.preview, 'preview')
+  for (const slot of ['child', 'proxy', 'preview']) {
+    try { await guard.release(slot) } catch { /* best effort */ }
+  }
   for (const port of [WEB_PORT, API_PORT]) {
     try {
       const pid = execFileSync('bash', ['-c',
@@ -159,22 +167,15 @@ async function doCleanup(reason) {
     } catch { /* nothing listening */ }
   }
   // The private key goes last and unconditionally.
-  try { owned.cert?.dispose() } catch { /* best effort */ }
+  try { await guard.release('cert') } catch { /* best effort */ }
 }
-
-/**
- * Which signal, if any, is tearing this run down.
- *
- * Set SYNCHRONOUSLY, before any await, so it is already true by the time killing the matrix child
- * makes `run()` reject. Without it the two paths race: teardown kills the child, the rejected
- * promise reaches the failure handler, and `exit(1)` lands before the signal handler's `exit(130)`.
- * An interrupted run would then be indistinguishable from a real failure.
- */
-let terminatedBy = null
 
 for (const sig of ['SIGINT', 'SIGTERM']) {
   process.on(sig, async () => {
-    terminatedBy = sig
+    // SYNCHRONOUSLY first, before any await: killing the matrix child is itself what makes `run()`
+    // reject, so the failure path must already be able to see that this is an interruption rather
+    // than a real failure — otherwise `exit(1)` lands before this handler's `exit(130)`.
+    guard.beginShutdown(sig)
     await cleanup(sig)
     process.exit(130)
   })
@@ -188,7 +189,12 @@ for (const sig of ['SIGINT', 'SIGTERM']) {
  * answering, and Lighthouse would record `NO_FCP` on every route while looking like a product
  * failure. Observed exactly that before this was made async.
  */
-function run(cmd, args, env = {}) {
+async function run(cmd, args, env = {}) {
+  // The PREVIOUS occupant's tree must be gone before the slot is reused, or its handle would be
+  // overwritten while its descendants were still running and nothing would be left to kill them.
+  // This also stops the desktop matrix starting while the mobile matrix's Chrome still lingers.
+  await guard.release('child')
+
   return new Promise((resolve, reject) => {
     // `detached: true` makes the child a process-GROUP LEADER. That is what lets teardown signal
     // the whole tree it goes on to spawn (`npm exec` → `sh -c lhci` → `lhci` → Chrome) with a single
@@ -198,10 +204,16 @@ function run(cmd, args, env = {}) {
     // directly, so teardown MUST kill it explicitly — which is exactly the controlled path
     // `terminateTree` implements, rather than racing the signal.
     const child = spawn(cmd, args, { stdio: 'inherit', detached: true, env: { ...process.env, ...env } })
-    owned.child = child
-    const done = fn => (...a) => { owned.child = null; fn(...a) }
-    child.on('error', done(reject))
-    child.on('exit', done(code => (code === 0 ? resolve() : reject(new Error(`${cmd} ${args.join(' ')} exited ${code}`)))))
+    // Registered WITH its disposer, so teardown never has to know how to kill it.
+    guard.register('child', child, c => terminateTree(c, 'matrix child'))
+
+    // The slot is deliberately NOT cleared when the leader exits. `npm exec` exits while `lhci` and
+    // Chrome are still running underneath it, so dropping the handle here would discard the only
+    // process-GROUP reference and leave failure cleanup with nothing to terminate — the orphaned
+    // tree would keep its ports and its Chrome. The handle stays until `release()` has confirmed
+    // the whole group is gone.
+    child.on('error', reject)
+    child.on('exit', code => (code === 0 ? resolve() : reject(new Error(`${cmd} ${args.join(' ')} exited ${code}`))))
   })
 }
 
@@ -329,21 +341,29 @@ async function main() {
 
   assertProvenanceAtMeasurementTime(marker)
 
+  guard.assertRunning()
   console.log('[lighthouse:ci] starting Nitro preview + contract mock…')
-  owned.preview = spawn('node', ['scripts/ci-preview.mjs'], {
+  await guard.own('preview', spawn('node', ['scripts/ci-preview.mjs'], {
     stdio: ['ignore', 'inherit', 'inherit'],
     detached: true,
     env: { ...process.env, CI_PREVIEW_PORT: String(WEB_PORT), CI_MOCK_PORT: String(API_PORT) }
-  })
+  }), child => terminateTree(child, 'preview'))
   await waitForPort(WEB_PORT, 'nitro preview')
 
+  guard.assertRunning()
   console.log('[lighthouse:ci] generating ephemeral localhost certificate…')
-  owned.cert = createEphemeralCert()
+  await guard.own('cert', createEphemeralCert(), cert => cert.dispose())
 
+  guard.assertRunning()
   console.log('[lighthouse:ci] starting HTTP/2 frontend…')
-  owned.proxy = await startH2Proxy({
+  // The ONLY genuinely asynchronous acquisition: `startH2Proxy` binds a socket, so a signal can
+  // land while it is still pending and teardown can complete before it resolves. Creation and
+  // ownership are written as two statements rather than nested awaits so that window is explicit —
+  // whatever this resolves to is handed to `own()`, which closes it if teardown has already run.
+  const startedProxy = await startH2Proxy({
     upstreamPort: WEB_PORT, port: H2_PORT, key: owned.cert.key, cert: owned.cert.cert
   })
+  await guard.own('proxy', startedProxy, proxy => proxy.close())
   const origin = owned.proxy.origin
   console.log(`[lighthouse:ci] HTTP/2 frontend: ${origin} -> http://127.0.0.1:${WEB_PORT}`)
 
@@ -393,8 +413,8 @@ main()
   .catch(async (err) => {
     // An interruption is not a failure. When a signal is tearing the run down, the child we just
     // killed rejects here first — reporting that as a build failure, with exit 1, would be a lie.
-    if (terminatedBy) {
-      await cleanup(terminatedBy)
+    if (guard.terminatedBy) {
+      await cleanup(guard.terminatedBy)
       process.exit(130)
     }
     console.error(`\n✗ [lighthouse:ci] ${err.message ?? err}`)

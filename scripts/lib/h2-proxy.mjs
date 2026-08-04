@@ -47,18 +47,29 @@ export function createEphemeralCert() {
   const dir = mkdtempSync(join(tmpdir(), 'lh-h2-cert-'))
   const key = join(dir, 'key.pem')
   const cert = join(dir, 'cert.pem')
-  execFileSync('openssl', [
-    'req', '-x509', '-newkey', 'rsa:2048', '-keyout', key, '-out', cert,
-    '-days', '1', '-nodes', '-subj', '/CN=localhost',
-    '-addext', 'subjectAltName=DNS:localhost,IP:127.0.0.1'
-  ], { stdio: 'pipe' })
 
-  // Chrome's narrow allowance: trust this one public key, not "any bad certificate".
-  const spki = execFileSync('bash', ['-c',
-    `openssl x509 -in '${cert}' -pubkey -noout | openssl pkey -pubin -outform der | openssl dgst -sha256 -binary | openssl enc -base64`
-  ], { encoding: 'utf8' }).trim()
+  // A FAILED generation must not leave the directory behind. `openssl req` writes `key.pem` before
+  // `cert.pem`, so a failure partway through leaves a real PRIVATE KEY on disk — and the caller has
+  // no handle to dispose, because this function never returned one. Observed as empty
+  // `lh-h2-cert-*` directories surviving a test run; the same path with openssl failing later would
+  // have left key material instead.
+  try {
+    execFileSync('openssl', [
+      'req', '-x509', '-newkey', 'rsa:2048', '-keyout', key, '-out', cert,
+      '-days', '1', '-nodes', '-subj', '/CN=localhost',
+      '-addext', 'subjectAltName=DNS:localhost,IP:127.0.0.1'
+    ], { stdio: 'pipe' })
 
-  return { dir, key, cert, spki, dispose: () => rmSync(dir, { recursive: true, force: true }) }
+    // Chrome's narrow allowance: trust this one public key, not "any bad certificate".
+    const spki = execFileSync('bash', ['-c',
+      `openssl x509 -in '${cert}' -pubkey -noout | openssl pkey -pubin -outform der | openssl dgst -sha256 -binary | openssl enc -base64`
+    ], { encoding: 'utf8' }).trim()
+
+    return { dir, key, cert, spki, dispose: () => rmSync(dir, { recursive: true, force: true }) }
+  } catch (error) {
+    rmSync(dir, { recursive: true, force: true })
+    throw error
+  }
 }
 
 /**

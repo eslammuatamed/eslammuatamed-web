@@ -87,7 +87,7 @@ beforeEach(async () => {
   // The REAL orchestrator and the REAL libraries it exercises.
   mkdirSync(join(sandbox, 'scripts', 'lib'), { recursive: true })
   copyFileSync(join(REAL_SCRIPTS, 'lighthouse-ci.mjs'), join(sandbox, 'scripts', 'lighthouse-ci.mjs'))
-  for (const lib of ['h2-proxy.mjs', 'build-provenance.mjs', 'lh-protocol.mjs']) {
+  for (const lib of ['h2-proxy.mjs', 'build-provenance.mjs', 'lh-protocol.mjs', 'lifecycle-guard.mjs']) {
     copyFileSync(join(REAL_SCRIPTS, 'lib', lib), join(sandbox, 'scripts', 'lib', lib))
   }
 
@@ -121,15 +121,40 @@ import { mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 const mode = process.env.FAKE_LHCI_MODE ?? 'ok'
 if (mode === 'fail') process.exit(1)
+if (mode === 'orphan-exit') {
+  // The FAILURE-path shape: the leader exits non-zero straight away while a descendant keeps
+  // running. No signal is involved -- run() simply rejects, and cleanup must still be holding the
+  // process-GROUP handle to kill what was left behind. (No backticks in here: this text lives
+  // inside a template literal, and one would end it.)
+  const { spawn } = await import('node:child_process')
+  const child = spawn(process.execPath, ['-e',
+    'process.on("SIGTERM", () => {});'
+    + ' require("node:fs").writeFileSync(process.env.FAKE_GRANDCHILD_PIDFILE, String(process.pid));'
+    + ' setInterval(() => {}, 1000)'
+  ], { stdio: 'ignore' })
+  // Give the descendant time to install its handler and announce itself before the leader goes.
+  const { existsSync } = await import('node:fs')
+  const deadline = Date.now() + 10000
+  while (!existsSync(process.env.FAKE_GRANDCHILD_PIDFILE) && Date.now() < deadline) {
+    await new Promise(r => setTimeout(r, 50))
+  }
+  void child
+  process.exit(7)
+}
 if (mode === 'orphan') {
   // The scenario a leader-only wait cannot catch: the ROOT exits the instant it is signalled, while
   // a descendant IGNORES SIGTERM and keeps running. Waiting on the leader would declare teardown
   // finished over a live group; only a group-wide check plus SIGKILL escalation actually ends it.
   const { spawn } = await import('node:child_process')
-  const { writeFileSync: wf } = await import('node:fs')
-  const stubborn = spawn(process.execPath,
-    ['-e', 'process.on("SIGTERM", () => {}); setInterval(() => {}, 1000)'], { stdio: 'ignore' })
-  wf(process.env.FAKE_GRANDCHILD_PIDFILE, String(stubborn.pid))
+  // The CHILD writes the pidfile, and only after installing its SIGTERM handler. The parent cannot:
+  // spawn() returns before the child's runtime has started, so a test that signalled as soon as the
+  // parent wrote the file would kill a child that was not yet ignoring SIGTERM — and the scenario
+  // would silently degrade into "everything died on SIGTERM", passing for the wrong reason.
+  spawn(process.execPath, ['-e',
+    'process.on("SIGTERM", () => {});'
+    + ' require("node:fs").writeFileSync(process.env.FAKE_GRANDCHILD_PIDFILE, String(process.pid));'
+    + ' setInterval(() => {}, 1000)'
+  ], { stdio: 'ignore' })
   process.on('SIGTERM', () => process.exit(143))
   await new Promise(() => {})
 }
@@ -137,9 +162,12 @@ if (mode === 'hang') {
   // Stands in for the real tree: npx -> sh -c lhci -> lhci collect -> Chrome. A teardown that only
   // signals THIS process leaves the grandchild running, which is the defect under test.
   const { spawn } = await import('node:child_process')
-  const { writeFileSync: wf } = await import('node:fs')
-  const grandchild = spawn(process.execPath, ['-e', 'setInterval(() => {}, 1000)'], { stdio: 'ignore' })
-  wf(process.env.FAKE_GRANDCHILD_PIDFILE, String(grandchild.pid))
+  // Same reasoning as 'orphan': the child announces itself once it is genuinely running, so the
+  // test never signals a process that has not finished starting.
+  spawn(process.execPath, ['-e',
+    'require("node:fs").writeFileSync(process.env.FAKE_GRANDCHILD_PIDFILE, String(process.pid));'
+    + ' setInterval(() => {}, 1000)'
+  ], { stdio: 'ignore' })
   await new Promise(() => {})
 }
 const profile = process.env.LHCI_PROFILE ?? 'mobile'
@@ -402,16 +430,69 @@ describe('governed orchestrator — interruption', () => {
     expect(out.match(/\[lighthouse:ci\] cleanup \(/g) ?? []).toHaveLength(1)
   }, 60_000)
 
+  it('31 — a signal during STARTUP leaves no certificate, process or bound port behind', async () => {
+    // END-TO-END SANITY ONLY. This asserts an OUTCOME — nothing leaked — which is also true when
+    // the run simply aborted before creating anything, the common case. It therefore does NOT prove
+    // the mid-creation disposal path ran; `lifecycle-guard.spec.mjs` drives that race directly,
+    // because the window is milliseconds wide inside one specific await.
+    const before = certDirs()
+    let signalled = false
+    const { done } = runOrchestrator({ FAKE_LHCI_MODE: 'hang' }, {
+      onData: (text, child) => {
+        if (!signalled && text.includes('starting Nitro preview')) { signalled = true; child.kill('SIGTERM') }
+      }
+    })
+    const { code, pidfile } = await done
+    expect(signalled).toBe(true)
+    expect(code).toBe(130)
+
+    // No key material survives, whichever side of the race the signal landed on.
+    expect(certDirs().filter(d => !before.includes(d))).toHaveLength(0)
+    // Nor a preview, if startup got far enough to spawn one.
+    if (existsSync(pidfile)) {
+      expect(await until(async () => !isAlive(previewPid(pidfile)))).toBe(true)
+    }
+    expect(await until(() => portIsFree(webPort))).toBe(true)
+    expect(await until(() => portIsFree(apiPort))).toBe(true)
+  }, 60_000)
+
+  it('32 — FAILURE PATH: a leader that exits non-zero still has its orphaned tree killed', async () => {
+    // No signal here. `npm exec` exits while `lhci` and Chrome keep running, `run()` rejects, and
+    // failure cleanup must still hold the process-GROUP handle. Dropping it on the leader's exit
+    // left Chrome and its ports behind with nothing able to terminate them.
+    const before = certDirs()
+    const grandchildPid = join(sandbox, 'grandchild.pid')
+    const { done } = runOrchestrator({ FAKE_LHCI_MODE: 'orphan-exit' })
+    const { code, out, pidfile } = await done
+
+    expect(code).toBe(1) // a real failure, not an interruption
+    expect(out).toMatch(/exited 7/)
+
+    const descendant = Number(readFileSync(grandchildPid, 'utf8'))
+    expect(Number.isFinite(descendant)).toBe(true)
+    expect(descendant).toBeGreaterThan(0)
+    // Killed via the retained group handle, escalating because it ignores SIGTERM.
+    expect(out).toMatch(/escalating to SIGKILL/)
+    expect(await until(async () => !isAlive(descendant))).toBe(true)
+
+    expect(certDirs().filter(d => !before.includes(d))).toHaveLength(0)
+    expect(await until(async () => !isAlive(previewPid(pidfile)))).toBe(true)
+    expect(await until(() => portIsFree(webPort))).toBe(true)
+  }, 60_000)
+
   it('30 — a FAST-EXITING leader does not end teardown while its tree is still alive', async () => {
     // The exact case a leader-only wait cannot catch: the ROOT exits the instant it is signalled,
     // while a descendant IGNORES SIGTERM. `npm exec` really does behave this way, so waiting on the
     // leader would report teardown complete over a live group. Only a group-wide check plus SIGKILL
     // escalation actually ends it.
     const { code, out, pidfile, before, descendant } = await runAndSignal('SIGTERM', 'orphan')
+    // Assert the fixture is real BEFORE asserting on behaviour: a test whose stubborn descendant
+    // never started would "pass" the interesting assertion for the wrong reason.
+    expect(Number.isFinite(descendant)).toBe(true)
+    expect(descendant).toBeGreaterThan(0)
     expect(code).toBe(130)
     // Escalation genuinely happened: SIGTERM alone did not clear the group.
     expect(out).toMatch(/escalating to SIGKILL/)
-    expect(descendant).toBeGreaterThan(0)
     expect(await until(async () => !isAlive(descendant))).toBe(true)
     expect(certDirs().filter(d => !before.includes(d))).toHaveLength(0)
     expect(await until(async () => !isAlive(previewPid(pidfile)))).toBe(true)

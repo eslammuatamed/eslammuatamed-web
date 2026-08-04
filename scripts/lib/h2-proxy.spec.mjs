@@ -1,7 +1,8 @@
 import http from 'node:http'
 import http2 from 'node:http2'
 import { execFileSync } from 'node:child_process'
-import { existsSync, readFileSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { brotliCompressSync, gzipSync } from 'node:zlib'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { assertH2, createEphemeralCert, startH2Proxy } from './h2-proxy.mjs'
@@ -97,9 +98,11 @@ describe('HTTP/2 frontend — protocol', () => {
     expect(r.headers[':status']).toBe(200)
   })
 
-  it('3 — HTTP/1.1 is refused, never silently accepted', async () => {
-    // `allowHTTP1: false` means an HTTP/1.1 client cannot complete a request. If this ever starts
-    // succeeding, the gate has quietly returned to measuring the wrong protocol.
+  it('3 — a plaintext HTTP/1.1 client cannot reach the TLS frontend', async () => {
+    // NOT a claim that the socket refuses HTTP/1.1 — it deliberately does not (`allowHTTP1: true`,
+    // because refusing it hung Nitro's chunked responses). What this pins is narrower and still
+    // useful: a plaintext request to a TLS port fails. The real guarantee that the MEASUREMENT used
+    // h2 lives in `lh-protocol.mjs`, which reads Chrome's own network record.
     await expect(new Promise((resolve, reject) => {
       const req = http.request({
         host: '127.0.0.1', port: proxy.port, path: '/', method: 'GET',
@@ -233,9 +236,12 @@ describe('certificate and cleanup', () => {
     c.dispose()
   })
 
-  it('16 — certificate generation FAILS LOUDLY when openssl is unavailable', () => {
-    // Without this, a missing openssl would surface as an unreadable key file much later, inside
-    // TLS setup, where the cause is far less obvious.
+  it('16 — certificate generation FAILS LOUDLY when openssl is unavailable, and LEAVES NOTHING BEHIND', () => {
+    // Without the loud failure, a missing openssl would surface as an unreadable key file much
+    // later, inside TLS setup, where the cause is far less obvious. And without the cleanup, the
+    // temp directory survives — `openssl req` writes key.pem before cert.pem, so a failure partway
+    // through would strand a real private key that the caller was never given a handle to dispose.
+    const dirsBefore = readdirSync(tmpdir()).filter(n => n.startsWith('lh-h2-cert-'))
     const realPath = process.env.PATH
     try {
       process.env.PATH = '/nonexistent'
@@ -243,6 +249,8 @@ describe('certificate and cleanup', () => {
     } finally {
       process.env.PATH = realPath
     }
+    const dirsAfter = readdirSync(tmpdir()).filter(n => n.startsWith('lh-h2-cert-'))
+    expect(dirsAfter.filter(d => !dirsBefore.includes(d))).toHaveLength(0)
   })
 
   it('17 — a generated certificate covers localhost AND 127.0.0.1, which is the origin Chrome is given', () => {
