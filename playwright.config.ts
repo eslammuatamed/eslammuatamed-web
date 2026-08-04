@@ -52,6 +52,14 @@ const READINESS_API_PORT = Number(process.env.CI_READINESS_MOCK_PORT ?? 3201)
 const RESUME_PDF_PORT = Number(process.env.CI_RESUME_PDF_PORT ?? 3300)
 const RESUME_PDF_API_PORT = Number(process.env.CI_RESUME_PDF_MOCK_PORT ?? 3301)
 
+// The Dashboard Inbox lane (012). Its own preview + backend pair for a reason the other lanes do not
+// have: this backend is MUTABLE (a PATCH changes what the next GET returns), which is required to
+// prove that the list and the unread badge follow CONFIRMED server state. Its project therefore runs
+// SERIALLY — see `fullyParallel: false` on the project below — while every other lane keeps running
+// in parallel, because mutable state is confined to this process.
+const DASHBOARD_PORT = Number(process.env.CI_DASHBOARD_PORT ?? 3500)
+const DASHBOARD_API_PORT = Number(process.env.CI_DASHBOARD_MOCK_PORT ?? 3501)
+
 // Fail with an actionable message instead of a connection-refused timeout 90 s later. `ci-preview.mjs`
 // boots `.output/server/index.mjs` directly, so a missing build is a setup mistake, not a test failure.
 if (!existsSync('.output/server/index.mjs')) {
@@ -101,7 +109,7 @@ export default defineConfig({
   projects: [
     {
       name: 'contract',
-      testIgnore: ['scenarios/**', 'readiness/**', 'resume-pdf/**'],
+      testIgnore: ['scenarios/**', 'readiness/**', 'resume-pdf/**', 'dashboard/**'],
       use: { ...devices['Desktop Chrome'], baseURL: `http://127.0.0.1:${CONTRACT_PORT}` }
     },
     {
@@ -118,6 +126,18 @@ export default defineConfig({
       name: 'resume-pdf',
       testMatch: 'resume-pdf/**/*.spec.ts',
       use: { ...devices['Desktop Chrome'], baseURL: `http://127.0.0.1:${RESUME_PDF_PORT}` }
+    },
+    {
+      name: 'dashboard',
+      testMatch: 'dashboard/**/*.spec.ts',
+      // SERIAL, unlike every other project here. Its backend holds mutable state that each test
+      // resets, so concurrent tests would reset each other's fixtures mid-assertion. `workers` is a
+      // TOP-LEVEL option and cannot be set per project, and `fullyParallel: false` only serialises
+      // tests within a FILE — so the lane is kept to a SINGLE spec file, which is what actually
+      // makes it serial. This is a property of the shared mutable backend, not a flake workaround:
+      // nothing is retried anywhere in this config.
+      fullyParallel: false,
+      use: { ...devices['Desktop Chrome'], baseURL: `http://127.0.0.1:${DASHBOARD_PORT}` }
     }
   ],
 
@@ -125,6 +145,7 @@ export default defineConfig({
     previewServer('prism', CONTRACT_PORT, CONTRACT_API_PORT),
     previewServer('scenarios', SCENARIO_PORT, SCENARIO_API_PORT),
     previewServer('about-readiness', READINESS_PORT, READINESS_API_PORT),
-    previewServer('resume-pdf', RESUME_PDF_PORT, RESUME_PDF_API_PORT)
+    previewServer('resume-pdf', RESUME_PDF_PORT, RESUME_PDF_API_PORT),
+    previewServer('dashboard', DASHBOARD_PORT, DASHBOARD_API_PORT)
   ]
 })

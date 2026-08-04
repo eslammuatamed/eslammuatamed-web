@@ -55,14 +55,46 @@ const busyId = ref<string | null>(null)
 const copyState = ref<'idle' | 'ok' | 'fail'>('idle')
 
 /**
- * The selected message is looked up in the loaded page rather than fetched — list rows already
- * carry the full body (owner decision 3), so a detail request would re-download what is on screen.
+ * The message the reader currently has OPEN, retained across list refreshes.
+ *
+ * WHY A SNAPSHOT IS REQUIRED. Opening an unread message auto-marks it read, and a confirmed
+ * mutation refreshes the list. The list is ordered unread-first, so the message the reader just
+ * opened is re-sorted behind every remaining unread one — and on any inbox with more than one page
+ * of unread mail that pushes it clean off the current page. Resolving `selected` from `items` alone
+ * then yielded `null`, `detailOpen` flipped false, and the detail CLOSED ITSELF a few hundred
+ * milliseconds after opening while `?message=` still named it: the URL and the page disagreeing,
+ * which is exactly what the canonical query schema exists to prevent.
+ *
+ * The snapshot is keyed to the selected id and cleared when the selection clears, so it can never
+ * resurrect a detail the reader has closed, and it is always overwritten by the fresher list copy
+ * whenever the message IS on the page.
  */
-const selected = computed(() => items.value.find(m => m.id === selectedId.value) ?? null)
+const selectedSnapshot = ref<ContactMessage | null>(null)
 
 /**
- * A selection that is not on this page is STALE, not an error: the message may have been archived,
- * purged by retention, or linked from a different page. Non-destructive notice, list stays usable.
+ * The selected message is looked up in the loaded page rather than fetched — list rows already
+ * carry the full body (owner decision 3), so a detail request would re-download what is on screen.
+ * The snapshot above covers the one case the page cannot answer: a message that left this page as a
+ * consequence of its own mutation.
+ */
+const selectedInPage = computed(() => items.value.find(m => m.id === selectedId.value) ?? null)
+const selected = computed(() => {
+  if (selectedInPage.value) return selectedInPage.value
+  const held = selectedSnapshot.value
+  return held && held.id === selectedId.value ? held : null
+})
+
+watch(selectedInPage, (message) => {
+  if (message) selectedSnapshot.value = message
+})
+watch(selectedId, (id) => {
+  if (id === null) selectedSnapshot.value = null
+})
+
+/**
+ * A selection that is not on this page AND was never opened here is STALE, not an error: the message
+ * may have been archived, purged by retention, or linked from a different page. Non-destructive
+ * notice, list stays usable.
  */
 const staleSelection = computed(() => selectedId.value !== null && selected.value === null && !pending.value)
 

@@ -75,6 +75,15 @@ const BACKENDS = {
     command: process.execPath,
     args: () => ['scripts/e2e/scenario-server.ts'],
     env: { E2E_RESUME_STATE: 'pdf' }
+  },
+  // Feature 012. A DIFFERENT server, not another variant of the scenario one: the Dashboard lane
+  // needs MUTABLE state (a PATCH must change what the next GET returns), and `scenario-server.ts`
+  // is deliberately stateless so its own lanes can run `fullyParallel` with no reset hook. Keeping
+  // the mutable surface in its own process preserves that invariant instead of trading it away.
+  dashboard: {
+    label: 'dashboard backend (Feature 012, mutable)',
+    command: process.execPath,
+    args: () => ['scripts/e2e/dashboard-server.ts']
   }
 }
 
