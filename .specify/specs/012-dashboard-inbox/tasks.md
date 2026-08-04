@@ -1,9 +1,11 @@
 # Feature 012 — Tasks
 
-**Status: IN IMPLEMENTATION to the visual-review gate.** The doc 20 budget decision **D20-23** is
-merged (Docs `main` `4704475`), so Phase A is closed and no owner decision blocks implementation.
-The next owner gate is the **visual review**, before the full Lighthouse / repeat-flake / final CI
-matrix.
+**Status: IMPLEMENTATION COMPLETE — in final release verification.** The doc 20 budget class and
+measurement method (**D20-23**, Docs `4704475`) and the superseding two-tier ceiling (**D20-24**,
+Docs `d77f414` — **300 KB gz quality target / 320 KB gz hard release ceiling**) are both merged, as
+is the Dashboard validation boundary (**D11-7**, same Docs SHA). No owner decision blocks this
+slice. `/dashboard/messages` measures **295.5 KB gz**, below the quality target and therefore green
+without a warning. The remaining gate is the **final release matrix**; PR #33 stops before merge.
 
 ## Phase A — gates before code (CLOSED)
 
@@ -85,14 +87,16 @@ matrix.
 - [x] T069d Canonical Zod route-query schema for `view` / `page` / `message`; total, pure, no URL rewrite
 - [x] T069e `isMessagesView` deleted — one validator, not two
 - [x] T069f Login form audited: already `UForm` + `UFormField` + Zod with typed `z.output` — no gap
-- [ ] T069g **BLOCKED** — `/dashboard/messages` 295.5 KB gz exceeds the D20-23 280 KB ceiling (UCard +0.4, Zod +17.4). Owner decision required on a Dashboard-only threshold
-- [ ] T069h Propose the doc 11 §4 amendment covering route/query parsing (currently forms-only)
+- [x] T069g **RESOLVED by D20-24** (Docs `d77f414`) — the 280 KB ceiling is superseded by a 300 KB gz quality target / 320 KB gz hard ceiling. `/dashboard/messages` measures **295.5 KB gz (302,582 B)**: below the quality target, green **without** a warning. Neither `UCard` nor regular Zod was reverted
+- [x] T069h **APPLIED as D11-7** (Docs `d77f414`) — doc 11 gains §4.1 covering route/query parsing with regular Zod, recorded as clarifying a gap rather than changing the approved form rule
+- [x] T069i Two-tier gate implemented — `dashboardTotalVerdict` (PASS/WARN/FAIL) with the six-part D20-24 attribution block on WARN, plus dashboard breach detail that the public loop never printed
+- [x] T069j Warn/block bands covered by unit tests (exact-byte boundaries at 300 KB and 320 KB), since neither band executes on a green run at this head
 
 ## Phase H — budgets, isolation, a11y
 
 - [ ] T070 Implement the D20-23 closure (**seed, then static closure** — never expand the entry's `dynamicImports` route map); add `/dashboard`, `/dashboard/login`, `/dashboard/messages`
 - [ ] T070a **Trust gate:** reproduce the `76f8fa6` ground truths (`/dashboard` ≈ 206.2, `/dashboard/login` ≈ 223.2 KB gz) and prove via a synthetic chunk-graph fixture that a dashboard-only chunk raises the dashboard closure while public closures stay unchanged. **Do not continue if the measurement is not trustworthy.**
-- [ ] T071 Assert the D20-23 class (≤ 280 KB gz / ≤ 101 KiB / ≤ 30 KB gz); re-measure every public route against frozen ceilings; record the exact router-manifest delta
+- [ ] T071 Assert the dashboard class — total JS **≤ 300 KB gz quality target / ≤ 320 KB gz hard ceiling** (D20-24), app-owned **≤ 101 KiB**, CSS **≤ 30 KB gz** (both unchanged from D20-23); re-measure every public route against frozen ceilings; record the exact router-manifest delta
 - [ ] T072 `check-forbidden-modules.mjs` — no Markdown/editor weight in any client chunk
 - [ ] T073 Confirm table code stays in a dynamic chunk, absent from entry/static chunks
 - [ ] T074 Full axe pass incl. 200 % zoom, reduced motion, long Arabic/mixed-language content

@@ -2,12 +2,15 @@ import { describe, expect, it } from 'vitest'
 import {
   APP_BASELINE_MAX_BYTES,
   BUDGET,
+  DASHBOARD_ACCEPTED_BASELINE_BYTES,
+  DASHBOARD_BUDGET,
   KB,
   approvedAppLimitBytes,
   attributeRenderedBytes,
   budgetVerdict,
   classifyModuleId,
   collectRouteAssets,
+  dashboardTotalVerdict,
   kb,
   vendorPackage
 } from './route-assets.mjs'
@@ -429,5 +432,94 @@ describe('app-owned budget boundaries — inclusive, exact bytes', () => {
   it('passes the recorded 138cef5 worst route with the approved headroom', () => {
     expect(budgetVerdict(APP_BASELINE_MAX_BYTES, LIMIT)).toBe('PASS')
     expect(LIMIT - APP_BASELINE_MAX_BYTES).toBe(14_223)
+  })
+})
+
+/**
+ * The D20-24 two-tier dashboard ceiling.
+ *
+ * These bands are the reason the ceiling could be raised at all, and the WARN band is the one that
+ * will not execute on a normal green run — `/dashboard/messages` sits at 295.5 KB gz, below the
+ * 300 KB target — so without these tests the warning path would ship unexercised and be reported as
+ * green. Every boundary is asserted on the exact byte, because "≤" is the whole contract.
+ */
+describe('dashboardTotalVerdict — doc 20 §1.1 two-tier ceiling (D20-24)', () => {
+  const TARGET = DASHBOARD_BUDGET.totalJsQualityTargetBytes
+  const CEILING = DASHBOARD_BUDGET.totalJsCeilingBytes
+
+  it('pins both documented tiers', () => {
+    expect(TARGET).toBe(300 * KB)
+    expect(CEILING).toBe(320 * KB)
+  })
+
+  it('no longer exposes a single-value total budget that a caller could read as the ceiling', () => {
+    // A lone `totalJsBytes` on a two-tier policy is how a caller silently enforces the wrong tier.
+    expect(DASHBOARD_BUDGET.totalJsBytes).toBeUndefined()
+  })
+
+  it.each([
+    ['far below the quality target', 1, 'PASS'],
+    ['one byte below the quality target', TARGET - 1, 'PASS'],
+    ['exactly at the quality target', TARGET, 'PASS'],
+    ['one byte above the quality target', TARGET + 1, 'WARN'],
+    ['mid-warning band', TARGET + (CEILING - TARGET) / 2, 'WARN'],
+    ['one byte below the hard ceiling', CEILING - 1, 'WARN'],
+    ['exactly at the hard ceiling', CEILING, 'WARN'],
+    ['one byte above the hard ceiling', CEILING + 1, 'FAIL'],
+    ['far above the hard ceiling', CEILING * 2, 'FAIL']
+  ])('%s → %s', (_label, bytes, expected) => {
+    expect(dashboardTotalVerdict(bytes)).toBe(expected)
+  })
+
+  it('treats the warning band as passing, not as a breach', () => {
+    // The distinction the exit-code contract depends on: WARN must never reach the breach path.
+    expect(dashboardTotalVerdict(TARGET + 1)).not.toBe('FAIL')
+    expect(dashboardTotalVerdict(CEILING)).not.toBe('FAIL')
+  })
+
+  it('keeps the app-owned and CSS limits unchanged — only the total ceiling moved', () => {
+    expect(DASHBOARD_BUDGET.appRenderedBytes).toBe(BUDGET.appRenderedBytes)
+    expect(DASHBOARD_BUDGET.appRenderedBytes).toBe(101 * KB)
+    expect(DASHBOARD_BUDGET.cssBytes).toBe(BUDGET.cssBytes)
+    expect(DASHBOARD_BUDGET.cssBytes).toBe(30 * KB)
+  })
+
+  it('does not disturb the public total budget', () => {
+    // D20-24 changes a dashboard number only. A public regression here is the failure that would
+    // matter most and is the easiest to introduce by editing the shared module.
+    expect(BUDGET.totalJsBytes).toBe(250 * KB)
+  })
+
+  it('classifies the measured routes at Web 80ee17ba as recorded in D20-24', () => {
+    expect(dashboardTotalVerdict(250_011)).toBe('PASS') // /dashboard/login   244.2 KB gz
+    expect(dashboardTotalVerdict(223_553)).toBe('PASS') // /dashboard         218.3 KB gz
+    expect(dashboardTotalVerdict(302_582)).toBe('PASS') // /dashboard/messages 295.5 KB gz
+  })
+
+  it('would have warned, not blocked, had the zod/mini variant shipped', () => {
+    // ≈290.3 KB gz — under the new target, and the measurement that showed the old 280 KB ceiling
+    // could not have been met by that substitution either.
+    expect(dashboardTotalVerdict(Math.round(290.3 * KB))).toBe('PASS')
+  })
+})
+
+describe('DASHBOARD_ACCEPTED_BASELINE_BYTES — reporting input, never a gate', () => {
+  it('records the accepted baselines measured at Web 80ee17ba', () => {
+    expect(DASHBOARD_ACCEPTED_BASELINE_BYTES['/dashboard/login']).toBe(250_011)
+    expect(DASHBOARD_ACCEPTED_BASELINE_BYTES['/dashboard']).toBe(223_553)
+    expect(DASHBOARD_ACCEPTED_BASELINE_BYTES['/dashboard/messages']).toBe(302_582)
+  })
+
+  it('every recorded baseline is itself within the hard ceiling', () => {
+    // A baseline above the ceiling would mean an accepted-but-blocking figure was recorded.
+    for (const bytes of Object.values(DASHBOARD_ACCEPTED_BASELINE_BYTES)) {
+      expect(dashboardTotalVerdict(bytes)).not.toBe('FAIL')
+    }
+  })
+
+  it('has no entry for an unmeasured route, so an absent baseline stays absent', () => {
+    // The warning block must report "no accepted baseline" rather than invent one — an invented
+    // baseline makes a real regression look like a first measurement.
+    expect(DASHBOARD_ACCEPTED_BASELINE_BYTES['/dashboard/settings']).toBeUndefined()
   })
 })

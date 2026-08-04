@@ -10,7 +10,8 @@ dashboard route).
 (`openapi.json` `3347f6253d2b…`). **No contract change** — the Web already carries this exact
 `openapi/openapi.json`, so **no doc 16 §3 adoption commit is required**.
 **Governed by:** doc 02 (FR-DSH-060), doc 04 (IA), doc 05 (F-D5), doc 11 §1/§2/§3, doc 13,
-doc 19 §6, doc 21, and **doc 20 v1.16.0 §1.1–§1.3 / D20-23** (authenticated dashboard budgets),
+doc 19 §6, doc 21, **doc 20 v1.17.0 §1.1–§1.3 / D20-23 + D20-24** (authenticated dashboard budgets;
+D20-24 supersedes D20-23's ceiling), **doc 11 v1.2.0 §4.1 / D11-7** (Dashboard validation boundary),
 merged to Docs `main` **`470447501363fbc733e2833ec8b9b0275dbbce72`**.
 
 ## 1. Why this slice exists
@@ -131,17 +132,31 @@ history · real-time / sockets · WhatsApp on a visitor number · delete · any 
 dashboard chrome · All/Unread/Read filters · an API permission-list endpoint · issue #30 · Skills
 taxonomy · promotion to `main` · deployment.
 
-## 9. Route budget — governed by D20-23
+## 9. Route budget — governed by D20-23, ceiling per D20-24
 
-**Governed, not proposed.** Doc 20 **v1.16.0 §1.1–§1.3 (D20-23)** is merged to Docs `main`
-`4704475`. This slice implements it.
+**Governed, not proposed.** Doc 20 **§1.1–§1.3** is merged to Docs `main`. The budget **class and
+measurement method** come from **D20-23** (Docs `4704475`); the **total-JS ceiling** is superseded by
+**D20-24** (Docs **`d77f414`**, doc 20 **v1.17.0**), which replaces the single 280 KB gz number with a
+two-tier policy. Everything else in D20-23 is unchanged.
 
 | Budget (per measured dashboard route) | Limit |
 |---|---|
-| Total initial JavaScript | **≤ 280 KB gz** |
+| Total initial JavaScript — **quality target / warning boundary** | **≤ 300 KB gz** (D20-24) |
+| Total initial JavaScript — **hard release ceiling** | **≤ 320 KB gz** (D20-24, release-blocking) |
 | App-owned Rollup rendered bytes | **≤ 101 KiB (103,424 B)** |
 | CSS | **≤ 30 KB gz** |
 | Dashboard ↔ public isolation | **Mandatory, release-blocking** |
+
+**The two tiers behave differently.** At or below 300 KB gz is an ordinary green result. Above
+300 KB gz and at or below 320 KB gz **still passes**, but is never reported as ordinary green — CI
+output and the verification report must both carry exact route size, delta from the previous
+accepted baseline, framework/vendor attribution, app-owned attribution, newly introduced
+components/dependencies, and public-isolation confirmation. Above 320 KB gz is **release-blocking**
+and requires owner review with attribution; the ceiling is never raised automatically.
+
+**Forbidden as a means of fitting under the quality target:** removing required Nuxt UI components,
+replacing regular Zod with `zod/mini`, or building bespoke lower-maintenance alternatives to
+standard Dashboard primitives.
 
 Measured routes: `/dashboard/login`, `/dashboard`, `/dashboard/messages`.
 
@@ -172,7 +187,9 @@ Every decision that previously blocked this slice is resolved:
 
 | Was blocking | Resolution |
 |---|---|
-| Dashboard budget class + method | **D20-23 merged** (Docs `4704475`) — 280 KB gz / 101 KiB / 30 KB gz + closure method |
+| Dashboard budget class + method | **D20-23 merged** (Docs `4704475`) — class, 101 KiB app-owned, 30 KB gz CSS, isolation + closure method |
+| Dashboard total-JS ceiling | **D20-24 merged** (Docs `d77f414`) — supersedes 280 KB gz with **300 KB gz quality target / 320 KB gz hard ceiling** |
+| Dashboard validation standard | **D11-7 merged** (Docs `d77f414`) — regular Zod for forms **and** route/query parsing; `zod/mini` rejected as the Dashboard default |
 | `/projects` public headroom | **Accepted** for this slice; 250 KB not raised; `/projects` is the watch route |
 | Shell scope | **Durable shell**, initial destinations Overview + Communication → Messages only |
 | Role gating | **No role inference**; Messages visible to any authenticated session; 403 renders forbidden |
@@ -181,17 +198,34 @@ Every decision that previously blocked this slice is resolved:
 | Retention wording | Exact string, **in the Archived view only** (§6 of `plan.md`) |
 | Detail request | **None** while list rows carry the full body |
 
-### §11 — outstanding after the Nuxt UI / Zod architecture review
+### §11 — Nuxt UI / Zod architecture review: RESOLVED
 
-1. **`/dashboard/messages` exceeds the D20-23 280 KB gz ceiling: 295.5 KB.** Attribution is exact —
-   `UCard` **+0.4 KB**, the Zod route-query schema **+17.4 KB**. Public routes, CSS and isolation are
-   unaffected. The owner directed that neither approved architecture choice be reverted for budget
-   pressure, so the breach stands pending a Dashboard-only threshold decision.
-2. **Proposed docs-first amendment (not applied):** doc 11 §4 currently mandates Zod for **forms**
-   only. Route/query parsing with Zod is a genuine extension of scope and should be recorded there
-   rather than living only in this feature. Smallest change: one bullet in doc 11 §4.
-3. **`zod/mini` measured as an option:** 290.3 KB — 5.2 KB cheaper, still over 280, and materially
-   less ergonomic (`z.catch(z.pipe(z.transform(…), …))` instead of chained `.catch()`). Recorded so
-   the trade-off is priced, not assumed.
+All three items previously outstanding here are closed by the owner decision of 2026-08-04 and the
+Docs merge at `d77f414`.
 
-**No other owner decision blocks implementation.**
+1. **Dashboard budget threshold — RESOLVED by D20-24.** The former 280 KB gz ceiling is superseded
+   by a **300 KB gz quality target** and a **320 KB gz hard release ceiling**. `/dashboard/messages`
+   measures **295.5 KB gz (302,582 B)** — **below the quality target**, therefore green **without a
+   warning**. Attribution remains exact: baseline **277.7 KB gz**, `UCard` **≈ +0.4 KB gz**, regular
+   Zod **≈ +17.4 KB gz**. The owner's direction that neither approved architecture choice be
+   reverted for budget pressure is now written into doc 20 as a standing prohibition.
+2. **Doc 11 §4 amendment — APPLIED as D11-7.** Doc 11 gains **§4.1**, extending regular Zod from
+   forms to **route/query parsing and normalization**: one canonical schema per governed query
+   contract, typed normalized output, deterministic malformed-input handling that cannot create
+   navigation loops. Generated API types remain the compile-time response contract; responses are
+   not blanket-duplicated as schemas. Recorded as **clarifying a gap**, not changing the approved
+   form standard.
+3. **`zod/mini` — PRICED AND REJECTED.** 290.3 KB gz, only 5.2 KB cheaper, **still over the former
+   280 KB ceiling** (so it never solved the problem it was proposed for) and materially less
+   ergonomic (`z.catch(z.pipe(z.transform(…), …))` instead of chained `.catch()`). Rejected by the
+   owner as the Dashboard default; `zod` and `zod/mini` must not be mixed without a later explicit
+   decision (D11-7).
+
+**Current architecture, as approved and shipped:**
+
+- `UCard` is the mobile message-card container; the desktop `UTable` is unchanged.
+- Regular Zod (`import * as z from 'zod'`) is the Dashboard validation standard.
+- The canonical Messages route-query schema lives in **`app/utils/messages-query.ts`**.
+- Generated API types remain the API response contract.
+
+**No owner decision blocks this slice. The final release matrix is the remaining gate.**

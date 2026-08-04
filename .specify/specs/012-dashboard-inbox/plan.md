@@ -181,7 +181,8 @@ artificial schema.
 
 - `UTable`, `UPagination` and `USlideover` are reached only from dashboard routes, which are `ssr: false` and code-split — measured landing in a `isDynamicEntry: true` chunk, absent from every static/entry chunk.
 - `check-forbidden-modules.mjs` continues to prove no editor/Markdown weight reaches any client chunk.
-- The dashboard route budget (spec §9) is **blocked on the owner decision** and is not silently assumed.
+- The dashboard route budget (spec §9) is **governed and measured**, not assumed: class and closure method from **D20-23**, two-tier ceiling from **D20-24** (Docs `d77f414`) — **≤ 300 KB gz quality target / ≤ 320 KB gz hard release ceiling**. Measured at this head: `/dashboard/messages` **295.5 KB gz**, below the quality target, green without a warning.
+- The gate implements both tiers in one place (`dashboardTotalVerdict`, `scripts/lib/route-assets.mjs`): `PASS` / `WARN` / `FAIL`, where `WARN` exits 0 but prints the six-part D20-24 attribution block. The warning band cannot execute on a normal green run at this head, so it is covered by dedicated unit tests rather than shipped unexercised.
 
 ## 11. Accessibility
 
