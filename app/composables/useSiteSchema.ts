@@ -20,7 +20,7 @@ export function useSiteSchema(
     }),
     definePerson({
       name: settings.value?.siteName ?? t('brand.name'),
-      jobTitle: settings.value?.tagline ?? t('brand.role'),
+      jobTitle: singleLineTitle(settings.value?.tagline ?? t('brand.role')),
       sameAs: (settings.value?.profileLinks ?? []).map(link => link.url),
       knowsAbout: (skills.value ?? []).map(skill => skill.label)
     })

@@ -1822,7 +1822,7 @@ export interface components {
             /** @example TypeScript */
             label: string;
             /** @enum {string} */
-            group: "LANGUAGE" | "FRAMEWORK" | "TOOLING" | "PRACTICE";
+            group: "LANGUAGE" | "FRONTEND" | "BACKEND" | "DELIVERY";
             /** @example 1 */
             order: number;
             /** @example #3178C6 */
@@ -1843,10 +1843,12 @@ export interface components {
             /** Format: uuid */
             id: string;
             /** @enum {string} */
-            group: "LANGUAGE" | "FRAMEWORK" | "TOOLING" | "PRACTICE";
+            group: "LANGUAGE" | "FRONTEND" | "BACKEND" | "DELIVERY";
             /** @example 1 */
             order: number;
             brandColor: string | null;
+            /** @description Whether the skill appears in public listings. Hidden skills keep their project and experience links. */
+            isPublic: boolean;
             translations: {
                 [key: string]: components["schemas"]["SkillTranslationEntity"];
             };
@@ -1862,11 +1864,16 @@ export interface components {
              * @example LANGUAGE
              * @enum {string}
              */
-            group: "LANGUAGE" | "FRAMEWORK" | "TOOLING" | "PRACTICE";
+            group: "LANGUAGE" | "FRONTEND" | "BACKEND" | "DELIVERY";
             /** @example 1 */
             order: number;
             /** @example #3178C6 */
             brandColor?: Record<string, never> | null;
+            /**
+             * @description Whether the skill appears in public listings. Hidden skills stay linked to their projects and experiences.
+             * @default true
+             */
+            isPublic: boolean;
             /**
              * @example [
              *       {
@@ -1882,11 +1889,16 @@ export interface components {
              * @example LANGUAGE
              * @enum {string}
              */
-            group?: "LANGUAGE" | "FRAMEWORK" | "TOOLING" | "PRACTICE";
+            group?: "LANGUAGE" | "FRONTEND" | "BACKEND" | "DELIVERY";
             /** @example 1 */
             order?: number;
             /** @example #3178C6 */
             brandColor?: Record<string, never> | null;
+            /**
+             * @description Whether the skill appears in public listings. Hidden skills stay linked to their projects and experiences.
+             * @default true
+             */
+            isPublic: boolean;
             /**
              * @example [
              *       {

@@ -13,8 +13,8 @@ mockNuxtImport('useI18n', () => () => ({ t: (key: string) => key, locale: ref('e
 // Typed as Skill[] rather than inferred: `group` is a literal union in the contract, so an inferred
 // `string` would not satisfy the prop and the spec would drift from the real shape.
 const technologies: Skill[] = [
-  { id: 'uuid-nuxt', label: 'Nuxt', group: 'FRAMEWORK', order: 0, brandColor: null, availableLocales: ['en'] },
-  { id: 'uuid-nest', label: 'NestJS', group: 'FRAMEWORK', order: 1, brandColor: null, availableLocales: ['en'] }
+  { id: 'uuid-nuxt', label: 'Nuxt', group: 'FRONTEND', order: 0, brandColor: null, availableLocales: ['en'] },
+  { id: 'uuid-nest', label: 'NestJS', group: 'FRONTEND', order: 1, brandColor: null, availableLocales: ['en'] }
 ]
 
 describe('ProjectFilter', () => {

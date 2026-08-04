@@ -126,7 +126,7 @@ async function render(options: {
   locale.value = options.locale ?? 'en'
   settingsState.data.value = options.settings === undefined ? settings() : options.settings
   experiencesState.data.value = options.experiences === undefined ? [role('e1')] : options.experiences
-  skillsState.data.value = options.skills === undefined ? [skill('s1', 'Vue.js', 'FRAMEWORK')] : options.skills
+  skillsState.data.value = options.skills === undefined ? [skill('s1', 'Vue.js', 'FRONTEND')] : options.skills
   experiencesState.error.value = options.experiencesError ?? null
   skillsState.error.value = options.skillsError ?? null
   return mountSuspended(ResumePage, { global: { stubs } })
@@ -264,10 +264,10 @@ describe('resume page — structure', () => {
 
   it('groups skills under their API group label', async () => {
     const wrapper = await render({
-      skills: [skill('s1', 'Vue.js', 'FRAMEWORK'), skill('s2', 'TypeScript', 'LANGUAGE')]
+      skills: [skill('s1', 'Vue.js', 'FRONTEND'), skill('s2', 'TypeScript', 'LANGUAGE')]
     })
     const groups = wrapper.findAll('dt').map(dt => dt.text())
-    expect(groups).toEqual(['Frameworks', 'Languages'])
+    expect(groups).toEqual(['Frontend Engineering', 'Languages'])
   })
 
   it('carries the resume-page hook the print stylesheet is gated on', async () => {

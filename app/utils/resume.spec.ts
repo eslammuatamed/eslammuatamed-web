@@ -21,52 +21,52 @@ const UNITS = { kb: 'kB', mb: 'MB' }
 describe('groupSkills', () => {
   it('groups by the API group, preserving arrival order within each group', () => {
     const groups = groupSkills([
-      skill('1', 'Vue.js', 'FRAMEWORK'),
-      skill('2', 'Nuxt', 'FRAMEWORK'),
+      skill('1', 'Vue.js', 'FRONTEND'),
+      skill('2', 'Nuxt', 'FRONTEND'),
       skill('3', 'TypeScript', 'LANGUAGE')
     ])
 
     expect(groups).toEqual([
-      { group: 'FRAMEWORK', skills: [expect.objectContaining({ label: 'Vue.js' }), expect.objectContaining({ label: 'Nuxt' })] },
+      { group: 'FRONTEND', skills: [expect.objectContaining({ label: 'Vue.js' }), expect.objectContaining({ label: 'Nuxt' })] },
       { group: 'LANGUAGE', skills: [expect.objectContaining({ label: 'TypeScript' })] }
     ])
   })
 
   /**
    * The binding rule: group order is FIRST APPEARANCE in the API sequence — not alphabetical,
-   * and *not* the enum's own declaration order. `TOOLING` precedes `LANGUAGE` here purely
+   * and *not* the enum's own declaration order. `BACKEND` precedes `LANGUAGE` here purely
    * because the API sent it first, which is the owner's curated order.
    */
   it('orders groups by first appearance, never by the enum declaration order', () => {
     const groups = groupSkills([
-      skill('1', 'Git', 'TOOLING'),
+      skill('1', 'Git', 'BACKEND'),
       skill('2', 'TypeScript', 'LANGUAGE')
     ])
 
-    expect(groups.map(g => g.group)).toEqual(['TOOLING', 'LANGUAGE'])
+    expect(groups.map(g => g.group)).toEqual(['BACKEND', 'LANGUAGE'])
   })
 
   // Interleaved members rejoin their group without disturbing the group sequence.
   it('reunites a group whose members are not adjacent', () => {
     const groups = groupSkills([
-      skill('1', 'Vue.js', 'FRAMEWORK'),
+      skill('1', 'Vue.js', 'FRONTEND'),
       skill('2', 'TypeScript', 'LANGUAGE'),
-      skill('3', 'Nuxt', 'FRAMEWORK')
+      skill('3', 'Nuxt', 'FRONTEND')
     ])
 
-    expect(groups.map(g => g.group)).toEqual(['FRAMEWORK', 'LANGUAGE'])
+    expect(groups.map(g => g.group)).toEqual(['FRONTEND', 'LANGUAGE'])
     expect(groups[0]!.skills.map(s => s.label)).toEqual(['Vue.js', 'Nuxt'])
   })
 
   it('handles all four contract groups', () => {
     const groups = groupSkills([
       skill('1', 'TypeScript', 'LANGUAGE'),
-      skill('2', 'Nuxt', 'FRAMEWORK'),
-      skill('3', 'Git', 'TOOLING'),
-      skill('4', 'SSR', 'PRACTICE')
+      skill('2', 'Nuxt', 'FRONTEND'),
+      skill('3', 'Git', 'BACKEND'),
+      skill('4', 'SSR', 'DELIVERY')
     ])
 
-    expect(groups.map(g => g.group)).toEqual(['LANGUAGE', 'FRAMEWORK', 'TOOLING', 'PRACTICE'])
+    expect(groups.map(g => g.group)).toEqual(['LANGUAGE', 'FRONTEND', 'BACKEND', 'DELIVERY'])
   })
 
   it('returns nothing for an empty registry', () => {

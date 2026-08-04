@@ -94,9 +94,10 @@ const PORTRAIT_ID = '019f89b5-3050-7161-af37-0000000000f1'
 export const SITE_SETTINGS: Record<Locale, SiteSettings> = {
   en: {
     siteName: 'Eslam Muatamed',
-    // The approved public tagline (positioning-strategy v1.1.0 §2), seeded by API 254f6cd0.
-    // Person.jobTitle derives from it (D22-8), so the fixture must carry the real string.
-    tagline: 'JavaScript Product Engineer — Frontend Engineer specializing in Vue.js & Nuxt.js',
+    // The approved public tagline (positioning-strategy v2.0.0 §2). Person.jobTitle derives from it
+    // (D22-8), so the fixture must carry the real string — including the approved line break, which
+    // is why it is written with an explicit \n rather than as two words on one line.
+    tagline: 'Full-Stack JavaScript\nProduct Engineer',
     defaultMetaTitle: 'Eslam Muatamed',
     defaultMetaDescription: 'Portfolio, case studies, and writing.',
     profileLinks: [{ label: 'GitHub', url: 'https://github.com/eslammuatamed', icon: 'i-simple-icons-github' }],
@@ -127,8 +128,8 @@ export const SITE_SETTINGS: Record<Locale, SiteSettings> = {
   },
   ar: {
     siteName: 'إسلام معتمد',
-    // The approved Arabic tagline (positioning-strategy v1.1.0 §3), seeded by API 254f6cd0.
-    tagline: 'مهندس برمجيات للمنتجات — متخصص في هندسة الواجهات الأمامية باستخدام Vue.js وNuxt.js',
+    // Same English professional title on the Arabic site, by decision (positioning-strategy v2.0.0 §3).
+    tagline: 'Full-Stack JavaScript\nProduct Engineer',
     defaultMetaTitle: 'إسلام معتمد',
     defaultMetaDescription: 'أعمال ودراسات حالة وكتابات.',
     profileLinks: [{ label: 'GitHub', url: 'https://github.com/eslammuatamed', icon: 'i-simple-icons-github' }],
@@ -222,14 +223,14 @@ export function resumePdfSettings(mediaOrigin: string): Record<Locale, SiteSetti
  */
 export const SKILLS: Record<Locale, Skill[]> = {
   en: [
-    { id: TECHNOLOGY.noMatches, label: 'Scenario — no matching projects', group: 'FRAMEWORK', order: 1, brandColor: null, availableLocales: ['en', 'ar'] },
-    { id: TECHNOLOGY.unreachable, label: 'Scenario — upstream unreachable', group: 'TOOLING', order: 2, brandColor: null, availableLocales: ['en', 'ar'] },
-    { id: TECHNOLOGY.upstream503, label: 'Scenario — upstream 503', group: 'TOOLING', order: 3, brandColor: null, availableLocales: ['en', 'ar'] }
+    { id: TECHNOLOGY.noMatches, label: 'Scenario — no matching projects', group: 'FRONTEND', order: 1, brandColor: null, availableLocales: ['en', 'ar'] },
+    { id: TECHNOLOGY.unreachable, label: 'Scenario — upstream unreachable', group: 'BACKEND', order: 2, brandColor: null, availableLocales: ['en', 'ar'] },
+    { id: TECHNOLOGY.upstream503, label: 'Scenario — upstream 503', group: 'BACKEND', order: 3, brandColor: null, availableLocales: ['en', 'ar'] }
   ],
   ar: [
-    { id: TECHNOLOGY.noMatches, label: 'سيناريو — لا مشاريع مطابقة', group: 'FRAMEWORK', order: 1, brandColor: null, availableLocales: ['en', 'ar'] },
-    { id: TECHNOLOGY.unreachable, label: 'سيناريو — تعذر الوصول للخادم', group: 'TOOLING', order: 2, brandColor: null, availableLocales: ['en', 'ar'] },
-    { id: TECHNOLOGY.upstream503, label: 'سيناريو — خطأ ٥٠٣ من الخادم', group: 'TOOLING', order: 3, brandColor: null, availableLocales: ['en', 'ar'] }
+    { id: TECHNOLOGY.noMatches, label: 'سيناريو — لا مشاريع مطابقة', group: 'FRONTEND', order: 1, brandColor: null, availableLocales: ['en', 'ar'] },
+    { id: TECHNOLOGY.unreachable, label: 'سيناريو — تعذر الوصول للخادم', group: 'BACKEND', order: 2, brandColor: null, availableLocales: ['en', 'ar'] },
+    { id: TECHNOLOGY.upstream503, label: 'سيناريو — خطأ ٥٠٣ من الخادم', group: 'BACKEND', order: 3, brandColor: null, availableLocales: ['en', 'ar'] }
   ]
 }
 

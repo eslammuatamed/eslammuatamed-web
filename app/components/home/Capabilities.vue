@@ -17,7 +17,10 @@ const props = withDefaults(defineProps<Props>(), { error: false, pending: false 
 defineEmits<{ retry: [] }>()
 const { t } = useI18n()
 
-const GROUP_ORDER = ['LANGUAGE', 'FRAMEWORK', 'TOOLING', 'PRACTICE'] as const
+// The approved public taxonomy, in the approved order (Docs `content/positioning-strategy.md` §5).
+// The API already sorts groups this way; naming them here keeps the columns stable and drops any
+// group the registry grows that the taxonomy has not adopted.
+const GROUP_ORDER = ['LANGUAGE', 'FRONTEND', 'BACKEND', 'DELIVERY'] as const
 
 const groups = computed(() => {
   const list = props.skills ?? []

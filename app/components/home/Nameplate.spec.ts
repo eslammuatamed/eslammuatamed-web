@@ -57,6 +57,20 @@ describe('HomeNameplate', () => {
     expect(withValues.text()).toContain('Software Engineer')
   })
 
+  it('renders the governed two-line professional title as two lines, without inventing the break', async () => {
+    const wrapper = await mountSuspended(Nameplate, {
+      props: { settings: base({ tagline: 'Full-Stack JavaScript\nProduct Engineer' }) },
+      global: { stubs }
+    })
+
+    // The break travels with the governed value; the hero only opts into honouring it. No <br>,
+    // no second i18n string, no per-locale split — those would each be a hard-coded title.
+    const title = wrapper.find('p.kicker')
+    expect(title.classes()).toContain('whitespace-pre-line')
+    expect(title.html()).not.toContain('<br')
+    expect(title.text().split('\n')).toEqual(['Full-Stack JavaScript', 'Product Engineer'])
+  })
+
   it('renders the availabilityStatus pill when present and omits it when null', async () => {
     const withStatus = await mountSuspended(Nameplate, {
       props: { settings: base({ availabilityStatus: 'Open to opportunities' }) },
