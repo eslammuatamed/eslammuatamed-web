@@ -4,7 +4,7 @@ import { chmodSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSyn
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { writeBuildStamp } from './lib/build-identity.mjs'
+import { writeProvenance } from './lib/build-provenance.mjs'
 
 /**
  * Lifecycle trust gate for the governed Lighthouse orchestrator (doc 20 §5.1, D20-25).
@@ -87,7 +87,7 @@ beforeEach(async () => {
   // The REAL orchestrator and the REAL libraries it exercises.
   mkdirSync(join(sandbox, 'scripts', 'lib'), { recursive: true })
   copyFileSync(join(REAL_SCRIPTS, 'lighthouse-ci.mjs'), join(sandbox, 'scripts', 'lighthouse-ci.mjs'))
-  for (const lib of ['h2-proxy.mjs', 'build-identity.mjs', 'lh-protocol.mjs']) {
+  for (const lib of ['h2-proxy.mjs', 'build-provenance.mjs', 'lh-protocol.mjs']) {
     copyFileSync(join(REAL_SCRIPTS, 'lib', lib), join(sandbox, 'scripts', 'lib', lib))
   }
 
@@ -159,7 +159,7 @@ process.exit(0)
   // Identity now counts untracked-but-not-ignored files, so the fixtures must be committed and the
   // run's own artifacts ignored — exactly the arrangement the real repository has. Everything is in
   // place before the stamp is written, so the orchestrator sees a clean tree that matches its build.
-  writeFileSync(join(sandbox, '.gitignore'), '.output\n.lighthouseci\ntmp/\n*.pid\n')
+  writeFileSync(join(sandbox, '.gitignore'), '.output\n.output.quarantined-*\n.lighthouseci\ntmp/\n*.pid\n')
   git(['add', '-A'])
   git(['commit', '-qm', 'fixtures'])
 
@@ -168,7 +168,7 @@ process.exit(0)
   writeFileSync(join(sandbox, '.output', 'server', 'index.mjs'), '// built')
   const here = process.cwd()
   process.chdir(sandbox)
-  try { writeBuildStamp(join(sandbox, '.output', '.build-identity.json')) } finally { process.chdir(here) }
+  try { writeProvenance({ cwd: sandbox, outputDir: join(sandbox, '.output') }) } finally { process.chdir(here) }
 })
 
 afterEach(() => {
@@ -227,11 +227,17 @@ describe('governed orchestrator — the happy path and its cleanup', () => {
     const { done } = runOrchestrator()
     const { code } = await done
     expect(code).toBe(0)
-    const stamp = JSON.parse(readFileSync(join(sandbox, '.lighthouseci', 'build-identity.json'), 'utf8'))
+    const record = JSON.parse(readFileSync(join(sandbox, '.lighthouseci', 'provenance.json'), 'utf8'))
     const head = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: sandbox, encoding: 'utf8' }).trim()
-    expect(stamp.sha).toBe(head)
-    expect(stamp.protocol.mobile.firstPartyByProtocol.h2).toBeGreaterThan(0)
-    expect(stamp.protocol.desktop.firstPartyByProtocol.h2).toBeGreaterThan(0)
+    const tree = execFileSync('git', ['rev-parse', 'HEAD^{tree}'], { cwd: sandbox, encoding: 'utf8' }).trim()
+    expect(record.identity.head).toBe(head)
+    expect(record.identity.tree).toBe(tree)
+    expect(record.identity.outputHash).toMatch(/^[0-9a-f]{64}$/)
+    // Every report file is bound by content hash, so a swapped report is detectable.
+    expect(record.reports.length).toBeGreaterThan(0)
+    for (const r of record.reports) expect(r.sha256).toMatch(/^[0-9a-f]{64}$/)
+    expect(record.protocol.mobile.firstPartyByProtocol.h2).toBeGreaterThan(0)
+    expect(record.protocol.desktop.firstPartyByProtocol.h2).toBeGreaterThan(0)
   }, 60_000)
 
   it('20 — discards a previous run\'s reports instead of measuring them again', async () => {

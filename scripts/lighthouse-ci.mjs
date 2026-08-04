@@ -9,9 +9,10 @@
  *
  * It owns the entire lifecycle so nobody has to remember steps, and so a clean checkout needs no
  * setup beyond `npm ci`:
- *   EXACT-HEAD BUILD → contract mock + Nitro preview → ephemeral localhost cert → HTTP/2 frontend →
- *   PREFLIGHT PROTOCOL ASSERTION → mobile matrix → MEASURED-SESSION PROOF → desktop matrix →
- *   MEASURED-SESSION PROOF → report identity stamp → median assertions → teardown.
+ *   CLEAN-TREE GATE → PROVENANCE-VERIFIED BUILD → contract mock + Nitro preview → ephemeral
+ *   localhost cert → HTTP/2 frontend → PREFLIGHT PROTOCOL ASSERTION → PROVENANCE RE-CHECK →
+ *   mobile matrix → MEASURED-SESSION PROOF → desktop matrix → MEASURED-SESSION PROOF →
+ *   PROVENANCE RE-CHECK → report provenance record → median assertions → teardown.
  *
  * Teardown runs on success, on failure, and on SIGINT/SIGTERM. Ports and certificates are released
  * either way — a half-cleaned run poisons the next one, and a leaked private key is worse than a
@@ -27,17 +28,20 @@
  *      made. This is the one that proves the NUMBERS came over h2, which matters because the
  *      frontend deliberately still accepts HTTP/1.1 (see h2-proxy.mjs).
  *
- * The build is also verified rather than assumed: `.output/` is untracked and survives branch
- * switches, so this rebuilds whenever the existing output was not produced from the current source
- * state. Numbers attributed to the wrong commit are as misleading as numbers measured over the
- * wrong protocol.
+ * PROVENANCE, for the same reason. Numbers attributed to the wrong commit mislead exactly as much as
+ * numbers measured over the wrong protocol. Governed measurement therefore demands a COMPLETELY
+ * CLEAN working tree before it builds anything — not a "dirty" label, a refusal — because Nuxt
+ * discovers sources by scanning directories and an uncommitted file is compiled in while HEAD does
+ * not contain it. The build then carries a marker (HEAD, tree, lockfile, toolchain, allowlisted
+ * build environment, output fingerprint) that is re-verified before and after collection, and every
+ * report file is bound to it by content hash. See `lib/build-provenance.mjs`.
  */
 import { execFileSync, spawn } from 'node:child_process'
-import { mkdirSync, readdirSync, readFileSync, rmSync } from 'node:fs'
+import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import process from 'node:process'
 import { assertH2, createEphemeralCert, startH2Proxy } from './lib/h2-proxy.mjs'
-import { buildIsCurrent, writeReportStamp } from './lib/build-identity.mjs'
+import { assertCleanSourceState, headSha, validateProvenance, writeReportProvenance } from './lib/build-provenance.mjs'
 import { assertCollectionUsedH2, formatProtocolSummary } from './lib/lh-protocol.mjs'
 
 const WEB_PORT = Number(process.env.CI_PREVIEW_PORT ?? 3000)
@@ -50,13 +54,18 @@ const H2_PORT = Number(process.env.LH_H2_PORT ?? 0)
 const PORT_TIMEOUT_MS = Number(process.env.LH_PORT_TIMEOUT_MS ?? 120_000)
 
 /** Everything we own, torn down in reverse order exactly once. */
-const owned = { preview: null, proxy: null, cert: null }
+const owned = { preview: null, proxy: null, cert: null, child: null }
 let cleanedUp = false
 
 async function cleanup(reason) {
   if (cleanedUp) return
   cleanedUp = true
   if (reason) console.log(`\n[lighthouse:ci] cleanup (${reason})`)
+  // The in-flight child (an `lhci` matrix, or the build) goes first: on SIGTERM it would otherwise
+  // outlive this process and keep driving Chrome against a frontend that is being torn down.
+  if (owned.child) {
+    try { owned.child.kill('SIGTERM') } catch { /* already gone */ }
+  }
   try { if (owned.proxy) await owned.proxy.close() } catch { /* best effort */ }
   if (owned.preview) {
     // The preview owns a process GROUP (Nitro + Prism); signalling the leader alone orphans children.
@@ -89,8 +98,10 @@ for (const sig of ['SIGINT', 'SIGTERM']) {
 function run(cmd, args, env = {}) {
   return new Promise((resolve, reject) => {
     const child = spawn(cmd, args, { stdio: 'inherit', env: { ...process.env, ...env } })
-    child.on('error', reject)
-    child.on('exit', code => (code === 0 ? resolve() : reject(new Error(`${cmd} ${args.join(' ')} exited ${code}`))))
+    owned.child = child
+    const done = fn => (...a) => { owned.child = null; fn(...a) }
+    child.on('error', done(reject))
+    child.on('exit', done(code => (code === 0 ? resolve() : reject(new Error(`${cmd} ${args.join(' ')} exited ${code}`)))))
   })
 }
 
@@ -112,38 +123,81 @@ async function waitForPort(port, label, timeoutMs = PORT_TIMEOUT_MS) {
 /** Profile output directories, in the order they are collected. */
 const PROFILE_DIRS = { mobile: join('.lighthouseci', 'mobile'), desktop: join('.lighthouseci', 'desktop') }
 
+/** Where a rejected build is moved so it cannot be measured, but can still be inspected. */
+function quarantine(reason) {
+  if (!existsSync('.output')) return null
+  const dest = `.output.quarantined-${reason}`
+  rmSync(dest, { recursive: true, force: true })
+  renameSync('.output', dest)
+  console.log(`[lighthouse:ci] quarantined the rejected build to ${dest}/ (not deleted, not measured)`)
+  return dest
+}
+
 /**
- * Guarantee `.output/` was built from the CURRENT source state, building it if it was not.
+ * Produce a build whose provenance can be stated, and refuse to proceed otherwise.
  *
- * `.output/` is untracked and survives branch switches, so "a build exists" never meant "a build of
- * this commit exists". Reports carrying the wrong commit's numbers are as misleading as reports
- * carrying the wrong protocol's numbers, so this is enforced rather than assumed — and because the
- * canonical command must work from a clean checkout, a missing or stale build is CORRECTED here
- * instead of merely being reported.
+ * ORDER MATTERS. The clean-state check runs FIRST, before anything is built, because the point is
+ * never to create output whose provenance cannot be stated — not to discover afterwards that it
+ * cannot. A tree with uncommitted or untracked sources is rejected here, not labelled.
+ *
+ * A build that fails validation is QUARANTINED rather than relabelled. Rewriting a marker around
+ * output whose sources are unknown is precisely the mislabelling this exists to prevent, so the
+ * only honest recovery is to move it aside and build again through this lifecycle.
  */
-async function ensureExactBuild() {
-  const state = buildIsCurrent()
-  if (state.current) {
-    console.log(`[lighthouse:ci] build identity ${state.stamp.id} matches HEAD — reusing .output/`)
-    return state.expected
+async function ensureGovernedBuild() {
+  assertCleanSourceState()
+  console.log('[lighthouse:ci] working tree is clean — provenance can be stated')
+
+  const first = validateProvenance()
+  if (first.valid) {
+    console.log(`[lighthouse:ci] provenance verified, reusing .output/ — HEAD ${first.marker.head}`)
+    return first.marker
   }
 
-  console.log(`[lighthouse:ci] rebuilding: ${state.reason}`)
-  if (state.stamp) console.log(`  build was ${state.stamp.id}, source is ${state.expected.id}`)
+  console.log('[lighthouse:ci] existing build rejected:')
+  for (const failure of first.failures) console.log(`   · ${failure}`)
+  quarantine(headSha().slice(0, 12))
 
   // The same build-time placeholders CI uses (D23-8). They are baked into canonical/og:url and the
   // sitemap, never into anything performance is measured on, and `npm run build` refuses to fall
-  // back to localhost — so without them a clean checkout could not build at all.
+  // back to localhost — so without them a clean checkout could not build at all. They are part of
+  // the governed environment fingerprint, so a run that used different ones cannot masquerade as
+  // this one.
   await run('npm', ['run', 'build'], {
     NUXT_PUBLIC_SITE_URL: process.env.NUXT_PUBLIC_SITE_URL ?? 'https://example.com',
     NUXT_PUBLIC_API_BASE: process.env.NUXT_PUBLIC_API_BASE ?? 'https://example.com/api/v1'
   })
 
-  const after = buildIsCurrent()
-  if (!after.current) {
-    throw new Error(`build completed but its identity still does not match HEAD (${after.reason}) — refusing to measure`)
+  const after = validateProvenance()
+  if (!after.valid) {
+    throw new Error(
+      'build completed but its provenance still does not validate — refusing to measure:\n'
+      + after.failures.map(f => `   · ${f}`).join('\n')
+    )
   }
-  return after.expected
+  console.log(`[lighthouse:ci] provenance recorded — HEAD ${after.marker.head}`)
+  return after.marker
+}
+
+/**
+ * Re-validate immediately before collection.
+ *
+ * The build may have happened minutes ago; a stray edit, a dependency install or a touched artifact
+ * in between would make every number that follows unattributable.
+ */
+function assertProvenanceAtMeasurementTime(expected) {
+  const result = validateProvenance()
+  if (!result.valid) {
+    throw new Error(
+      'provenance no longer valid at measurement time — refusing to collect:\n'
+      + result.failures.map(f => `   · ${f}`).join('\n')
+    )
+  }
+  if (result.marker.output.hash !== expected.output.hash) {
+    throw new Error('the output changed between build and measurement — refusing to collect')
+  }
+  console.log('[lighthouse:ci] provenance re-verified at measurement time')
+  return result.marker
 }
 
 /** Every report Lighthouse wrote for one profile. */
@@ -168,7 +222,7 @@ function assertProfileProtocol(profile) {
 }
 
 async function main() {
-  await ensureExactBuild()
+  const marker = await ensureGovernedBuild()
 
   // Stale reports from an earlier run would be read back both by the protocol proof and by the
   // median gate, which expects exactly three comparable runs per configuration.
@@ -176,6 +230,8 @@ async function main() {
     rmSync(dir, { recursive: true, force: true })
     mkdirSync(dir, { recursive: true })
   }
+
+  assertProvenanceAtMeasurementTime(marker)
 
   console.log('[lighthouse:ci] starting Nitro preview + contract mock…')
   owned.preview = spawn('node', ['scripts/ci-preview.mjs'], {
@@ -220,12 +276,17 @@ async function main() {
 
   console.log('\n[lighthouse:ci] browser-session protocol PROVEN h2 for every governed report (D20-25)')
 
-  // Bind the reports to the source state they describe, so an artifact downloaded weeks later is
-  // still attributable to a commit rather than to "whatever was checked out at the time".
-  const stamp = writeReportStamp({
-    protocol: { mobile: mobileProtocol, desktop: desktopProtocol }
+  // Nothing may have shifted underneath the collection either.
+  assertProvenanceAtMeasurementTime(marker)
+
+  // Bind every report file to the exact identity it was measured from, by content hash, so an
+  // artifact downloaded weeks later is attributable to a commit rather than to "whatever was
+  // checked out at the time".
+  const record = writeReportProvenance({
+    marker,
+    extra: { protocol: { mobile: mobileProtocol, desktop: desktopProtocol } }
   })
-  console.log(`[lighthouse:ci] reports bound to source identity ${stamp.id}`)
+  console.log(`[lighthouse:ci] ${record.reports.length} report files bound to HEAD ${record.identity.head} (tree ${record.identity.tree.slice(0, 12)}, output ${record.identity.outputHash.slice(0, 12)})`)
 
   console.log('\n[lighthouse:ci] asserting medians (thresholds unchanged)…')
   await run('node', ['scripts/check-lighthouse-medians.mjs'])

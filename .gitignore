@@ -45,3 +45,7 @@ blob-report
 *.pem
 lh-h2-cert-*/
 .lighthouse-tmp/
+
+# Governed Lighthouse (D20-25): a build whose provenance failed validation is moved aside rather
+# than deleted or relabelled, so it stays inspectable without ever being measured.
+.output.quarantined-*

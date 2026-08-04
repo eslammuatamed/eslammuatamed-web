@@ -63,12 +63,29 @@ socket (refusing it made Nitro's chunked responses hang), so only the measuremen
 prove the numbers came over `h2`. Third-party and `data:` requests are classified and reported
 separately, never gated.
 
-**Builds are attributed, not assumed.** `.output/` is untracked and survives branch switches, so
-every build is stamped with the source state that produced it (`.output/.build-identity.json`: the
-HEAD sha, plus a digest of any uncommitted tracked changes). The governed command rebuilds whenever
-that stamp does not match, and writes `.lighthouseci/build-identity.json` so a downloaded report
-artifact is always traceable to a commit. Numbers attributed to the wrong commit are as misleading
-as numbers measured over the wrong protocol.
+**Governed measurement requires a completely clean tree.** Before it builds anything,
+`npm run lighthouse:ci` refuses if `git status --porcelain=v1 -z --untracked-files=all` reports
+*anything*: staged changes, unstaged changes, untracked non-ignored files, conflicts, or dirty
+submodules. This is a whole-tree rule rather than a list of watched directories on purpose — Nuxt
+discovers sources by scanning (`app/components/`, `app/composables/`, `app/middleware/`,
+`app/layouts/`, `app/pages/`, `server/`, …), so a file that was never `git add`-ed is compiled into
+the build while HEAD does not contain it. A directory allowlist would be outflanked by the next
+auto-discovery location; "the tree is clean" cannot be. Exclusions come from `.gitignore` alone,
+never from provenance-specific exceptions.
+
+**Builds carry a provenance marker.** `.output/.provenance.json` records the HEAD sha, the Git
+**tree** sha, the `package-lock.json` hash, Node and npm versions, the governed build-mode
+identifier, a hash of the allowlisted build-affecting environment, and a fingerprint of the built
+output. The build timestamp is metadata only and is never compared. Before collection — and again
+after it — the governed command re-verifies all seven properties. A build that fails is
+**quarantined to `.output.quarantined-<sha>/`** and rebuilt, never silently relabelled. Every report
+file is then bound by content hash in `.lighthouseci/provenance.json`, so a downloaded artifact is
+traceable to an exact commit.
+
+**Secrets never reach the marker.** Only allowlisted variable *names* and each one's presence
+(`set` / `empty` / `absent` — a distinction that matters, since an empty `NUXT_PUBLIC_SITE_URL` is a
+misconfiguration, not an unset one) are recorded. Values are hashed and never written or logged, and
+anything outside the allowlist is not hashed at all.
 
 **Why HTTP/2.** Production serves HTTP/2 (Cloudflare → Caddy → Nitro). The gate used to point
 Lighthouse straight at Nitro over HTTP/1.1, whose six-connection limit serialises requests HTTP/2
