@@ -35,6 +35,9 @@ beforeEach(() => {
   git(['config', 'user.email', 'test@example.com'])
   git(['config', 'user.name', 'Test'])
   writeFileSync(join(repo, 'app.txt'), 'v1')
+  // Mirrors the real repository: build output and logs are IGNORED, so they must not invalidate
+  // the build, while anything else untracked must.
+  writeFileSync(join(repo, '.gitignore'), '.output\n*.log\n')
   git(['add', '.'])
   git(['commit', '-qm', 'first'])
   // The module reads the CURRENT working directory's git state, so the sandbox becomes cwd.
@@ -74,26 +77,59 @@ describe('build identity — source state', () => {
     expect(sourceIdentity().id).not.toBe(a)
   })
 
-  it('21 — untracked files do not change identity (.output/ must not invalidate itself)', () => {
+  it('21 — IGNORED paths do not change identity (a build must not invalidate itself)', () => {
+    // `.output/` already exists in this sandbox and is ignored, exactly as in the real repository.
     const before = sourceIdentity().id
-    writeFileSync(join(repo, 'untracked.log'), 'noise')
+    writeFileSync(join(OUT(), 'server', 'chunk.mjs'), 'generated output')
+    writeFileSync(join(repo, 'ignored.log'), 'noise')
     expect(sourceIdentity().id).toBe(before)
+  })
+
+  it('22 — an UNTRACKED, NON-IGNORED source file DOES change identity', () => {
+    // The provenance hole this closes: Nuxt auto-imports from `app/components/`, so a file that was
+    // never `git add`-ed is still compiled into the build. If identity ignored it, the report would
+    // carry HEAD's name over numbers HEAD cannot reproduce.
+    const before = sourceIdentity().id
+    mkdirSync(join(repo, 'app', 'components'), { recursive: true })
+    writeFileSync(join(repo, 'app', 'components', 'Sneaky.vue'), '<template><div/></template>')
+    const after = sourceIdentity()
+    expect(after.dirty).toBe(true)
+    expect(after.id).not.toBe(before)
+  })
+
+  it('23 — editing an untracked file changes identity again (content is hashed, not just the path)', () => {
+    mkdirSync(join(repo, 'app', 'components'), { recursive: true })
+    const file = join(repo, 'app', 'components', 'Sneaky.vue')
+    writeFileSync(file, '<template><div>v1</div></template>')
+    const first = sourceIdentity().id
+    writeFileSync(file, '<template><div>v2</div></template>')
+    expect(sourceIdentity().id).not.toBe(first)
+  })
+
+  it('24 — a build stamped before an untracked source appeared is REJECTED as stale', () => {
+    writeBuildStamp(STAMP())
+    expect(buildIsCurrent(opts()).current).toBe(true)
+    mkdirSync(join(repo, 'app', 'components'), { recursive: true })
+    writeFileSync(join(repo, 'app', 'components', 'Sneaky.vue'), '<template><div/></template>')
+    const state = buildIsCurrent(opts())
+    expect(state.current).toBe(false)
+    expect(state.reason).toBe('build is from a different source state')
   })
 })
 
 describe('build identity — stale build detection', () => {
-  it('22 — a build with no stamp is not current', () => {
+  it('25 — a build with no stamp is not current', () => {
     const state = buildIsCurrent(opts())
     expect(state.current).toBe(false)
     expect(state.reason).toBe('build has no identity stamp')
   })
 
-  it('23 — a stamped build of the current source IS current', () => {
+  it('26 — a stamped build of the current source IS current', () => {
     writeBuildStamp(STAMP())
     expect(buildIsCurrent(opts()).current).toBe(true)
   })
 
-  it('24 — STALE BUILD IS REJECTED: a build from another commit is not current', () => {
+  it('27 — STALE BUILD IS REJECTED: a build from another commit is not current', () => {
     writeBuildStamp(STAMP())
     expect(buildIsCurrent(opts()).current).toBe(true)
     // A new commit — the classic "switched branches, .output stayed" case.
@@ -104,18 +140,18 @@ describe('build identity — stale build detection', () => {
     expect(state.reason).toBe('build is from a different source state')
   })
 
-  it('25 — an uncommitted edit after the build also invalidates it', () => {
+  it('28 — an uncommitted edit after the build also invalidates it', () => {
     writeBuildStamp(STAMP())
     writeFileSync(join(repo, 'app.txt'), 'edited-after-build')
     expect(buildIsCurrent(opts()).current).toBe(false)
   })
 
-  it('26 — a missing build is reported as "no build", not as a stale one', () => {
+  it('29 — a missing build is reported as "no build", not as a stale one', () => {
     rmSync(OUT(), { recursive: true, force: true })
     expect(buildIsCurrent(opts()).reason).toBe('no build')
   })
 
-  it('27 — a corrupt stamp is treated as missing rather than trusted', () => {
+  it('30 — a corrupt stamp is treated as missing rather than trusted', () => {
     writeFileSync(STAMP(), '{ not json')
     expect(readBuildStamp(STAMP())).toBeNull()
     expect(buildIsCurrent(opts()).current).toBe(false)
@@ -123,12 +159,12 @@ describe('build identity — stale build detection', () => {
 })
 
 describe('build identity — the non-governed refusal', () => {
-  it('28 — assertBuildIsCurrent passes silently on an exact build', () => {
+  it('31 — assertBuildIsCurrent passes silently on an exact build', () => {
     writeBuildStamp(STAMP())
     expect(assertBuildIsCurrent(opts()).current).toBe(true)
   })
 
-  it('29 — assertBuildIsCurrent REFUSES a stale build and names both identities', () => {
+  it('32 — assertBuildIsCurrent REFUSES a stale build and names both identities', () => {
     writeBuildStamp(STAMP())
     const built = readBuildStamp(STAMP()).id
     writeFileSync(join(repo, 'app.txt'), 'v2')

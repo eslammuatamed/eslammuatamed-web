@@ -83,8 +83,6 @@ beforeEach(async () => {
   git(['config', 'user.email', 'test@example.com'])
   git(['config', 'user.name', 'Test'])
   writeFileSync(join(sandbox, 'source.txt'), 'v1')
-  git(['add', '.'])
-  git(['commit', '-qm', 'first'])
 
   // The REAL orchestrator and the REAL libraries it exercises.
   mkdirSync(join(sandbox, 'scripts', 'lib'), { recursive: true })
@@ -92,13 +90,6 @@ beforeEach(async () => {
   for (const lib of ['h2-proxy.mjs', 'build-identity.mjs', 'lh-protocol.mjs']) {
     copyFileSync(join(REAL_SCRIPTS, 'lib', lib), join(sandbox, 'scripts', 'lib', lib))
   }
-
-  // A build that IS the current source, so these tests exercise the lifecycle rather than a rebuild.
-  mkdirSync(join(sandbox, '.output', 'server'), { recursive: true })
-  writeFileSync(join(sandbox, '.output', 'server', 'index.mjs'), '// built')
-  const here = process.cwd()
-  process.chdir(sandbox)
-  try { writeBuildStamp(join(sandbox, '.output', '.build-identity.json')) } finally { process.chdir(here) }
 
   // Stand-in for Nitro + Prism: serves a document that references a first-party /_nuxt/ asset,
   // which is what the preflight discovers and asserts against.
@@ -164,6 +155,20 @@ process.exit(0)
   mkdirSync(badBin, { recursive: true })
   writeFileSync(join(badBin, 'openssl'), '#!/bin/sh\necho "openssl unavailable" >&2\nexit 1\n')
   chmodSync(join(badBin, 'openssl'), 0o755)
+
+  // Identity now counts untracked-but-not-ignored files, so the fixtures must be committed and the
+  // run's own artifacts ignored — exactly the arrangement the real repository has. Everything is in
+  // place before the stamp is written, so the orchestrator sees a clean tree that matches its build.
+  writeFileSync(join(sandbox, '.gitignore'), '.output\n.lighthouseci\ntmp/\n*.pid\n')
+  git(['add', '-A'])
+  git(['commit', '-qm', 'fixtures'])
+
+  // A build that IS the current source, so these tests exercise the lifecycle rather than a rebuild.
+  mkdirSync(join(sandbox, '.output', 'server'), { recursive: true })
+  writeFileSync(join(sandbox, '.output', 'server', 'index.mjs'), '// built')
+  const here = process.cwd()
+  process.chdir(sandbox)
+  try { writeBuildStamp(join(sandbox, '.output', '.build-identity.json')) } finally { process.chdir(here) }
 })
 
 afterEach(() => {

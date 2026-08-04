@@ -9,12 +9,18 @@
  * label on it is wrong — so it is closed the same way: assert, and refuse to measure.
  *
  * WHAT IDENTITY MEANS HERE. The commit SHA alone is not enough, because a contributor iterating on a
- * fix has uncommitted edits that change the build. Identity is therefore HEAD plus a digest of the
- * working-tree diff against HEAD. A clean tree yields `<sha>`; a dirty tree yields `<sha>+<digest>`,
- * which changes whenever the tracked sources change and stays stable when they do not.
+ * fix has uncommitted edits that change the build. Identity is therefore HEAD plus a digest of
+ * everything in the working tree that can reach the build. A clean tree yields `<sha>`; anything
+ * else yields `<sha>+<digest>`, which moves whenever the sources move and stays stable when they do
+ * not.
  *
- * Untracked files are deliberately EXCLUDED. `.output/`, `.lighthouseci/` and `node_modules/` are
- * untracked and would otherwise make every build differ from itself.
+ * IGNORED is the exclusion, not UNTRACKED — and the difference is load-bearing. `.output/`,
+ * `.nuxt/`, `.lighthouseci/` and `node_modules/` are all in `.gitignore`, so excluding ignored paths
+ * is enough to stop a build from invalidating itself. Excluding *untracked* paths instead would let
+ * a brand-new file that has never been `git add`-ed sit in the build while identity still reported a
+ * pristine HEAD — and Nuxt auto-imports from `app/components/`, so a new untracked component is
+ * compiled in without anyone touching a tracked file. That report would carry a commit's name over
+ * numbers that commit cannot reproduce, which is the exact failure this module exists to prevent.
  */
 import { execFileSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
@@ -46,14 +52,35 @@ export function sourceIdentity() {
     return { sha: 'unknown', dirty: false, id: 'unknown' }
   }
 
-  // `git diff HEAD` covers staged and unstaged tracked changes in one digest.
+  // `git diff HEAD` covers staged and unstaged changes to TRACKED files in one digest.
   let diff = ''
   try {
     diff = execFileSync('git', ['diff', 'HEAD'], { encoding: 'utf8', maxBuffer: 256 * 1024 * 1024, stdio: ['ignore', 'pipe', 'ignore'] })
   } catch { /* treat an unreadable diff as clean; the SHA still pins the commit */ }
 
-  const dirty = diff.length > 0
-  const id = dirty ? `${sha}+${createHash('sha256').update(diff).digest('hex').slice(0, 12)}` : sha
+  // …and this covers files git has never seen. `--others --exclude-standard` lists untracked paths
+  // while honouring `.gitignore`, so build output and `node_modules/` stay out while a genuinely new
+  // source file counts. Content is hashed, not just the path: creating a file and then editing it
+  // must produce two different identities.
+  let untrackedDigest = ''
+  try {
+    const listed = execFileSync('git', ['ls-files', '--others', '--exclude-standard', '-z'],
+      { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024, stdio: ['ignore', 'pipe', 'ignore'] })
+    const paths = listed.split('\0').filter(Boolean).sort()
+    if (paths.length > 0) {
+      const h = createHash('sha256')
+      for (const p of paths) {
+        h.update(p)
+        try { h.update(readFileSync(p)) } catch { h.update('<unreadable>') }
+      }
+      untrackedDigest = h.digest('hex')
+    }
+  } catch { /* no git or unreadable listing; the diff and SHA still apply */ }
+
+  const dirty = diff.length > 0 || untrackedDigest !== ''
+  const id = dirty
+    ? `${sha}+${createHash('sha256').update(diff).update(untrackedDigest).digest('hex').slice(0, 12)}`
+    : sha
   return { sha, dirty, id }
 }
 
