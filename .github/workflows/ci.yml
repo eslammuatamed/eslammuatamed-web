@@ -146,8 +146,13 @@ jobs:
       - name: Assert logical properties (RTL)
         run: npm run check:logical
 
-      # Lighthouse CI against the built artifact behind a Prism mock of the committed contract
-      # (scripts/ci-preview.mjs) — deterministic, and independent of staging uptime or data.
+      # Governed Lighthouse (D20-25). ONE canonical command owns the whole lifecycle: preview +
+      # contract mock, an ephemeral localhost certificate, the local HTTP/2 frontend, the
+      # BROWSER-FACING PROTOCOL ASSERTION, both profile matrices, the median assertions, and
+      # teardown of every process, port and key on success or failure alike.
+      # The browser must see HTTP/2 because production does; measuring Nitro directly over
+      # HTTP/1.1 overstated LCP on every route (/ar 4441 ms -> 3389 ms at Web 9876279).
+      # Nitro itself may stay HTTP/1.1 behind the frontend.
       # home + article × EN/AR; `/projects` and `/contact` from doc 20 §5's four-page matrix are
       # the accepted web-005 404s (spec.md:36) and are deferred with it, not silently dropped.
       # ubuntu-latest ships Chrome preinstalled, so no browser download step is needed.
@@ -156,18 +161,13 @@ jobs:
       # grouped by run configuration, where FEWER than three is infrastructure rather than a low
       # score) cannot be expressed as an LHCI assertion list. Separate output directories keep the
       # second profile from overwriting the first profile's evidence.
-      - name: Lighthouse CI collect — mobile profile (doc 20 §5)
-        run: npm run lhci
-
-      - name: Lighthouse CI collect — desktop profile (doc 20 §5)
-        run: npm run lhci:desktop
 
       # Median-of-3 thresholds (doc 20 §1, D20-13): Performance ≥ 95 desktop / ≥ 60 mobile;
       # Accessibility, Best Practices and SEO 100; LCP, CLS and per-script fonts at their unchanged
       # §1 limits. Every individual run is printed so a median cannot hide instability. Exit 1 =
       # a real regression; exit 2 = the collection was incomplete or unreadable.
-      - name: Assert Lighthouse medians (doc 20 §1)
-        run: npm run lhci:assert
+      - name: Governed Lighthouse over HTTP/2 (doc 20 §5.1, D20-25)
+        run: npm run lighthouse:ci
 
       # Reports are preserved even when the assertions fail — that is when they are most useful.
       # Both profile subdirectories are included, so all three runs behind every median remain
@@ -189,3 +189,56 @@ jobs:
           retention-days: 14
           include-hidden-files: true
           if-no-files-found: error
+
+  # End-to-end + accessibility lane (doc 18 §3, D18-3). Separate job from `verify` so a browser
+  # download and a full e2e run never slow the fast feedback loop, and so an e2e failure is
+  # attributable on sight. It changes NO existing threshold, budget, or job.
+  #
+  # No live API: `scripts/ci-preview.mjs` serves the built Nitro output behind a Prism mock of the
+  # COMMITTED contract — the same orchestration the Lighthouse gate uses, so both lanes measure the
+  # artifact the deploy ships (doc 00 §3 repository independence).
+  e2e:
+    name: E2E · Accessibility (Playwright + axe)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      # Same build-time placeholders as `verify`: canonical/hreflang/sitemap are baked at build time
+      # and a non-localhost origin keeps @nuxtjs/seo quiet (D23-8).
+      NUXT_PUBLIC_SITE_URL: https://example.com
+      NUXT_PUBLIC_API_BASE: https://example.com/api/v1
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Chromium only — the suite declares a single chromium project. `--with-deps` installs the
+      # system libraries the runner does not ship.
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Typecheck e2e suite
+        run: npm run typecheck:e2e
+
+      # The e2e suite drives the real production output, not the dev server: SSR correctness,
+      # hydration and route rules are exactly what it exists to protect. `playwright.config.ts`
+      # fails fast with an actionable message if this build is missing.
+      - name: Build
+        run: npm run build
+
+      - name: Playwright + axe
+        run: npm run test:e2e
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-${{ github.sha }}
+          path: playwright-report/
+          retention-days: 14
+          if-no-files-found: ignore

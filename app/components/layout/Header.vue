@@ -79,10 +79,15 @@ watch(() => route.fullPath, () => {
     class="sticky top-0 z-40 border-b transition-colors duration-200"
     :class="scrolled ? 'glass border-default bg-[var(--glass-surface)]' : 'border-transparent bg-transparent'"
   >
-    <UContainer class="flex h-16 items-center justify-between gap-6">
-      <AppLink to="/" class="inline-flex items-center gap-2.5">
+    <UContainer class="flex h-16 items-center justify-between gap-2 md:gap-6">
+      <!--
+        `whitespace-nowrap` is the load-bearing bit: at 320px the controls left too little inline
+        space and "Eslam Muatamed" wrapped onto a second line, which broke the header's height. The
+        name is never abbreviated or initialised — it is kept whole and the space is found elsewhere.
+      -->
+      <AppLink to="/" class="inline-flex shrink-0 items-center gap-2 md:gap-2.5">
         <UiBrandMark :size="20" class="text-primary" />
-        <span class="font-display text-lg font-semibold tracking-tight text-highlighted">
+        <span class="font-display text-[15px] font-semibold tracking-tight whitespace-nowrap text-highlighted md:text-lg">
           {{ t('brand.name') }}
         </span>
       </AppLink>
@@ -100,7 +105,7 @@ watch(() => route.fullPath, () => {
         </AppLink>
       </nav>
 
-      <div class="flex items-center gap-1.5">
+      <div class="flex shrink-0 items-center gap-1 md:gap-1.5">
         <AppLink
           to="/resume"
           class="me-1 hidden text-body-sm text-muted transition-colors hover:text-default sm:inline-flex"
@@ -110,7 +115,16 @@ watch(() => route.fullPath, () => {
         <UButton :to="localePath('/contact')" size="sm" class="hidden sm:inline-flex">
           {{ t('nav.contact') }}
         </UButton>
-        <LayoutLangToggle class="hidden sm:inline-flex" />
+        <!--
+          Wrapped rather than given `hidden sm:inline-flex` directly: LangToggle's own root is
+          `inline-flex`, and a merged `hidden` loses to it on source order — which is why the
+          segmented control was still rendering at 390px despite the utility. The wrapper owns the
+          visibility so there is nothing to lose against.
+        -->
+        <span class="hidden sm:inline-flex">
+          <LayoutLangToggle />
+        </span>
+        <LayoutLangSwitchButton class="sm:hidden" />
         <LayoutThemeToggle />
         <UButton
           icon="i-lucide-menu"

@@ -34,6 +34,15 @@ const full: SiteSettings = {
   bingSiteVerification: null,
   customMetas: [],
   resumeAsset: { id: 'r1', kind: 'PDF', url: 'https://media.example.com/cv.pdf', filename: 'cv.pdf', sizeBytes: 100 },
+  aboutBio: null,
+  engineeringPhilosophy: null,
+  currentFocus: null,
+  professionalEmail: null,
+  contactEmail: null,
+  contactPhone: '+201002785408',
+  whatsappPhone: '+201002785408',
+  portraitAssetId: null,
+  portrait: null,
   availableLocales: ['en']
 }
 

@@ -2,16 +2,21 @@
 import type { ArticleListItem, Paginated } from '~/types/models'
 
 // Paginated blog index (FR-PUB-040). Page state lives in the URL query (linkable, SEO-legible —
-// D13-4); the list is keyed by locale + page so each combination caches on its own.
-const { t, locale } = useI18n()
+// D13-4); the list is keyed by locale + page so each combination caches on its own. The locale is the
+// ROUTE's (D06-6), and the key uses the same value the request sends.
+const { t } = useI18n()
 const route = useRoute()
 const api = useApi()
+const locale = useRouteLocale()
 
 const page = computed(() => Number(route.query.page) || 1)
 
 const { data, status, error, refresh } = await useAsyncData(
   () => `articles:${locale.value}:${page.value}`,
-  () => api<Paginated<ArticleListItem>>('/articles', { query: { page: page.value } }),
+  () => api<Paginated<ArticleListItem>>('/articles', {
+    locale: locale.value,
+    query: { page: page.value }
+  }),
   { watch: [page] }
 )
 

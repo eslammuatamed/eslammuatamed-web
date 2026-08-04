@@ -251,6 +251,88 @@ export const BUDGET = {
 }
 
 /**
+ * Authenticated dashboard routes — doc 20 §1.1 (D20-23, ceiling superseded by **D20-24**). A
+ * separate budget CLASS, not a relaxation of the public one: the dashboard is a single-operator
+ * tool behind a login, never indexed, not a conversion surface, and legitimately carries
+ * interaction weight (data tables, overlays) no public route may.
+ *
+ * THE TOTAL-JS BUDGET IS TWO-TIER (D20-24), and the two tiers do different jobs:
+ *
+ *   ≤ 300 KB gz   quality target      an ordinary green result
+ *   ≤ 320 KB gz   hard release ceiling  PASSES, but only with full attribution printed
+ *   > 320 KB gz   release-blocking    genuine breach, exit 1, owner review required
+ *
+ * WHY TWO TIERS RATHER THAN ONE HIGHER NUMBER. D20-23's single 280 KB gz ceiling was derived at
+ * Web `76f8fa6`, before the owner confirmed the long-term dashboard architecture (Nuxt UI-first,
+ * regular-Zod-first). At Web `80ee17ba` `/dashboard/messages` measured 295.5 KB gz — 277.7 baseline
+ * + ≈0.4 `UCard` + ≈17.4 regular Zod — with app-owned at 54,993 B of 101 KiB, i.e. barely half its
+ * project-owned budget. The route was not bloated; the only ways under 280 KB were to drop a
+ * standard Nuxt UI component or swap to `zod/mini` (itself ≈290.3 KB gz — still a breach). A
+ * threshold whose binding constraint is framework policy rather than application bloat is not
+ * detecting what it was built to detect.
+ *
+ * A lone 320 KB ceiling would have thrown away all early warning, so the warning tier is what makes
+ * the higher ceiling safe: growth must be EXPLAINED (exact size, delta from the previous accepted
+ * baseline, framework/vendor attribution, app-owned attribution, new components/dependencies,
+ * public-isolation confirmation) long before it is permitted to BLOCK. Silence in the 300–320 band
+ * is a gate defect, not a pass.
+ *
+ * There is deliberately NO `totalJsBytes` key any more: a single name for a two-tier policy is
+ * exactly how a caller silently reads the wrong tier.
+ *
+ * `appRenderedBytes` and `cssBytes` are D20-12's and §1's numbers UNCHANGED — app-owned measures
+ * project-owned growth, a concern identical on both sides of the login, and the dashboard shares
+ * the one global stylesheet. Only the transfer ceiling differs, and only because it governs a
+ * different product.
+ *
+ * Like the public limits, these are doc 20 verbatim. Re-baselining requires an owner decision and a
+ * decision-log entry there — never an edit here.
+ */
+export const DASHBOARD_BUDGET = {
+  /** D20-24 quality target and warning boundary. At or below this is an ordinary green result. */
+  totalJsQualityTargetBytes: 300 * KB,
+  /** D20-24 hard release ceiling. Above this is release-blocking and never raised automatically. */
+  totalJsCeilingBytes: 320 * KB,
+  appRenderedBytes: BUDGET.appRenderedBytes,
+  cssBytes: BUDGET.cssBytes
+}
+
+/**
+ * Last owner-ACCEPTED total-JS measurement per governed dashboard route, in gzip bytes.
+ *
+ * This exists solely to satisfy D20-24's "delta from its previous accepted baseline" reporting
+ * requirement in the warning band. It is a REPORTING input, never a gate: nothing passes or fails
+ * because of it, so it can never quietly become a second threshold.
+ *
+ * RE-MEASURED under the CORRECTED closure. The previous figures (250_011 / 223_553 / 302_582) were
+ * produced by a seed that omitted the shell's layout and middleware maps, so they understated every
+ * dashboard route — `/dashboard/messages` by 6,114 B gz. Leaving them here would have made the
+ * correction itself look like a 6 KB regression, which is the opposite of what this map is for.
+ * The measurement method changed; no threshold did.
+ *
+ * A route absent from this map is reported as having no previously accepted baseline rather than
+ * being given a fabricated one.
+ */
+export const DASHBOARD_ACCEPTED_BASELINE_BYTES = {
+  '/dashboard/login': 256_497,
+  '/dashboard': 229_657,
+  '/dashboard/messages': 308_718
+}
+
+/**
+ * The dashboard total-JS verdict — the only place the two D20-24 tiers are compared, so no caller
+ * can invent a third reading. Inclusive at both bounds ("≤", exactly-at-budget passes).
+ *
+ * @param {number} actualBytes gzip bytes for the route's closure
+ * @returns {'PASS' | 'WARN' | 'FAIL'} WARN still passes the gate, but obliges the attribution block
+ */
+export function dashboardTotalVerdict(actualBytes) {
+  if (actualBytes <= DASHBOARD_BUDGET.totalJsQualityTargetBytes) return 'PASS'
+  if (actualBytes <= DASHBOARD_BUDGET.totalJsCeilingBytes) return 'WARN'
+  return 'FAIL'
+}
+
+/**
  * The frozen limit, re-derived from its inputs so the constant above cannot drift from the
  * documented formula unnoticed. Exported for the test that pins it.
  * @param {number} baselineMaxBytes

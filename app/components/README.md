@@ -35,7 +35,7 @@
 | `home/Voices.vue` | `<HomeVoices>` — التوصيات (`FR-PUB-016`): `UiSpread tone="lift"` + `UiSectionHead`، تخطيط شبكي بلا carousel، `ContentQuoteBlock` (من `GET /testimonials`)؛ حالات التحميل/الخطأ/إعادة التحقّق عبر `UiRequestState` (`skeleton="quotes"`) |
 | `home/Contact.vue` | `<HomeContact>` — قسم التواصل (`FR-PUB-017`): قسم حبر ختامي (`UiSpread tone="ink"`) — verso لبطل الصفحة الورقي؛ رابط نموذج + بريد مباشر (رابط `mailto:` من `profileLinks`، `D05-4`) + صدى حالة التوفّر وروابط تواصل اجتماعي **أيقونية فقط** (aria-label)، مطابقةً لأسلوب التذييل |
 | `content/WorkEntry.vue` | `<ContentWorkEntry>` — صفّ فهرس مشروع (لا بطاقة مؤطَّرة): سنة بخطّ `mono` في الهامش + عنوان بخطّ العرض الكبير + ملخّص + شريط تقنيات بخطّ `mono` (رابط ممتدّ واحد → `/projects/{slug}`) |
-| `content/TimelineEntry.vue` | `<ContentTimelineEntry>` — عنصر جدول زمني: فترة (`Intl`) + نوع التوظيف + دور@شركة + نقاط الأثر (تُقسَّم من نص `impact`)؛ القضيب على الحافّة المنطقية (ينعكس RTL)، علامة بنفسجية للدور الحالي |
+| `content/TimelineEntry.vue` | `<ContentTimelineEntry>` — عنصر جدول زمني: فترة (`Intl`) + نوع التوظيف + دور@شركة + نقاط الأثر (تُقسَّم من نص `impact`)؛ القضيب على الحافّة المنطقية (ينعكس RTL)، علامة بنفسجية للدور الحالي. **تحديث 008:** التواريخ في عنصري `<time datetime>`، وقائمة التقنيات (`<ul>` موسومة باسم الدور، بترتيب الـ API حسب `Skill.order` — `D02-9`)، و`headingLevel` (`h3` افتراضًا للرئيسية، و`h2` في `/experience` حتى لا يُتخطّى مستوى عنوان) |
 | `content/ArticleRow.vue` | `<ContentArticleRow>` — صفّ فهرس مقال: سطر meta (فئة / تاريخ / زمن قراءة) + عنوان بخطّ العرض + مقتطف (رابط ممتدّ واحد → `/blog/{slug}`) |
 | `content/QuoteBlock.vue` | `<ContentQuoteBlock>` — اقتباس تحريري بعلامة تنصيص بنفسجية بخطّ العرض؛ عزو بصورة (`<NuxtImg>`) أو حرف بديل (monogram) إن غابت الصورة |
 | `content/Prose.vue` | `<ContentProse>` — سطح عرض Markdown الوحيد (يفوّض إلى `/api/prose`) |
@@ -44,6 +44,21 @@
 
 - **وارد:** التخطيطات (`LayoutHeader`/`LayoutFooter`/`UiBackToTop` في `default.vue`)، الصفحات (`HomeNameplate`, `HomeCapabilities`, `HomeSelectedWork`, `HomeTimeline`, `HomeWriting`, `HomeVoices`, `HomeContact`, `ContentArticleRow`, `ContentProse`، `UiSpread`، `UiSectionHead`، `UiRequestState`).
 - **صادر:** مكوّنات `Nuxt UI`، `useI18n`/`useLocalePath`/`useSwitchLocalePath`/`useColorMode`، ومركّبات البيانات (`useSiteSettings`/`useHomeData`/`useSiteSchema`)، و`utils` (`formatDate`/`formatMonthYear`/`formatExperiencePeriod`)، وبدائيّات الواجهة الجديدة (`UiSpread`/`UiSectionHead`/`UiBrandMark`/`UiRequestState`/`LayoutLangToggle`).
+
+### مكوّنات المشاريع (005)
+
+- **`project/Filter.vue`** — مرشّح التقنيات من سجلّ المهارات لا من نصّ حرّ؛ القيمة المُرسَلة هي
+  `UUID` القياسي (الشكل الوحيد الذي يقبله العقد)، والتسميات للعرض فقط. «كل التقنيات» **عنصر نائب**
+  لا خيار في القائمة: `reka-ui` تحجز السلسلة الفارغة لمسح الاختيار وترفض عنصرًا قيمته `''`؛ فالمسح
+  إجراء صريح يظهر فقط أثناء وجود مرشّح.
+- **`project/Gallery.vue`** — `srcset` مبني من `variants` الواردة في العقد نفسه، لا من تحويل وقت
+  تشغيل (`D23-15`: الـ API يولّد النسخ وR2 يقدّمها ساكنة). `width`/`height` صريحان دائمًا — هما ما
+  يُثبّت `CLS` عند الصفر. و**`alt === null` تختلف عن `alt === ''`**: الأولى تعني «لا ترجمة للنصّ
+  البديل» فتُخفى الصورة من شجرة الإتاحة، والثانية تعني «زخرفيّة عن قصد».
+- **`project/Links.vue`** — يعرض `liveUrl`/`repoUrl` بالتوليفات الأربع، ولا يعرض **أيّ** منطقة حين
+  يكونان معًا `null`.
+- **`ui/Breadcrumbs.vue`** — `nav` دلالي بقائمة مرتّبة، والعنصر الأخير يحمل `aria-current="page"`
+  وليس رابطًا، وبخصائص CSS منطقيّة فينعكس المسار تلقائيًّا في RTL.
 
 ## قرارات جوهرية (شرح لمطوّر مبتدئ)
 

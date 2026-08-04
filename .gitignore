@@ -32,3 +32,20 @@ logs
 
 # Bundle-provenance analysis output (ANALYZE_BUNDLE=1); analysis input, never committed
 .bundle-analysis
+
+# Playwright e2e output (uploaded as a CI artifact, never committed)
+test-results
+playwright-report
+blob-report
+.playwright
+
+# Governed Lighthouse (D20-25): the HTTP/2 frontend's certificate is generated per run into the OS
+# temp directory and disposed on exit, so nothing should ever land here. These entries exist so that
+# a future change which writes the key into the repo is caught by git rather than by a leak.
+*.pem
+lh-h2-cert-*/
+.lighthouse-tmp/
+
+# Governed Lighthouse (D20-25): a build whose provenance failed validation is moved aside rather
+# than deleted or relabelled, so it stays inspectable without ever being measured.
+.output.quarantined-*

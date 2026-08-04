@@ -42,11 +42,25 @@ export type ProjectGalleryItem = Schemas['PublicProjectGalleryItemEntity']
 export type ProjectListItem = Schemas['PublicProjectListItemEntity']
 export type ProjectTechnology = Schemas['ProjectTechnologyEntity']
 
+/**
+ * `GET /redirects/resolve` — the destination for a renamed slug (D04-6). `toPath` is
+ * **section-relative** (e.g. `/projects/new-slug`), so the caller localizes it before navigating.
+ */
+export type RedirectResolve = Schemas['RedirectResolveEntity']
+
 /** `GET /skills` — resolved single-locale skill (home tech-stack section, D09-9). */
 export type Skill = Schemas['PublicSkillEntity']
 
 /** `GET /experiences` — resolved single-locale experience (home timeline summary; `employmentType` code, D09-9). */
 export type Experience = Schemas['PublicExperienceEntity']
+
+/**
+ * One technology on an experience (FR-PUB-021, D02-9) — a Skill-registry reference, not free text,
+ * so the label matches the Projects filter and translates with the registry. The API orders these by
+ * `Skill.order` and drops a skill with no translation in the requested locale rather than falling
+ * back to another one (D10-6); the client renders the array verbatim.
+ */
+export type ExperienceTechnology = Schemas['ExperienceTechnologyEntity']
 
 /** `GET /testimonials` — visible testimonials (home social-proof section). */
 export type Testimonial = Schemas['PublicTestimonialEntity']
@@ -63,3 +77,6 @@ export type AuthUser = Schemas['AuthUserEntity']
 export type AuthSession = Schemas['LoginResponse']
 export type RefreshSession = Schemas['RefreshResponse']
 export type LoginCredentials = Schemas['LoginDto']
+
+/** Admin inbox message descriptor (FR-DSH-060, D10-16 (d) — `email`/`phone` nullable, never both). */
+export type ContactMessage = Schemas['ContactMessageEntity']

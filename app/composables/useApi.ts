@@ -1,6 +1,27 @@
 import type { NitroFetchOptions } from 'nitropack'
 
 /**
+ * Options for one API call: ofetch's own options plus the locale override defined by D06-6.
+ */
+export interface ApiRequestOptions extends NitroFetchOptions<string> {
+  /**
+   * Locale to send as `?locale=` on a public read (D06-6, doc 06 §4).
+   *
+   * Public content composables pass the ROUTE-resolved locale (`useRouteLocale()`), because during
+   * the D03-13 deferred locale commit the reactive UI locale still holds the OUTGOING language while
+   * the incoming page is already fetching its content. Omit it to use the current UI locale.
+   *
+   * **`false` means "send no locale at all"**, which is what ADMIN reads require. The admin DTOs are
+   * validated with `forbidNonWhitelisted`, and none of them declares `locale` — messages are
+   * locale-agnostic — so an unsolicited `?locale=` is a **422**, not a harmless extra parameter.
+   * Omitting the option is therefore not the same as opting out: the default still sends the UI
+   * locale. This is explicit rather than inferred from an `/admin/` prefix, so a caller states its
+   * intent instead of relying on a path convention that a future route could silently break.
+   */
+  locale?: string | false
+}
+
+/**
  * The single API door (doc 06 §2, principle 12). Every call to the NestJS API goes through
  * here — base URL from env, bearer from the memory store (D11-1), locale on public reads
  * (D10-6), one RFC 7807 error shape, and a single silent-refresh retry on 401 (flow F-D1).
@@ -24,11 +45,6 @@ export function useApi() {
     // sending it on public reads is harmless and keeps one client config.
     credentials: 'include',
     onRequest({ options }) {
-      const method = (options.method ?? 'GET').toUpperCase()
-      if (method === 'GET') {
-        // Public reads are locale-scoped (D10-6); content arrives already localized from the API.
-        options.query = { locale: $i18n.locale.value, ...options.query }
-      }
       const headers = (options.headers = new Headers(options.headers))
       if (auth.accessToken) {
         headers.set('Authorization', `Bearer ${auth.accessToken}`)
@@ -36,13 +52,25 @@ export function useApi() {
     }
   })
 
-  return async function apiFetch<T>(request: string, options: NitroFetchOptions<string> = {}): Promise<T> {
+  return async function apiFetch<T>(request: string, options: ApiRequestOptions = {}): Promise<T> {
+    const { locale, ...fetchOptions } = options
+    const method = (fetchOptions.method ?? 'GET').toUpperCase()
+
+    // Public reads are locale-scoped (D10-6); content arrives already localized from the API. WHICH
+    // locale is D06-6: the caller's explicit one when it knows the content language of the page it is
+    // building, otherwise the current UI locale, which is correct everywhere except inside the D03-13
+    // deferred locale commit. Resolved here rather than in `onRequest` so there is exactly one place
+    // the parameter can come from. An explicit `query.locale` still wins, as it always did.
+    const localized: NitroFetchOptions<string> = method === 'GET' && locale !== false
+      ? { ...fetchOptions, query: { locale: locale ?? $i18n.locale.value, ...fetchOptions.query } }
+      : fetchOptions
+
     // Never retry the refresh endpoint itself — a 401 there means the session is truly gone.
     const isAuthRoute = request.startsWith('/auth/')
     return requestWithRefreshRetry<T>(
       // `client` is Nuxt's Nitro-typed $fetch; against an external API the response maps to the
       // caller's T, which the generic passthrough cannot prove — assert Promise<T> at this one door.
-      () => client<T>(request, options) as Promise<T>,
+      () => client<T>(request, localized) as Promise<T>,
       () => auth.refresh(),
       { retry: !isAuthRoute }
     )

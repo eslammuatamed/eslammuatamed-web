@@ -2,16 +2,17 @@
 /**
  * Lighthouse median gate — doc 20 §1 / §5 (D20-13, D20-14, D20-15).
  *
- * `npm run lhci` / `npm run lhci:desktop` COLLECT three runs per URL per profile into
- * `.lighthouseci/<profile>/`. This script ASSERTS the approved thresholds on the median of those
- * runs, and prints every individual run so a median can never hide instability behind a passing
- * number.
+ * `npm run lighthouse:ci` COLLECTS three runs per URL per profile into `.lighthouseci/<profile>/`,
+ * over the governed HTTP/2 frontend (doc 20 §5.1, D20-25), and then runs this script. This script
+ * ASSERTS the approved thresholds on the median of those runs, and prints every individual run so a
+ * median can never hide instability behind a passing number.
  *
  *     Performance     median ≥ 95 desktop  ·  ≥ 60 mobile
  *     A11y / BP / SEO median 100
  *     LCP (lab)       ≤ 1200 ms desktop  ·  ≤ 4000 ms mobile   — device-scoped (D20-14)
  *                     mobile `/ar` ≤ 5000 ms — route+device CI regression ceiling (D20-16);
- *                     4000 ms remains a reported, non-blocking quality target there
+ *                     mobile `/ar/projects` ≤ 5500 ms — same, per D20-17;
+ *                     4000 ms remains a reported, non-blocking quality target on both
  *     CLS             ≤ 0.05
  *     Fonts           Arabic-SCRIPT resources ≤ 130 KiB on Arabic routes (D20-15); the combined
  *                     per-route total and the non-Arabic split are reported as diagnostics
@@ -65,8 +66,8 @@ async function loadRuns() {
     if (entries === null) {
       throw new InfraError(
         `no Lighthouse reports at ${dir} — collect them first:\n`
-        + '    npm run lhci            (mobile profile)\n'
-        + '    npm run lhci:desktop    (desktop profile)'
+        + '    npm run lighthouse:ci   (governed: builds the exact head, starts the HTTP/2\n'
+        + '                             frontend, collects BOTH profiles, then runs this gate)'
       )
     }
     const reports = entries.filter(name => name.endsWith('.json') && name !== 'manifest.json')
@@ -108,7 +109,8 @@ async function main() {
   console.log('Grouped by configSettings.formFactor × requestedUrl (run configuration, not filename).')
   console.log('Every individual run is shown: the median must not be able to hide instability.')
   console.log('LCP budgets are device-scoped (D20-14); the font budget is Arabic-script on Arabic routes (D20-15).')
-  console.log('Mobile /ar asserts the D20-16 CI regression ceiling (5000 ms); its 4000 ms quality target is reported, not blocking.\n')
+  console.log('Mobile /ar asserts the D20-16 CI regression ceiling (5000 ms) and mobile /ar/projects the D20-17 ceiling (5500 ms);')
+  console.log('on both, the 4000 ms quality target is reported, not blocking. Every other configuration keeps its device budget.\n')
 
   for (const s of summaries) {
     const locale = isArabicRoute(s.url) ? 'Arabic route' : 'Latin route'
@@ -141,15 +143,15 @@ async function main() {
             ? '(budget does not apply to this route)'
             : '(recorded, no doc 20 §1 budget)')
         : `≤ ${fmt(m.limit, m.unit)}`
-      // A D20-16 ceiling raised the asserted bound above the quality target, so the target is
-      // reported beside the verdict. An unmet target must stay legible on a PASSING gate — a
+      // A D20-16 / D20-17 ceiling raised the asserted bound above the quality target, so the target
+      // is reported beside the verdict. An unmet target must stay legible on a PASSING gate — a
       // ceiling that silently absorbs the number it replaced is how a temporary allowance becomes
       // the permanent standard.
       const targetNote = m.targetMet === null
         ? ''
         : m.targetMet
           ? `  · quality target ${fmt(m.target, m.unit)} met`
-          : `  · quality target ${fmt(m.target, m.unit)} NOT met (non-blocking, D20-16)`
+          : `  · quality target ${fmt(m.target, m.unit)} NOT met (non-blocking, D20-16/D20-17)`
       console.log(
         `   ${mark} ${m.label.padEnd(38)} runs [${m.values.map(v => fmt(v, m.unit)).join(', ')}]`
         + `  median ${fmt(m.median, m.unit)}  ${bound}${targetNote}`
