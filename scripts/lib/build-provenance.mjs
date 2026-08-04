@@ -1,0 +1,296 @@
+/**
+ * Build provenance for governed Lighthouse measurement (doc 20 §5.1, D20-25).
+ *
+ * WHAT WENT WRONG BEFORE. The first attempt derived a "source identity" from `git diff HEAD` and
+ * treated a dirty tree as merely a different identity. `git diff HEAD` reports only TRACKED files,
+ * so a source file that had never been `git add`-ed was invisible to it — and Nuxt DISCOVERS files
+ * by scanning directories (`app/components/`, `app/composables/`, `app/middleware/`, `app/layouts/`,
+ * `app/pages/`, `server/`, and more). A build could therefore contain code that the recorded HEAD
+ * does not contain, while the report confidently carried that HEAD's name.
+ *
+ * Hashing `.output` does not fix this. An output hash proves two measurements used the same bytes;
+ * it says nothing about which sources produced them.
+ *
+ * THE RULE NOW. Governed measurement requires a COMPLETELY CLEAN source state — no staged changes,
+ * no unstaged changes, no untracked non-ignored files, no conflicts, no dirty submodules. That is a
+ * property of the whole working tree rather than a list of interesting directories, so it cannot be
+ * outflanked by a future Nuxt auto-discovery location that nobody remembered to allowlist.
+ *
+ * Exclusions come from `.gitignore` alone — `node_modules`, `.output`, `.lighthouseci`, the `.pem`
+ * pattern and the ephemeral certificate directories are already ignored there — never from
+ * provenance-specific exceptions.
+ */
+import { execFileSync } from 'node:child_process'
+import { createHash } from 'node:crypto'
+import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
+import { join, relative, sep } from 'node:path'
+
+/** Identifies the tool and contract that produced a marker (validation check 7). */
+export const GENERATOR = 'scripts/lighthouse-ci.mjs'
+export const MARKER_VERSION = 1
+export const GOVERNED_BUILD_MODE = 'governed-lighthouse/v1'
+
+/**
+ * Environment variables known to change the PUBLIC WEB BUILD.
+ *
+ * Derived from the only two `process.env` reads in `nuxt.config.ts` and `config/`
+ * (`NUXT_PUBLIC_SITE_URL`, `ANALYZE_BUNDLE`), the loopback override those consult, the public
+ * runtime origin, and the build mode. Names only ever appear in the marker; VALUES are hashed and
+ * never written or logged.
+ */
+export const BUILD_ENV_ALLOWLIST = Object.freeze([
+  'ANALYZE_BUNDLE',
+  'NODE_ENV',
+  'NUXT_PUBLIC_API_BASE',
+  'NUXT_PUBLIC_SITE_URL',
+  'NUXT_PUBLIC_SITE_URL_ALLOW_LOOPBACK'
+])
+
+/**
+ * Build-time placeholders the governed lifecycle supplies when the operator has not (D23-8).
+ *
+ * These MUST be resolved in one place. The build runs as a child process with them applied, so if
+ * the orchestrator later fingerprinted its own bare `process.env` it would compute a different hash
+ * from the one the build recorded and reject its own artifact. That is exactly what happened the
+ * first time this ran end to end.
+ */
+export const GOVERNED_ENV_DEFAULTS = Object.freeze({
+  NUXT_PUBLIC_SITE_URL: 'https://example.com',
+  NUXT_PUBLIC_API_BASE: 'https://example.com/api/v1'
+})
+
+/** The effective governed build environment: the ambient one, plus the defaults above. */
+export function governedBuildEnv(base = process.env) {
+  const env = { ...base }
+  for (const [name, value] of Object.entries(GOVERNED_ENV_DEFAULTS)) {
+    if (env[name] === undefined) env[name] = value
+  }
+  return env
+}
+
+export const MARKER_PATH = join('.output', '.provenance.json')
+export const REPORT_PROVENANCE_PATH = join('.lighthouseci', 'provenance.json')
+
+const sha256 = data => createHash('sha256').update(data).digest('hex')
+
+function git(args, cwd = process.cwd()) {
+  return execFileSync('git', args, { cwd, encoding: 'utf8', maxBuffer: 256 * 1024 * 1024, stdio: ['ignore', 'pipe', 'ignore'] })
+}
+
+/**
+ * Every entry `git status` reports, using the porcelain v1 NUL-delimited form with
+ * `--untracked-files=all`.
+ *
+ * `--untracked-files=all` matters: the default `normal` collapses an untracked directory to the
+ * directory name, which would hide how many files are really there. NUL delimiting keeps paths with
+ * spaces or newlines intact. Renames emit a second NUL-terminated field (the original path), which
+ * is consumed so it is never mistaken for a separate entry.
+ */
+export function gitStatusEntries(cwd = process.cwd()) {
+  const raw = git(['status', '--porcelain=v1', '-z', '--untracked-files=all'], cwd)
+  const fields = raw.split('\0')
+  const entries = []
+  for (let i = 0; i < fields.length; i++) {
+    const field = fields[i]
+    if (!field) continue
+    const code = field.slice(0, 2)
+    const path = field.slice(3)
+    entries.push({ code, path })
+    // 'R'ename and 'C'opy carry their source path in the next field.
+    if (code[0] === 'R' || code[0] === 'C') i++
+  }
+  return entries
+}
+
+/**
+ * Refuse to proceed unless the working tree is completely clean.
+ *
+ * This runs BEFORE the build, not after: the point is to never produce output whose provenance
+ * cannot be stated, rather than to notice afterwards.
+ */
+export function assertCleanSourceState(cwd = process.cwd()) {
+  const entries = gitStatusEntries(cwd)
+  if (entries.length === 0) return { clean: true, entries }
+
+  const describe = ({ code, path }) => {
+    const c = code.trim()
+    if (code === '??') return `  untracked (not ignored): ${path}`
+    if (/[U]/.test(code) || code === 'AA' || code === 'DD') return `  CONFLICTED: ${path}`
+    return `  ${c}: ${path}`
+  }
+  throw new Error(
+    'Refusing to build or measure: the working tree is not clean.\n'
+    + entries.map(describe).join('\n')
+    + '\n\nGoverned Lighthouse records the commit its numbers belong to (doc 20 §5.1, D20-25).\n'
+    + 'Anything not committed is invisible to that record — and Nuxt discovers sources by scanning\n'
+    + 'directories, so an untracked file is compiled into the build while HEAD does not contain it.\n'
+    + 'Commit or stash the listed paths, or add genuinely generated output to .gitignore.'
+  )
+}
+
+export function headSha(cwd = process.cwd()) { return git(['rev-parse', 'HEAD'], cwd).trim() }
+export function treeSha(cwd = process.cwd()) { return git(['rev-parse', 'HEAD^{tree}'], cwd).trim() }
+
+export function packageLockHash(cwd = process.cwd()) {
+  const path = join(cwd, 'package-lock.json')
+  if (!existsSync(path)) return null
+  return sha256(readFileSync(path))
+}
+
+function toolVersion(cmd, args) {
+  try { return execFileSync(cmd, args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim() } catch { return 'unknown' }
+}
+
+/**
+ * A fingerprint of the allowlisted build environment.
+ *
+ * ABSENT and EMPTY are deliberately different: `NUXT_PUBLIC_SITE_URL=""` is a misconfiguration that
+ * must not hash the same as "not set at all". Values are hashed, never stored — the marker keeps
+ * only each name's presence, so it is safe to commit, upload as a CI artifact, or print.
+ */
+export function envFingerprint(env = governedBuildEnv()) {
+  const presence = {}
+  const parts = []
+  for (const name of BUILD_ENV_ALLOWLIST) {
+    const raw = env[name]
+    const state = raw === undefined ? 'absent' : (raw === '' ? 'empty' : 'set')
+    presence[name] = state
+    // The value is normalised into the hash input; it never reaches the marker or a log line.
+    parts.push(`${name}\0${state}\0${raw ?? ''}`)
+  }
+  return { hash: sha256(parts.join('\u0001')), presence }
+}
+
+/** Every file under a directory, relative and sorted, excluding a set of relative paths. */
+function walk(dir, exclude = new Set(), base = dir, out = []) {
+  for (const name of readdirSync(dir).sort()) {
+    const full = join(dir, name)
+    const rel = relative(base, full).split(sep).join('/')
+    if (exclude.has(rel)) continue
+    const st = statSync(full)
+    if (st.isDirectory()) walk(full, exclude, base, out)
+    else out.push(rel)
+  }
+  return out
+}
+
+/**
+ * A fingerprint of the built output.
+ *
+ * The marker itself is excluded — it lives inside `.output/` and cannot contain its own hash. This
+ * pins THIS output against later tampering; it is deliberately NOT a claim that two builds of the
+ * same source produce identical bytes (Nuxt writes a per-build UUID and timestamp into
+ * `_nuxt/builds/meta/`, so they never do).
+ */
+export function outputFingerprint(outputDir = '.output', markerRel = '.provenance.json') {
+  if (!existsSync(outputDir)) return null
+  const files = walk(outputDir, new Set([markerRel]))
+  const h = createHash('sha256')
+  for (const rel of files) {
+    h.update(rel)
+    h.update('\0')
+    h.update(createHash('sha256').update(readFileSync(join(outputDir, rel))).digest())
+  }
+  return { hash: h.digest('hex'), fileCount: files.length }
+}
+
+/**
+ * Write the provenance marker for the output currently in `.output/`.
+ *
+ * Requires a clean tree: a marker that cannot state its sources truthfully must not exist at all.
+ */
+export function writeProvenance({ cwd = process.cwd(), outputDir = '.output', mode = GOVERNED_BUILD_MODE, env = governedBuildEnv() } = {}) {
+  assertCleanSourceState(cwd)
+  const fingerprint = outputFingerprint(outputDir)
+  if (!fingerprint) throw new Error(`cannot record provenance: ${outputDir} does not exist`)
+  const envPrint = envFingerprint(env)
+
+  const marker = {
+    markerVersion: MARKER_VERSION,
+    generator: GENERATOR,
+    buildMode: mode,
+    head: headSha(cwd),
+    tree: treeSha(cwd),
+    packageLockHash: packageLockHash(cwd),
+    node: process.version,
+    npm: toolVersion('npm', ['--version']),
+    env: { allowlist: [...BUILD_ENV_ALLOWLIST], hash: envPrint.hash, presence: envPrint.presence },
+    output: fingerprint,
+    // Metadata only. Never compared, because a rebuilt-but-identical source state is still the same
+    // provenance and a clock is not part of what a report is about.
+    builtAt: new Date().toISOString()
+  }
+  writeFileSync(join(outputDir, '.provenance.json'), `${JSON.stringify(marker, null, 2)}\n`)
+  return marker
+}
+
+export function readProvenance(outputDir = '.output') {
+  const path = join(outputDir, '.provenance.json')
+  if (!existsSync(path)) return null
+  try { return JSON.parse(readFileSync(path, 'utf8')) } catch { return null }
+}
+
+/**
+ * The seven measurement-time checks.
+ *
+ * Returns `{ valid, failures }` rather than throwing, so the orchestrator can decide between
+ * rebuilding (governed) and refusing (non-governed).
+ */
+export function validateProvenance({ cwd = process.cwd(), outputDir = '.output', mode = GOVERNED_BUILD_MODE, env = governedBuildEnv() } = {}) {
+  const failures = []
+  const marker = readProvenance(outputDir)
+
+  // 7 — the marker exists and this tool wrote it, at a contract version we understand.
+  if (!marker) {
+    return { valid: false, marker: null, failures: ['no provenance marker — this output was not produced by the governed lifecycle'] }
+  }
+  if (marker.generator !== GENERATOR || marker.markerVersion !== MARKER_VERSION) {
+    failures.push(`marker was produced by ${marker.generator}@v${marker.markerVersion}, expected ${GENERATOR}@v${MARKER_VERSION}`)
+  }
+  if (marker.buildMode !== mode) failures.push(`marker build mode is "${marker.buildMode}", expected "${mode}"`)
+
+  // 1 — still clean.
+  try { assertCleanSourceState(cwd) } catch (error) { failures.push(error.message.split('\n')[0]) }
+
+  // 2, 3 — the commit and its tree.
+  const head = headSha(cwd)
+  const tree = treeSha(cwd)
+  if (marker.head !== head) failures.push(`marker HEAD ${marker.head} does not match current HEAD ${head}`)
+  if (marker.tree !== tree) failures.push(`marker tree ${marker.tree} does not match current tree ${tree}`)
+
+  // 4 — dependencies.
+  const lock = packageLockHash(cwd)
+  if (marker.packageLockHash !== lock) failures.push('package-lock.json changed since the build')
+
+  // 5 — build environment.
+  const envPrint = envFingerprint(env)
+  if (marker.env?.hash !== envPrint.hash) failures.push('governed build-environment fingerprint changed since the build')
+
+  // 6 — the output itself.
+  const fingerprint = outputFingerprint(outputDir)
+  if (!fingerprint) failures.push(`${outputDir} is missing`)
+  else if (marker.output?.hash !== fingerprint.hash) failures.push('built output changed since the marker was written')
+
+  return { valid: failures.length === 0, marker, failures }
+}
+
+/** Bind a collected report set to the exact identity it was measured from. */
+export function writeReportProvenance({ marker, reportDir = '.lighthouseci', extra = {} } = {}) {
+  const files = walk(reportDir, new Set(['provenance.json']))
+    .filter(rel => rel.endsWith('.json') || rel.endsWith('.html'))
+    .map(rel => ({ file: rel, sha256: sha256(readFileSync(join(reportDir, rel))) }))
+  const record = {
+    markerVersion: MARKER_VERSION,
+    generator: GENERATOR,
+    identity: {
+      head: marker.head, tree: marker.tree, packageLockHash: marker.packageLockHash,
+      buildMode: marker.buildMode, node: marker.node, npm: marker.npm,
+      envHash: marker.env.hash, outputHash: marker.output.hash
+    },
+    reports: files,
+    measuredAt: new Date().toISOString(),
+    ...extra
+  }
+  writeFileSync(join(reportDir, 'provenance.json'), `${JSON.stringify(record, null, 2)}\n`)
+  return record
+}

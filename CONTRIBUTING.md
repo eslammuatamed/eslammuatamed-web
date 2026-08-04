@@ -37,6 +37,85 @@ hotfix/<slug>   (branch from main)
 - **Never reset or force-push the shared `dev` branch**, and never recreate it.
 - **A zero-file content diff is not sufficient** — `dev` and `main` must also share ancestry (`git merge-base --is-ancestor origin/main origin/dev` is true after a sync). This synchronization rule applies **independently per repository**; coordinated API/Web releases still go **API first, then Web**.
 
+## Performance verification — governed Lighthouse (doc 20 §5.1, D20-25)
+
+**One command, everywhere — and it is the only setup you need:**
+
+```bash
+npm ci
+npm run lighthouse:ci  # THE canonical entry point — local, PR CI, dev push and dev→main promotion
+```
+
+That single command owns the whole lifecycle: it **builds the exact current head** (or reuses
+`.output` when it already matches, so CI does not build twice), starts the Nitro preview and the
+Prism contract mock, generates an ephemeral localhost certificate, brings up a local
+**HTTPS/HTTP/2** frontend, **asserts the browser-facing protocol before** the expensive matrix runs,
+collects the unchanged mobile and desktop matrices, **proves from Lighthouse's own artifacts that
+Chrome measured over `h2`**, asserts the unchanged medians, then tears down every process, port and
+key — on success, on failure and on Ctrl-C.
+
+**Two protocol checks, because neither alone is enough.** The *preflight* asks the TLS layer what it
+negotiated, before minutes of collection are spent — but it only proves what a Node client saw. The
+*measured-session proof* reads `audits['network-requests']` out of every report and fails the run
+unless Chrome negotiated `h2` for the document, the `/_nuxt/` JavaScript, and any first-party CSS or
+fonts. That second check is load-bearing: the frontend deliberately still accepts HTTP/1.1 at the
+socket (refusing it made Nitro's chunked responses hang), so only the measurement's own record can
+prove the numbers came over `h2`. Third-party and `data:` requests are classified and reported
+separately, never gated.
+
+**Governed measurement requires a completely clean tree.** Before it builds anything,
+`npm run lighthouse:ci` refuses if `git status --porcelain=v1 -z --untracked-files=all` reports
+*anything*: staged changes, unstaged changes, untracked non-ignored files, conflicts, or dirty
+submodules. This is a whole-tree rule rather than a list of watched directories on purpose — Nuxt
+discovers sources by scanning (`app/components/`, `app/composables/`, `app/middleware/`,
+`app/layouts/`, `app/pages/`, `server/`, …), so a file that was never `git add`-ed is compiled into
+the build while HEAD does not contain it. A directory allowlist would be outflanked by the next
+auto-discovery location; "the tree is clean" cannot be. Exclusions come from `.gitignore` alone,
+never from provenance-specific exceptions.
+
+**Builds carry a provenance marker.** `.output/.provenance.json` records the HEAD sha, the Git
+**tree** sha, the `package-lock.json` hash, Node and npm versions, the governed build-mode
+identifier, a hash of the allowlisted build-affecting environment, and a fingerprint of the built
+output. The build timestamp is metadata only and is never compared. Before collection — and again
+after it — the governed command re-verifies all seven properties. A build that fails is
+**quarantined to `.output.quarantined-<sha>/`** and rebuilt, never silently relabelled. Every report
+file is then bound by content hash in `.lighthouseci/provenance.json`, so a downloaded artifact is
+traceable to an exact commit.
+
+**Secrets never reach the marker.** Only allowlisted variable *names* and each one's presence
+(`set` / `empty` / `absent` — a distinction that matters, since an empty `NUXT_PUBLIC_SITE_URL` is a
+misconfiguration, not an unset one) are recorded. Values are hashed and never written or logged, and
+anything outside the allowlist is not hashed at all.
+
+**Why HTTP/2.** Production serves HTTP/2 (Cloudflare → Caddy → Nitro). The gate used to point
+Lighthouse straight at Nitro over HTTP/1.1, whose six-connection limit serialises requests HTTP/2
+multiplexes. Measured at Web `9876279` with byte-identical assets, that alone moved `/ar` from a
+4441 ms LCP median to 3389 ms. **Nitro may stay HTTP/1.1 behind the frontend** — only what the
+browser negotiates is governed.
+
+**Requirements:** Node per `.nvmrc`/`package.json` engines, an installed Chrome/Chromium (CI's
+`ubuntu-latest` ships one), and `openssl` on `PATH` for the ephemeral certificate. No production
+credentials and no VPS access are needed.
+
+**Ports and reports.** The preview uses `CI_PREVIEW_PORT`/`CI_MOCK_PORT` (default 3000/3001); the
+HTTP/2 frontend takes an OS-assigned free port by default, overridable with `LH_H2_PORT`, so
+parallel runs do not collide. Reports land in `.lighthouseci/mobile` and `.lighthouseci/desktop`.
+
+**Certificates are never committed.** They are generated per run into the OS temp directory,
+localhost-scoped, removed on exit, and `.gitignore` carries `*.pem` as a backstop. Chrome is given
+`--ignore-certificate-errors-spki-list=<that key>` — trust for exactly this certificate, never a
+blanket certificate-error bypass.
+
+**Non-governed escape hatches.** `lhci:collect:*-nongoverned` and `lhci:assert-nongoverned` exist for
+low-level debugging only. They are **not** the gate and CI never calls them. Two guards keep them
+from quietly becoming a second methodology: `lighthouserc.cjs` throws unless `LH_BASE_URL` is set, so
+running `lhci` by hand cannot reintroduce HTTP/1.1 measurement; and they refuse to run at all unless
+`.output/` was built from the current head — unlike the governed command, they never build for you,
+they just decline to measure the wrong commit.
+
+**Diagnostic only:** Lighthouse against the public production domain. Real RTT and edge-cache state
+make it non-deterministic, so it never gates a PR.
+
 ## Documentation & Handoff Gate (required before delivery)
 Every feature's **final task** is the mandatory **Documentation & Handoff Gate** — canonical rule **doc 16 §5.1 / D16-8** ([`16-development-conventions.md`](../eslammuatamed-docs/docs/16-development-conventions.md)). Until it passes, the feature must **not** be pushed, PR'd, merged to `dev`, promoted to `main`, or deployed — "not requested" is never a reason to skip it. The Arabic module docs and SpecKit closeout are always required; other doc changes may be justified. The full rule lives in doc 16 and is **not restated here**.
 
