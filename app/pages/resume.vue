@@ -192,7 +192,7 @@ useSeoMeta({
           :key="skillGroup.group"
           class="resume-entry break-inside-avoid sm:grid sm:grid-cols-[10rem_1fr] sm:gap-4"
         >
-          <!-- The contract's `group` is an ENUM TOKEN (`LANGUAGE`…`PRACTICE`), not a label.
+          <!-- The contract's `group` is an ENUM TOKEN (`LANGUAGE`…`DELIVERY`), not a label.
                Its localized labels already exist for the home capabilities section, so they are
                REUSED here — a résumé-only copy of the same four strings would be exactly the
                second source of truth FR-PUB-024 forbids, one translation drift away from the

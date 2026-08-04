@@ -44,8 +44,11 @@ const stack = ['JavaScript', 'TypeScript', 'Vue', 'Nuxt', 'Node.js', 'Nest.js']
         <h1 class="mt-8 font-nameplate text-mega text-highlighted text-balance">{{ name }}</h1>
 
         <!-- Deliberate block gap below the name (bigger in Arabic, where the Reem Kufi name has taller
-             verticals): responsive margin only — no spacer element / <br> / nbsp / locale hack. -->
-        <p class="mt-7 kicker text-muted sm:mt-9">
+             verticals): responsive margin only — no spacer element / <br> / nbsp / locale hack.
+             `whitespace-pre-line` honours the line break the governed title carries: the approved
+             professional title is a two-line composition, and the break travels with the value
+             rather than being re-invented here (no <br>, no per-locale split, no second string). -->
+        <p class="mt-7 kicker whitespace-pre-line text-muted sm:mt-9">
           <bdi>{{ tagline }}</bdi>
         </p>
         <p class="mt-6 max-w-2xl text-body-lg text-default text-pretty">{{ t('home.hero.valueProp') }}</p>

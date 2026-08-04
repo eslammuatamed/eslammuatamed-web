@@ -1,7 +1,7 @@
 {
   "brand": {
     "name": "Eslam Muatamed",
-    "role": "JavaScript Product Engineer"
+    "role": "Full-Stack JavaScript\nProduct Engineer"
   },
   "nav": {
     "projects": "Projects",
@@ -52,7 +52,7 @@
     "hero": {
       "viewWork": "View work",
       "contact": "Get in touch",
-      "valueProp": "I build fast, accessible web interfaces with Vue and Nuxt — and I document the engineering decisions behind them.",
+      "valueProp": "I turn product requirements into production-ready web products, combining strong frontend architecture with reliable backend development and end-to-end delivery.",
       "stackLabel": "Working across",
       "since": "Shipping to production since {year}",
       "unavailableTitle": "Content unavailable",
@@ -64,9 +64,9 @@
       "title": "Technologies I work with",
       "group": {
         "LANGUAGE": "Languages",
-        "FRAMEWORK": "Frameworks",
-        "TOOLING": "Tooling",
-        "PRACTICE": "Practices"
+        "FRONTEND": "Frontend Engineering",
+        "BACKEND": "Backend Engineering",
+        "DELIVERY": "Delivery & Quality"
       }
     },
     "featured": {
