@@ -77,3 +77,6 @@ export type AuthUser = Schemas['AuthUserEntity']
 export type AuthSession = Schemas['LoginResponse']
 export type RefreshSession = Schemas['RefreshResponse']
 export type LoginCredentials = Schemas['LoginDto']
+
+/** Admin inbox message descriptor (FR-DSH-060, D10-16 (d) — `email`/`phone` nullable, never both). */
+export type ContactMessage = Schemas['ContactMessageEntity']

@@ -52,8 +52,12 @@ import { spawn } from 'node:child_process'
 import { readFile, access, readdir } from 'node:fs/promises'
 import { gzipSync } from 'node:zlib'
 import process from 'node:process'
+import { DASHBOARD_ROUTES, resolveDashboardClosure } from './lib/dashboard-closure.mjs'
 import {
   BUDGET,
+  DASHBOARD_ACCEPTED_BASELINE_BYTES,
+  DASHBOARD_BUDGET,
+  dashboardTotalVerdict,
   attributeRenderedBytes,
   budgetVerdict,
   collectRouteAssets,
@@ -158,7 +162,180 @@ async function loadChunkMeta() {
     }
     byAsset.set(`/${chunk.fileName}`, { modules: chunk.modules })
   }
+  // The dashboard closure (D20-23) needs the chunk GRAPH — imports/dynamicImports/isEntry — which
+  // the per-asset attribution map deliberately drops. Carried as a non-enumerable property so the
+  // existing `[...byAsset.keys()]` staleness check and every other consumer are untouched.
+  Object.defineProperty(byAsset, 'rawChunks', { value: parsed.chunks, enumerable: false })
   return byAsset
+}
+
+/**
+ * Measure one authenticated dashboard route by the doc 20 §1.2 client-build closure.
+ *
+ * The HTML path above cannot see these routes: `/dashboard/**` is `ssr: false`, so the server sends
+ * a bare SPA shell and every dashboard route would report the same shared entry. Same gate, same
+ * exit-code contract, different METHOD — chosen by what can actually observe the route.
+ */
+async function measureDashboardRoute(meta, pageModule, html) {
+  const { files, seed, missing } = resolveDashboardClosure(meta.rawChunks, pageModule)
+  if (missing.length > 0) {
+    throw new InfraError(
+      `dashboard closure for ${pageModule} could not be resolved (${missing.join('; ')}) — `
+      + 'refusing to report a number the method cannot justify. '
+      + 'Rebuild with: ANALYZE_BUNDLE=1 npm run build'
+    )
+  }
+
+  const js = { assets: [], raw: 0, gz: 0 }
+  const assetPaths = []
+  for (const file of files) {
+    const assetPath = `/${file}`
+    const sizes = await assetSizes(assetPath)
+    if (!sizes) throw new InfraError(`chunk in the dashboard closure is missing from the build: ${assetPath}`)
+    if (!meta.has(assetPath)) {
+      throw new InfraError(`no Rollup provenance for ${assetPath} — ${META_PATH} is stale; rebuild with ANALYZE_BUNDLE=1 npm run build`)
+    }
+    assetPaths.push(assetPath)
+    js.assets.push({ asset: assetPath, ...sizes })
+    js.raw += sizes.raw
+    js.gz += sizes.gz
+  }
+
+  // CSS comes from THIS ROUTE'S rendered shell, exactly as the public gate does it.
+  //
+  // A `ssr: false` route still returns an app-shell document carrying its stylesheet links — the
+  // part of the HTML that IS trustworthy here — even though its JS is fetched after hydration.
+  // The earlier version instead summed every `.css` file in the build on the assumption that there
+  // is "one global stylesheet". That assumption is not enforced anywhere: the moment the build emits
+  // a second stylesheet the dashboard CSS figure silently becomes a whole-bundle total attributed to
+  // one route, which is the confidently-wrong number this gate exists to refuse.
+  const cssAssets = collectRouteAssets(html, 'css')
+  let css = { raw: 0, gz: 0, count: cssAssets.length }
+  for (const asset of cssAssets) {
+    const sizes = await assetSizes(asset)
+    if (!sizes) throw new InfraError(`stylesheet referenced by the route is missing from the build: ${asset}`)
+    css = { ...css, raw: css.raw + sizes.raw, gz: css.gz + sizes.gz }
+  }
+
+  const attribution = attributeRenderedBytes(assetPaths, meta)
+  return {
+    js,
+    css,
+    seed,
+    ...attribution,
+    appVerdict: budgetVerdict(attribution.totals.app, DASHBOARD_BUDGET.appRenderedBytes),
+    // Three-valued on purpose (D20-24): PASS / WARN / FAIL. WARN passes the gate but obliges the
+    // attribution block below — see `reportDashboardWarning`.
+    totalVerdict: dashboardTotalVerdict(js.gz),
+    cssVerdict: budgetVerdict(css.gz, DASHBOARD_BUDGET.cssBytes)
+  }
+}
+
+/**
+ * The D20-24 warning band (route above the 300 KB gz quality target, at or below the 320 KB gz hard
+ * ceiling). The route PASSES — this prints on a green run and does not touch the exit code.
+ *
+ * WHY THIS FUNCTION IS THE POINT OF D20-24. Raising a ceiling without adding an obligation would
+ * just move the cliff. The warning is what keeps growth in the top 20 KB explained rather than
+ * merely tolerated, so doc 20 §1.1 names six things that must appear and this prints all six:
+ * exact route size · delta from the previous accepted baseline · framework/vendor attribution ·
+ * app-owned attribution · newly introduced components or dependencies · public-isolation
+ * confirmation. Dropping any of them silently downgrades a governed warning into an ordinary pass,
+ * which is the exact failure mode the two-tier policy exists to prevent.
+ *
+ * @param {object} row              the measured dashboard route
+ * @param {Map<string, object>} meta Rollup chunk metadata by asset path
+ * @param {Set<string>} publicAssetPaths every asset referenced by any measured PUBLIC route
+ */
+function reportDashboardWarning(row, meta, publicAssetPaths) {
+  const target = DASHBOARD_BUDGET.totalJsQualityTargetBytes
+  const ceiling = DASHBOARD_BUDGET.totalJsCeilingBytes
+
+  console.log(`\n${'!'.repeat(78)}`)
+  console.log(`! D20-24 QUALITY-TARGET WARNING — ${row.route}`)
+  console.log('!'.repeat(78))
+  console.log(
+    `\n  This route is ABOVE the ${kb(target)} gz quality target and AT OR BELOW the ${kb(ceiling)} gz\n`
+    + '  hard ceiling. It PASSES the release gate, but doc 20 §1.1 (D20-24) forbids reporting it as\n'
+    + '  an ordinary green result. The attribution below is REQUIRED in the verification report.'
+  )
+
+  // 1 — exact route size.
+  console.log(`\n  1. Exact route size:  ${row.js.gz} B  (${kb(row.js.gz)} gz)   raw ${row.js.raw} B (${kb(row.js.raw)})`)
+  console.log(`     Over quality target by ${row.js.gz - target} B (${kb(row.js.gz - target)}) · headroom to hard ceiling ${ceiling - row.js.gz} B (${kb(ceiling - row.js.gz)})`)
+
+  // 2 — delta from the previous ACCEPTED baseline. Never fabricated when absent.
+  const baseline = DASHBOARD_ACCEPTED_BASELINE_BYTES[row.route]
+  if (typeof baseline === 'number') {
+    const delta = row.js.gz - baseline
+    const sign = delta > 0 ? '+' : delta < 0 ? '−' : '±'
+    console.log(
+      `\n  2. Delta from previous accepted baseline:  ${sign}${Math.abs(delta)} B (${sign}${kb(Math.abs(delta))})`
+      + `\n     baseline ${baseline} B (${kb(baseline)} gz)  →  now ${row.js.gz} B (${kb(row.js.gz)} gz)`
+    )
+  } else {
+    console.log(
+      '\n  2. Delta from previous accepted baseline:  NO ACCEPTED BASELINE RECORDED for this route.'
+      + '\n     Reported as absent rather than estimated — an invented baseline would make a real'
+      + '\n     regression look like a first measurement. Record one in DASHBOARD_ACCEPTED_BASELINE_BYTES'
+      + '\n     when the owner accepts this figure.'
+    )
+  }
+
+  // 3 — framework/vendor attribution.
+  const assetPaths = row.js.assets.map(a => a.asset)
+  const ranking = packageRanking(meta, assetPaths)
+  console.log(`\n  3. Framework/vendor attribution (Rollup renderedLength — PRE-minification, relative weight):`)
+  console.log(`     vendor total ${row.totals.vendor} B (${kb(row.totals.vendor)}) · generated ${row.totals.generated} B (${kb(row.totals.generated)})`)
+  for (const [pkg, bytes] of ranking.slice(0, 10)) {
+    console.log(`     ${kb(bytes).padStart(10)}  ${pkg}`)
+  }
+
+  // 4 — app-owned attribution.
+  console.log(`\n  4. App-owned attribution:  ${row.totals.app} B (${kb(row.totals.app)}) / ${DASHBOARD_BUDGET.appRenderedBytes} B (${kb(DASHBOARD_BUDGET.appRenderedBytes)})  — ${row.appVerdict}`)
+  for (const mod of row.appModules.slice(0, 10)) {
+    console.log(`     ${String(mod.bytes).padStart(7)} B  ${mod.id}`)
+  }
+
+  // 5 — newly introduced components or dependencies. Derived from the build, not from a hand-kept
+  // list: any vendor package in this route's closure that no measured public route pulls in is what
+  // "new to this route" can be proven to mean here. A hand-maintained list would rot silently.
+  const publicPackages = new Set(packageRanking(meta, [...publicAssetPaths]).map(([pkg]) => pkg))
+  const dashboardOnly = ranking.filter(([pkg]) => !publicPackages.has(pkg))
+  console.log('\n  5. Components/dependencies in this route that no measured public route loads:')
+  if (dashboardOnly.length) {
+    for (const [pkg, bytes] of dashboardOnly) console.log(`     ${kb(bytes).padStart(10)}  ${pkg}`)
+  } else {
+    console.log('     (none — every vendor package on this route is also loaded by a public route)')
+  }
+
+  // 6 — public-route isolation confirmation. Isolation is release-blocking (D20-23, unchanged by
+  // D20-24), so the warning states it explicitly rather than leaving the reader to assume it.
+  const dashboardOwnedModules = new Set()
+  for (const asset of assetPaths) {
+    if (publicAssetPaths.has(asset)) continue
+    for (const mod of meta.get(asset)?.modules ?? []) {
+      if (/(^|\/)app\/(pages|components|layouts|middleware|stores|composables)\/dashboard\//.test(mod.id.replace(/\\/g, '/'))) {
+        dashboardOwnedModules.add(mod.id)
+      }
+    }
+  }
+  const leaked = []
+  for (const asset of publicAssetPaths) {
+    for (const mod of meta.get(asset)?.modules ?? []) {
+      if (dashboardOwnedModules.has(mod.id)) leaked.push({ asset, id: mod.id })
+    }
+  }
+  if (leaked.length === 0) {
+    console.log(
+      `\n  6. Public-route isolation:  INTACT — ${dashboardOwnedModules.size} dashboard-owned module(s) in this`
+      + '\n     route\'s closure, and none of them appears in any measured public route\'s asset set.'
+    )
+  } else {
+    console.log(`\n  6. Public-route isolation:  ✗ VIOLATED — ${leaked.length} dashboard-owned module(s) reached a public route:`)
+    for (const { asset, id } of leaked.slice(0, 10)) console.log(`     ${asset}  ←  ${id}`)
+  }
+  console.log(`\n${'!'.repeat(78)}\n`)
 }
 
 /**
@@ -331,6 +508,34 @@ async function main() {
     rows.push({ route, ...(await measureRoute(html, meta)) })
   }
 
+  // Authenticated dashboard routes — doc 20 §1.1/§1.2 (D20-23). JS comes from the client-build
+  // closure (rendered HTML cannot see a `ssr: false` route's chunks); CSS comes from that route's
+  // own shell document, as for public routes.
+  //
+  // There is NO skip path. D20-23 names these three routes, so each one must produce a number:
+  // an unresolvable closure raises an InfraError and the gate exits 2. The earlier version caught
+  // "no page chunk" and skipped with a log line, which was written when `/dashboard/messages` did
+  // not exist yet — but it cannot distinguish "route not built yet" from "chunking changed and the
+  // page chunk can no longer be found", so it would have dropped a governed route from measurement
+  // while the gate still exited 0. A route that is never measured has no effective budget.
+  const dashboardRows = []
+  for (const { route, pageModule } of DASHBOARD_ROUTES) {
+    let res
+    try {
+      res = await fetch(`${BASE}${route}`, { signal: AbortSignal.timeout(20_000) })
+    } catch (error) {
+      throw new InfraError(`${route} could not be fetched: ${error.message}`)
+    }
+    if (!res.ok) throw new InfraError(`${route} returned HTTP ${res.status}; cannot measure`)
+    const dashHtml = await res.text()
+    dashboardRows.push({ route, ...(await measureDashboardRoute(meta, pageModule, dashHtml)) })
+  }
+
+  // Every asset any measured PUBLIC route fetches. Used only by the D20-24 warning block, to prove
+  // isolation and to name what is dashboard-exclusive from the build rather than from a hand-kept
+  // list that would rot without anyone noticing.
+  const publicAssetPaths = new Set(rows.flatMap(r => r.js.assets.map(a => a.asset)))
+
   const header = `${'route'.padEnd(44)}${'assets'.padStart(7)}${'raw'.padStart(11)}${'gz'.padStart(10)}${'≤250KB'.padStart(8)}${'app rendered'.padStart(14)}${'≤101KB'.padStart(8)}`
   console.log(header)
   console.log('─'.repeat(header.length))
@@ -353,6 +558,56 @@ async function main() {
       + `${row.totals.app} B`.padStart(14)
       + (row.appVerdict === 'PASS' ? '✓' : '✗').padStart(8)
     )
+  }
+
+  if (dashboardRows.length > 0) {
+    console.log(`\nAuthenticated dashboard routes — doc 20 §1.1/§1.2 (D20-23; ceiling per D20-24), client-build closure`)
+    console.log(
+      `Budget: total JS ≤ ${kb(DASHBOARD_BUDGET.totalJsQualityTargetBytes)} gz quality target`
+      + ` · ≤ ${kb(DASHBOARD_BUDGET.totalJsCeilingBytes)} gz hard ceiling`
+      + `  ·  app-owned ≤ ${kb(DASHBOARD_BUDGET.appRenderedBytes)}  ·  CSS ≤ ${kb(DASHBOARD_BUDGET.cssBytes)} gz`
+    )
+    const dashHeader = `${'route'.padEnd(44)}${'assets'.padStart(7)}${'raw'.padStart(11)}${'gz'.padStart(10)}${'300/320'.padStart(8)}${'app rendered'.padStart(14)}${'≤101KB'.padStart(8)}`
+    console.log(dashHeader)
+    console.log('─'.repeat(dashHeader.length))
+    for (const row of dashboardRows) {
+      if (row.totalVerdict === 'FAIL') breach = true
+      if (row.cssVerdict === 'FAIL') breach = true
+      if (row.appVerdict === 'FAIL') breach = true
+      if (row.unclassifiedModules.length) breach = true
+
+      // '!' is deliberately NOT '✓': D20-24 forbids reporting a route above the quality target as
+      // an ordinary green result, and a reader scanning this column is exactly who that protects.
+      const totalMark = { PASS: '✓', WARN: '!', FAIL: '✗' }[row.totalVerdict]
+      console.log(
+        row.route.padEnd(44)
+        + String(row.js.assets.length).padStart(7)
+        + kb(row.js.raw).padStart(11)
+        + kb(row.js.gz).padStart(10)
+        + totalMark.padStart(8)
+        + `${row.totals.app} B`.padStart(14)
+        + (row.appVerdict === 'PASS' ? '✓' : '✗').padStart(8)
+      )
+    }
+
+    // D20-24 warning band. This block is the whole reason the ceiling could be raised safely, so it
+    // runs before any success message and prints on a PASSING run.
+    for (const row of dashboardRows.filter(r => r.totalVerdict === 'WARN')) {
+      reportDashboardWarning(row, meta, publicAssetPaths)
+    }
+    console.log('\n  CSS per dashboard route (from the route\'s own shell document, not a build-wide glob):')
+    for (const row of dashboardRows) {
+      console.log(
+        `  ${row.cssVerdict === 'PASS' ? '✓' : '✗'} ${row.route.padEnd(24)} ${kb(row.css.gz)} gz / ${kb(DASHBOARD_BUDGET.cssBytes)}  (${row.css.count} file${row.css.count === 1 ? '' : 's'})`
+      )
+    }
+
+    console.log('\n  Closure seed per route (entry · layout · page · auth) — provenance, not filenames:')
+    for (const row of dashboardRows) {
+      console.log(`  ${row.route.padEnd(24)} entry=${row.seed.entry}  page=${row.seed.page}`)
+      if (row.seed.layout.length) console.log(`  ${''.padEnd(24)} layouts=${row.seed.layout.join(', ')}`)
+      if (row.seed.auth.length) console.log(`  ${''.padEnd(24)} auth=${row.seed.auth.join(', ')}`)
+    }
   }
 
   console.log('\nExact rendered-byte ownership per route (Rollup renderedLength, integer bytes —')
@@ -432,6 +687,43 @@ async function main() {
         }
       }
     }
+    // Dashboard rows are a separate collection with a separate budget class, so their breach detail
+    // has to be printed separately too. Without this, a dashboard-only breach set `breach = true`
+    // and exited 1 while every printed reason line came from the public loop above — a correct
+    // exit code with no stated cause.
+    for (const row of dashboardRows) {
+      if (row.totalVerdict === 'FAIL') {
+        const ceiling = DASHBOARD_BUDGET.totalJsCeilingBytes
+        console.error(
+          `  ${row.route}: total JS ${kb(row.js.gz)} gz (${row.js.gz} B) exceeds the D20-24 HARD CEILING`
+          + ` ${kb(ceiling)} gz by ${kb(row.js.gz - ceiling)} (${row.js.gz - ceiling} B).`
+          + '\n      This is release-blocking. The ceiling is NEVER raised automatically — a hard-ceiling'
+          + '\n      failure requires owner review with bundle attribution (doc 20 §1.1, D20-24).'
+        )
+        // The owner review this failure demands needs attribution, so print exactly the block the
+        // warning band prints rather than making someone re-run the gate to obtain it.
+        reportDashboardWarning(row, meta, publicAssetPaths)
+      }
+      if (row.cssVerdict === 'FAIL') {
+        console.error(`  ${row.route}: CSS ${kb(row.css.gz)} gz exceeds ${kb(DASHBOARD_BUDGET.cssBytes)}`)
+      }
+      if (row.appVerdict === 'FAIL') {
+        const over = row.totals.app - DASHBOARD_BUDGET.appRenderedBytes
+        console.error(
+          `  ${row.route}: app-owned rendered bytes ${row.totals.app} B exceeds the frozen ${DASHBOARD_BUDGET.appRenderedBytes} B limit by ${over} B (${kb(over)}).`
+          + '\n      Unchanged by D20-24 — only the total-JS ceiling moved.'
+        )
+      }
+      if (row.unclassifiedModules.length) {
+        console.error(
+          `  ${row.route}: ${row.unclassifiedModules.length} module(s) totalling ${row.totals.unclassified} B do not match any`
+          + '\n      rule in the doc 20 §5 classification contract, so app ownership cannot be proven.'
+        )
+        for (const mod of row.unclassifiedModules.slice(0, 10)) {
+          console.error(`        ${String(mod.bytes).padStart(7)} B  ${mod.id}`)
+        }
+      }
+    }
     console.error(
       '\n  These budgets are normative. They are re-baselined ONLY by a decision-log entry in\n'
       + '  eslammuatamed-docs/docs/20-performance.md — never by editing this file.'
@@ -439,7 +731,22 @@ async function main() {
     return EXIT_BREACH
   }
 
+  const warned = dashboardRows.filter(r => r.totalVerdict === 'WARN')
+  if (warned.length) {
+    // Passing, but never as an ordinary green line: the last thing printed must not read as
+    // unqualified success when a governed route is over the quality target (D20-24).
+    console.log(
+      `\n! Budgets satisfied, WITH ${warned.length} D20-24 quality-target warning(s): `
+      + warned.map(r => `${r.route} at ${kb(r.js.gz)} gz`).join(', ')
+      + `\n  Above the ${kb(DASHBOARD_BUDGET.totalJsQualityTargetBytes)} gz quality target, at or below the ${kb(DASHBOARD_BUDGET.totalJsCeilingBytes)} gz hard ceiling.`
+      + '\n  The attribution block above is REQUIRED in the verification report — this is not an'
+      + '\n  ordinary green result.'
+    )
+    return EXIT_OK
+  }
+
   console.log('\n✓ All public routes within the doc 20 §1 transfer budgets.')
+  console.log('✓ All dashboard routes at or below the doc 20 §1.1 quality target (D20-24).')
   return EXIT_OK
 }
 

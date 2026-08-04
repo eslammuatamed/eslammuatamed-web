@@ -297,7 +297,82 @@
     "title": "Dashboard",
     "welcome": "Signed in as {email}",
     "signOut": "Sign out",
-    "placeholder": "Modules arrive in the next milestone."
+    "placeholder": "Modules arrive in the next milestone.",
+    "nav": {
+      "overview": "Overview",
+      "communication": "Communication",
+      "messages": "Messages",
+      "openMenu": "Open navigation",
+      "closeMenu": "Close navigation",
+      "primary": "Dashboard"
+    },
+    "messages": {
+      "title": "Messages",
+      "description": "Contact submissions, unread first.",
+      "unreadBadgeLabel": "Unread messages: {count}",
+      "view": {
+        "label": "View",
+        "inbox": "Inbox",
+        "archived": "Archived"
+      },
+      "column": {
+        "from": "From",
+        "subject": "Subject",
+        "received": "Received",
+        "status": "Status",
+        "actions": "Actions"
+      },
+      "status": {
+        "unread": "Unread",
+        "read": "Read"
+      },
+      "rowActions": "Message actions",
+      "open": "Open",
+      "tableLabel": "Contact messages",
+      "listRegionLabel": "{view} messages",
+      "pagination": {
+        "label": "Pagination",
+        "page": "Page {page} of {pages}"
+      },
+      "loading": "Loading messages…",
+      "sessionLoading": "Restoring your session…",
+      "emptyTitle": "No messages yet",
+      "emptyBody": "Contact submissions will appear here.",
+      "emptyArchivedTitle": "Nothing archived",
+      "emptyArchivedBody": "Messages you archive will appear here.",
+      "errorTitle": "Messages could not be loaded",
+      "errorBody": "The request did not complete. This is usually temporary.",
+      "retry": "Try again",
+      "forbiddenTitle": "You do not have access to messages",
+      "forbiddenBody": "This account is not permitted to read the contact inbox.",
+      "offlineTitle": "You are offline",
+      "offlineBody": "Reconnect to load messages and make changes.",
+      "staleSelection": "That message is not on this page. It may have been archived or removed.",
+      "retentionNotice": "Archived messages are retained for 12 months from the date they were archived.",
+      "detail": {
+        "title": "Message",
+        "close": "Close message",
+        "from": "From",
+        "email": "Email",
+        "phone": "Phone",
+        "receivedAt": "Received {date}",
+        "messageHeading": "Message"
+      },
+      "actions": {
+        "markRead": "Mark as read",
+        "markUnread": "Mark as unread",
+        "archive": "Archive",
+        "unarchive": "Restore from archive",
+        "reply": "Reply by email",
+        "replyHint": "Opens your email client — replies are not sent from the dashboard.",
+        "call": "Call",
+        "copyNumber": "Copy number",
+        "copied": "Number copied",
+        "copyFailed": "Could not copy the number"
+      },
+      "updateErrorTitle": "The change did not save",
+      "updateErrorBody": "Try again in a moment."
+    }
   },
   "footer": {
     "rights": "© {year} {name}. All rights reserved.",
