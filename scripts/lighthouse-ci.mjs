@@ -7,27 +7,47 @@
  * two methodologies, and the whole reason this file exists is that the gate was silently measuring a
  * protocol production does not serve.
  *
- * It owns the entire lifecycle so nobody has to remember steps:
- *   build check → contract mock + Nitro preview → ephemeral localhost cert → HTTP/2 frontend →
- *   PROTOCOL ASSERTION → mobile matrix → desktop matrix → median assertions → teardown.
+ * It owns the entire lifecycle so nobody has to remember steps, and so a clean checkout needs no
+ * setup beyond `npm ci`:
+ *   EXACT-HEAD BUILD → contract mock + Nitro preview → ephemeral localhost cert → HTTP/2 frontend →
+ *   PREFLIGHT PROTOCOL ASSERTION → mobile matrix → MEASURED-SESSION PROOF → desktop matrix →
+ *   MEASURED-SESSION PROOF → report identity stamp → median assertions → teardown.
  *
  * Teardown runs on success, on failure, and on SIGINT/SIGTERM. Ports and certificates are released
  * either way — a half-cleaned run poisons the next one, and a leaked private key is worse than a
  * failed build.
  *
- * The protocol assertion runs BEFORE the matrix on purpose. The matrix costs minutes; discovering
- * afterwards that the frontend fell back to HTTP/1.1 would mean throwing all of it away, and worse,
- * someone might not notice and would ship the wrong numbers.
+ * TWO protocol checks, doing different jobs, because neither alone is enough:
+ *
+ *   1. The PREFLIGHT (`assertH2`) runs before the matrix on purpose. The matrix costs minutes;
+ *      discovering afterwards that the frontend is not serving h2 at all would mean throwing all of
+ *      it away. But it only proves what a NODE client negotiated.
+ *   2. The MEASURED-SESSION PROOF (`assertCollectionUsedH2`) runs after each profile and reads
+ *      Lighthouse's own `network-requests` record — Chrome's view of every request it actually
+ *      made. This is the one that proves the NUMBERS came over h2, which matters because the
+ *      frontend deliberately still accepts HTTP/1.1 (see h2-proxy.mjs).
+ *
+ * The build is also verified rather than assumed: `.output/` is untracked and survives branch
+ * switches, so this rebuilds whenever the existing output was not produced from the current source
+ * state. Numbers attributed to the wrong commit are as misleading as numbers measured over the
+ * wrong protocol.
  */
 import { execFileSync, spawn } from 'node:child_process'
-import { existsSync } from 'node:fs'
+import { mkdirSync, readdirSync, readFileSync, rmSync } from 'node:fs'
+import { join } from 'node:path'
 import process from 'node:process'
 import { assertH2, createEphemeralCert, startH2Proxy } from './lib/h2-proxy.mjs'
+import { buildIsCurrent, writeReportStamp } from './lib/build-identity.mjs'
+import { assertCollectionUsedH2, formatProtocolSummary } from './lib/lh-protocol.mjs'
 
 const WEB_PORT = Number(process.env.CI_PREVIEW_PORT ?? 3000)
 const API_PORT = Number(process.env.CI_MOCK_PORT ?? 3001)
 // 0 lets the OS pick a free port, so parallel jobs and local runs cannot collide.
 const H2_PORT = Number(process.env.LH_H2_PORT ?? 0)
+// How long the preview gets to start listening. Generous by default because a cold Nitro boot on a
+// loaded CI runner is genuinely slow; overridable so the lifecycle tests can exercise the
+// startup-failure path in seconds instead of minutes.
+const PORT_TIMEOUT_MS = Number(process.env.LH_PORT_TIMEOUT_MS ?? 120_000)
 
 /** Everything we own, torn down in reverse order exactly once. */
 const owned = { preview: null, proxy: null, cert: null }
@@ -74,7 +94,7 @@ function run(cmd, args, env = {}) {
   })
 }
 
-async function waitForPort(port, label, timeoutMs = 120_000) {
+async function waitForPort(port, label, timeoutMs = PORT_TIMEOUT_MS) {
   const deadline = Date.now() + timeoutMs
   while (Date.now() < deadline) {
     try {
@@ -89,9 +109,72 @@ async function waitForPort(port, label, timeoutMs = 120_000) {
   throw new Error(`${label} did not start listening on ${port} within ${timeoutMs} ms`)
 }
 
+/** Profile output directories, in the order they are collected. */
+const PROFILE_DIRS = { mobile: join('.lighthouseci', 'mobile'), desktop: join('.lighthouseci', 'desktop') }
+
+/**
+ * Guarantee `.output/` was built from the CURRENT source state, building it if it was not.
+ *
+ * `.output/` is untracked and survives branch switches, so "a build exists" never meant "a build of
+ * this commit exists". Reports carrying the wrong commit's numbers are as misleading as reports
+ * carrying the wrong protocol's numbers, so this is enforced rather than assumed — and because the
+ * canonical command must work from a clean checkout, a missing or stale build is CORRECTED here
+ * instead of merely being reported.
+ */
+async function ensureExactBuild() {
+  const state = buildIsCurrent()
+  if (state.current) {
+    console.log(`[lighthouse:ci] build identity ${state.stamp.id} matches HEAD — reusing .output/`)
+    return state.expected
+  }
+
+  console.log(`[lighthouse:ci] rebuilding: ${state.reason}`)
+  if (state.stamp) console.log(`  build was ${state.stamp.id}, source is ${state.expected.id}`)
+
+  // The same build-time placeholders CI uses (D23-8). They are baked into canonical/og:url and the
+  // sitemap, never into anything performance is measured on, and `npm run build` refuses to fall
+  // back to localhost — so without them a clean checkout could not build at all.
+  await run('npm', ['run', 'build'], {
+    NUXT_PUBLIC_SITE_URL: process.env.NUXT_PUBLIC_SITE_URL ?? 'https://example.com',
+    NUXT_PUBLIC_API_BASE: process.env.NUXT_PUBLIC_API_BASE ?? 'https://example.com/api/v1'
+  })
+
+  const after = buildIsCurrent()
+  if (!after.current) {
+    throw new Error(`build completed but its identity still does not match HEAD (${after.reason}) — refusing to measure`)
+  }
+  return after.expected
+}
+
+/** Every report Lighthouse wrote for one profile. */
+function readProfileReports(dir) {
+  const entries = readdirSync(dir).filter(n => n.endsWith('.json') && n !== 'manifest.json')
+  if (entries.length === 0) throw new Error(`${dir} contains no Lighthouse report JSON`)
+  return entries.sort().map(n => JSON.parse(readFileSync(join(dir, n), 'utf8')))
+}
+
+/**
+ * Prove, from Lighthouse's OWN record, that Chrome measured over h2 (doc 20 §5.1, D20-25).
+ *
+ * Runs immediately after each profile is collected rather than once at the end, so a fallback is
+ * attributed to the profile that suffered it and the desktop matrix is not collected on top of a
+ * mobile matrix that is already invalid.
+ */
+function assertProfileProtocol(profile) {
+  const summary = assertCollectionUsedH2(readProfileReports(PROFILE_DIRS[profile]))
+  console.log(`[lighthouse:ci] ${profile} browser-session protocol verified from Lighthouse artifacts:`)
+  console.log(formatProtocolSummary(summary))
+  return summary
+}
+
 async function main() {
-  if (!existsSync('.output/server/index.mjs')) {
-    throw new Error('no production build — run `npm run build` first (governed Lighthouse measures the real .output)')
+  await ensureExactBuild()
+
+  // Stale reports from an earlier run would be read back both by the protocol proof and by the
+  // median gate, which expects exactly three comparable runs per configuration.
+  for (const dir of Object.values(PROFILE_DIRS)) {
+    rmSync(dir, { recursive: true, force: true })
+    mkdirSync(dir, { recursive: true })
   }
 
   console.log('[lighthouse:ci] starting Nitro preview + contract mock…')
@@ -129,9 +212,20 @@ async function main() {
 
   console.log('\n[lighthouse:ci] collecting MOBILE matrix over HTTP/2…')
   await run('npx', ['lhci', 'autorun'], { ...lhEnv, LHCI_PROFILE: 'mobile' })
+  const mobileProtocol = assertProfileProtocol('mobile')
 
   console.log('\n[lighthouse:ci] collecting DESKTOP matrix over HTTP/2…')
   await run('npx', ['lhci', 'autorun', '--collect.settings.preset=desktop'], { ...lhEnv, LHCI_PROFILE: 'desktop' })
+  const desktopProtocol = assertProfileProtocol('desktop')
+
+  console.log('\n[lighthouse:ci] browser-session protocol PROVEN h2 for every governed report (D20-25)')
+
+  // Bind the reports to the source state they describe, so an artifact downloaded weeks later is
+  // still attributable to a commit rather than to "whatever was checked out at the time".
+  const stamp = writeReportStamp({
+    protocol: { mobile: mobileProtocol, desktop: desktopProtocol }
+  })
+  console.log(`[lighthouse:ci] reports bound to source identity ${stamp.id}`)
 
   console.log('\n[lighthouse:ci] asserting medians (thresholds unchanged)…')
   await run('node', ['scripts/check-lighthouse-medians.mjs'])

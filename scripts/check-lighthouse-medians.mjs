@@ -2,10 +2,10 @@
 /**
  * Lighthouse median gate — doc 20 §1 / §5 (D20-13, D20-14, D20-15).
  *
- * `npm run lhci` / `npm run lhci:desktop` COLLECT three runs per URL per profile into
- * `.lighthouseci/<profile>/`. This script ASSERTS the approved thresholds on the median of those
- * runs, and prints every individual run so a median can never hide instability behind a passing
- * number.
+ * `npm run lighthouse:ci` COLLECTS three runs per URL per profile into `.lighthouseci/<profile>/`,
+ * over the governed HTTP/2 frontend (doc 20 §5.1, D20-25), and then runs this script. This script
+ * ASSERTS the approved thresholds on the median of those runs, and prints every individual run so a
+ * median can never hide instability behind a passing number.
  *
  *     Performance     median ≥ 95 desktop  ·  ≥ 60 mobile
  *     A11y / BP / SEO median 100
@@ -66,8 +66,8 @@ async function loadRuns() {
     if (entries === null) {
       throw new InfraError(
         `no Lighthouse reports at ${dir} — collect them first:\n`
-        + '    npm run lhci            (mobile profile)\n'
-        + '    npm run lhci:desktop    (desktop profile)'
+        + '    npm run lighthouse:ci   (governed: builds the exact head, starts the HTTP/2\n'
+        + '                             frontend, collects BOTH profiles, then runs this gate)'
       )
     }
     const reports = entries.filter(name => name.endsWith('.json') && name !== 'manifest.json')

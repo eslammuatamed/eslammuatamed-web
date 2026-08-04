@@ -1,5 +1,6 @@
 import http from 'node:http'
 import http2 from 'node:http2'
+import { execFileSync } from 'node:child_process'
 import { existsSync, readFileSync } from 'node:fs'
 import { brotliCompressSync, gzipSync } from 'node:zlib'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
@@ -215,6 +216,40 @@ describe('certificate and cleanup', () => {
       req.end()
     })).rejects.toBeTruthy()
     await dead.close()
+    c.dispose()
+  })
+
+  it('15 — a port-binding failure REJECTS instead of resolving a half-started proxy', async () => {
+    // The orchestrator awaits this promise and treats a rejection as a fatal startup error. If it
+    // resolved instead, the run would proceed against a frontend that is not listening and the
+    // failure would surface minutes later as unexplained Lighthouse errors.
+    const c = createEphemeralCert()
+    const squatter = http.createServer(() => {})
+    await new Promise(r => squatter.listen(0, '127.0.0.1', r))
+    const taken = squatter.address().port
+    await expect(startH2Proxy({ upstreamPort, port: taken, key: c.key, cert: c.cert }))
+      .rejects.toMatchObject({ code: 'EADDRINUSE' })
+    await new Promise(r => squatter.close(r))
+    c.dispose()
+  })
+
+  it('16 — certificate generation FAILS LOUDLY when openssl is unavailable', () => {
+    // Without this, a missing openssl would surface as an unreadable key file much later, inside
+    // TLS setup, where the cause is far less obvious.
+    const realPath = process.env.PATH
+    try {
+      process.env.PATH = '/nonexistent'
+      expect(() => createEphemeralCert()).toThrow()
+    } finally {
+      process.env.PATH = realPath
+    }
+  })
+
+  it('17 — a generated certificate covers localhost AND 127.0.0.1, which is the origin Chrome is given', () => {
+    const c = createEphemeralCert()
+    const text = execFileSync('openssl', ['x509', '-in', c.cert, '-noout', '-text'], { encoding: 'utf8' })
+    expect(text).toContain('DNS:localhost')
+    expect(text).toContain('IP Address:127.0.0.1')
     c.dispose()
   })
 })

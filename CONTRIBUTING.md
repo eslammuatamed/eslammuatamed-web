@@ -39,18 +39,36 @@ hotfix/<slug>   (branch from main)
 
 ## Performance verification — governed Lighthouse (doc 20 §5.1, D20-25)
 
-**One command, everywhere:**
+**One command, everywhere — and it is the only setup you need:**
 
 ```bash
-npm run build          # governed Lighthouse measures the real .output
+npm ci
 npm run lighthouse:ci  # THE canonical entry point — local, PR CI, dev push and dev→main promotion
 ```
 
-That single command owns the whole lifecycle: it starts the Nitro preview and the Prism contract
-mock, generates an ephemeral localhost certificate, brings up a local **HTTPS/HTTP/2** frontend,
-**asserts the browser-facing protocol before** the expensive matrix runs, collects the unchanged
-mobile and desktop matrices, asserts the unchanged medians, then tears down every process, port and
+That single command owns the whole lifecycle: it **builds the exact current head** (or reuses
+`.output` when it already matches, so CI does not build twice), starts the Nitro preview and the
+Prism contract mock, generates an ephemeral localhost certificate, brings up a local
+**HTTPS/HTTP/2** frontend, **asserts the browser-facing protocol before** the expensive matrix runs,
+collects the unchanged mobile and desktop matrices, **proves from Lighthouse's own artifacts that
+Chrome measured over `h2`**, asserts the unchanged medians, then tears down every process, port and
 key — on success, on failure and on Ctrl-C.
+
+**Two protocol checks, because neither alone is enough.** The *preflight* asks the TLS layer what it
+negotiated, before minutes of collection are spent — but it only proves what a Node client saw. The
+*measured-session proof* reads `audits['network-requests']` out of every report and fails the run
+unless Chrome negotiated `h2` for the document, the `/_nuxt/` JavaScript, and any first-party CSS or
+fonts. That second check is load-bearing: the frontend deliberately still accepts HTTP/1.1 at the
+socket (refusing it made Nitro's chunked responses hang), so only the measurement's own record can
+prove the numbers came over `h2`. Third-party and `data:` requests are classified and reported
+separately, never gated.
+
+**Builds are attributed, not assumed.** `.output/` is untracked and survives branch switches, so
+every build is stamped with the source state that produced it (`.output/.build-identity.json`: the
+HEAD sha, plus a digest of any uncommitted tracked changes). The governed command rebuilds whenever
+that stamp does not match, and writes `.lighthouseci/build-identity.json` so a downloaded report
+artifact is always traceable to a commit. Numbers attributed to the wrong commit are as misleading
+as numbers measured over the wrong protocol.
 
 **Why HTTP/2.** Production serves HTTP/2 (Cloudflare → Caddy → Nitro). The gate used to point
 Lighthouse straight at Nitro over HTTP/1.1, whose six-connection limit serialises requests HTTP/2
@@ -72,9 +90,11 @@ localhost-scoped, removed on exit, and `.gitignore` carries `*.pem` as a backsto
 blanket certificate-error bypass.
 
 **Non-governed escape hatches.** `lhci:collect:*-nongoverned` and `lhci:assert-nongoverned` exist for
-low-level debugging only. They are **not** the gate, CI never calls them, and `lighthouserc.cjs`
-throws unless `LH_BASE_URL` is set — so running `lhci` by hand cannot silently reintroduce HTTP/1.1
-measurement.
+low-level debugging only. They are **not** the gate and CI never calls them. Two guards keep them
+from quietly becoming a second methodology: `lighthouserc.cjs` throws unless `LH_BASE_URL` is set, so
+running `lhci` by hand cannot reintroduce HTTP/1.1 measurement; and they refuse to run at all unless
+`.output/` was built from the current head — unlike the governed command, they never build for you,
+they just decline to measure the wrong commit.
 
 **Diagnostic only:** Lighthouse against the public production domain. Real RTT and edge-cache state
 make it non-deterministic, so it never gates a PR.

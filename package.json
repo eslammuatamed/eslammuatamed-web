@@ -6,7 +6,7 @@
     "node": ">=24.0.0"
   },
   "scripts": {
-    "build": "nuxt build",
+    "build": "nuxt build && node scripts/stamp-build.mjs",
     "dev": "nuxt dev",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
@@ -25,8 +25,8 @@
     "size:routes": "node scripts/check-route-size.mjs",
     "ci:preview": "node scripts/ci-preview.mjs",
     "lighthouse:ci": "node scripts/lighthouse-ci.mjs",
-    "lhci:collect:mobile-nongoverned": "LHCI_PROFILE=mobile lhci autorun",
-    "lhci:collect:desktop-nongoverned": "LHCI_PROFILE=desktop lhci autorun --collect.settings.preset=desktop",
+    "lhci:collect:mobile-nongoverned": "node scripts/assert-exact-build.mjs && LHCI_PROFILE=mobile lhci autorun",
+    "lhci:collect:desktop-nongoverned": "node scripts/assert-exact-build.mjs && LHCI_PROFILE=desktop lhci autorun --collect.settings.preset=desktop",
     "lhci:assert-nongoverned": "node scripts/check-lighthouse-medians.mjs",
     "test:e2e": "playwright test",
     "test:e2e:repeat": "node scripts/repeat-flake-sweep.mjs",

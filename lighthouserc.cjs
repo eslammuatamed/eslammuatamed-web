@@ -2,7 +2,7 @@
  * Lighthouse CI gate — realises the enforcement doc 20 §5 has always specified.
  *
  * THIS FILE NOW ONLY COLLECTS. Assertion moved to `scripts/check-lighthouse-medians.mjs`
- * (`npm run lhci:assert`) when D20-13 replaced the flat "Performance 100" gate with median-based
+ * (`npm run lhci:assert-nongoverned`) when D20-13 replaced the flat "Performance 100" gate with median-based
  * thresholds. The approved semantics — exactly three comparable runs per configuration, grouped by
  * run configuration rather than filename, where FEWER than three is an infrastructure failure and
  * not a low score — are project-specific requirements that a threshold list cannot express. The
@@ -69,21 +69,21 @@ const urls = [
   `${BASE}/projects/content-platform-api`,
   `${BASE}/ar/projects/content-platform-api`,
   // web-005 Profile, Experience slice (008). Adding URLs to the COLLECTION only — every threshold
-  // stays exactly as `npm run lhci:assert` defines it (D20-13). A new public route that is never
+  // stays exactly as `npm run lhci:assert-nongoverned` defines it (D20-13). A new public route that is never
   // measured is a budget that silently does not apply to it.
   `${BASE}/experience`,
   `${BASE}/ar/experience`,
   // web-005 Profile, About slice (009). Added to the COLLECTION only — every threshold stays exactly
-  // as `npm run lhci:assert` defines it (D20-13). Governed by D20-19, recorded in doc 20 first.
+  // as `npm run lhci:assert-nongoverned` defines it (D20-13). Governed by D20-19, recorded in doc 20 first.
   `${BASE}/about`,
   `${BASE}/ar/about`,
   // web-005 Profile, Resume slice (010). Added to the COLLECTION only — every threshold stays
-  // exactly as `npm run lhci:assert` defines it (D20-13). Governed by D20-21, recorded in doc 20
+  // exactly as `npm run lhci:assert-nongoverned` defines it (D20-13). Governed by D20-21, recorded in doc 20
   // first.
   `${BASE}/resume`,
   `${BASE}/ar/resume`,
   // web-005 Contact slice (011). Added to the COLLECTION only — every threshold stays exactly as
-  // `npm run lhci:assert` defines it (D20-13). Governed by D20-22, recorded in doc 20 first. With
+  // `npm run lhci:assert-nongoverned` defines it (D20-13). Governed by D20-22, recorded in doc 20 first. With
   // these two URLs, §5's four-page matrix (home, article, project, contact x both locales) is
   // COMPLETE and D20-8's deferral is fully closed.
   `${BASE}/contact`,
@@ -102,17 +102,22 @@ module.exports = {
       settings: {
         chromeFlags: process.env.LH_CHROME_FLAGS ?? '--no-sandbox --headless=new',
         // Default (mobile) profile. The desktop pass runs the same config with
-        // `--collect.settings.preset=desktop` via `npm run lhci:desktop`. The assertion step reads
+        // `--collect.settings.preset=desktop`, which `scripts/lighthouse-ci.mjs` passes. The assertion step reads
         // the profile back from each report's own `configSettings.formFactor`, so this flag can
         // never disagree with how the runs are grouped.
         skipAudits: ['uses-http2', 'canonical']
-        // `uses-http2`: the local preview is HTTP/1.1; production is HTTP/2 via Cloudflare.
+        // `uses-http2`: governed collection now runs THROUGH a local HTTP/2 frontend (D20-25), so
+        //  this audit would pass — but a passing audit is not how the guarantee is enforced. The
+        //  proof is `scripts/lib/lh-protocol.mjs`, which reads the `network-requests` record out of
+        //  every report and fails the run unless Chrome negotiated `h2` for the document and the
+        //  first-party assets. That is strictly stronger than a score-affecting audit, and it keeps
+        //  the Performance score comparable with the historical HTTP/1.1 baselines.
         // `canonical`: the baked canonical is the real public origin, which correctly does not
         //  match the 127.0.0.1 collection URL. Canonical correctness is asserted separately by
         //  the browser regression pass, not by penalising the gate for being local.
       }
     },
-    // No `assert` block: `npm run lhci:assert` owns every threshold (D20-13). Leaving the old
+    // No `assert` block: `npm run lhci:assert-nongoverned` owns every threshold (D20-13). Leaving the old
     // per-run `categories:performance: minScore 1` here would fail `autorun` before the median gate
     // ever ran — asserting the superseded requirement in a step that only collects evidence.
     upload: {
