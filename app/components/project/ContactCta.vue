@@ -25,6 +25,12 @@ const { data: settings } = await useSiteSettings()
 const mailto = computed(
   () => settings.value?.profileLinks.find(link => link.url.startsWith('mailto:'))?.url ?? CANONICAL_EMAIL
 )
+
+// WhatsApp is SECONDARY and additive (018). Email stays the primary, guaranteed path — D05-4 says the
+// conversion must never dead-end, and only email has a fallback when settings are unreachable. This
+// one has no fallback by design: it comes from the shared gate, and when the number is absent or
+// implausible the action simply is not there.
+const whatsappUrl = computed(() => buildWhatsappUrl(settings.value?.whatsappPhone, t('contact.whatsappMessage')))
 </script>
 
 <template>
@@ -48,9 +54,22 @@ const mailto = computed(
         </h2>
         <p class="mt-2 text-body-sm text-muted text-pretty">{{ t('projects.contact.body') }}</p>
       </div>
-      <UButton class="shrink-0" :to="mailto" :external="true">
-        {{ t('projects.contact.action') }}
-      </UButton>
+      <div class="flex shrink-0 flex-wrap items-center gap-3">
+        <UButton :to="mailto" :external="true">
+          {{ t('projects.contact.action') }}
+        </UButton>
+        <UButton
+          v-if="whatsappUrl"
+          :to="whatsappUrl"
+          :external="true"
+          target="_blank"
+          rel="noopener noreferrer"
+          color="neutral"
+          variant="outline"
+          icon="i-simple-icons-whatsapp"
+          :label="t('projects.contact.whatsappAction')"
+        />
+      </div>
     </div>
   </aside>
 </template>
