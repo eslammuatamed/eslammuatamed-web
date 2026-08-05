@@ -96,7 +96,7 @@ useSeoMeta({
       <header>
         <p class="kicker text-dimmed print:hidden">{{ t('nav.resume') }}</p>
 
-        <h1 class="mt-3 font-display text-display text-highlighted text-balance print:mt-0">
+        <h1 class="mt-3 nameplate font-display text-display text-highlighted text-balance print:mt-0">
           {{ name ?? t('resume.title') }}
         </h1>
 

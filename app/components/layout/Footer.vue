@@ -43,7 +43,7 @@ const isHttp = (url: string) => /^https?:\/\//.test(url)
       <div class="max-w-sm">
         <AppLink to="/" class="inline-flex items-center gap-2.5">
           <UiBrandMark :size="20" class="text-primary" />
-          <span class="font-display text-lg font-semibold tracking-tight text-highlighted">
+          <span class="nameplate font-display text-lg font-semibold tracking-tight text-highlighted">
             {{ t('brand.name') }}
           </span>
         </AppLink>
