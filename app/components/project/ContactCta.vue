@@ -21,18 +21,29 @@ const mailto = computed(
 </script>
 
 <template>
-  <UiSpread tone="ink" as="aside">
-    <div class="max-w-2xl">
-      <!-- text-link, not text-primary: violet does not clear AA on the ink surface. 007's
-           acceptance pass made exactly this correction for the Home ink eyebrows. -->
-      <p class="kicker text-link">{{ t('projects.contact.eyebrow') }}</p>
-      <p class="mt-4 font-display text-h1 text-highlighted text-balance">
-        {{ t('projects.contact.title') }}
-      </p>
-      <p class="mt-5 text-body-lg text-muted text-pretty">{{ t('projects.contact.body') }}</p>
-      <UButton class="mt-8" size="lg" :to="mailto" :external="true">
+  <!-- COMPACT, not a landing-page banner. This was a full-bleed `UiSpread tone="ink"` carrying
+       `text-h1` type, which put a second display-sized line on a page whose h1 is the project title —
+       two competing headlines on one page, and a full section of vertical space spent on four words.
+       It is now one bordered card on the page ground: same governed copy, same single conversion,
+       a third of the height. (It also removes a real nesting defect — `UiSpread` renders its own
+       `UContainer` inside the page's, so the CTA was double-padded.)
+       A NAMED aside: the heading is what gives the complementary landmark its accessible name, and
+       h2 keeps it directly under the page h1 with no skipped level. -->
+  <aside
+    aria-labelledby="project-contact-heading"
+    class="rounded-card border border-default bg-elevated p-6 sm:p-8"
+  >
+    <div class="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between sm:gap-10">
+      <div class="max-w-xl">
+        <p class="kicker text-dimmed">{{ t('projects.contact.eyebrow') }}</p>
+        <h2 id="project-contact-heading" class="mt-3 font-display text-h3 text-highlighted text-balance">
+          {{ t('projects.contact.title') }}
+        </h2>
+        <p class="mt-2 text-body-sm text-muted text-pretty">{{ t('projects.contact.body') }}</p>
+      </div>
+      <UButton class="shrink-0" :to="mailto" :external="true">
         {{ t('projects.contact.action') }}
       </UButton>
     </div>
-  </UiSpread>
+  </aside>
 </template>
