@@ -2,7 +2,7 @@
 // Public shell: skip link first (D21-1), landmarked header/main/footer (doc 21 §1). On client
 // navigation focus moves to <main> so keyboard/AT users land on the new content while the route
 // announcer reads the title.
-const { t, locale } = useI18n()
+const { t } = useI18n()
 const main = useTemplateRef<HTMLElement>('main')
 const router = useRouter()
 const nuxtApp = useNuxtApp()
@@ -16,9 +16,21 @@ const nuxtApp = useNuxtApp()
 // This shares the `settings:site:{locale}` key with the footer and the pages. MEASURED, because
 // the shared key by itself proves nothing: Nuxt's default `getCachedData` reads `static.data` on
 // the server, which is empty during a normal SSR render, so before `sharedSettingsCachedData`
-// every call site issued its OWN request and this read added a third one to `/about`
-// (`evidence/ab-request-count.md`). With that resolver the whole render makes exactly one
-// `/settings/site` request, on every public route.
+// every call site issued its OWN request (`evidence/ab-request-count.md`). With that resolver a
+// HEALTHY render makes exactly one `/settings/site` request on every public route.
+//
+// KNOWN DEBT, measured, not hidden (BLK-2). On the OUTAGE path the resolver cannot help: Nuxt
+// writes `payload.data[key]` only on SUCCESS, so a failed read is never shared and all three
+// readers refetch — 6 requests per render against an already-failing API (base, with two readers,
+// is 4). Removing this reader was TRIED and REVERTED: `useNuxtData` does not take a reactive key,
+// and this layout is persistent, so it would have pinned the metadata to the locale that was
+// active when the layout mounted and served stale localized tags after a client-side locale switch
+// — the exact WD-6 locale-parity regression `useSiteSettings`'s `watch: [locale]` exists to
+// prevent. The correct fix is a request-scoped shared PROMISE inside `useSiteSettings` so every
+// reader awaits one outcome, success or failure; it must NOT be a cached failure value, because
+// `asyncData.js` clears the shared `error` whenever `getCachedData` returns one, which would erase
+// the D13-1 API-unavailable state.
+//
 // It IS awaited: an un-awaited `useAsyncData` leaves `data` null while the server
 // renders, which would serialize the committed tier and then swap the CMS value in on the client —
 // a head hydration mismatch, and a violation of "the initial server-rendered HTML must already
@@ -28,21 +40,7 @@ const nuxtApp = useNuxtApp()
 // leaves `data` null and every `pickMeta` below falls through to the committed value `app.vue`
 // already emitted. A whitespace-only CMS value falls through for the same reason. Pages override
 // these afterwards with their own content (tier 1).
-// READ-ONLY. `useNuxtData` attaches to the SHARED `settings:site:{locale}` entry without ever
-// initiating a fetch of its own — and that is the entire point. Calling `useSiteSettings()` here
-// made this layout a THIRD independent reader, which cost nothing while the API was healthy (the
-// shared `getCachedData` collapses those to one request) but multiplied the OUTAGE path: a failed
-// read is never cached, so every reader refetches. Measured with a 503 stub on one render of `/`:
-// base 4fea8a3 = 4 requests, this branch with a third reader = 6. Reading the shared entry instead
-// restores parity, and dashboard isolation is preserved for free because a read that never fetches
-// cannot reach a public endpoint.
-//
-// It is safe to read data this layout does not fetch because `useSeoMeta` getters are LAZY: they
-// are evaluated when the head is serialized, which happens after the subtree — including
-// `<LayoutFooter>`, which does perform the read — has resolved. If nothing on the route reads
-// settings, these resolve to the committed tier-3 values, which is the specified fallback anyway.
-// Keyed on the UI locale, matching `useSiteSettings()` exactly — the chrome's locale, per D06-6.
-const { data: settings } = useNuxtData<SiteSettings>(`settings:site:${locale.value}`)
+const { data: settings } = await useSiteSettings()
 
 const siteName = computed(() => pickMeta(settings.value?.siteName, t('brand.name')) ?? t('brand.name'))
 
