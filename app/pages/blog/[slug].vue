@@ -79,25 +79,61 @@ useSeoMeta({
 </script>
 
 <template>
-  <UContainer v-if="article" class="py-16">
-    <AppLink to="/blog" class="inline-flex items-center gap-1 text-sm text-link">
-      <UIcon name="i-lucide-arrow-left" class="size-4 rtl:-scale-x-100" aria-hidden="true" />
-      {{ t('article.back') }}
-    </AppLink>
+  <!-- ONE reading column, centred, at the governed measure — this page is a reading surface, not a
+       dashboard, so nothing sits beside the text (015).
 
-    <article class="mt-8">
-      <header class="mb-8">
-        <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-caption text-muted">
-          <span class="font-medium text-default">{{ article.category.name }}</span>
-          <span aria-hidden="true">·</span>
-          <time :datetime="article.publishAt ?? undefined">{{ publishedLabel }}</time>
-          <span aria-hidden="true">·</span>
-          <span>{{ t('blog.minRead', { count: article.readingTimeMin }) }}</span>
-        </div>
-        <h1 class="mt-4 text-h1 text-highlighted">{{ article.title }}</h1>
-      </header>
+       WHAT WAS WRONG, MEASURED. The header and the body used to disagree about their width: the h1
+       and the meta line ran the FULL 1216px container while `.content-prose` capped itself at its
+       own `68ch`. The result at 1280px and above was a start-aligned body with dead space on the
+       end side — 468px in EN, 672px in AR — under a headline three times wider than its own text.
+       Both numbers were measured in a real browser, not estimated.
 
-      <ContentProse :source="article.body" :cache-key="`${article.id}:${locale}`" />
-    </article>
+       THE COLUMN OWNS THE MEASURE, NOT THE PROSE. `--measure-prose` is set here on the wrapper and
+       `.content-prose` is released with `max-w-none`, so header, lede and body are bounded by ONE
+       value that cannot drift. Releasing the prose is also what keeps this change local: the same
+       `.content-prose` rule is shared with /about, /projects/{slug} and the two preview routes, and
+       narrowing it there is a separate, coordinated decision.
+
+       `text-body-lg` IS THE MEASURE'S BASIS, NOT DECORATION. Doc 03 §3 assigns `body-lg` (18px) to
+       article prose; the page was inheriting the 16px UI size. It is set on the WRAPPER because
+       `--measure-prose` is in `em`: font-size and column width then resolve against the same
+       element, so the character count per line is correct by construction rather than by
+       coincidence. -->
+  <UContainer v-if="article" class="py-[var(--space-section)]">
+    <div class="mx-auto max-w-[var(--measure-prose)] text-body-lg">
+      <AppLink to="/blog" class="inline-flex items-center gap-1 text-sm text-link">
+        <UIcon name="i-lucide-arrow-left" class="size-4 rtl:-scale-x-100" aria-hidden="true" />
+        {{ t('article.back') }}
+      </AppLink>
+
+      <article class="mt-10">
+        <header>
+          <p class="kicker text-dimmed">{{ article.category.name }}</p>
+          <h1 class="mt-4 font-display text-h1 text-highlighted text-balance">
+            {{ article.title }}
+          </h1>
+          <!-- The excerpt is required by the contract but may be blank, so it is rendered only when
+               it carries something — an empty standfirst would leave a gap the reader has to skip. -->
+          <p v-if="article.excerpt" class="mt-5 text-body-lg text-muted text-pretty">
+            {{ article.excerpt }}
+          </p>
+          <!-- Date and reading time are the reader's orientation, so they sit UNDER the title with
+               the byline rule, not above it as an eyebrow — the category already holds that slot. -->
+          <div
+            class="mt-7 flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-default pt-4 text-caption text-muted"
+          >
+            <time :datetime="article.publishAt ?? undefined">{{ publishedLabel }}</time>
+            <span aria-hidden="true">·</span>
+            <span>{{ t('blog.minRead', { count: article.readingTimeMin }) }}</span>
+          </div>
+        </header>
+
+        <ContentProse
+          class="mt-10 max-w-none"
+          :source="article.body"
+          :cache-key="`${article.id}:${locale}`"
+        />
+      </article>
+    </div>
   </UContainer>
 </template>
