@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest'
+import { entitySocialImage } from './entity-social-image'
 import {
   SOCIAL_IMAGE_HEIGHT,
   SOCIAL_IMAGE_PATH,
   SOCIAL_IMAGE_WIDTH,
   absoluteSocialUrl,
-  entitySocialImage,
   isBlank,
   pickMeta,
 } from './metadata'

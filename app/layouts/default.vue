@@ -36,14 +36,22 @@ useHead(() => ({
   titleTemplate: title => (title ? `${title} — ${siteName.value}` : siteName.value)
 }))
 
+// Each getter falls through to the SAME committed value `app.vue` uses as its floor, rather than
+// to `undefined`. This is not belt-and-braces: `useSeoMeta` treats an `undefined` value as "remove
+// this tag", so a getter that resolved to `undefined` here DELETED the floor `app.vue` had already
+// set. Measured against a closed port: `twitter:title` and `twitter:description` disappeared
+// entirely on the dead-API path while `og:title` survived only because nuxt-seo-utils re-infers it
+// from `<title>`. Passing the committed default as `pickMeta`'s last candidate IS the documented
+// tier hierarchy (page → CMS → committed); tier 1 still wins because pages call `useSeoMeta` after
+// this layout. See evidence/ab-request-count.md.
 useSeoMeta({
   ogSiteName: () => siteName.value,
-  title: () => pickMeta(settings.value?.defaultMetaTitle),
-  description: () => pickMeta(settings.value?.defaultMetaDescription),
-  ogTitle: () => pickMeta(settings.value?.defaultMetaTitle),
-  ogDescription: () => pickMeta(settings.value?.defaultMetaDescription),
-  twitterTitle: () => pickMeta(settings.value?.defaultMetaTitle),
-  twitterDescription: () => pickMeta(settings.value?.defaultMetaDescription)
+  title: () => pickMeta(settings.value?.defaultMetaTitle, t('seo.defaultTitle')),
+  description: () => pickMeta(settings.value?.defaultMetaDescription, t('seo.siteDescription')),
+  ogTitle: () => pickMeta(settings.value?.defaultMetaTitle, t('seo.defaultTitle')),
+  ogDescription: () => pickMeta(settings.value?.defaultMetaDescription, t('seo.siteDescription')),
+  twitterTitle: () => pickMeta(settings.value?.defaultMetaTitle, t('seo.defaultTitle')),
+  twitterDescription: () => pickMeta(settings.value?.defaultMetaDescription, t('seo.siteDescription'))
 })
 
 if (import.meta.client) {
