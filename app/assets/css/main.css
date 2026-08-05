@@ -571,6 +571,34 @@ html[lang="ar"] .font-nameplate {
   line-height: 1.12;
 }
 
+/* Latin nameplate SETTING (019) — the counterpart the rule above has always assumed. Its comment
+   pairs Reem Kufi 700 against "the heavy Space Grotesk Latin name", but the Latin name was never
+   heavy: it inherited `--text-mega--font-weight: 600` in the hero and `font-semibold` in the chrome,
+   so the bilingual pair was 700 against 600. 700 is the TOP of Space Grotesk's variable axis
+   (`fvar wght 300–700`, read from the shipped woff2), so this costs no new font file and no new
+   weight instance — it moves the one axis the installed face actually has.
+
+   WHY A SEPARATE CLASS FROM `.font-nameplate`. That utility selects the FACE and is script-aware, and
+   Reem Kufi is the Arabic HERO face only (D03-12 — "not on body/section titles"). Putting
+   `.font-nameplate` on the header/footer wordmark would therefore swap the Arabic chrome to Reem Kufi
+   AND fetch `reem-kufi-arabic-*.woff2` on every /ar route that has no hero, against the D20-15 font
+   budget. `.nameplate` carries the setting only, so a surface adopts the treatment with whatever face
+   its script sanctions: the hero pairs it with `font-nameplate`, the chrome with `font-display`.
+
+   WHY SCOPED POSITIVELY TO NON-ARABIC rather than neutralised under `html[lang="ar"]` the way
+   `.kicker` is: there is no single value to neutralise BACK to. The Arabic chrome is 600 (Cairo) and
+   the Arabic nameplate is 700 (Reem Kufi, the rule above), so one restoring rule would be wrong on
+   one of them. Stating the Latin register once, positively, leaves every Arabic surface byte-identical
+   — which is also why `font-semibold` stays on the chrome wordmark: under `html[lang="ar"]` it is the
+   declaration still doing the work.
+
+   Unlayered for the same reason as the block above: it must beat `.text-mega`'s own
+   `font-weight: 600` and the chrome's `font-semibold`, both of which live in Tailwind's utilities
+   layer, without resorting to `!important`. */
+html:not([lang="ar"]) .nameplate {
+  font-weight: 700;
+}
+
 /* ---------------------------------------------------------------------------------------
    Prose — the rendered-Markdown surface owned by ContentProse (doc 12 §5, doc 13 §9). Logical
    properties throughout so it mirrors in RTL; code is isolated LTR (doc 21 §4).
