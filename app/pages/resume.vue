@@ -56,8 +56,8 @@ useSchemaOrg(() => [
 // Title, description and OG/Twitter title+description only. Canonical, hreflang/x-default,
 // og:locale, og:url and <html lang/dir> belong to @nuxtjs/i18n under strict SEO (D22-7) —
 // writing them here would duplicate the tags and fight the global owner (that is how F-3
-// happened). No `ogImage`: F-1 remains open (no branded social-image fallback exists), and
-// emitting a URL that does not resolve is worse than inheriting nothing.
+// happened). No `ogImage` of its own — web-013 CLOSED F-1 by committing a branded social card, so
+// this route inherits the absolute site-wide image `app.vue` emits instead of carrying none.
 useSeoMeta({
   title: () => t('seo.resume.title'),
   description: () => t('seo.resume.description'),

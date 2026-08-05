@@ -90,7 +90,8 @@ useAsyncData(`key:${locale}`, () => api<Envelope<T>>('/path').then(r => r.data))
 - **الدلالات**: `<h1>` واحد ثمّ `<h2>` لكل قسم؛ `<ol>` للأدوار لأن الترتيب ذو معنى؛ التواريخ في
   عنصري `<time datetime>` يحملان قيمة العقد؛ المهارات في `<dl>` بمجموعات الـ API وترتيبه.
 - **الرأس (head) ملك للغة** (`D22-7`)؛ و`BreadcrumbList` فقط بلا `ProfilePage` ثانٍ (`D22-8` يسمّي
-  `/resume` صراحةً)؛ ولا `og:image` (`F-1` ما زالت مفتوحة).
+  `/resume` صراحةً)؛ ولا `og:image` خاصّ بالصفحة — فهي ترث البطاقة الاجتماعية المُلتزَمة التي
+  يُصدرها `app.vue` على مستوى الموقع (`web-013` أغلقت `F-1`).
 
 ### حماية لوحة التحكّم
 `login.vue` **بلا** حارس (كي يصلها الخارج) و`robots:noindex`؛ `index.vue` بـ `middleware:'auth'`. عزل SSR: `routeRules` في `nuxt.config.ts` تجعل `/dashboard/**` و`/ar/dashboard/**` بـ `ssr:false`.

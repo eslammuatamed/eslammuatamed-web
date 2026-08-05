@@ -295,7 +295,8 @@ useSchemaOrg(() => [
 ])
 
 // Title and description only. Canonical, hreflang/x-default, og:locale, og:url and <html lang/dir>
-// belong to @nuxtjs/i18n under strict SEO (D22-7). No `ogImage` (finding F-1).
+// belong to @nuxtjs/i18n under strict SEO (D22-7). No `ogImage` of its own — it inherits the
+// branded committed card `app.vue` emits site-wide (web-013 closed finding F-1).
 useSeoMeta({
   title: () => t('seo.contact.title'),
   description: () => t('seo.contact.description'),

@@ -61,10 +61,11 @@ useAboutSchema(data, crumbs)
 // Title, description and OG title/description only. Canonical, hreflang/x-default, og:locale, og:url
 // and <html lang/dir> are owned by @nuxtjs/i18n under strict SEO (D22-7) — writing them here would
 // duplicate the tags and fight the global owner, which is how finding F-3 happened.
-// No `ogImage`: the repository still has no branded social-image fallback (`ogImage` disabled in
-// nuxt.config, `public/` holds only favicons) and no new social artwork is authorized for this slice.
-// The portrait is NOT substituted for one — it is unpublished, and emitting a URL that does not
-// resolve is worse than inheriting nothing (carried from the Experience slice as finding F-1).
+// No `ogImage` HERE, but the page is no longer imageless: web-013 CLOSED finding F-1 by committing
+// a branded 1200×630 PNG that `app.vue` emits as the site-wide floor, so this route inherits one
+// absolute, resolvable image. This page still sets none of its own — the portrait is NOT substituted
+// for one, because it is unpublished and emitting a URL that does not resolve is worse than
+// inheriting the branded card.
 useSeoMeta({
   title: () => t('seo.about.title'),
   description: () => t('seo.about.description'),

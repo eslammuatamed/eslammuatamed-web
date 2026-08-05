@@ -132,11 +132,14 @@ test.describe('Head and structured data', () => {
     await expect(page.locator('meta[name="twitter:title"]')).toHaveAttribute('content', /Résumé/)
   })
 
-  // F-1 stays open: no branded social-image fallback exists, and a URL that does not resolve is
-  // worse than inheriting nothing.
-  test('emits no og:image', async ({ page }) => {
+  // F-1 is CLOSED by web-013: the committed branded 1200×630 PNG is now the site-wide floor, so
+  // every public route inherits one absolute, resolvable social image instead of none.
+  test('inherits the branded social card as a single absolute og:image (F-1 closed)', async ({ page }) => {
     await open(page, EN)
-    await expect(page.locator('meta[property="og:image"]')).toHaveCount(0)
+
+    const image = page.locator('meta[property="og:image"]')
+    await expect(image).toHaveCount(1)
+    await expect(image).toHaveAttribute('content', /^https?:\/\/.+\/social-card\.png$/)
   })
 
   // D22-8: ProfilePage belongs to /about. A second one here would be a duplicate identity.
