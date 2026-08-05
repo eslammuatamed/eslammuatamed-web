@@ -152,6 +152,14 @@ describe('ResumeEntry', () => {
     expect(wrapper.find('li').classes()).toContain('resume-entry')
   })
 
+  // The bullet marker is a background on an empty span, and print flattens backgrounds to save
+  // ink — which erased every marker until the stylesheet exempted this hook. Losing the class
+  // would silently reintroduce bullets with no bullet on paper.
+  it('carries the resume-bullet hook the print stylesheet exempts from the ink rule', async () => {
+    const wrapper = await mountSuspended(Entry, { props: { experience: experience() } })
+    expect(wrapper.findAll('.resume-bullet').length).toBe(2)
+  })
+
   // The entry is an <li>: the page wraps entries in an ordered list so reverse-chronological
   // order survives with CSS off.
   it('is a list item so the ordered sequence survives without CSS', async () => {

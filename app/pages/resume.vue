@@ -81,8 +81,14 @@ useSeoMeta({
 
     <!-- ONE measure for the whole document, set once rather than per section, so the identity
          block, the section rules and both rails share a single left and right edge. A résumé is
-         read as one sheet; three independently constrained blocks read as three cards. -->
-    <div class="mt-8 max-w-3xl print:mt-0">
+         read as one sheet; three independently constrained blocks read as three cards.
+
+         `4xl`, where `/experience` uses `3xl`: the rail spends 10rem of the measure before any
+         content starts, so at `3xl` the content column came out ~176px NARROWER than the timeline
+         it is supposed to be denser than. At `4xl` the two pages have the same content measure and
+         this one simply spends fewer vertical inches on it. Prose is exempt — the summary keeps
+         its own narrower measure below, because a 720px line of running text is not readable. -->
+    <div class="mt-8 max-w-4xl print:mt-0">
       <!-- ── Identity ───────────────────────────────────────────────────────────────────
            A résumé leads with who this is, so the name is the h1, the governed positioning
            line sits directly beneath it, and the summary follows. Name and positioning come
@@ -104,7 +110,7 @@ useSeoMeta({
              from the two surfaces describing the same person differently. This is the
              established idiom on this page, which already reuses the skill-group labels and
              the employment-type labels for exactly that reason. -->
-        <p class="mt-4 text-body text-muted text-pretty">{{ t('home.hero.valueProp') }}</p>
+        <p class="mt-4 max-w-2xl text-body text-muted text-pretty">{{ t('home.hero.valueProp') }}</p>
 
         <!-- Contact row: the professional email and the owner's public links, in API order.
              A list, so it is announced with a count rather than as a run of adjacent links.
@@ -323,15 +329,42 @@ useSeoMeta({
     color: #000 !important;
   }
 
+  /**
+   * ...and settle there INSTANTLY. The contact links carry `transition-colors` for their hover
+   * treatment, so switching to print media starts a colour transition rather than applying one —
+   * and a running transition outranks `!important`. Measured on the print render: the links were
+   * still `oklab(0.3646 …)`, a mid-grey, for the length of the transition. Whether the rasteriser
+   * catches that frame is a race, and a résumé that sometimes prints grey links is not a print
+   * deliverable. Nothing on paper animates, so nothing on paper needs a transition.
+   */
+  .resume-page * {
+    transition: none !important;
+    animation: none !important;
+  }
+
   .resume-page {
     max-width: none !important;
     padding: 0 !important;
   }
 
   /* The single document measure is a screen concern — on paper the sheet margin (`@page`) is
-     the measure, and a 48rem cap would leave a wide empty gutter on A4 and on Letter alike. */
-  .resume-page .max-w-3xl {
+     the measure, and a 56rem cap would leave a wide empty gutter on A4 and on Letter alike. The
+     summary's own narrower measure is released with it: a printed sheet is already a narrow
+     column, so constraining prose twice would only lengthen the document. */
+  .resume-page .max-w-4xl,
+  .resume-page .max-w-2xl {
     max-width: none !important;
+  }
+
+  /**
+   * Impact-bullet markers survive the ink rule. They are `background-color` on an empty span —
+   * a decorative dot with no glyph — so `background: transparent` above erased every one of them
+   * and the printed bullets became bare indented lines. Measured on the print render before this
+   * rule existed. Black rather than the accented border token: the printed document is a
+   * one-colour document by design.
+   */
+  .resume-page .resume-bullet {
+    background: #000 !important;
   }
 
   /* Borders stay, but as hairlines rather than themed surfaces, so the technology and skill

@@ -79,7 +79,9 @@ const technologiesLabelId = computed(() => `resume-tech-${props.experience.id}`)
           :key="i"
           class="flex gap-2.5 text-body-sm text-muted"
         >
-          <span class="mt-[0.5em] size-1 shrink-0 rounded-full bg-[var(--ui-border-accented)]" aria-hidden="true" />
+          <!-- `resume-bullet` is the hook the print stylesheet uses to keep this marker: it is a
+               background on an empty span, and print flattens backgrounds to save ink. -->
+          <span class="resume-bullet mt-[0.5em] size-1 shrink-0 rounded-full bg-[var(--ui-border-accented)]" aria-hidden="true" />
           <span class="text-pretty">{{ bullet }}</span>
         </li>
       </ul>
