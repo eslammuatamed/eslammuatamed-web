@@ -118,9 +118,56 @@ for (const { locale, home, about, resume } of ROUTES) {
         expect(html, `${path} must not carry the superseded primary title`).not.toMatch(
           /(?<!Full-Stack )JavaScript Product Engineer/
         )
-        expect(html, `${path} must not carry the retired qualifier`).not.toMatch(/frontend-led/i)
         expect(html, `${path} must not carry the superseded Arabic title`).not.toContain(
           'مهندس برمجيات للمنتجات'
+        )
+      }
+    })
+
+    /**
+     * The retired *qualifier* is governed differently from the retired *titles* above, and this
+     * suite asserted a rule the governing documents do not actually state.
+     *
+     * §9 withdrew "frontend-led" from POSITIONING. It did not withdraw it from the owner's
+     * first-person About prose, and that is an explicit, recorded decision rather than an oversight:
+     * `about-copy.md` v1.1.0 §5 says the third `aboutBio` paragraph is "**Still divergent, and
+     * deliberately not rewritten here** … recorded as an open row in [Positioning Strategy]'s
+     * divergence table rather than edited, because it is owner-voiced first-person prose and §4
+     * makes any wording change an owner-review change." `positioning-strategy.md` carries the
+     * matching row under "Still open". The 2026-08-05 directive replaced the OPENING paragraph only.
+     *
+     * The blanket assertion passed for one reason only: the contract mock served the literal string
+     * `"string"` for `aboutBio`, so it had never once been evaluated against the real About prose.
+     * The moment the fixture carried the canonical copy, the test failed on APPROVED content.
+     *
+     * So the ban is kept where §9 actually governs — every surface that DECLARES positioning: the
+     * hero, the résumé headline, and all head metadata on every route including `/about`. Only the
+     * rendered About prose is exempt, and only until the owner reviews that paragraph. Nothing is
+     * weakened: a reappearance in any metadata, on the home page, or on the résumé still fails here.
+     */
+    test('the retired qualifier stays out of every positioning surface', async ({ page }) => {
+      // RENDERED TEXT, NOT `page.content()`. Every route that reads `/settings/site` serialises the
+      // WHOLE settings object into `__NUXT_DATA__` for hydration, `aboutBio` included — so the raw
+      // HTML of `/resume` carries the governed About prose although the résumé never displays it.
+      // Measured, not assumed: this assertion failed on `/resume` for exactly that reason. A
+      // hydration payload is a transport artifact, not a positioning surface; what §9 governs is
+      // what the page SAYS, which is `innerText` (it excludes `<script>`) plus the head below.
+      for (const path of [fresh(home), resume]) {
+        await page.goto(path, { waitUntil: 'domcontentloaded' })
+        const rendered = await page.locator('body').innerText()
+        expect(rendered, `${path} must not display the retired qualifier`).not.toMatch(
+          /frontend-led/i
+        )
+      }
+
+      // The head is asserted on EVERY route including `/about`: the About prose may carry the
+      // qualifier (governed, owner-review-pending), but no page may make it a positioning CLAIM in
+      // its title, description, og/twitter tags or JSON-LD.
+      for (const path of [fresh(home), about, resume]) {
+        await page.goto(path, { waitUntil: 'domcontentloaded' })
+        const head = await page.locator('head').innerHTML()
+        expect(head, `${path} head must not carry the retired qualifier`).not.toMatch(
+          /frontend-led/i
         )
       }
     })
