@@ -7,10 +7,17 @@
 // `/contact` route and keeps direct email as that page's fallback.
 //
 // The address is read from the API's profile links so the owner controls it in the CMS like every other
-// piece of content. `CANONICAL_EMAIL` is the owner-supplied fallback for the case where settings are
-// unreachable or carry no mail link — without it an API hiccup would silently remove the only
-// conversion path on the page.
-const CANONICAL_EMAIL = 'mailto:eslammuatemed@gmail.com'
+// piece of content. `CANONICAL_EMAIL` is the fallback for the case where settings are unreachable or
+// carry no mail link — without it an API hiccup would silently remove the only conversion path on the
+// page.
+//
+// THE FALLBACK MUST BE THE PUBLIC-WEBSITE ADDRESS. `owner-profile.md` §8 (approved 2026-07-29) gives
+// `contact@eslammuatamed.com` that role explicitly, and marks `eslammuatemed@gmail.com` as the
+// internal Contact-form notification destination — "Never rendered publicly". This constant held the
+// Gmail, so every project page published it whenever settings were unavailable, against the profile's
+// own rule. (The `mu**ate**med` spelling in the Gmail is intentional and not a typo — §8 R5 — which is
+// exactly why it reads as a plausible address and survived review this long.)
+const CANONICAL_EMAIL = 'mailto:contact@eslammuatamed.com'
 
 const { t } = useI18n()
 const { data: settings } = await useSiteSettings()

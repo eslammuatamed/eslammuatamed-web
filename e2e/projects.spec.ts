@@ -43,7 +43,7 @@ test.describe('F-P1 — hiring-manager journey (EN)', () => {
 
     // The journey ends in a direct-email action, never a link to the not-yet-built /contact route.
     const cta = page.getByRole('link', { name: /Email me/i })
-    await expect(cta).toHaveAttribute('href', 'mailto:eslammuatemed@gmail.com')
+    await expect(cta).toHaveAttribute('href', 'mailto:contact@eslammuatamed.com')
     await expect(page.locator('main a[href="/contact"], aside a[href="/contact"]')).toHaveCount(0)
   })
 })
@@ -63,7 +63,7 @@ test.describe('F-P1 — hiring-manager journey (AR, RTL)', () => {
 
     await expect(page.getByRole('link', { name: /راسلني عبر البريد/ })).toHaveAttribute(
       'href',
-      'mailto:eslammuatemed@gmail.com'
+      'mailto:contact@eslammuatamed.com'
     )
   })
 })

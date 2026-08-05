@@ -74,7 +74,7 @@ test.describe('Project detail with an empty gallery — English', () => {
     await expect(page.getByRole('link', { name: 'Live product' })).toBeVisible()
     await expect(page.getByRole('link', { name: /Email me/i })).toHaveAttribute(
       'href',
-      'mailto:eslammuatemed@gmail.com'
+      'mailto:contact@eslammuatamed.com'
     )
   })
 
