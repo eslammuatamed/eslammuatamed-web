@@ -24,7 +24,7 @@ const currentShort = computed(() => locale.value.toUpperCase())
   <SwitchLocalePathLink
     v-if="other"
     :locale="other.code"
-    :aria-label="t('a11y.switchToOtherLocale')"
+    :aria-label="`${currentShort}: ${t('a11y.switchToOtherLocale')}`"
     :title="t('a11y.switchToOtherLocale')"
     class="inline-flex size-9 items-center justify-center rounded-full border border-default bg-elevated text-caption font-semibold leading-none text-highlighted transition-colors hover:bg-accented"
   >

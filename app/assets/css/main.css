@@ -563,6 +563,20 @@ html[lang="ar"] .font-display {
   font-family: var(--font-display-arabic);
 }
 
+/* CONTENT LANGUAGE WINS OVER PAGE LANGUAGE for the display face. Some governed strings are English
+   in BOTH locales by owner decision — positioning-strategy §3 keeps the professional title
+   `Full-Stack JavaScript Product Engineer` identical on `/` and `/ar`, because it is the industry's
+   term of art. Rendering that Latin string through the Arabic stack selects Cairo's LATIN subset,
+   which is neither the governed Latin display face nor metrically related to the fallback that
+   precedes it — a measured source of layout shift on `/ar`.
+   Selecting on `:lang(en)` makes the TYPOGRAPHY FOLLOW THE SCRIPT OF THE CONTENT, so any element
+   that honestly declares `lang="en"` is covered — no route-specific rule, and nothing to remember.
+   Reuses `--font-display` rather than restating the stack. One step more specific than the rule
+   above, so it wins without `!important`. */
+html[lang="ar"] .font-display:lang(en) {
+  font-family: var(--font-display);
+}
+
 /* Arabic nameplate (D03-12): Reem Kufi at the top of its weight axis carries the same visual
    mass as the heavy Space Grotesk Latin name. Its taller Kufi forms receive extra line-height. */
 html[lang="ar"] .font-nameplate {

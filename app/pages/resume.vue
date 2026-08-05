@@ -100,7 +100,11 @@ useSeoMeta({
           {{ name ?? t('resume.title') }}
         </h1>
 
-        <p v-if="tagline" class="mt-3 font-display text-h3 text-muted text-pretty">{{ tagline }}</p>
+        <!-- `lang="en"`: the governed title is English in BOTH locales (positioning-strategy §3), so it
+             is Latin-script CONTENT on an Arabic page, not page chrome. Declaring that is what selects
+             the Latin display face; `<bdi>` isolates the run inside RTL flow without forcing the
+             block's direction — the treatment `HomeNameplate` already gives this same string. -->
+        <p v-if="tagline" lang="en" class="mt-3 font-display text-h3 text-muted text-pretty"><bdi>{{ tagline }}</bdi></p>
 
         <!-- The summary positioning-strategy v2.0.0 §8 asks a résumé to carry: "Headline =
              displayed title; summary carries the hero description's substance". It is the

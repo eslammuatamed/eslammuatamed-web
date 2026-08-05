@@ -54,7 +54,7 @@ const stack = ['JavaScript', 'TypeScript', 'Vue', 'Nuxt', 'Node.js', 'NestJS']
              professional title is a two-line composition, and the break travels with the value
              rather than being re-invented here (no <br>, no per-locale split, no second string). -->
         <p class="mt-7 kicker whitespace-pre-line text-muted sm:mt-9">
-          <bdi>{{ tagline }}</bdi>
+          <bdi lang="en">{{ tagline }}</bdi>
         </p>
         <p class="mt-6 max-w-2xl text-body-lg text-default text-pretty">{{ t('home.hero.valueProp') }}</p>
 
