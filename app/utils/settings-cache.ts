@@ -23,7 +23,7 @@ import type { SiteSettings } from '~/types/models'
  * matches CONCURRENT calls and is cleared on settle — and these sites `await` sequentially as
  * nested component setups run, so no promise is ever in flight when the next one starts. Measured:
  * `/about` issued one request per call site (2 on the pre-013 tree, 3 once the public layout began
- * reading tier 2). See `evidence/ab-request-count.md`.
+ * reading tier 2). See `e2e/dedupe/settings-dedupe.spec.ts`.
  *
  * Reading `payload.data` — which `asyncData.js:432` populates on settle, during the render — makes
  * the documented single-request invariant actually true.

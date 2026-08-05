@@ -63,7 +63,17 @@ export function sharedSettingsRequest(
   const existing = byKey.get(key)
   if (existing) return existing
 
-  const request = fetcher()
+  // `fetcher()` is called inside try/catch because a SYNCHRONOUS throw would otherwise escape before
+  // the memo is written: the entry would never be stored, and every later reader in the same render
+  // would call the fetcher again and throw independently — silently un-sharing exactly the failure
+  // path this file exists to share. Converting it to a rejected promise puts a synchronous fault on
+  // the same path as an async one, so readers observe one outcome either way.
+  let request: Promise<SiteSettings>
+  try {
+    request = fetcher()
+  } catch (cause) {
+    request = Promise.reject(cause)
+  }
   byKey.set(key, request)
 
   // ONE detached observer, doing both jobs, because they must not be two chains.
@@ -80,9 +90,12 @@ export function sharedSettingsRequest(
   // the derived promise settles cleanly and nothing propagates. Callers still receive `request`
   // itself, so the rejection they observe is the original, untouched.
   const release = () => {
-    // Guard the identity: a manual retry may already have replaced this entry, and deleting a newer
-    // in-flight request would silently un-share it.
-    if (import.meta.client && byKey.get(key) === request) byKey.delete(key)
+    // Unconditional, and safe to be: a replacement entry cannot exist yet. The only writer is this
+    // function, and it writes only when `byKey.get(key)` is empty — so for as long as THIS request
+    // is unsettled, every caller finds and shares it rather than creating a rival. An identity check
+    // here would therefore be unreachable code guarding an event the design makes impossible, which
+    // reads as protection that does not exist.
+    if (import.meta.client) byKey.delete(key)
   }
   void request.then(release, release)
 

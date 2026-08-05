@@ -75,12 +75,22 @@ describe('sharedSettingsRequest', () => {
     // This is why the map is a WeakMap keyed by NuxtApp and not a module-level Map: on the server a
     // module-level Map is shared by every concurrent request, and would serve one visitor's settings
     // — or one visitor's OUTAGE — to another.
-    const fetcher = vi.fn(() => Promise.resolve(SETTINGS))
+    //
+    // The two calls are CONCURRENT on purpose. Awaiting the first before making the second would
+    // make this test pass with a module-level `Map` too, because the client branch releases the
+    // entry on settle — so the fetcher would be called twice either way and the assertion would
+    // prove nothing about scoping. Overlapping them is what makes a shared map observable: under one
+    // the second caller would join the first request; under per-request scoping it cannot.
+    const deferred: Array<(value: SiteSettings) => void> = []
+    const fetcher = vi.fn(() => new Promise<SiteSettings>(resolve => deferred.push(resolve)))
 
-    await sharedSettingsRequest(fakeNuxtApp(), 'settings:site:en', fetcher)
-    await sharedSettingsRequest(fakeNuxtApp(), 'settings:site:en', fetcher)
+    const first = sharedSettingsRequest(fakeNuxtApp(), 'settings:site:en', fetcher)
+    const second = sharedSettingsRequest(fakeNuxtApp(), 'settings:site:en', fetcher)
 
-    expect(fetcher).toHaveBeenCalledTimes(2)
+    expect(fetcher, 'a second request must not join the first visitor request').toHaveBeenCalledTimes(2)
+
+    for (const resolve of deferred) resolve(SETTINGS)
+    await Promise.all([first, second])
   })
 
   it('releases a settled failure on the client, so a retry is a real request and never a cached null', async () => {

@@ -21,7 +21,7 @@ import type { Envelope, Skill } from '~/types/models'
  *   from ONE request whenever their locales agree: every SSR render and every initial load. The
  *   shared key alone dedupes nothing during SSR; it takes `sharedSettingsCachedData` on the
  *   healthy path and `sharedSettingsRequest` on the outage path (BLK-2). See
- *   utils/settings-cache.ts, utils/settings-request.ts and evidence/ab-request-count.md.
+ *   utils/settings-cache.ts, utils/settings-request.ts and e2e/dedupe/settings-dedupe.spec.ts.
  *
  * ## Locale
  *

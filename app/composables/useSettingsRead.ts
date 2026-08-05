@@ -31,10 +31,15 @@ export function useSettingsRead(locale: Ref<string>) {
   const api = useApi()
   const nuxtApp = useNuxtApp()
 
+  // Derived once. Writing the key expression twice inside the very function whose purpose is that no
+  // copy can drift would be the same defect at a smaller scale: the async-data key and the key the
+  // request is shared under MUST be the same string, and here they are the same expression.
+  const key = () => `settings:site:${locale.value}`
+
   return useAsyncData(
-    () => `settings:site:${locale.value}`,
+    key,
     () =>
-      sharedSettingsRequest(nuxtApp, `settings:site:${locale.value}`, () =>
+      sharedSettingsRequest(nuxtApp, key(), () =>
         api<Envelope<SiteSettings>>('/settings/site', { locale: locale.value, retry: 0 }).then(
           res => res.data
         )

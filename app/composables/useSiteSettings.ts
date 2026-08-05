@@ -9,7 +9,7 @@
 // `sharedSettingsCachedData` (shares a settled VALUE via `payload.data`, success only) and
 // `sharedSettingsRequest` (shares the request-scoped PROMISE, which is what makes the OUTAGE path one
 // request too — BLK-2). See utils/settings-cache.ts, utils/settings-request.ts and
-// evidence/ab-request-count.md.
+// e2e/dedupe/settings-dedupe.spec.ts.
 //
 // THE LOCALE HERE IS THE UI LOCALE, NOT THE ROUTE'S — deliberately, and it is the one public read that
 // differs. D06-6 exists to stop a per-locale-slug read (D04-2) asking for the incoming slug in the

@@ -16,7 +16,7 @@ const nuxtApp = useNuxtApp()
 // This shares the `settings:site:{locale}` key with the footer and the pages. MEASURED, because
 // the shared key by itself proves nothing: Nuxt's default `getCachedData` reads `static.data` on
 // the server, which is empty during a normal SSR render, so before `sharedSettingsCachedData`
-// every call site issued its OWN request (`evidence/ab-request-count.md`). With that resolver a
+// every call site issued its OWN request (`e2e/dedupe/settings-dedupe.spec.ts`). With that resolver a
 // HEALTHY render makes exactly one `/settings/site` request on every public route.
 //
 // THE OUTAGE PATH COSTS ONE REQUEST TOO (BLK-2, resolved). The payload resolver alone could not do
@@ -57,7 +57,7 @@ useHead(() => ({
 // entirely on the dead-API path while `og:title` survived only because nuxt-seo-utils re-infers it
 // from `<title>`. Passing the committed default as `pickMeta`'s last candidate IS the documented
 // tier hierarchy (page → CMS → committed); tier 1 still wins because pages call `useSeoMeta` after
-// this layout. See evidence/ab-request-count.md.
+// this layout. See e2e/dedupe/settings-dedupe.spec.ts.
 // Resolved ONCE and reused across the six tags rather than repeating the same tiered expression
 // per tag: `/projects` is measured against a frozen 250 KB budget (doc 20 §1), so six copies of an
 // identical `pickMeta(...)` chain is bytes shipped to every public route for no behavioural gain —
