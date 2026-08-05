@@ -33,6 +33,7 @@ import net from 'node:net'
 import process from 'node:process'
 import { setTimeout as sleep } from 'node:timers/promises'
 import { shutdownAll, startTracked } from './lib/process-group.mjs'
+import { resolveMockPort, resolvePreviewPort } from './lib/preview-base.mjs'
 
 const BACKENDS = {
   // The RESOLVED binary, not `npx`: the npx shim spawns Prism as a grandchild, so the process we
@@ -109,8 +110,10 @@ if (!BACKEND) {
   process.exit(1)
 }
 
-const WEB_PORT = process.env.CI_PREVIEW_PORT ?? '3000'
-const API_PORT = process.env.CI_MOCK_PORT ?? '3001'
+// Same resolver `check-route-size.mjs` measures through, so the server this file starts and the URL
+// that gate reads can no longer be defaulted to different ports. See `lib/preview-base.mjs`.
+const WEB_PORT = resolvePreviewPort()
+const API_PORT = resolveMockPort()
 
 const children = []
 let shuttingDown = false

@@ -53,6 +53,7 @@ import { readFile, access, readdir } from 'node:fs/promises'
 import { gzipSync } from 'node:zlib'
 import process from 'node:process'
 import { DASHBOARD_ROUTES, resolveDashboardClosure } from './lib/dashboard-closure.mjs'
+import { resolvePreviewBase } from './lib/preview-base.mjs'
 import {
   BUDGET,
   DASHBOARD_ACCEPTED_BASELINE_BYTES,
@@ -102,7 +103,9 @@ const ROUTES = [
   '/ar/contact'
 ]
 
-const BASE = process.env.ROUTE_SIZE_BASE ?? 'http://127.0.0.1:3000'
+// Derived from the port this script's own `startPreview()` will use — see `lib/preview-base.mjs`
+// for why that is a shared function rather than a constant repeated here.
+const BASE = resolvePreviewBase()
 // Overridable so the failure paths (missing build, missing/corrupt metadata) can be exercised in
 // tests without disturbing the real build output. Defaults are the production locations.
 const PUBLIC_DIR = process.env.ROUTE_SIZE_PUBLIC_DIR ?? '.output/public'
