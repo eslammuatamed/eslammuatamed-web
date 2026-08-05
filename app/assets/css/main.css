@@ -265,6 +265,20 @@
   --leading-prose: 1.7;
   --leading-prose-arabic: 1.9;
 
+  /* Reading measure (doc 03 §3: 65–75 characters, BOTH scripts). Stated in `em`, not `ch`, and
+     calibrated per script — both choices are measurements, not taste.
+       `em` because the character count then holds at ANY font-size: the column and the glyphs
+       scale together, so the same token is correct at the 16px UI size and the 18px article size.
+       Per script because a single value cannot satisfy both. Measured average character advance
+       of real prose in each body face: Geist 0.454em, IBM Plex Sans Arabic 0.394em. So
+       32em → ~70 Latin characters and 28em → ~71 Arabic characters — mid-band in both.
+     NOT `ch`. `ch` is the advance of "0", which is 0.688em in Geist — far from the average
+     character — and the Arabic body face is imported as an ARABIC-ONLY subset with no "0" glyph
+     at all, so `ch` silently falls back to the 0.5em default there. One shared `68ch` therefore
+     produced two unrelated columns: 748px (~103 characters) in EN and 544px (~86) in AR, both
+     outside the governed band. See scratchpad/reports/article-detail-layout.md for the numbers. */
+  --measure-prose: 32em;
+
   --duration-micro: 120ms;
   --duration-standard: 200ms;
   --duration-structural: 320ms;
@@ -276,6 +290,15 @@
 
   /* Nuxt UI derives component radii from this base; 6px aligns controls to doc 03 §4. */
   --ui-radius: 0.375rem;
+}
+
+/* The Arabic measure REBINDS the same token rather than adding a second one (the
+   `--leading-prose-arabic` shape). A second token would force every consumer to carry its own
+   `html[lang="ar"]` rule and to remember that it exists; rebinding here means a consumer writes
+   `var(--measure-prose)` once and is correct in both scripts. Unlayered and one specificity step
+   above the `:root` default above, so it wins without `!important`. */
+html[lang="ar"] {
+  --measure-prose: 28em;
 }
 
 /* Accent-text utility for links — kept distinct from Nuxt UI's fill-driven `text-primary`

@@ -12,7 +12,7 @@
 |---|---|---|
 | `index.vue` | الرئيسية الكاملة (`FR-PUB-010…017`): بطل + تقنيات + مشاريع مميّزة + ملخّص خبرة + أحدث مقالات + توصيات + CTA تواصل، عبر `useSiteSettings` + `useHomeData` (جلب متوازٍ معزول لكل قسم)؛ `settings/site` تبعية صلبة (فشلها = حالة «الـ API غير متاح» `D13-1` — تعرض الآن علامة `UiBrandMark`)؛ بيانات `Person`+`WebSite` (`useSiteSchema`) وعنوان مستقلّ (`D22-4`). **أُعيد تصميم طبقتها البصرية في web-006** (التنسيق نفسه دون تغيير) | عام |
 | `blog/index.vue` | قائمة المدوّنة المُرقَّمة (`GET /articles`)، حالة الصفحة في الـ URL query | عام |
-| `blog/[slug].vue` | صفحة المقال (`GET /articles/{slug}`) + عرض `ContentProse` + `setI18nParams` | عام |
+| `blog/[slug].vue` | صفحة المقال (`GET /articles/{slug}`) + عرض `ContentProse` + `setI18nParams`. **سطح قراءة بعمود واحد موسّط** (015): العنوان والمقدّمة والنصّ كلّها محكومة بقياس واحد هو `--measure-prose`، ويُحرَّر `ContentProse` بـ `max-w-none` كي يملك العمود القياس وحده | عام |
 | `experience.vue` | صفحة الخبرة المهنية (`FR-PUB-021`): جدول زمني عكسي زمنيًّا من `GET /experiences` عبر `useExperiences`، مع التقنيات من سجلّ المهارات (`D02-9`)؛ الحالات الثلاث عبر `UiRequestState`؛ `BreadcrumbList` فقط (لا `ProfilePage` — `D22-8`) | عام |
 | `dashboard/login.vue` | تسجيل الدخول (`UForm` + zod)، بلا حارس، layout `auth` | لوحة (عميل) |
 | `dashboard/index.vue` | overview مبدئية خلف الحارس (`middleware: 'auth'`, layout `dashboard`) | لوحة (عميل) |
