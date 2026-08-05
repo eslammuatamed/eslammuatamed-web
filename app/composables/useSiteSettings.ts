@@ -4,12 +4,19 @@
 // would stay on the previous locale (a locale-parity regression, code-review WD-6).
 // Mirrors the blog/index reactive-key idiom.
 //
-// The per-locale key is what makes the shared page+footer+layout read ONE request (doc 20 §7) — but
+// The per-locale key is what makes the shared page+footer+layout read ONE request — but
 // the key alone does not dedupe anything. It takes BOTH mechanisms in `useSettingsRead`:
 // `sharedSettingsCachedData` (shares a settled VALUE via `payload.data`, success only) and
 // `sharedSettingsRequest` (shares the request-scoped PROMISE, which is what makes the OUTAGE path one
 // request too — BLK-2). See utils/settings-cache.ts, utils/settings-request.ts and
 // e2e/dedupe/settings-dedupe.spec.ts.
+//
+// This line previously cited "doc 20 §7" as the governing requirement. That citation was FALSE —
+// doc 20 §7 is API Performance (Prisma query discipline, N+1, caching layers) and the document never
+// mentions this read. A documentation audit found that NO canonical document specifies the Settings
+// read pattern at all, so the single-request rule is an IMPLEMENTATION invariant whose authority is
+// the lane that measures it, not a governed requirement. Recorded plainly because a comment that
+// invents a citation is worse than one that admits the gap.
 //
 // THE LOCALE HERE IS THE UI LOCALE, NOT THE ROUTE'S — deliberately, and it is the one public read that
 // differs. D06-6 exists to stop a per-locale-slug read (D04-2) asking for the incoming slug in the
