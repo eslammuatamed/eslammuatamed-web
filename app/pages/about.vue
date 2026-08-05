@@ -66,11 +66,20 @@ useAboutSchema(data, crumbs)
 // absolute, resolvable image. This page still sets none of its own — the portrait is NOT substituted
 // for one, because it is unpublished and emitting a URL that does not resolve is worse than
 // inheriting the branded card.
+// The Twitter pair is set ALONGSIDE the OG pair, not left to the lower tiers. Omitting it here never
+// produced an EMPTY tag — it produced a WRONG one, because the pair is always filled from below:
+// `layouts/default.vue` supplies the CMS `defaultMetaTitle`/`defaultMetaDescription` (tier 2) and
+// `app.vue` the committed defaults (tier 3). So `/about` shipped two DISAGREEING previews of one
+// URL: `og:*` describing About, `twitter:*` describing the site. Measured against the built server in
+// both states, not assumed. `/resume` already set both for this reason, and `/` now does too — see
+// the sharper case documented there. The image pair still comes from the floor: this page has none.
 useSeoMeta({
   title: () => t('seo.about.title'),
   description: () => t('seo.about.description'),
   ogTitle: () => `${t('seo.about.title')} — ${t('brand.name')}`,
-  ogDescription: () => t('seo.about.description')
+  ogDescription: () => t('seo.about.description'),
+  twitterTitle: () => `${t('seo.about.title')} — ${t('brand.name')}`,
+  twitterDescription: () => t('seo.about.description')
 })
 </script>
 
