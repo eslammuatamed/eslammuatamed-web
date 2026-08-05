@@ -2,8 +2,9 @@
 import type { Skill } from '~/types/models'
 
 // Technology filter for the projects index (FR-PUB-030). Options come from the Skills registry, not
-// free text (doc 04 §5) — the value sent to the API is the skill's canonical UUID, which is the only
-// form `GET /projects?technology=` accepts; labels are display-only and arrive already localized.
+// free text (doc 04 §5) — the value sent to the API is the skill's `slug`, the canonical form of
+// `GET /projects?technology=` (D10-17); labels are display-only and arrive already localized, so a
+// label must never become the filter value or the URL would change meaning with the language.
 //
 // "All technologies" is the PLACEHOLDER, not a list option: reka-ui reserves the empty string for
 // clearing a select and rejects an item whose value is `''` ("A <SelectItem /> must have a value prop
@@ -12,7 +13,10 @@ import type { Skill } from '~/types/models'
 // real technologies instead of a permanent redundant row.
 interface Props {
   technologies: readonly Skill[]
-  /** Canonical technology UUID, or `undefined` for the unfiltered list. */
+  /**
+   * The active filter value, or `undefined` for the unfiltered list. Canonically a Skill `slug`; a
+   * uuid from a link shared before the slug contract landed is still valid and still round-trips.
+   */
   modelValue: string | undefined
   disabled?: boolean
 }
@@ -23,7 +27,7 @@ const emit = defineEmits<{ 'update:modelValue': [value: string | undefined] }>()
 const { t } = useI18n()
 
 const items = computed(() =>
-  props.technologies.map(technology => ({ label: technology.label, value: technology.id }))
+  props.technologies.map(technology => ({ label: technology.label, value: technology.slug }))
 )
 
 const selected = computed({

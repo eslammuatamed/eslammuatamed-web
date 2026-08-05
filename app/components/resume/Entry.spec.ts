@@ -81,9 +81,9 @@ describe('ResumeEntry', () => {
       props: {
         experience: experience({
           technologies: [
-            { id: 't1', label: 'Vue.js' },
-            { id: 't2', label: 'Tailwind CSS' },
-            { id: 't3', label: 'Angular' }
+            { id: 't1', slug: 'vue', label: 'Vue.js' },
+            { id: 't2', slug: 'tailwind-css', label: 'Tailwind CSS' },
+            { id: 't3', slug: 'angular', label: 'Angular' }
           ]
         })
       }

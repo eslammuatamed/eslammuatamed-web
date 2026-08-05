@@ -60,6 +60,21 @@ export const TECHNOLOGY = {
   upstream503: '019f89b5-3050-7161-af37-000000000003'
 } as const
 
+/**
+ * The SAME three scenarios addressed by their canonical slug. `?technology=` accepts both forms —
+ * the slug is canonical and the uuid is backward-compatible only (D10-17) — so the harness carries
+ * both and the scenario server resolves either to one scenario. Keeping the two lists side by side
+ * is what lets a test assert the legacy form still works instead of assuming it.
+ */
+export const TECHNOLOGY_SLUG = {
+  /** Returns a well-formed, EMPTY page — the filtered empty state. */
+  noMatches: 'scenario-no-matches',
+  /** The upstream destroys the socket: a genuine connection failure inside Nitro. */
+  unreachable: 'scenario-unreachable',
+  /** The upstream answers RFC 7807 `503` — a different failure mode from the one above. */
+  upstream503: 'scenario-upstream-503'
+} as const
+
 /** Slugs that select the DETAIL scenarios. One slug per scenario per locale; never reused. */
 export const SLUG = {
   /** The canonical destination of the redirect scenario. */
@@ -223,14 +238,14 @@ export function resumePdfSettings(mediaOrigin: string): Record<Locale, SiteSetti
  */
 export const SKILLS: Record<Locale, Skill[]> = {
   en: [
-    { id: TECHNOLOGY.noMatches, label: 'Scenario — no matching projects', group: 'FRONTEND', order: 1, brandColor: null, availableLocales: ['en', 'ar'] },
-    { id: TECHNOLOGY.unreachable, label: 'Scenario — upstream unreachable', group: 'BACKEND', order: 2, brandColor: null, availableLocales: ['en', 'ar'] },
-    { id: TECHNOLOGY.upstream503, label: 'Scenario — upstream 503', group: 'BACKEND', order: 3, brandColor: null, availableLocales: ['en', 'ar'] }
+    { id: TECHNOLOGY.noMatches, slug: TECHNOLOGY_SLUG.noMatches, label: 'Scenario — no matching projects', group: 'FRONTEND', order: 1, brandColor: null, availableLocales: ['en', 'ar'] },
+    { id: TECHNOLOGY.unreachable, slug: TECHNOLOGY_SLUG.unreachable, label: 'Scenario — upstream unreachable', group: 'BACKEND', order: 2, brandColor: null, availableLocales: ['en', 'ar'] },
+    { id: TECHNOLOGY.upstream503, slug: TECHNOLOGY_SLUG.upstream503, label: 'Scenario — upstream 503', group: 'BACKEND', order: 3, brandColor: null, availableLocales: ['en', 'ar'] }
   ],
   ar: [
-    { id: TECHNOLOGY.noMatches, label: 'سيناريو — لا مشاريع مطابقة', group: 'FRONTEND', order: 1, brandColor: null, availableLocales: ['en', 'ar'] },
-    { id: TECHNOLOGY.unreachable, label: 'سيناريو — تعذر الوصول للخادم', group: 'BACKEND', order: 2, brandColor: null, availableLocales: ['en', 'ar'] },
-    { id: TECHNOLOGY.upstream503, label: 'سيناريو — خطأ ٥٠٣ من الخادم', group: 'BACKEND', order: 3, brandColor: null, availableLocales: ['en', 'ar'] }
+    { id: TECHNOLOGY.noMatches, slug: TECHNOLOGY_SLUG.noMatches, label: 'سيناريو — لا مشاريع مطابقة', group: 'FRONTEND', order: 1, brandColor: null, availableLocales: ['en', 'ar'] },
+    { id: TECHNOLOGY.unreachable, slug: TECHNOLOGY_SLUG.unreachable, label: 'سيناريو — تعذر الوصول للخادم', group: 'BACKEND', order: 2, brandColor: null, availableLocales: ['en', 'ar'] },
+    { id: TECHNOLOGY.upstream503, slug: TECHNOLOGY_SLUG.upstream503, label: 'سيناريو — خطأ ٥٠٣ من الخادم', group: 'BACKEND', order: 3, brandColor: null, availableLocales: ['en', 'ar'] }
   ]
 }
 
@@ -299,12 +314,12 @@ function galleryItem(id: string, order: number, alt: string | null, caption: str
 }
 
 const TECHNOLOGIES_EN = [
-  { id: '019f89b5-3050-7161-af37-0000000000a1', label: 'Nuxt' },
-  { id: '019f89b5-3050-7161-af37-0000000000a2', label: 'PostgreSQL' }
+  { id: '019f89b5-3050-7161-af37-0000000000a1', slug: 'nuxt', label: 'Nuxt' },
+  { id: '019f89b5-3050-7161-af37-0000000000a2', slug: 'postgresql', label: 'PostgreSQL' }
 ]
 const TECHNOLOGIES_AR = [
-  { id: '019f89b5-3050-7161-af37-0000000000a1', label: 'نكست' },
-  { id: '019f89b5-3050-7161-af37-0000000000a2', label: 'بوستجريس' }
+  { id: '019f89b5-3050-7161-af37-0000000000a1', slug: 'nuxt', label: 'نكست' },
+  { id: '019f89b5-3050-7161-af37-0000000000a2', slug: 'postgresql', label: 'بوستجريس' }
 ]
 
 /**

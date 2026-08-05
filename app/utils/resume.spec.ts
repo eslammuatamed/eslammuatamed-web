@@ -8,6 +8,7 @@ import { formatFileSize, groupSkills, impactBullets, resumeEmail, resumeLinks } 
 
 const skill = (id: string, label: string, group: Skill['group']): Skill => ({
   id,
+  slug: id,
   label,
   group,
   order: 0,

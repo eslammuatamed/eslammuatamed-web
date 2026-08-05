@@ -49,7 +49,7 @@ describe('HomeTimeline', () => {
   // the assertion that fails if a later change flips the default or adds the prop here.
   it('never enables technology chips, even when the API supplies them', async () => {
     const experiences: Experience[] = [
-      experience({ role: 'With stack', technologies: [{ id: 't1', label: 'Nuxt.js' }] }),
+      experience({ role: 'With stack', technologies: [{ id: 't1', slug: 'nuxt', label: 'Nuxt.js' }] }),
       experience({ role: 'Without stack', technologies: [] })
     ]
     const wrapper = await mountSuspended(Timeline, { props: { experiences }, global: { stubs } })

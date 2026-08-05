@@ -48,7 +48,8 @@ import { realpathSync } from 'node:fs'
 import http from 'node:http'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
-import { ARTICLES, EMPTY_PAGE, PROJECTS, REDIRECTS, SITE_SETTINGS, SKILLS, TECHNOLOGY, isLocale, problem,
+import { ARTICLES, EMPTY_PAGE, PROJECTS, REDIRECTS, SITE_SETTINGS, SKILLS, TECHNOLOGY, TECHNOLOGY_SLUG,
+  isLocale, problem,
   ABOUT_READINESS_SETTINGS, RESUME_PDF_BYTES, RESUME_PDF_FILENAME, resumePdfSettings } from './fixtures.ts'
 import type { Locale, ProblemDetail } from './fixtures.ts'
 
@@ -146,10 +147,20 @@ function resolveExperiences(locale: Locale, instance: string): Reply {
   return json({ data: [] })
 }
 
-/** `GET /projects` — the index. The `technology` filter is the scenario selector (see the table above). */
+/**
+ * `GET /projects` — the index. The `technology` filter is the scenario selector (see the table above).
+ *
+ * BOTH forms select the same scenario, because the real API accepts both: the slug is canonical and
+ * the uuid is backward-compatible only (D10-17). Resolving only the slug here would make the legacy
+ * form untestable, and a shared link carrying the old uuid is exactly the case that must keep working.
+ */
 function resolveProjectsIndex(technology: string | null, instance: string): Reply {
-  if (technology === TECHNOLOGY.unreachable) return { kind: 'destroy' }
-  if (technology === TECHNOLOGY.upstream503) return unavailable(instance)
+  if (technology === TECHNOLOGY.unreachable || technology === TECHNOLOGY_SLUG.unreachable) {
+    return { kind: 'destroy' }
+  }
+  if (technology === TECHNOLOGY.upstream503 || technology === TECHNOLOGY_SLUG.upstream503) {
+    return unavailable(instance)
+  }
   // Both the unfiltered index and the "no matches" filter answer with a well-formed empty page; the
   // page itself tells the two apart and renders different copy, which is what the tests assert.
   return json(EMPTY_PAGE)

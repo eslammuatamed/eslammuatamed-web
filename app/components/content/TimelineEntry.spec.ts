@@ -81,7 +81,7 @@ describe('ContentTimelineEntry', () => {
   it('renders NO technology markup by default, preserving the merged home behaviour', async () => {
     const wrapper = await mountSuspended(TimelineEntry, {
       props: {
-        experience: experience({ technologies: [{ id: 't1', label: 'Nuxt.js' }] })
+        experience: experience({ technologies: [{ id: 't1', slug: 'nuxt', label: 'Nuxt.js' }] })
       }
     })
 
@@ -99,9 +99,9 @@ describe('ContentTimelineEntry', () => {
         showTechnologies: true,
         experience: experience({
           technologies: [
-            { id: 't3', label: 'Vue.js' },
-            { id: 't1', label: 'Nuxt.js' },
-            { id: 't2', label: 'TypeScript' }
+            { id: 't3', slug: 'vue', label: 'Vue.js' },
+            { id: 't1', slug: 'nuxt', label: 'Nuxt.js' },
+            { id: 't2', slug: 'typescript', label: 'TypeScript' }
           ]
         })
       }
@@ -115,7 +115,7 @@ describe('ContentTimelineEntry', () => {
 
   it('labels the technology list with the role it belongs to', async () => {
     const wrapper = await mountSuspended(TimelineEntry, {
-      props: { showTechnologies: true, experience: experience({ technologies: [{ id: 't1', label: 'Nuxt.js' }] }) }
+      props: { showTechnologies: true, experience: experience({ technologies: [{ id: 't1', slug: 'nuxt', label: 'Nuxt.js' }] }) }
     })
     const list = wrapper.find('ul[aria-labelledby]')
     expect(list.exists()).toBe(true)
