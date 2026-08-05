@@ -30,6 +30,7 @@ export type ProjectListItem = Schemas['PublicProjectListItemEntity']
 export type GalleryItem = Schemas['PublicProjectGalleryItemEntity']
 export type MediaImage = Schemas['PublicMediaImageDescriptor']
 export type Skill = Schemas['PublicSkillEntity']
+export type Category = Schemas['PublicCategoryEntity']
 export type SiteSettings = Schemas['PublicSiteSettingsEntity']
 export type PageMeta = Schemas['PageMeta']
 export type RedirectResolve = Schemas['RedirectResolveEntity']
@@ -229,6 +230,28 @@ export function resumePdfSettings(mediaOrigin: string): Record<Locale, SiteSetti
     en: { ...SITE_SETTINGS.en, resumeAsset: asset },
     ar: { ...SITE_SETTINGS.ar, resumeAsset: asset }
   }
+}
+
+/**
+ * The blog category filter's options, and the slugs that select each blog INDEX SCENARIO.
+ *
+ * Category slugs are PER-LOCALE (D04-2) — unlike Skill slugs — so each scenario deliberately has a
+ * DIFFERENT slug in each language. That asymmetry is the point: it is what lets a test prove the
+ * English slug is not selectable on the Arabic index, which is the real behaviour a visitor hits when
+ * a locale switch carries `?category=` across.
+ */
+export const CATEGORY = {
+  /** Present in both languages; returns a well-formed EMPTY page. */
+  noMatches: { en: 'scenario-empty-topic', ar: 'scenario-mawdue-farigh' }
+} as const
+
+export const CATEGORIES: Record<Locale, Category[]> = {
+  en: [
+    { id: '019f89b5-3050-7161-af37-0000000000c1', name: 'Scenario — empty topic', slug: CATEGORY.noMatches.en, description: null, availableLocales: ['en', 'ar'] }
+  ],
+  ar: [
+    { id: '019f89b5-3050-7161-af37-0000000000c1', name: 'سيناريو — موضوع فارغ', slug: CATEGORY.noMatches.ar, description: null, availableLocales: ['en', 'ar'] }
+  ]
 }
 
 /**

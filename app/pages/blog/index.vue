@@ -1,24 +1,22 @@
 <script setup lang="ts">
-import type { ArticleListItem, Paginated } from '~/types/models'
-
-// Paginated blog index (FR-PUB-040). Page state lives in the URL query (linkable, SEO-legible —
-// D13-4); the list is keyed by locale + page so each combination caches on its own. The locale is the
-// ROUTE's (D06-6), and the key uses the same value the request sends.
+// Paginated blog index (FR-PUB-040). Filter and page state live in the URL query (linkable, survives
+// reload and back/forward, legible to crawlers — D13-4); the list is keyed by locale + page + filter so
+// each combination caches on its own. The locale is the ROUTE's (D06-6), and the key uses the same
+// value the request sends.
 const { t } = useI18n()
 const route = useRoute()
-const api = useApi()
-const locale = useRouteLocale()
+const router = useRouter()
 
-const page = computed(() => Number(route.query.page) || 1)
+// Query rules live in `~/utils/blog-query` as pure functions so each one is unit-tested; every one of
+// them is invisible in the rendered output until it is wrong.
+const page = computed(() => readPage(route.query))
+const category = computed(() => readCategory(route.query))
 
-const { data, status, error, refresh } = await useAsyncData(
-  () => `articles:${locale.value}:${page.value}`,
-  () => api<Paginated<ArticleListItem>>('/articles', {
-    locale: locale.value,
-    query: { page: page.value }
-  }),
-  { watch: [page] }
-)
+const { data, status, error, refresh } = await useArticlesList({
+  page: () => page.value,
+  category: () => category.value
+})
+const { data: categories } = await useArticleCategories()
 
 // Split pending into initial-load (skeleton) vs a page change with content already on screen
 // (branded overlay, not a skeleton) — useAsyncData keeps the previous `data` while refetching.
@@ -27,6 +25,49 @@ const initialPending = computed(() => status.value === 'pending' && !hasData.val
 const refreshing = computed(() => status.value === 'pending' && hasData.value)
 // A list page shows a real empty state (unlike optional home sections, which omit — doc 13 §9.1).
 const isEmpty = computed(() => !!data.value && data.value.data.length === 0)
+// "No articles at all" and "no articles in this category" are different situations and read differently.
+const isFilteredEmpty = computed(() => isEmpty.value && category.value !== undefined)
+
+/**
+ * CATEGORY SLUGS ARE PER-LOCALE (D04-2) — the load-bearing difference from the projects filter, whose
+ * Skill slugs are locale-independent.
+ *
+ * `SwitchLocalePathLink` carries the query string across a locale switch, so `/blog?category=engineering`
+ * becomes `/ar/blog?category=engineering` — and `engineering` is not an Arabic category slug. The API
+ * answers an unknown category with a well-formed EMPTY page (200), so without this the Arabic index
+ * would render "no articles yet" and look broken, while the real cause is a filter that cannot exist
+ * in this language.
+ *
+ * The categories list for the CURRENT locale is exactly the set of selectable values, so an active
+ * filter that is not in it is not selectable here. That case gets its own copy and a recovery action
+ * rather than being silently folded into the generic empty state. It is deliberately NOT auto-cleared:
+ * rewriting the visitor's URL would hide that the link they followed does not carry over.
+ */
+const isUnknownCategory = computed(() =>
+  category.value !== undefined
+  && !!categories.value
+  && !categories.value.some(item => item.slug === category.value)
+)
+
+/**
+ * Writing the filter to the URL resets `page`: keeping page 3 while switching categories would land on
+ * an out-of-range page and render an empty list that looks like a broken filter.
+ *
+ * `push`, so Back undoes a filter — the chips have no intermediate states and `UiChipFilter` refuses to
+ * emit when the already-pressed chip is pressed again, so an identical URL is never pushed.
+ */
+function onCategoryChange(value: string | undefined): void {
+  router.push({ path: route.path, query: buildCategoryQuery(value) })
+}
+
+/** Pagination must carry the active filter, or paging silently widens the result set. */
+function pageLink(target: number) {
+  return { query: buildBlogPageQuery(category.value, target) }
+}
+
+const categoryOptions = computed(() =>
+  (categories.value ?? []).map(item => ({ value: item.slug, label: item.name }))
+)
 
 useSeoMeta({
   title: () => t('seo.blog.title'),
@@ -43,6 +84,18 @@ useSeoMeta({
       <h1 class="mt-4 font-display text-display text-highlighted text-balance">{{ t('blog.title') }}</h1>
       <p class="mt-5 text-body-lg text-muted text-pretty">{{ t('blog.description') }}</p>
     </header>
+
+    <div class="mt-10">
+      <UiChipFilter
+        id="blog-filter"
+        :label="t('blog.filter.label')"
+        :all-label="t('blog.filter.all')"
+        :options="categoryOptions"
+        :model-value="category"
+        :disabled="Boolean(error)"
+        @update:model-value="onCategoryChange"
+      />
+    </div>
 
     <!-- The list consumes the shared data-state contract (doc 13 §9.1): initial → skeleton, error →
          localized retry, empty → localized copy, loaded → list with a branded overlay during a page
@@ -69,8 +122,27 @@ useSeoMeta({
 
       <template #empty>
         <div class="rounded-card border border-default bg-elevated p-8">
-          <p class="font-display text-h3 text-highlighted">{{ t('blog.emptyTitle') }}</p>
-          <p class="mt-2 text-muted">{{ t('blog.emptyBody') }}</p>
+          <!-- Three distinct situations, three distinct messages. Folding the unknown-category case
+               into "no articles yet" would state something false about the blog. -->
+          <p class="font-display text-h3 text-highlighted">
+            {{ isUnknownCategory
+              ? t('blog.emptyUnknownCategoryTitle')
+              : isFilteredEmpty ? t('blog.emptyFilteredTitle') : t('blog.emptyTitle') }}
+          </p>
+          <p class="mt-2 text-muted">
+            {{ isUnknownCategory
+              ? t('blog.emptyUnknownCategoryBody')
+              : isFilteredEmpty ? t('blog.emptyFilteredBody') : t('blog.emptyBody') }}
+          </p>
+          <UButton
+            v-if="isFilteredEmpty"
+            class="mt-4"
+            variant="subtle"
+            color="neutral"
+            @click="onCategoryChange(undefined)"
+          >
+            {{ t('blog.filter.clear') }}
+          </UButton>
         </div>
       </template>
 
@@ -82,7 +154,7 @@ useSeoMeta({
         :page="page"
         :total="data.meta.total"
         :items-per-page="data.meta.perPage"
-        :to="(p: number) => ({ query: { page: p } })"
+        :to="pageLink"
       />
     </div>
   </UContainer>

@@ -26,12 +26,6 @@ export function readTechnology(query: LocationQuery): string | undefined {
   return typeof value === 'string' && value.length > 0 ? value : undefined
 }
 
-/** Read the current page, defaulting to 1 for absent, malformed, or out-of-range values. */
-export function readPage(query: LocationQuery): number {
-  const value = Number(query.page)
-  return Number.isInteger(value) && value > 0 ? value : 1
-}
-
 /** Query for a filter change — deliberately drops `page`, resetting to the first page. */
 export function buildFilterQuery(technology: string | undefined): LocationQuery {
   return technology ? { technology } : {}

@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { buildFilterQuery, buildPageQuery, readPage, readTechnology } from './projects-query'
+import { buildFilterQuery, buildPageQuery, readTechnology } from './projects-query'
+// `readPage` is shared by every paginated listing, so it lives in `list-query`, not here.
+import { readPage } from './list-query'
 
 const UUID = '019f89b5-3050-7161-af37-3e9a2cbf41ed'
 

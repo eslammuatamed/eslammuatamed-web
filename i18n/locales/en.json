@@ -103,6 +103,15 @@
     "title": "Blog",
     "description": "Notes on engineering, architecture, and building for the web.",
     "minRead": "{count} min read",
+    "filter": {
+      "label": "Category",
+      "all": "All topics",
+      "clear": "Clear filter"
+    },
+    "emptyFilteredTitle": "No articles in this topic yet",
+    "emptyFilteredBody": "Nothing is published under this topic. Clear the filter to see every article.",
+    "emptyUnknownCategoryTitle": "That topic does not exist in this language",
+    "emptyUnknownCategoryBody": "Topic links are language-specific, so a link from the other language does not carry over. Pick a topic above to continue.",
     "emptyTitle": "No articles yet",
     "emptyBody": "New writing will appear here soon.",
     "errorTitle": "Couldn't load articles",

@@ -39,8 +39,17 @@
  *   /projects/ssr-upstream-failure                 RFC 7807 503                    error page, never a 404
  *   /experience                                    200, zero experiences           localized empty state
  *   /ar/experience                                 RFC 7807 503                    localized RTL error state
+ *   /blog                (and /ar/blog)            200, zero articles              localized empty state
+ *   /blog?category=scenario-empty-topic            200, zero articles              filtered empty + clear
+ *   /ar/blog?category=scenario-empty-topic         200, zero articles              UNKNOWN-category copy
  *
- * `/settings/site` and `/skills` are ALWAYS healthy, including in the failure scenarios. If the page
+ * The last row is the one worth reading twice. `scenario-empty-topic` is the ENGLISH slug, and category
+ * slugs are per-locale (D04-2), so on the Arabic index it names a category that does not exist there —
+ * exactly what a locale switch produces, because the query string is carried across. The upstream
+ * answers all three identically (a valid empty page), so the page can only tell them apart from the
+ * category LIST. That is the behaviour the scenario exists to pin.
+ *
+ * `/settings/site`, `/skills` and `/categories` are ALWAYS healthy, including in the failure scenarios. If the page
  * shell also failed, the accessibility and recovery-action assertions would be measuring a different
  * page than the one under test.
  */
@@ -48,8 +57,8 @@ import { realpathSync } from 'node:fs'
 import http from 'node:http'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
-import { ARTICLES, EMPTY_PAGE, PROJECTS, REDIRECTS, SITE_SETTINGS, SKILLS, TECHNOLOGY, TECHNOLOGY_SLUG,
-  isLocale, problem,
+import { ARTICLES, CATEGORIES, EMPTY_PAGE, PROJECTS, REDIRECTS, SITE_SETTINGS, SKILLS,
+  TECHNOLOGY, TECHNOLOGY_SLUG, isLocale, problem,
   ABOUT_READINESS_SETTINGS, RESUME_PDF_BYTES, RESUME_PDF_FILENAME, resumePdfSettings } from './fixtures.ts'
 import type { Locale, ProblemDetail } from './fixtures.ts'
 
@@ -166,6 +175,20 @@ function resolveProjectsIndex(technology: string | null, instance: string): Repl
   return json(EMPTY_PAGE)
 }
 
+/**
+ * `GET /articles` — the blog index. The `category` filter is the scenario selector.
+ *
+ * Every scenario here answers with a well-formed EMPTY page, including an UNKNOWN category — which is
+ * the real API's behaviour (an unknown category is a valid empty result, not a 404). That is exactly
+ * what makes the wrong-locale case indistinguishable at the network level and why the page has to tell
+ * the two apart from the category LIST rather than from the response.
+ */
+function resolveArticlesIndex(category: string | null, locale: Locale): Reply {
+  void category
+  void locale
+  return json(EMPTY_PAGE)
+}
+
 /** `GET /projects/{slug}` — the detail route. The slug is the scenario selector. */
 function resolveProjectDetail(slug: string, locale: Locale, instance: string): Reply {
   if (slug.startsWith('ssr-upstream-failure')) return unavailable(instance)
@@ -226,6 +249,8 @@ export function resolveRequest(url: string): Reply {
 
   if (pathname === '/settings/site') return json({ data: SETTINGS[locale] })
   if (pathname === '/skills') return json({ data: SKILLS[locale] })
+  if (pathname === '/categories') return json({ data: CATEGORIES[locale] })
+  if (pathname === '/articles') return resolveArticlesIndex(parsed.searchParams.get('category'), locale)
   if (pathname === '/experiences') return resolveExperiences(locale, instance)
   if (pathname === '/projects') return resolveProjectsIndex(parsed.searchParams.get('technology'), instance)
   if (pathname === '/redirects/resolve') return resolveRedirect(parsed.searchParams.get('path'), locale, instance)

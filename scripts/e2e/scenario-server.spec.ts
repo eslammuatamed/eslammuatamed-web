@@ -1,6 +1,6 @@
 import net from 'node:net'
 import { describe, expect, it } from 'vitest'
-import { ARTICLE_SLUG, SLUG, TECHNOLOGY } from './fixtures.ts'
+import { ARTICLE_SLUG, CATEGORY, SLUG, TECHNOLOGY } from './fixtures.ts'
 import { API_PREFIX, createScenarioServer, resolveRequest, stopScenarioServer } from './scenario-server.ts'
 
 /**
@@ -69,11 +69,30 @@ describe('route selection', () => {
 
   it('refuses to act as a general mock API', () => {
     // Scope guard: an endpoint nobody added on purpose must fail loudly, not return something
-    // plausible. This is what keeps the backend bounded (D18-6) — the article DETAIL route exists
-    // only for the locale-switch scenario, and the blog INDEX deliberately does not.
-    expect(resolveRequest(url('/articles?locale=en'))).toMatchObject({ kind: 'problem', status: 404 })
+    // plausible. This is what keeps the backend bounded (D18-6).
+    //
+    // `/articles` USED TO BE ONE OF THESE. WS E added the blog category filter, so the blog index is
+    // now a deliberate scenario and is asserted positively below. The guard is narrowed to endpoints
+    // that are still genuinely unadded rather than deleted — deleting it would retire the scope rule
+    // along with the one endpoint that outgrew it.
+    expect(resolveRequest(url('/tags?locale=en'))).toMatchObject({ kind: 'problem', status: 404 })
     expect(resolveRequest(url('/testimonials?locale=en'))).toMatchObject({ kind: 'problem', status: 404 })
     expect(resolveRequest('/not-the-api/projects?locale=en')).toMatchObject({ kind: 'problem', status: 404 })
+  })
+
+  it('serves the blog index and the category list, which WS E added on purpose', () => {
+    expect(resolveRequest(url('/articles?locale=en'))).toMatchObject({ kind: 'json', status: 200 })
+    expect(resolveRequest(url('/categories?locale=en'))).toMatchObject({ kind: 'json', status: 200 })
+  })
+
+  it('answers an unknown category exactly like a known-but-empty one — 200, empty page', () => {
+    // This is the real API's behaviour and the whole reason the page cannot tell the wrong-locale case
+    // from a genuinely empty topic by looking at the response. If this ever diverged, the blog index's
+    // third empty state would be testing a fiction.
+    const known = resolveRequest(url(`/articles?locale=ar&category=${CATEGORY.noMatches.ar}`))
+    const wrongLocale = resolveRequest(url(`/articles?locale=ar&category=${CATEGORY.noMatches.en}`))
+    expect(known).toMatchObject({ kind: 'json', status: 200 })
+    expect(wrongLocale).toEqual(known)
   })
 
   // `/experiences` (008) — the locale IS the scenario selector, because `/experience` forwards no
