@@ -23,8 +23,10 @@ import { expect, test } from '@playwright/test'
  *
  * THE EN/AR WIDTH ASSERTION IS NOT COSMETIC. The measure is rebound per script (`32em` Latin /
  * `28em` Arabic) because a single value cannot land both scripts inside 65–75 characters. If that
- * rebinding is ever dropped, the two locales collapse to the same width and this file fails — which
- * is the only signal that the Arabic reading measure is still real.
+ * rebinding is ever dropped, the Arabic column resolves at the Latin `32em × 18px = 576` and this
+ * file is the signal that the Arabic reading measure is no longer real: it fails the exact-width
+ * assertions in the `ar` describe AND the cross-locale comparison. Nothing else in the suite
+ * distinguishes "Arabic has a reading measure" from "Arabic has whatever the Latin measure is".
  */
 
 /**
@@ -42,18 +44,27 @@ const ROUTE = {
 }
 
 /**
- * The stated upper bound for the reading column at ANY viewport. 640px is deliberately loose enough
- * that a legitimate token adjustment inside the governed band does not fail the gate, and tight
- * enough that the pre-015 behaviour (748px prose in a 1216px container) cannot pass.
+ * A loose upper bound for the reading column at ANY viewport, asserted BEFORE the exact width purely
+ * as a first-failure diagnostic. It is tight enough that the pre-015 behaviour (748px prose in a
+ * 1216px container) cannot pass, and an unbounded column reports
+ * `Expected: <= 640  Received: 1216`, which names the defect far more legibly than the exact-width
+ * message would.
  *
- * THE BOUND AND THE EXACT WIDTH DO DIFFERENT JOBS, which is why both are asserted. The bound catches
- * an UNBOUNDED column. The exact width catches a MISRESOLVED one — and that is the failure mode that
- * would otherwise ship silently. `--measure-prose` is in `em`, so it only produces the intended
- * character count when the reading font-size is on the SAME element that carries the max-width. Move
+ * IT ADDS NO COVERAGE THE EXACT WIDTH LACKS. With `toBe(column)` asserted in the same test, there is
+ * no column value that passes the exact width and fails this bound. Keep it for the message, not for
+ * the guarantee.
+ *
+ * THE EXACT WIDTH IS THE REAL GATE. It catches a MISRESOLVED column — the failure mode that would
+ * otherwise ship silently. `--measure-prose` is in `em`, so it only produces the intended character
+ * count when the reading font-size is on the SAME element that carries the max-width. Move
  * `text-body-lg` down onto a child and `em` resolves at the 16px UI size instead: the column becomes
  * 512px/448px — still bounded, still centred, still symmetric, still narrower in AR than EN — so
  * every other assertion in this file keeps passing while the measure quietly falls out of the
  * governed 65–75 character band. Only the exact number notices.
+ *
+ * CONSEQUENCE FOR WHOEVER RE-TUNES THE TOKEN: re-tuning `--measure-prose` DOES fail this file, by
+ * design, even for a value well inside the governed band — the exact widths in `ROUTE` are part of
+ * the contract and must be updated in the same change. That is deliberate, not an oversight.
  */
 const MAX_COLUMN_PX = 640
 
