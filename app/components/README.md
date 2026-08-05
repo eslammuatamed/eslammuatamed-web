@@ -16,7 +16,7 @@
 |---|---|
 | `AppLink.vue` | رابط واعٍ باللغة: داخلي عبر `useLocalePath`، خارجي بـ `target=_blank` + `rel=noopener` (قائمة سماح مخطّطات `WD-5`) |
 | `layout/Header.vue` | `<LayoutHeader>` — الترويسة، أُعيد بناؤها لـ007 وحُدِّثت في مرحلة القبول: علامة Monolith (`UiBrandMark`) بجوار وسم الاسم بخطّ العرض (`D03-11`) + تنقّل رئيسي بأربعة عناصر مع علامة نشاط بنفسجية + رابط Résumé دائم + زرّ تواصل بنفسجي + `LayoutLangToggle` + `LayoutThemeToggle` + درج جوّال (`USlideover`) بعرض ~70vw من الحافّة الأمامية (منطقيًّا حسب RTL) فوق تعتيم يُبقي الصفحة خلفه مرئية، بفخّ تركيز/Escape/قفل تمرير من Reka |
-| `layout/Footer.vue` | `<LayoutFooter>` — التذييل، أُعيد بناؤه لـ007 بوصفه **colophon** وحُدِّث في مرحلة القبول: علامة Monolith (`UiBrandMark`) بجوار الاسم + سطر بناء (colophon) + تنقّل مكرّر + حالة التوفّر + روابط تواصل اجتماعي **أيقونية فقط** (الاسم المرئي أُسقط، الاسم المتاح لتقنية المساعدة عبر `aria-label`؛ مُرشَّحة بالمخطّط `WD-5`) + تنزيل السيرة الذاتية (من `SiteSettings` عبر `useSiteSettings`، مُتشارَك مع `HomeNameplate`) + `LayoutLangToggle`/`LayoutThemeToggle` + سطر الحقوق السنوي (`FR-PUB-003`) |
+| `layout/Footer.vue` | `<LayoutFooter>` — التذييل، أُعيد بناؤه لـ007 بوصفه **colophon** وحُدِّث في مرحلة القبول: علامة Monolith (`UiBrandMark`) بجوار الاسم + سطر بناء (colophon) + تنقّل مكرّر + حالة التوفّر + روابط تواصل اجتماعي **أيقونية فقط** (الاسم المرئي أُسقط، الاسم المتاح لتقنية المساعدة عبر `aria-label`؛ مُرشَّحة بالمخطّط `WD-5`) + تنزيل السيرة الذاتية (من `SiteSettings` عبر `useSiteSettings`، مُتشارَك مع `HomeNameplate`) + إجراء **واتساب** (018) مُشتقّ من `buildWhatsappUrl` المشترك ويختفي كليًّا حين يغيب الرقم أو يكون غير صالح، ولا يطبع الرقم نفسه — `/contact` مكان عرض الرقم والتذييل مكان الإجراء + `LayoutLangToggle`/`LayoutThemeToggle` + سطر الحقوق السنوي (`FR-PUB-003`) |
 | `layout/LangToggle.vue` | `<LayoutLangToggle>` — **جديد (007، يحلّ محلّ `LocaleSwitcher`):** مبدّل لغة ثنائي (EN/AR) كعنصر segmented يعرض الخيارين معًا في آنٍ (لا قائمة منسدلة)؛ اللغة النشطة بسطح مملوء بنفسجي + `aria-current`، وكل خيار رابط `NuxtLink` إلى المسار المُحلَّل مسبقًا عبر `useSwitchLocalePath` |
 | `layout/ThemeToggle.vue` | `<LayoutThemeToggle>` — تبديل السمة (`useColorMode`) داخل `ClientOnly` (بلا وميض) |
 | `ui/BrandMark.vue` | `<UiBrandMark>` — **جديد (007، أُعيدت في مرحلة القبول، `D03-11`):** علامة Monolith الأساسية — شكل واحد متّصل بتناظر دوراني 180° يُقرأ متطابقًا في LTR وRTL؛ SVG مضمّن بتعبئة `currentColor` وحيدة، زخرفي/`aria-hidden` لأنّ الاسم المجاور هو الهوية المتاحة (`AP-9`)؛ تظهر بجوار الاسم في الترويسة والتذييل ودرج الجوّال وطبقة `UiDataLoadingOverlay` |
@@ -71,6 +71,8 @@
   كلمات؛ صارت بطاقة واحدة على أرضيّة الصفحة بالنصّ المُعتمد نفسه (وهذا يزيل أيضًا تداخل
   `UContainer` داخل `UContainer`). الوجهة بريد مباشر فقط، والعنوان يُقرأ من روابط الملف الشخصي في
   الـ API مع عنوان احتياطي ثابت كي لا يختفي مسار التحويل الوحيد عند تعذّر الإعدادات.
+  وأُضيف في 018 إجراء **واتساب ثانوي** بجوار زرّ البريد: البريد يبقى المسار الأساسي المضمون
+  (`D05-4`) لأنّه وحده يملك عنوانًا احتياطيًّا، أمّا واتساب فإضافيّ ويختفي كليًّا حين يغيب الرقم.
 - **`ui/Breadcrumbs.vue`** — `nav` دلالي بقائمة مرتّبة، والعنصر الأخير يحمل `aria-current="page"`
   وليس رابطًا، وبخصائص CSS منطقيّة فينعكس المسار تلقائيًّا في RTL.
 
@@ -95,7 +97,7 @@
 
 ## الاختبارات
 
-`content/Prose.spec.ts`، `content/WorkEntry.spec.ts`، `content/TimelineEntry.spec.ts`، `content/ArticleRow.spec.ts`، `content/QuoteBlock.spec.ts`، `home/Nameplate.spec.ts`، `home/Capabilities.spec.ts`، `home/SelectedWork.spec.ts`، `home/Timeline.spec.ts`، `home/Writing.spec.ts`، `home/Voices.spec.ts`، `home/Contact.spec.ts`، `ui/Spread.spec.ts`، `ui/SectionHead.spec.ts`، `ui/ContentSkeleton.spec.ts`، `ui/DataLoadingOverlay.spec.ts`، `ui/RequestState.spec.ts`، `ui/BackToTop.spec.ts`، `layout/Footer.spec.ts` (يشمل إسقاط المخطّط غير الآمن `WD-5`)، `layout/LangToggle.spec.ts`. تُغطّى الحالات الثلاث (مملوء/فارغ/خطأ) وكلا اللغتين.
+`content/Prose.spec.ts`، `content/WorkEntry.spec.ts`، `content/TimelineEntry.spec.ts`، `content/ArticleRow.spec.ts`، `content/QuoteBlock.spec.ts`، `home/Nameplate.spec.ts`، `home/Capabilities.spec.ts`، `home/SelectedWork.spec.ts`، `home/Timeline.spec.ts`، `home/Writing.spec.ts`، `home/Voices.spec.ts`، `home/Contact.spec.ts`، `ui/Spread.spec.ts`، `ui/SectionHead.spec.ts`، `ui/ContentSkeleton.spec.ts`، `ui/DataLoadingOverlay.spec.ts`، `ui/RequestState.spec.ts`، `ui/BackToTop.spec.ts`، `layout/Footer.spec.ts` (يشمل إسقاط المخطّط غير الآمن `WD-5`، وغياب إجراء واتساب مؤكَّدًا على **الاسم المتاح** لا على الـ `href` وحده)، `project/ContactCta.spec.ts`، `layout/LangToggle.spec.ts`. تُغطّى الحالات الثلاث (مملوء/فارغ/خطأ) وكلا اللغتين.
 
 ## أخطاء شائعة
 
