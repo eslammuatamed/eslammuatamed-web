@@ -34,6 +34,18 @@ export const API_PREFIX = '/api/v1'
 /** Every `/settings/site` request this process has served since the last reset. */
 let settingsSiteRequests: string[] = []
 
+/**
+ * When true, `/settings/site` answers **503** — the outage path (BLK-2).
+ *
+ * The count is what this lane exists to measure, so the failure is injected HERE rather than by a
+ * separate failing stub: the same counter must observe both paths, or "one request on failure" is
+ * being asserted against a different instrument than "one request on success". A 503 specifically,
+ * because that is a status ofetch retries by default — the behaviour that turned three readers into
+ * six requests, and the reason `useSettingsRead` sets `retry: 0`. A status ofetch does NOT retry
+ * would make the assertion pass without proving that.
+ */
+let settingsSiteFails = false
+
 export function createCountingServer() {
   return http.createServer((request, response) => {
     const url = new URL(request.url ?? '/', 'http://127.0.0.1')
@@ -46,16 +58,24 @@ export function createCountingServer() {
     if (url.pathname === '/__settings-count') {
       return send({ count: settingsSiteRequests.length, urls: settingsSiteRequests })
     }
+    // Reset restores the HEALTHY path as well as zeroing the counter, so an outage test cannot leak
+    // its mode into the next test through this shared mutable process. `?fail=1` opts in explicitly.
     if (url.pathname === '/__settings-count/reset') {
       settingsSiteRequests = []
-      return send({ count: 0 })
+      settingsSiteFails = url.searchParams.get('fail') === '1'
+      return send({ count: 0, failing: settingsSiteFails })
     }
 
     if (!url.pathname.startsWith(API_PREFIX)) return send({ detail: 'not served' }, 404)
     const pathname = url.pathname.slice(API_PREFIX.length)
 
     if (pathname === '/settings/site') {
+      // Counted BEFORE the mode is consulted: a failed read is exactly the request this lane needs
+      // to see, and counting only successes would make the outage assertion vacuous.
       settingsSiteRequests.push(request.url ?? '')
+      if (settingsSiteFails) {
+        return send({ type: 'about:blank', title: 'Service Unavailable', status: 503 }, 503)
+      }
       const locale = url.searchParams.get('locale')
       return send({ data: SITE_SETTINGS[isLocale(locale) ? locale : 'en'] })
     }

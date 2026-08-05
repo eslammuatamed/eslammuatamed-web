@@ -74,11 +74,20 @@ if (!existsSync('.output/server/index.mjs')) {
   )
 }
 
-/** Shared `webServer` policy. Never reuse a stray server: it may be running a stale build. */
-function previewServer(backend: string, webPort: number, apiPort: number) {
+/**
+ * Shared `webServer` policy. Never reuse a stray server: it may be running a stale build.
+ *
+ * `readyPath` exists because the readiness probe is not free of side effects. Playwright GETs this
+ * URL to decide the server is up, and `nuxt.config.ts` puts `swr: 60` on `/` — so probing the
+ * default `/` RENDERS AND CACHES the home page before any test runs. The `settings-dedupe` lane then
+ * measured that cache instead of the application: its outage test asserted against a healthy `/`
+ * that had been rendered while the backend was still answering 200. Lanes that count requests point
+ * the probe at a route with no SWR rule; the rest keep `/`, which is the cheapest liveness signal.
+ */
+function previewServer(backend: string, webPort: number, apiPort: number, readyPath = '/') {
   return {
     command: `node scripts/ci-preview.mjs --backend ${backend}`,
-    url: `http://127.0.0.1:${webPort}`,
+    url: `http://127.0.0.1:${webPort}${readyPath}`,
     env: { CI_PREVIEW_PORT: String(webPort), CI_MOCK_PORT: String(apiPort) },
     reuseExistingServer: false,
     timeout: 120_000,
@@ -168,6 +177,7 @@ export default defineConfig({
     previewServer('about-readiness', READINESS_PORT, READINESS_API_PORT),
     previewServer('resume-pdf', RESUME_PDF_PORT, RESUME_PDF_API_PORT),
     previewServer('dashboard', DASHBOARD_PORT, DASHBOARD_API_PORT),
-    previewServer('settings-count', SETTINGS_COUNT_PORT, SETTINGS_COUNT_API_PORT)
+    // `/about` carries no SWR rule, so probing it leaves every route this lane measures cold.
+    previewServer('settings-count', SETTINGS_COUNT_PORT, SETTINGS_COUNT_API_PORT, '/about')
   ]
 })

@@ -32,9 +32,12 @@ import type { SiteSettings } from '~/types/models'
  *
  * - **A manual `refresh()` always refetches.** `index.vue` exposes retry after a failed settings
  *   read (D13-1); serving it the cached miss would make the retry button inert.
- * - **A failed read is never cached.** `asyncData.js` only writes `payload.data[key]` on success,
- *   so after a failure the next call site fetches again and every `pickMeta` still falls through
- *   to the committed tier-3 value. The metadata floor is untouched.
+ * - **A failed read is never cached.** `asyncData.js` only writes `payload.data[key]` on success, so
+ *   a failure never reaches this resolver at all and every `pickMeta` still falls through to the
+ *   committed tier-3 value. The metadata floor is untouched. That success-only behaviour is also why
+ *   this resolver cannot fix the outage path on its own, and must not be made to try: returning a
+ *   value for a failed key would make `asyncData.js` clear the shared `error`. Sharing the failure is
+ *   `utils/settings-request.ts`'s job, at the promise level, where the error survives (BLK-2).
  * - **A locale change still refetches**, because the key itself carries the locale: the incoming
  *   `settings:site:{newLocale}` has no payload entry yet. The UI-locale/route-locale divergence
  *   during the D03-13 deferred commit therefore keeps working exactly as documented — each side

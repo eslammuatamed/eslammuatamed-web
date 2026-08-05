@@ -1,4 +1,4 @@
-import type { Envelope, SiteSettings, Skill } from '~/types/models'
+import type { Envelope, Skill } from '~/types/models'
 
 /**
  * The three public reads that compose the HTML résumé (FR-PUB-023).
@@ -16,11 +16,12 @@ import type { Envelope, SiteSettings, Skill } from '~/types/models'
  * - **Skills** reads `/skills` under its own key. The home page and `/projects` each keep
  *   their own key for the same endpoint (`home:skills:`, `projects:technologies:`), which is
  *   the established idiom: one key per consuming surface, one endpoint, one owner of order.
- * - **Settings** shares the `settings:site:{locale}` key namespace with `useSiteSettings()`
- *   (chrome) and `useAboutContent()` (`/about`), so the page body and the persistent footer
- *   resolve from ONE request whenever their locales agree — every SSR render and every
- *   initial load. That requires `sharedSettingsCachedData`; the shared key alone does not
- *   dedupe during SSR (utils/settings-cache.ts, evidence/ab-request-count.md).
+ * - **Settings** calls `useSettingsRead()` — the same function the chrome (`useSiteSettings()`)
+ *   and `/about` (`useAboutContent()`) call, so the page body and the persistent footer resolve
+ *   from ONE request whenever their locales agree: every SSR render and every initial load. The
+ *   shared key alone dedupes nothing during SSR; it takes `sharedSettingsCachedData` on the
+ *   healthy path and `sharedSettingsRequest` on the outage path (BLK-2). See
+ *   utils/settings-cache.ts, utils/settings-request.ts and evidence/ab-request-count.md.
  *
  * ## Locale
  *
@@ -45,11 +46,7 @@ export function useResumeData() {
   const api = useApi()
   const locale = useRouteLocale()
 
-  const settings = useAsyncData(
-    () => `settings:site:${locale.value}`,
-    () => api<Envelope<SiteSettings>>('/settings/site', { locale: locale.value }).then(res => res.data),
-    { watch: [locale], getCachedData: sharedSettingsCachedData }
-  )
+  const settings = useSettingsRead(locale)
 
   // The shared composable, called — not re-implemented. This line IS the FR-PUB-024 proof.
   const experiences = useExperiences()

@@ -1,5 +1,3 @@
-import type { Envelope, SiteSettings } from '~/types/models'
-
 /**
  * `GET /settings/site` for ABOUT PAGE CONTENT — the About prose, the portrait descriptor and the
  * positioning that feed `/about` (FR-PUB-020).
@@ -26,17 +24,12 @@ import type { Envelope, SiteSettings } from '~/types/models'
  * gets the incoming language while the chrome still holds the outgoing one, each under its own key,
  * and the chrome finds the payload already cached when it catches up.
  *
- * That collapse comes from `sharedSettingsCachedData`, NOT from the shared key by itself. Nuxt's
- * default resolver returns nothing during SSR, so before it this page issued its own request on
- * top of the footer's — measured, 2 on `/about`. See utils/settings-cache.ts.
+ * That collapse comes from the two mechanisms inside `useSettingsRead`, NOT from the shared key by
+ * itself. Nuxt's default resolver returns nothing during SSR, so before `sharedSettingsCachedData`
+ * this page issued its own request on top of the footer's — measured, 2 on `/about`; and on the
+ * outage path, where no payload is ever written, it takes `sharedSettingsRequest` as well (BLK-2).
+ * See utils/settings-cache.ts and utils/settings-request.ts.
  */
 export function useAboutContent() {
-  const api = useApi()
-  const locale = useRouteLocale()
-
-  return useAsyncData(
-    () => `settings:site:${locale.value}`,
-    () => api<Envelope<SiteSettings>>('/settings/site', { locale: locale.value }).then(res => res.data),
-    { watch: [locale], getCachedData: sharedSettingsCachedData }
-  )
+  return useSettingsRead(useRouteLocale())
 }

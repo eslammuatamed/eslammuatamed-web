@@ -19,17 +19,19 @@ const nuxtApp = useNuxtApp()
 // every call site issued its OWN request (`evidence/ab-request-count.md`). With that resolver a
 // HEALTHY render makes exactly one `/settings/site` request on every public route.
 //
-// KNOWN DEBT, measured, not hidden (BLK-2). On the OUTAGE path the resolver cannot help: Nuxt
-// writes `payload.data[key]` only on SUCCESS, so a failed read is never shared and all three
-// readers refetch — 6 requests per render against an already-failing API (base, with two readers,
-// is 4). Removing this reader was TRIED and REVERTED: `useNuxtData` does not take a reactive key,
-// and this layout is persistent, so it would have pinned the metadata to the locale that was
-// active when the layout mounted and served stale localized tags after a client-side locale switch
-// — the exact WD-6 locale-parity regression `useSiteSettings`'s `watch: [locale]` exists to
-// prevent. The correct fix is a request-scoped shared PROMISE inside `useSiteSettings` so every
-// reader awaits one outcome, success or failure; it must NOT be a cached failure value, because
-// `asyncData.js` clears the shared `error` whenever `getCachedData` returns one, which would erase
-// the D13-1 API-unavailable state.
+// THE OUTAGE PATH COSTS ONE REQUEST TOO (BLK-2, resolved). The payload resolver alone could not do
+// it: Nuxt writes `payload.data[key]` only on SUCCESS, so a failed read was never shared and all
+// three readers refetched — 6 requests per render against an already-failing API (base, with two
+// readers, was 4). `utils/settings-request.ts` shares the request-scoped PROMISE, so every reader
+// awaits ONE outcome, success or failure, and `retry: 0` in `useSettingsRead` drops ofetch's default
+// retry that had doubled each of them. It is deliberately NOT a cached failure value: `asyncData.js`
+// clears the shared `error` whenever `getCachedData` returns one, which would erase the D13-1
+// API-unavailable state this page's error branch renders from.
+//
+// Removing this reader instead was TRIED and REVERTED: `useNuxtData` does not take a reactive key,
+// and this layout is persistent, so it pinned the metadata to the locale that was active when the
+// layout mounted and served stale localized tags after a client-side locale switch — the exact WD-6
+// locale-parity regression `useSiteSettings`'s `watch: [locale]` exists to prevent.
 //
 // It IS awaited: an un-awaited `useAsyncData` leaves `data` null while the server
 // renders, which would serialize the committed tier and then swap the CMS value in on the client —
