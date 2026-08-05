@@ -49,12 +49,15 @@ test.describe('Empty projects list — English', () => {
     await expect(page.getByRole('navigation', { name: /pagination/i })).toHaveCount(0)
 
     // An empty list is NOT an error, so the filter must stay usable rather than be disabled.
-    const filter = page.getByLabel('Technology')
+    const filter = page.getByRole('group', { name: 'Technology' })
     await expect(filter).toBeVisible()
-    await expect(filter).toBeEnabled()
+    for (const chip of await filter.getByRole('button').all()) await expect(chip).toBeEnabled()
 
-    // The unfiltered empty state has nothing to clear, so it must not offer a clear action.
+    // The unfiltered empty state has nothing to clear, so it must not offer a clear action. The
+    // filter's own former clear BUTTON is gone — "All" is now a chip and is simply the pressed one —
+    // so this asserts the empty state adds none of its own.
     await expect(page.getByRole('button', { name: 'Clear filter' })).toHaveCount(0)
+    await expect(filter.getByRole('button', { name: 'All technologies' })).toHaveAttribute('aria-pressed', 'true')
   })
 
   test('the filtered empty state reads differently and offers a working recovery action', async ({ page }) => {
@@ -64,10 +67,17 @@ test.describe('Empty projects list — English', () => {
     await expect(page.getByText('No case studies yet')).toHaveCount(0)
     await expect(page.getByRole('article')).toHaveCount(0)
 
-    // TWO clear affordances exist, and both are intended: one on the filter control itself, one
-    // inside the empty state. Pinning the count keeps a future refactor from silently dropping the
-    // in-context one, which is the recovery path a visitor who just hit the empty state will use.
-    await expect(page.getByRole('button', { name: 'Clear filter' })).toHaveCount(2)
+    // ONE "Clear filter" button now, not two. The filter's own clear button existed because a select
+    // had no way to express "all" as an option; with chips, "All" IS an option and the pressed state
+    // says which one is active. The in-context recovery inside the empty state stays, and the count is
+    // still pinned so a refactor cannot silently drop it — it is the path a visitor who just hit this
+    // state will actually use.
+    await expect(page.getByRole('button', { name: 'Clear filter' })).toHaveCount(1)
+
+    // The filter-side recovery is the "All" chip, and it is genuinely unpressed here — otherwise the
+    // control would be claiming the list is unfiltered while the empty state says it is filtered.
+    const filter = page.getByRole('group', { name: 'Technology' })
+    await expect(filter.getByRole('button', { name: 'All technologies' })).toHaveAttribute('aria-pressed', 'false')
 
     // Recovery: clearing from within the empty state must return to the unfiltered index, not merely
     // reset a widget.

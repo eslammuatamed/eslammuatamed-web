@@ -87,23 +87,61 @@ test.describe('Projects index', () => {
   test('technology filter round-trips through the URL and is keyboard reachable', async ({ page }) => {
     await page.goto('/projects')
 
-    const filter = page.getByLabel('Technology')
+    // The filter is a labelled GROUP of `<button aria-pressed>` chips, not a select. Asserting the
+    // group by its accessible name is what proves the visible label is actually wired to the control.
+    const filter = page.getByRole('group', { name: 'Technology' })
     await expect(filter).toBeVisible()
 
-    // Reachable by keyboard alone — no pointer-only affordance (doc 21). Tab from the top of the
-    // document until the filter takes focus; a bounded walk, so a regression fails rather than hangs.
-    await page.locator('body').press('Tab')
-    let focusedFilter = false
-    for (let i = 0; i < 40 && !focusedFilter; i += 1) {
-      focusedFilter = await page.evaluate(() => document.activeElement?.id === 'projects-filter')
-      if (!focusedFilter) await page.keyboard.press('Tab')
-    }
-    expect(focusedFilter).toBe(true)
+    // "All" is a real chip and is pressed while nothing is filtered — the unfiltered state has its own
+    // visible, pressable control rather than being the absence of one.
+    await expect(filter.getByRole('button', { name: 'All technologies' })).toHaveAttribute('aria-pressed', 'true')
 
-    // A filtered view is linkable and restores from the URL.
+    // Reachable by keyboard alone — no pointer-only affordance (doc 21). Tab from the top of the
+    // document until focus lands INSIDE the group; a bounded walk, so a regression fails rather than
+    // hangs. Focus lands on a chip, not the group: the group is a labelling wrapper, and each chip is
+    // its own tab stop (the deliberate consequence of `aria-pressed` toggles over a radiogroup).
+    await page.locator('body').press('Tab')
+    let focusedChip = false
+    for (let i = 0; i < 40 && !focusedChip; i += 1) {
+      focusedChip = await page.evaluate(() =>
+        document.activeElement?.closest('#projects-filter') !== null
+        && document.activeElement?.tagName === 'BUTTON'
+      )
+      if (!focusedChip) await page.keyboard.press('Tab')
+    }
+    expect(focusedChip).toBe(true)
+
+    // A filtered view is linkable and restores from the URL. The uuid form is used here on purpose:
+    // it is the BACKWARD-COMPATIBLE form (D10-17), so this is the regression test for a link shared
+    // before the slug contract landed.
     await page.goto('/projects?technology=019f89b5-3050-7161-af37-3e9a2cbf41ed')
     await expect(page).toHaveURL(/technology=/)
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
+  })
+
+  test('pressing a technology chip writes its SLUG to the URL and presses that chip', async ({ page }) => {
+    await page.goto('/projects')
+
+    const filter = page.getByRole('group', { name: 'Technology' })
+    // The first non-"All" chip — Prism serves the contract's own skills list, so the label is the
+    // mock's, but the VALUE written to the URL is the assertion that matters and it must be a slug.
+    const chip = filter.getByRole('button').nth(1)
+    const label = (await chip.textContent())?.trim()
+    await chip.click()
+
+    // A slug, never a uuid and never a localized label: the URL must not change meaning with the
+    // language, and a uuid in a freshly written URL would mean the contract adoption regressed.
+    await expect(page).toHaveURL(/[?&]technology=[a-z0-9]+(-[a-z0-9]+)*(&|$)/)
+    await expect(page).not.toHaveURL(/technology=[0-9a-f]{8}-[0-9a-f]{4}-/)
+
+    // The pressed state follows the URL, so a reload or a shared link shows the same control state.
+    await expect(filter.getByRole('button', { name: label! })).toHaveAttribute('aria-pressed', 'true')
+    await expect(filter.getByRole('button', { name: 'All technologies' })).toHaveAttribute('aria-pressed', 'false')
+
+    // Back returns to the unfiltered index AND to the unfiltered control state.
+    await page.goBack()
+    await expect(page).toHaveURL(/\/projects$/)
+    await expect(filter.getByRole('button', { name: 'All technologies' })).toHaveAttribute('aria-pressed', 'true')
   })
 
   test('a filtered view canonicalizes to the unfiltered index', async ({ page }) => {

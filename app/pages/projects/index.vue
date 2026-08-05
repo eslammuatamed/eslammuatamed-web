@@ -32,11 +32,17 @@ const isFilteredEmpty = computed(() => isEmpty.value && technology.value !== und
 
 /**
  * Writing the filter to the URL resets `page`: keeping page 3 while switching filters would land on an
- * out-of-range page and render an empty list that looks like a broken filter. `replace` keeps the
- * back button meaning "the page before the index" rather than one entry per filter keystroke.
+ * out-of-range page and render an empty list that looks like a broken filter.
+ *
+ * `push`, NOT `replace` — a deliberate reversal of the earlier decision, which the control change
+ * invalidates. `replace` was chosen so a SELECT could not stack one history entry per keystroke while
+ * a visitor arrowed through options. A chip row has no intermediate states: every change is one
+ * deliberate press, and `ProjectFilter` refuses to emit when the already-pressed chip is pressed
+ * again, so an identical URL is never pushed. With `push`, Back undoes a filter — which is what
+ * Back/Forward support has to mean for a control whose whole state lives in the URL.
  */
 function onTechnologyChange(value: string | undefined): void {
-  router.replace({ path: route.path, query: buildFilterQuery(value) })
+  router.push({ path: route.path, query: buildFilterQuery(value) })
 }
 
 /** Pagination must carry the active filter, or paging silently widens the result set. */
