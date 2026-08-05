@@ -124,6 +124,7 @@
       "all": "All technologies",
       "clear": "Clear filter"
     },
+    "resultCount": "Case studies: {count}",
     "breadcrumbLabel": "Breadcrumb",
     "sections": {
       "overview": "Overview",

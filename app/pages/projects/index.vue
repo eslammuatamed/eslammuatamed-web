@@ -99,6 +99,30 @@ useSeoMeta({
       />
     </div>
 
+    <!--
+      The result count, localized.
+
+      COUNT-AGNOSTIC PHRASING ON PURPOSE — "Case studies: 7", not "7 case studies". This app has no
+      pluralized message anywhere, and vue-i18n's default plural rules do not cover Arabic's six
+      categories, so a pluralized string here would drag a custom `pluralRules` registration in as a
+      side effect of a listing change. The label form is already the house convention
+      (`dashboard.unreadBadgeLabel`), and it is correct in both languages at every count.
+
+      The digits stay Western in both locales — `{count}` interpolates the raw number, which is what
+      D03-4 requires and what `formatDate`/`formatMonthYear` pin explicitly with `numberingSystem`.
+
+      `aria-live="polite"` because filtering does not move focus: without it, a sighted visitor sees
+      the number change and a screen-reader user gets nothing. It renders only alongside real data, so
+      the region is not announced during the skeleton or the error state.
+    -->
+    <p
+      v-if="data && data.data.length"
+      class="mt-8 text-body-sm text-dimmed"
+      aria-live="polite"
+    >
+      {{ t('projects.resultCount', { count: data.meta.total }) }}
+    </p>
+
     <UiRequestState
       class="mt-10 block"
       :pending="initialPending"

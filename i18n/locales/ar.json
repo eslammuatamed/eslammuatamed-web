@@ -124,6 +124,7 @@
       "all": "كل التقنيات",
       "clear": "إزالة التصفية"
     },
+    "resultCount": "دراسات الحالة: {count}",
     "breadcrumbLabel": "مسار التنقّل",
     "sections": {
       "overview": "نظرة عامة",
