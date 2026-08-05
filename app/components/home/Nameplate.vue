@@ -41,7 +41,12 @@ const stack = ['JavaScript', 'TypeScript', 'Vue', 'Nuxt', 'Node.js', 'Nest.js']
           <bdi>{{ settings.availabilityStatus }}</bdi>
         </p>
 
-        <h1 class="mt-8 font-nameplate text-mega text-highlighted text-balance">{{ name }}</h1>
+        <!-- Two classes, two jobs (019): `font-nameplate` selects the FACE per script (Reem Kufi under
+             the Arabic root, D03-12); `.nameplate` carries the Latin SETTING and is script-scoped, so the
+             Arabic hero is byte-for-byte what it was. No `UiWordmark` here on purpose — the mark already
+             sits ~100px above in the sticky header, and this hero's thesis is that the name itself is the
+             graphic, so a second Monolith would compete with it rather than identify it. -->
+        <h1 class="mt-8 font-nameplate nameplate text-mega text-highlighted text-balance">{{ name }}</h1>
 
         <!-- Deliberate block gap below the name (bigger in Arabic, where the Reem Kufi name has taller
              verticals): responsive margin only — no spacer element / <br> / nbsp / locale hack.

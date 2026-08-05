@@ -81,15 +81,12 @@ watch(() => route.fullPath, () => {
   >
     <UContainer class="flex h-16 items-center justify-between gap-2 md:gap-6">
       <!--
-        `whitespace-nowrap` is the load-bearing bit: at 320px the controls left too little inline
-        space and "Eslam Muatamed" wrapped onto a second line, which broke the header's height. The
-        name is never abbreviated or initialised — it is kept whole and the space is found elsewhere.
+        The lockup — mark, gap, register and the load-bearing `whitespace-nowrap` — belongs to
+        `UiWordmark` (019), so the bar and the drawer below set one identity instead of two hand-matched
+        class strings. The link keeps only its own layout role.
       -->
-      <AppLink to="/" class="inline-flex shrink-0 items-center gap-2 md:gap-2.5">
-        <UiBrandMark :size="20" class="text-primary" />
-        <span class="font-display text-[15px] font-semibold tracking-tight whitespace-nowrap text-highlighted md:text-lg">
-          {{ t('brand.name') }}
-        </span>
+      <AppLink to="/" class="shrink-0">
+        <UiWordmark />
       </AppLink>
 
       <nav :aria-label="t('a11y.primaryNav')" class="hidden items-center gap-8 md:flex">
@@ -148,10 +145,7 @@ watch(() => route.fullPath, () => {
       :ui="{ content: 'w-[70vw] max-w-sm glass bg-[var(--glass-surface-elevated)]' }"
     >
       <template #title>
-        <span class="inline-flex items-center gap-2.5">
-          <UiBrandMark :size="18" class="text-primary" />
-          <span class="font-display font-semibold tracking-tight text-highlighted">{{ t('brand.name') }}</span>
-        </span>
+        <UiWordmark size="md" />
       </template>
 
       <template #body>
