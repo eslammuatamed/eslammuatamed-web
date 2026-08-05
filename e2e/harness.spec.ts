@@ -20,9 +20,11 @@ test.describe('e2e harness foundation', () => {
     await expect(page.locator('html')).toHaveAttribute('lang', 'en-US')
     await expect(page.locator('html')).toHaveAttribute('dir', 'ltr')
 
-    // Proves the contract mock actually answered: the nameplate renders API-derived settings, so a
-    // page rendered before Prism was ready would show the API-unavailable state instead.
-    await expect(page.locator('h1')).toBeVisible()
+    // Proves the contract mock actually answered. `h1` ALONE DID NOT: the API-unavailable state
+    // renders an `<h1>` too (`app/error.vue:47`), so a bare locator passed in exactly the condition
+    // this assertion exists to detect — it was vacuous for as long as it has existed. The nameplate
+    // h1 is the only one carrying `font-nameplate`, so this discriminates.
+    await expect(page.locator('h1.font-nameplate')).toBeVisible()
   })
 
   test('serves the Arabic home page with RTL direction', async ({ page }) => {
@@ -31,7 +33,7 @@ test.describe('e2e harness foundation', () => {
 
     await expect(page.locator('html')).toHaveAttribute('lang', 'ar')
     await expect(page.locator('html')).toHaveAttribute('dir', 'rtl')
-    await expect(page.locator('h1')).toBeVisible()
+    await expect(page.locator('h1.font-nameplate')).toBeVisible()
   })
 
   test('axe integration reports no WCAG 2.2 AA violations on the English home page', async ({ page }) => {

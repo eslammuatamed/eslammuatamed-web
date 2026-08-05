@@ -172,7 +172,12 @@ export default defineConfig({
   ],
 
   webServer: [
-    previewServer('prism', CONTRACT_PORT, CONTRACT_API_PORT),
+    // Readiness probes `/about`, NOT `/` (INF-A). `/` carries `swr: 60` (nuxt.config.ts:85), so a
+    // probe that lands before Prism is listening caches the API-unavailable render and Nitro serves
+    // that stale entry to every subsequent `/` request for the rest of the lane — the whole contract
+    // run then asserts against the error state. `/about` has no SWR rule, so probing it cannot poison
+    // a cache. `settings-count` below already probes `/about` for the same reason.
+    previewServer('prism', CONTRACT_PORT, CONTRACT_API_PORT, '/about'),
     previewServer('scenarios', SCENARIO_PORT, SCENARIO_API_PORT),
     previewServer('about-readiness', READINESS_PORT, READINESS_API_PORT),
     previewServer('resume-pdf', RESUME_PDF_PORT, RESUME_PDF_API_PORT),
