@@ -13,10 +13,12 @@ const nuxtApp = useNuxtApp()
 // made authenticated routes block on (and fail with) an endpoint they never consume. Only public
 // pages have public settings, so only the public shell reads them.
 //
-// This shares the `settings:site:{locale}` key with the footer and the pages, so it reuses their
-// cached entry rather than introducing a new key. NOT YET MEASURED: a public route currently
-// issues 3 `/settings/site` requests per SSR render, which predates this change and is worth
-// investigating separately — do not read the shared key as proof the total is unchanged.
+// This shares the `settings:site:{locale}` key with the footer and the pages. MEASURED, because
+// the shared key by itself proves nothing: Nuxt's default `getCachedData` reads `static.data` on
+// the server, which is empty during a normal SSR render, so before `sharedSettingsCachedData`
+// every call site issued its OWN request and this read added a third one to `/about`
+// (`evidence/ab-request-count.md`). With that resolver the whole render makes exactly one
+// `/settings/site` request, on every public route.
 // It IS awaited: an un-awaited `useAsyncData` leaves `data` null while the server
 // renders, which would serialize the committed tier and then swap the CMS value in on the client —
 // a head hydration mismatch, and a violation of "the initial server-rendered HTML must already

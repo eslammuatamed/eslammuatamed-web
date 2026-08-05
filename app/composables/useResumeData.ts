@@ -19,7 +19,8 @@ import type { Envelope, SiteSettings, Skill } from '~/types/models'
  * - **Settings** shares the `settings:site:{locale}` key namespace with `useSiteSettings()`
  *   (chrome) and `useAboutContent()` (`/about`), so the page body and the persistent footer
  *   resolve from ONE request whenever their locales agree — every SSR render and every
- *   initial load.
+ *   initial load. That requires `sharedSettingsCachedData`; the shared key alone does not
+ *   dedupe during SSR (utils/settings-cache.ts, evidence/ab-request-count.md).
  *
  * ## Locale
  *
@@ -47,7 +48,7 @@ export function useResumeData() {
   const settings = useAsyncData(
     () => `settings:site:${locale.value}`,
     () => api<Envelope<SiteSettings>>('/settings/site', { locale: locale.value }).then(res => res.data),
-    { watch: [locale] }
+    { watch: [locale], getCachedData: sharedSettingsCachedData }
   )
 
   // The shared composable, called — not re-implemented. This line IS the FR-PUB-024 proof.

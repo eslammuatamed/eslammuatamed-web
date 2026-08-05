@@ -60,6 +60,11 @@ const RESUME_PDF_API_PORT = Number(process.env.CI_RESUME_PDF_MOCK_PORT ?? 3301)
 const DASHBOARD_PORT = Number(process.env.CI_DASHBOARD_PORT ?? 3500)
 const DASHBOARD_API_PORT = Number(process.env.CI_DASHBOARD_MOCK_PORT ?? 3501)
 
+// The settings-dedupe lane. Its own preview + backend pair again, because its backend COUNTS
+// requests: any other lane sharing the process would add renders to the count under test.
+const SETTINGS_COUNT_PORT = Number(process.env.CI_SETTINGS_COUNT_PORT ?? 3600)
+const SETTINGS_COUNT_API_PORT = Number(process.env.CI_SETTINGS_COUNT_MOCK_PORT ?? 3601)
+
 // Fail with an actionable message instead of a connection-refused timeout 90 s later. `ci-preview.mjs`
 // boots `.output/server/index.mjs` directly, so a missing build is a setup mistake, not a test failure.
 if (!existsSync('.output/server/index.mjs')) {
@@ -109,7 +114,7 @@ export default defineConfig({
   projects: [
     {
       name: 'contract',
-      testIgnore: ['scenarios/**', 'readiness/**', 'resume-pdf/**', 'dashboard/**'],
+      testIgnore: ['scenarios/**', 'readiness/**', 'resume-pdf/**', 'dashboard/**', 'dedupe/**'],
       use: { ...devices['Desktop Chrome'], baseURL: `http://127.0.0.1:${CONTRACT_PORT}` }
     },
     {
@@ -145,6 +150,15 @@ export default defineConfig({
       // the normal `npm run test:e2e` invocation is unaffected because each test runs once.
       fullyParallel: false,
       use: { ...devices['Desktop Chrome'], baseURL: `http://127.0.0.1:${DASHBOARD_PORT}` }
+    },
+    {
+      name: 'settings-dedupe',
+      testMatch: 'dedupe/**/*.spec.ts',
+      // SERIAL, for the same reason as `dashboard`: its backend holds a mutable counter that each
+      // test resets, so concurrent tests would count each other's renders. `workers` is a TOP-LEVEL
+      // option, so what actually makes this lane serial is keeping it to a SINGLE spec file.
+      fullyParallel: false,
+      use: { ...devices['Desktop Chrome'], baseURL: `http://127.0.0.1:${SETTINGS_COUNT_PORT}` }
     }
   ],
 
@@ -153,6 +167,7 @@ export default defineConfig({
     previewServer('scenarios', SCENARIO_PORT, SCENARIO_API_PORT),
     previewServer('about-readiness', READINESS_PORT, READINESS_API_PORT),
     previewServer('resume-pdf', RESUME_PDF_PORT, RESUME_PDF_API_PORT),
-    previewServer('dashboard', DASHBOARD_PORT, DASHBOARD_API_PORT)
+    previewServer('dashboard', DASHBOARD_PORT, DASHBOARD_API_PORT),
+    previewServer('settings-count', SETTINGS_COUNT_PORT, SETTINGS_COUNT_API_PORT)
   ]
 })

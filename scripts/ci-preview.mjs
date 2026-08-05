@@ -84,6 +84,15 @@ const BACKENDS = {
     label: 'dashboard backend (Feature 012, mutable)',
     command: process.execPath,
     args: () => ['scripts/e2e/dashboard-server.ts']
+  },
+  // Another DIFFERENT server, and mutable for the same reason as `dashboard`: it counts
+  // `/settings/site` requests so the `settings-dedupe` lane can assert that one public SSR render
+  // performs exactly one. That count cannot be taken in the browser — the read happens inside Nitro
+  // — and it cannot live in `scenario-server.ts` without giving up that server's stateless invariant.
+  'settings-count': {
+    label: 'settings-count backend (one-read-per-render guard)',
+    command: process.execPath,
+    args: () => ['scripts/e2e/settings-count-server.ts']
   }
 }
 

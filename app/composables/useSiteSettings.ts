@@ -3,8 +3,14 @@ import type { Envelope, SiteSettings } from '~/types/models'
 // Shared read of GET /settings/site (D10-6). The key is a reactive getter and `watch:[locale]` re-runs
 // the fetch on a client-side locale switch — this matters because the footer lives in the persistent
 // `default` layout and never remounts, so without the watch its API-localized `availabilityStatus`
-// would stay on the previous locale (a locale-parity regression, code-review WD-6). The per-locale key
-// still dedupes the shared page+footer read (doc 20 §7). Mirrors the blog/index reactive-key idiom.
+// would stay on the previous locale (a locale-parity regression, code-review WD-6).
+// Mirrors the blog/index reactive-key idiom.
+//
+// The per-locale key is what makes the shared page+footer+layout read ONE request (doc 20 §7) — but
+// only together with `sharedSettingsCachedData`. The key alone does not dedupe: Nuxt's default
+// resolver reads `static.data` on the server, which is empty during a normal SSR render, so every
+// call site refetched. Measured on `/about`: one request per call site. See utils/settings-cache.ts
+// and evidence/ab-request-count.md.
 //
 // THE LOCALE HERE IS THE UI LOCALE, NOT THE ROUTE'S — deliberately, and it is the one public read that
 // differs. D06-6 exists to stop a per-locale-slug read (D04-2) asking for the incoming slug in the
@@ -22,6 +28,6 @@ export function useSiteSettings() {
   return useAsyncData(
     () => `settings:site:${locale.value}`,
     () => api<Envelope<SiteSettings>>('/settings/site', { locale: locale.value }).then(res => res.data),
-    { watch: [locale] }
+    { watch: [locale], getCachedData: sharedSettingsCachedData }
   )
 }
