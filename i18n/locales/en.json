@@ -157,6 +157,12 @@
     },
     "gallery": {
       "heading": "Gallery"
+    },
+    "facts": {
+      "heading": "At a glance",
+      "year": "Year",
+      "stack": "Stack",
+      "links": "Links"
     }
   },
   "experience": {

@@ -164,9 +164,17 @@ test.describe('Case study', () => {
 
     const headings = await page.locator('article h2').allInnerTexts()
 
-    // The eight FR-CNT-020 sections, in narrative order. The gallery heading legitimately follows
-    // them inside the same <article>, so this pins the prefix rather than the whole list.
-    expect(headings.slice(0, 8)).toEqual([
+    // The facts card leads: it is the at-a-glance summary and it precedes the narrative in DOM order
+    // at every width, sticky desktop column or not. Then the eight FR-CNT-020 sections in narrative
+    // order, then the gallery — the whole h2 run, pinned exactly, so an extra or missing heading
+    // fails here rather than only in the axe pass.
+    //
+    // 'AT A GLANCE' is uppercase because `allInnerTexts` reports RENDERED text and the facts heading
+    // wears the `.kicker` treatment — the deliberate visual split between a card label and the
+    // narrative headings it introduces. The Arabic page keeps its authored casing: `.kicker` drops
+    // `text-transform` under `html[lang="ar"]`, since Arabic has no case.
+    expect(headings).toEqual([
+      'AT A GLANCE',
       'Overview',
       'The problem',
       'The solution',
@@ -174,9 +182,36 @@ test.describe('Case study', () => {
       'Architecture',
       'Challenges',
       'Key features',
-      'What I took away'
+      'What I took away',
+      'Gallery'
     ])
-    expect(headings.slice(8)).toEqual(['Gallery'])
+
+    // One h1 on the page. The closing CTA used to carry `text-h1` display type, which read as a
+    // second headline; it is an h2 in a compact card now.
+    await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1)
+  })
+
+  test('summarizes the contract facts once, in the facts card, and keeps it out of the flow on mobile', async ({ page }) => {
+    await page.goto(`/projects/${SLUG}`)
+
+    const facts = page.locator('article section[aria-labelledby="project-facts-heading"]')
+    await expect(facts).toBeVisible()
+
+    // Stated ONCE. The year and the technology list used to sit in the <header> as well; two copies of
+    // the same fact on one screen is what this change removed.
+    await expect(facts.getByRole('term')).toHaveText(['Year', 'Stack', 'Links'])
+    await expect(page.locator('article header bdi')).toHaveCount(0)
+
+    // Sticky is a DESKTOP affordance only — on a small viewport a pinned card steals reading space,
+    // so the card must be a normal block in the flow. Computed style is the assertion because the
+    // behaviour is CSS-only (breakpoint-scoped utilities, no JS).
+    const position = () => facts.evaluate(node => getComputedStyle(node).position)
+
+    await page.setViewportSize({ width: 1280, height: 900 })
+    expect(await position()).toBe('sticky')
+
+    await page.setViewportSize({ width: 390, height: 844 })
+    expect(await position()).toBe('static')
   })
 
   test('renders optional live and repository links safely when both exist', async ({ page }) => {

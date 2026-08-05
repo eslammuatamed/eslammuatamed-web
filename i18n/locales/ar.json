@@ -157,6 +157,12 @@
     },
     "gallery": {
       "heading": "معرض الصور"
+    },
+    "facts": {
+      "heading": "لمحة سريعة",
+      "year": "السنة",
+      "stack": "التقنيات",
+      "links": "روابط"
     }
   },
   "experience": {
