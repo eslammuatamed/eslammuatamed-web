@@ -26,6 +26,7 @@ import { realpathSync } from 'node:fs'
 import http from 'node:http'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
+import type { Locale } from './fixtures.ts'
 import { SITE_SETTINGS, isLocale } from './fixtures.ts'
 
 /** The contract's mount point. `NUXT_PUBLIC_API_BASE` points Nitro at `http://host:port/api/v1`. */
@@ -45,6 +46,25 @@ let settingsSiteRequests: string[] = []
  * would make the assertion pass without proving that.
  */
 let settingsSiteFails = false
+
+/**
+ * A `siteName` that the committed tier-3 floor CANNOT produce — served only by this lane.
+ *
+ * Tier-2 is "the localized values an operator manages in the CMS", and the layout falls back to the
+ * committed `brand.name` when the read yields nothing. The shared fixture's `siteName` is
+ * BYTE-IDENTICAL to that fallback ('Eslam Muatamed' / 'إسلام معتمد'), so asserting `og:site_name`
+ * against it proves nothing: a layout whose tier-2 read returned `null` would emit exactly the same
+ * string and the assertion would still pass. That is a vacuous test, and this lane exists precisely
+ * to stop settings behaviour being asserted vacuously — the original dedupe invariant survived eight
+ * features that way, because its only assertion mocked `useApi`.
+ *
+ * Overridden HERE rather than in `fixtures.ts` because the fixture is shared: other lanes render the
+ * real brand name and must keep doing so. Only the field under test differs, and only in this lane.
+ */
+const CMS_SITE_NAME: Record<Locale, string> = {
+  en: 'Eslam Muatamed CMS Site Name',
+  ar: 'اسم الموقع من لوحة التحكم'
+}
 
 export function createCountingServer() {
   return http.createServer((request, response) => {
@@ -76,8 +96,9 @@ export function createCountingServer() {
       if (settingsSiteFails) {
         return send({ type: 'about:blank', title: 'Service Unavailable', status: 503 }, 503)
       }
-      const locale = url.searchParams.get('locale')
-      return send({ data: SITE_SETTINGS[isLocale(locale) ? locale : 'en'] })
+      const requested = url.searchParams.get('locale')
+      const locale: Locale = isLocale(requested) ? requested : 'en'
+      return send({ data: { ...SITE_SETTINGS[locale], siteName: CMS_SITE_NAME[locale] } })
     }
 
     // Everything else stays healthy and empty. This lane asserts a REQUEST COUNT, not page content,

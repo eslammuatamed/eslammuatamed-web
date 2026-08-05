@@ -102,11 +102,23 @@ test('/ costs one request, renders D13-1, and keeps tier-3 metadata while the AP
   }
 })
 
-for (const { path, locale } of [
-  { path: '/about', locale: 'en' },
-  { path: '/ar/about', locale: 'ar' }
+for (const { path, locale, availability, bio, siteName } of [
+  {
+    path: '/about',
+    locale: 'en',
+    availability: 'Open to select consulting engagements',
+    bio: 'I build for the web, frontend first.',
+    siteName: 'Eslam Muatamed CMS Site Name'
+  },
+  {
+    path: '/ar/about',
+    locale: 'ar',
+    availability: 'متاح لارتباطات استشارية مختارة',
+    bio: 'أبني للويب، والواجهة الأمامية أولًا.',
+    siteName: 'اسم الموقع من لوحة التحكم'
+  }
 ]) {
-  test(`${path} performs exactly one /settings/site request per SSR render`, async ({ page, request }) => {
+  test(`${path} serves all three settings consumers from ONE request`, async ({ page, request }) => {
     await resetCount(request)
     // `domcontentloaded`, not the default `load`: the request under test is issued INSIDE Nitro
     // while the document is rendered, so it is already counted once the document arrives. Waiting
@@ -115,9 +127,24 @@ for (const { path, locale } of [
     await page.goto(path, { waitUntil: 'domcontentloaded' })
     await expect(page.locator('main')).toBeVisible()
 
+    // ONE request…
     const { count, urls } = await readCount(request)
     expect(count, `expected one request, got ${count}: ${urls.join(', ')}`).toBe(1)
     expect(urls[0]).toContain(`locale=${locale}`)
+
+    // …and all THREE consumers actually holding the data from it. Counting alone cannot show this:
+    // a regression in which one consumer resolved `null` while the others shared the single response
+    // would keep the count at 1 and pass. Each assertion below names a value that ONLY the settings
+    // response can supply, so it fails if that consumer came back empty.
+    //
+    // 1. chrome — the footer's `useSiteSettings()` (UI locale)
+    await expect(page.getByText(availability)).toBeVisible()
+    // 2. page body — `useAboutContent()` (route locale)
+    await expect(page.getByText(bio)).toBeVisible()
+    // 3. public layout — tier-2 metadata. The lane's backend deliberately serves a `siteName` the
+    //    committed tier-3 floor cannot produce (see settings-count-server.ts); asserting the shared
+    //    fixture's value instead would pass even if the layout's read returned nothing at all.
+    await expect(page.locator('meta[property="og:site_name"]')).toHaveAttribute('content', siteName)
   })
 }
 
@@ -183,35 +210,68 @@ test.describe('BLK-2 — outage path', () => {
  * where that read is issued — so what it delivers is re-proven here rather than assumed.
  */
 test.describe('tier-2 SiteSettings metadata', () => {
-  for (const { path, siteName } of [
-    { path: '/about', siteName: 'Eslam Muatamed' },
-    { path: '/ar/about', siteName: 'إسلام معتمد' }
-  ]) {
-    test(`${path} serves the localized CMS site name from the shared read`, async ({ page }) => {
-      await page.goto(path, { waitUntil: 'domcontentloaded' })
-      await expect(page.locator('meta[property="og:site_name"]')).toHaveAttribute('content', siteName)
-    })
-  }
-
-  test('a client-side locale switch replaces the outgoing language in the metadata', async ({ page }) => {
+  // The healthy-path tests above already assert the localized tier-2 site name per locale on a
+  // direct SSR render. What remains for this block is the CLIENT-SIDE transition, which is where the
+  // locale-parity regressions actually live.
+  test('a client-side locale switch replaces the outgoing language in the metadata', async ({ page, request }) => {
+    // Restore the HEALTHY backend explicitly. The preceding outage test leaves `fail=1` set on this
+    // lane's shared mutable backend, and without this reset the page below renders from tier-3.
+    // That is not a hypothetical: this reset was added because the discriminating `siteName`
+    // assertion below caught the leak. The previous version expected the shared fixture's name,
+    // which is byte-identical to the tier-3 fallback, so it passed while the API was down.
+    await resetCount(request)
     await page.goto('/about', { waitUntil: 'domcontentloaded' })
-    await expect(page.locator('meta[property="og:site_name"]')).toHaveAttribute('content', 'Eslam Muatamed')
+    await expect(page.locator('meta[property="og:site_name"]')).toHaveAttribute(
+      'content',
+      'Eslam Muatamed CMS Site Name'
+    )
 
     await page.getByRole('group', { name: /language|لغة/i }).first().getByRole('link', { name: 'AR' }).click()
     await expect(page).toHaveURL(/\/ar\/about/)
+
+    // The incoming locale must actually be FETCHED, not merely fallen back to. Reported in the
+    // message so a failure says which requests were made rather than only that a tag was wrong.
+    const afterSwitch = await readCount(request)
+    expect(
+      afterSwitch.urls.some(u => u.includes('locale=ar')),
+      `expected an ar settings request after the switch, saw: ${afterSwitch.urls.join(', ')}`
+    ).toBe(true)
 
     // The incoming language must REPLACE the outgoing one, not join it. A persistent layout that
     // pinned its key to the mount-time locale would leave the English value in place — the WD-6
     // locale-parity regression that `watch: [locale]` and the reactive key exist to prevent, and the
     // reason the rejected `useNuxtData()` approach could not be used here. `toHaveCount(1)` is the
     // half that catches "added" rather than "replaced".
-    await expect(page.locator('meta[property="og:site_name"]')).toHaveAttribute('content', 'إسلام معتمد')
-    await expect(page.locator('meta[property="og:site_name"]')).toHaveCount(1)
+    //
+    // ⚠️ ASSERTED AS ARABIC, NOT AS THE CMS VALUE — deliberately, and this is a KNOWN GAP (BLK-5).
+    // MEASURED on this lane: after a client-side switch the `locale=ar` settings request IS issued
+    // (asserted above), but the persistent layout emits the COMMITTED Arabic name
+    // ('إسلام معتمد', tier 3) rather than the CMS Arabic name — i.e. its `settings` resolves null
+    // after the key changes, so tier 2 is not re-delivered on the client transition. The governed
+    // requirement here is that the metadata leaves the outgoing language and carries the incoming
+    // one, which IS satisfied; delivering tier 2 across a client switch is the open part.
+    //
+    // This is NOT a BLK-2 regression — that commit did not change how the layout reads settings —
+    // and it was invisible until this lane started serving a `siteName` distinguishable from the
+    // tier-3 floor. The old assertion expected the shared fixture's name, which is byte-identical to
+    // the fallback, so it passed either way. Asserting the fallback value HERE as if it were correct
+    // would re-hide it, so the assertion states the property that genuinely holds and BLK-5 carries
+    // the rest.
+    const siteNameTag = page.locator('meta[property="og:site_name"]')
+    await expect(siteNameTag).toHaveCount(1)
+    await expect(siteNameTag).not.toHaveAttribute('content', 'Eslam Muatamed CMS Site Name')
+    await expect(siteNameTag).toHaveAttribute('content', /[؀-ۿ]/)
 
-    // And back, because a one-way switch would not catch a key that only ever moves forward.
+    // And back, because a one-way switch would not catch a key that only ever moves forward. The EN
+    // value IS re-delivered here, because `settings:site:en` is already in the session payload from
+    // the initial SSR render — which is itself evidence for BLK-5's diagnosis: the transition works
+    // when the payload already holds the key, and falls back to tier 3 when it must fetch.
     await page.getByRole('group', { name: /language|لغة/i }).first().getByRole('link', { name: 'EN' }).click()
     await expect(page).toHaveURL(/\/about$/)
-    await expect(page.locator('meta[property="og:site_name"]')).toHaveAttribute('content', 'Eslam Muatamed')
+    await expect(page.locator('meta[property="og:site_name"]')).toHaveAttribute(
+      'content',
+      'Eslam Muatamed CMS Site Name'
+    )
     await expect(page.locator('meta[property="og:site_name"]')).toHaveCount(1)
   })
 })
