@@ -110,36 +110,43 @@ useSeoMeta({
     <UiBreadcrumbs :items="crumbs" :label="t('projects.breadcrumbLabel')" />
 
     <article class="mt-10">
+      <!-- Year, technologies and links used to live here as three loose strips under the summary. They
+           are now the ProjectFacts card below: the same values stated once, in a scannable place,
+           instead of twice on one screen. -->
       <header class="max-w-3xl">
-        <p v-if="project.year" class="kicker text-dimmed">{{ project.year }}</p>
-        <h1 class="mt-4 font-display text-display text-highlighted text-balance">
+        <h1 class="font-display text-display text-highlighted text-balance">
           {{ project.title }}
         </h1>
         <p class="mt-5 text-body-lg text-muted text-pretty">{{ project.summary }}</p>
-
-        <!-- <bdi> isolates Latin technology names inside Arabic prose so the bidi algorithm cannot
-             reorder them against neighbouring RTL text (doc 21). -->
-        <ul
-          v-if="project.technologies.length"
-          class="mt-7 flex flex-wrap gap-x-4 gap-y-1 font-mono text-caption text-dimmed"
-        >
-          <li v-for="tech in project.technologies" :key="tech.id"><bdi>{{ tech.label }}</bdi></li>
-        </ul>
-
-        <ProjectLinks class="mt-7" :live-url="project.liveUrl" :repo-url="project.repoUrl" />
       </header>
 
-      <div class="mt-14 flex flex-col gap-14">
-        <section v-for="section in sections" :key="section.key">
-          <h2 class="font-display text-h2 text-highlighted">
-            {{ t(`projects.sections.${section.key}`) }}
-          </h2>
-          <ContentProse
-            class="mt-5"
-            :source="section.body"
-            :cache-key="`${project.id}:${section.key}:${locale}`"
-          />
-        </section>
+      <!-- Prose column + facts column. `lg:order-last` is what puts the card in the SECOND grid track
+           from `lg` while leaving it FIRST in DOM order — so on a narrow viewport the facts are read
+           straight after the summary as a normal block in the flow, and only the desktop column is
+           sticky. Grid tracks are direction-aware, so the card lands on the inline-end side in both
+           LTR and RTL with no mirrored CSS. CSS-only: no JS, no resize observer, no media-query
+           composable — the whole behaviour is two breakpoint-scoped utilities. -->
+      <div class="mt-12 grid gap-12 lg:grid-cols-[minmax(0,1fr)_19rem] lg:gap-16">
+        <ProjectFacts
+          class="lg:order-last lg:sticky lg:top-24 lg:self-start"
+          :year="project.year"
+          :technologies="project.technologies"
+          :live-url="project.liveUrl"
+          :repo-url="project.repoUrl"
+        />
+
+        <div class="flex max-w-2xl flex-col gap-14">
+          <section v-for="section in sections" :key="section.key">
+            <h2 class="font-display text-h2 text-highlighted">
+              {{ t(`projects.sections.${section.key}`) }}
+            </h2>
+            <ContentProse
+              class="mt-5"
+              :source="section.body"
+              :cache-key="`${project.id}:${section.key}:${locale}`"
+            />
+          </section>
+        </div>
       </div>
 
       <!-- Omitted entirely when the owner has not attached media yet — currently every seeded project
