@@ -299,13 +299,19 @@ useSeoMeta({
    * `clamp(2.5rem, 1.3rem + 5vw, 4rem)`, which at an A4 content width (~794px at 96dpi) resolves
    * to about 60px ≈ 45pt. That is a poster, not a résumé headline, and it spent most of the first
    * sheet on the name. Every `text-*` utility reads `var(--text-*)`, so redefining the tokens on
-   * `.resume-page` re-scales the whole document in one place — no utility is duplicated, and a
-   * new token added to the scale later cannot silently keep a viewport-derived size on paper.
+   * `.resume-page` re-scales the whole document in one place and no utility is duplicated.
+   *
+   * THIS LIST IS EXPLICIT AND CLOSED-ENDED — custom properties have no wildcard. Any token in the
+   * scale that is NOT named below keeps its viewport-derived screen definition on paper. Adding a
+   * token to the scale therefore means adding it here too; nothing detects the omission for you.
+   * `--text-mega` is listed for exactly that reason: it is not used under `.resume-page` today, so
+   * it changes no output, but leaving it out is what makes the next omission look normal.
    *
    * The values are the conventional print register for a CV: 20pt name, 10pt body, 8.5pt
    * captions, and a section label that reads as a label rather than a heading.
    */
   .resume-page {
+    --text-mega: 24pt;
     --text-display: 20pt;
     --text-h1: 16pt;
     --text-h2: 13pt;
@@ -362,9 +368,20 @@ useSeoMeta({
    * and the printed bullets became bare indented lines. Measured on the print render before this
    * rule existed. Black rather than the accented border token: the printed document is a
    * one-colour document by design.
+   *
+   * `print-color-adjust: exact` IS REQUIRED HERE and is not belt-and-braces. Chrome ships its print
+   * dialog with "Background graphics" unchecked, Firefox with "Print backgrounds" off, and Safari
+   * likewise; under those defaults the browser paints NO element background whatever the stylesheet
+   * says, and this marker is nothing but a background. Without it the rule above is honoured in the
+   * test environment and silently dropped on real paper — `page.emulateMedia({ media: 'print' })`
+   * rasterises like a screen render, so every print test in this repo would keep passing while the
+   * bullets vanished in the only place that matters. The property is scoped to this one decorative
+   * dot deliberately: the sheet-wide policy of NOT forcing colour (see the ink rule above) stands.
    */
   .resume-page .resume-bullet {
     background: #000 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
 
   /* Borders stay, but as hairlines rather than themed surfaces, so the technology and skill
@@ -401,13 +418,22 @@ useSeoMeta({
     margin-top: 0.6cm;
   }
 
-  /* A section rule that lands as the first mark on a sheet reads as a stray line; the rule is a
-     separator between blocks, so it stays with the block it opens. */
-  .resume-page section {
-    break-before: auto;
-  }
+  /* A section rule landing as the first mark on a sheet would read as a stray line. What prevents
+     it is the `break-after: avoid` on the headings above — the rule is drawn by the section's
+     heading block, so keeping the heading with what follows keeps the rule with it.
 
-  /* Prose that does survive a page break breaks with company, not one stranded line. */
+     There was a `.resume-page section { break-before: auto }` here claiming to do this. It did
+     nothing: `auto` is the initial value of `break-before` and nothing in this app, Tailwind's
+     preflight or Nuxt UI sets that property, so it overrode nothing. Removed rather than left to
+     look like a solved problem. `break-inside: avoid` on the section is NOT substituted for it —
+     that would try to hold an entire Experience section on one sheet and push a large blank area
+     onto the previous one, which is worse than the stray line it would prevent. */
+
+  /* Prose that survives a page break breaks with company, not one stranded line.
+     Both values restate the CSS initial value; they are declared explicitly because this sheet's
+     whole point is that the printed register is stated rather than inherited, and a future reader
+     changing the pagination rules should see the intended minimum. Do not read them as the cause
+     of the behaviour — remove them and printed prose still keeps two lines together. */
   .resume-page p,
   .resume-page li {
     orphans: 2;
