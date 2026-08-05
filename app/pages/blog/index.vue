@@ -134,12 +134,23 @@ useSeoMeta({
               ? t('blog.emptyUnknownCategoryBody')
               : isFilteredEmpty ? t('blog.emptyFilteredBody') : t('blog.emptyBody') }}
           </p>
+          <!--
+            A LINK, not a `@click` button. This action does exactly one thing — go to the unfiltered
+            index — so a link is what it is, and a link WORKS BEFORE HYDRATION. A button's handler does
+            not exist until Vue attaches it, so a visitor who lands on this server-rendered page and
+            clicks immediately gets nothing; that race is real, and it is what made this test fail
+            intermittently rather than the test being wrong. It also restores middle-click and
+            open-in-new-tab, which a button silently removes.
+
+            `query: {}` drops `category` and `page` together, which is the same rule
+            `buildCategoryQuery(undefined)` encodes for the chips.
+          -->
           <UButton
             v-if="isFilteredEmpty"
             class="mt-4"
             variant="subtle"
             color="neutral"
-            @click="onCategoryChange(undefined)"
+            :to="{ path: route.path, query: {} }"
           >
             {{ t('blog.filter.clear') }}
           </UButton>

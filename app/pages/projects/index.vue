@@ -151,12 +151,23 @@ useSeoMeta({
           <p class="mt-2 text-muted">
             {{ isFilteredEmpty ? t('projects.emptyFilteredBody') : t('projects.emptyBody') }}
           </p>
+          <!--
+            A LINK, not a `@click` button. This action does exactly one thing — go to the unfiltered
+            index — so a link is what it is, and a link WORKS BEFORE HYDRATION. A button's handler does
+            not exist until Vue attaches it, so a visitor who lands on this server-rendered page and
+            clicks immediately gets nothing. That race is real: it was caught as an intermittent e2e
+            failure on the blog index, and this page had the identical defect. It also restores
+            middle-click and open-in-new-tab, which a button silently removes.
+
+            `query: {}` drops `technology` and `page` together — the same rule
+            `buildFilterQuery(undefined)` encodes for the chips.
+          -->
           <UButton
             v-if="isFilteredEmpty"
             class="mt-4"
             variant="subtle"
             color="neutral"
-            @click="onTechnologyChange(undefined)"
+            :to="{ path: route.path, query: {} }"
           >
             {{ t('projects.filter.clear') }}
           </UButton>

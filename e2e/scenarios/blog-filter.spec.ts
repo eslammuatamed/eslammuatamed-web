@@ -16,6 +16,26 @@ import { CATEGORY } from '../../scripts/e2e/fixtures.ts'
 const filter = (page: import('@playwright/test').Page) =>
   page.getByRole('group', { name: /Category|الموضوع/ })
 
+/**
+ * Wait until Vue has actually hydrated before driving an interactive control.
+ *
+ * These pages are server-rendered, so a chip is present and clickable in the DOM well before its
+ * `@click` handler exists. Playwright's actionability checks are satisfied by the SSR markup, so a
+ * click can land on a button that is not yet wired and the test fails intermittently — which is
+ * exactly how this file failed before the wait was added. The signal is real rather than a sleep:
+ * Vue sets `__vue_app__` on the container element when `mount()` completes.
+ *
+ * This is a TEST-ONLY concern for the chips, deliberately. Chips are `<button aria-pressed>` toggles
+ * (the approved control), and a toggle genuinely requires JavaScript. The one control here that merely
+ * NAVIGATES — "Clear filter" — is a real link instead, so it works with no JavaScript at all.
+ */
+async function hydrated(page: import('@playwright/test').Page): Promise<void> {
+  await page.waitForFunction(() => {
+    const root = document.getElementById('__nuxt') as (HTMLElement & { __vue_app__?: unknown }) | null
+    return Boolean(root?.__vue_app__)
+  })
+}
+
 test.describe('Blog category filter — English', () => {
   test('renders chips with "all" pressed, and the unfiltered empty state', async ({ page }) => {
     await page.goto('/blog')
@@ -24,12 +44,14 @@ test.describe('Blog category filter — English', () => {
     await expect(filter(page).getByRole('button', { name: 'All topics' })).toHaveAttribute('aria-pressed', 'true')
     await expect(page.getByText('No articles yet')).toBeVisible()
 
-    // Nothing to clear when nothing is filtered.
-    await expect(page.getByRole('button', { name: 'Clear filter' })).toHaveCount(0)
+    // Nothing to clear when nothing is filtered. The recovery is a LINK, not a button — it navigates,
+    // so it must work before hydration and support middle-click.
+    await expect(page.getByRole('link', { name: 'Clear filter' })).toHaveCount(0)
   })
 
   test('pressing a category writes its slug to the URL and reads back as pressed', async ({ page }) => {
     await page.goto('/blog')
+    await hydrated(page)
 
     await filter(page).getByRole('button', { name: 'Scenario — empty topic' }).click()
 
@@ -48,10 +70,16 @@ test.describe('Blog category filter — English', () => {
     await expect(filter(page).getByRole('button', { name: 'All topics' })).toHaveAttribute('aria-pressed', 'true')
   })
 
-  test('clearing from the empty state returns to the unfiltered index', async ({ page }) => {
+  test('clearing from the empty state is a real link to the unfiltered index', async ({ page }) => {
     await page.goto(`/blog?category=${CATEGORY.noMatches.en}`)
 
-    await page.getByRole('button', { name: 'Clear filter' }).click()
+    const clear = page.getByRole('link', { name: 'Clear filter' })
+    // The href is asserted BEFORE the click, and that is the point: a `@click` button has no href, so
+    // it does nothing until Vue hydrates and it cannot be middle-clicked at all. Checking the href
+    // proves the recovery exists in the server-rendered HTML, not just after hydration.
+    await expect(clear).toHaveAttribute('href', '/blog')
+
+    await clear.click()
 
     await expect(page).toHaveURL(/\/blog$/)
     await expect(page.getByText('No articles yet')).toBeVisible()
@@ -82,7 +110,7 @@ test.describe('Blog category filter — Arabic and the cross-locale case', () =>
     // A slug that exists in this locale is an ordinary filtered-empty state, not the unknown one.
     await expect(page.getByText('لا مقالات في هذا الموضوع بعد')).toBeVisible()
     await expect(page.getByText('هذا الموضوع غير موجود بهذه اللغة')).toHaveCount(0)
-    await expect(page.getByRole('button', { name: 'إزالة التصفية' })).toBeVisible()
+    await expect(page.getByRole('link', { name: 'إزالة التصفية' })).toHaveAttribute('href', '/ar/blog')
   })
 
   test('an ENGLISH slug on the Arabic index says the topic does not exist here — not "no articles"', async ({ page }) => {

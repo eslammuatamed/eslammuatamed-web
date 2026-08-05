@@ -5,17 +5,20 @@ import { TECHNOLOGY } from './backend.ts'
 
 /**
  * The empty-state panel itself — the INNERMOST element that holds both the empty copy and its
- * recovery button.
+ * recovery LINK.
  *
- * Scoped structurally rather than by class, and innermost rather than by index, because the filter
- * control offers a "Clear filter" button too. Asserting on whichever one happens to come first in
- * the DOM would silently start testing the wrong control the moment the layout changes.
+ * Scoped structurally rather than by class, and innermost rather than by index, so it keeps naming the
+ * in-context recovery even as the surrounding layout changes.
+ *
+ * It filters on a LINK, not a button: the recovery navigates, so it is an `<a>` — which is what lets it
+ * work before hydration. It used to filter on a button, and that had to move with the element rather
+ * than be left matching whatever button happened to be nearby.
  */
 function emptyStatePanel(page: Page, copy: string) {
   return page
     .locator('div')
     .filter({ has: page.getByText(copy) })
-    .filter({ has: page.getByRole('button') })
+    .filter({ has: page.getByRole('link') })
     .last()
 }
 
@@ -55,8 +58,9 @@ test.describe('Empty projects list — English', () => {
 
     // The unfiltered empty state has nothing to clear, so it must not offer a clear action. The
     // filter's own former clear BUTTON is gone — "All" is now a chip and is simply the pressed one —
-    // so this asserts the empty state adds none of its own.
-    await expect(page.getByRole('button', { name: 'Clear filter' })).toHaveCount(0)
+    // so this asserts the empty state adds none of its own. It is a LINK now, not a button: the action
+    // navigates, so it must work before hydration and support middle-click.
+    await expect(page.getByRole('link', { name: 'Clear filter' })).toHaveCount(0)
     await expect(filter.getByRole('button', { name: 'All technologies' })).toHaveAttribute('aria-pressed', 'true')
   })
 
@@ -72,7 +76,7 @@ test.describe('Empty projects list — English', () => {
     // says which one is active. The in-context recovery inside the empty state stays, and the count is
     // still pinned so a refactor cannot silently drop it — it is the path a visitor who just hit this
     // state will actually use.
-    await expect(page.getByRole('button', { name: 'Clear filter' })).toHaveCount(1)
+    await expect(page.getByRole('link', { name: 'Clear filter' })).toHaveCount(1)
 
     // The filter-side recovery is the "All" chip, and it is genuinely unpressed here — otherwise the
     // control would be claiming the list is unfiltered while the empty state says it is filtered.
@@ -81,9 +85,12 @@ test.describe('Empty projects list — English', () => {
 
     // Recovery: clearing from within the empty state must return to the unfiltered index, not merely
     // reset a widget.
-    await emptyStatePanel(page, 'No projects use this technology')
-      .getByRole('button', { name: 'Clear filter' })
-      .click()
+    const clear = emptyStatePanel(page, 'No projects use this technology')
+      .getByRole('link', { name: 'Clear filter' })
+    // Asserted BEFORE the click: an href proves the recovery exists in the server-rendered HTML rather
+    // than only after hydration, which is what a `@click` button could not promise.
+    await expect(clear).toHaveAttribute('href', '/projects')
+    await clear.click()
     await expect(page).toHaveURL(/\/projects$/)
     await expect(page.getByText('No case studies yet')).toBeVisible()
   })
@@ -119,7 +126,7 @@ test.describe('Empty projects list — Arabic', () => {
 
     await expect(page.getByText('لا مشاريع تستخدم هذه التقنية')).toBeVisible()
     await emptyStatePanel(page, 'لا مشاريع تستخدم هذه التقنية')
-      .getByRole('button', { name: 'إزالة التصفية' })
+      .getByRole('link', { name: 'إزالة التصفية' })
       .click()
     await expect(page).toHaveURL(/\/ar\/projects$/)
     await expect(page.getByText('لا توجد دراسات حالة بعد')).toBeVisible()
