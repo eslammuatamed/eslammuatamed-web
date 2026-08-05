@@ -2,7 +2,7 @@
 // Public shell: skip link first (D21-1), landmarked header/main/footer (doc 21 §1). On client
 // navigation focus moves to <main> so keyboard/AT users land on the new content while the route
 // announcer reads the title.
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const main = useTemplateRef<HTMLElement>('main')
 const router = useRouter()
 const nuxtApp = useNuxtApp()
@@ -28,7 +28,21 @@ const nuxtApp = useNuxtApp()
 // leaves `data` null and every `pickMeta` below falls through to the committed value `app.vue`
 // already emitted. A whitespace-only CMS value falls through for the same reason. Pages override
 // these afterwards with their own content (tier 1).
-const { data: settings } = await useSiteSettings()
+// READ-ONLY. `useNuxtData` attaches to the SHARED `settings:site:{locale}` entry without ever
+// initiating a fetch of its own — and that is the entire point. Calling `useSiteSettings()` here
+// made this layout a THIRD independent reader, which cost nothing while the API was healthy (the
+// shared `getCachedData` collapses those to one request) but multiplied the OUTAGE path: a failed
+// read is never cached, so every reader refetches. Measured with a 503 stub on one render of `/`:
+// base 4fea8a3 = 4 requests, this branch with a third reader = 6. Reading the shared entry instead
+// restores parity, and dashboard isolation is preserved for free because a read that never fetches
+// cannot reach a public endpoint.
+//
+// It is safe to read data this layout does not fetch because `useSeoMeta` getters are LAZY: they
+// are evaluated when the head is serialized, which happens after the subtree — including
+// `<LayoutFooter>`, which does perform the read — has resolved. If nothing on the route reads
+// settings, these resolve to the committed tier-3 values, which is the specified fallback anyway.
+// Keyed on the UI locale, matching `useSiteSettings()` exactly — the chrome's locale, per D06-6.
+const { data: settings } = useNuxtData<SiteSettings>(`settings:site:${locale.value}`)
 
 const siteName = computed(() => pickMeta(settings.value?.siteName, t('brand.name')) ?? t('brand.name'))
 
