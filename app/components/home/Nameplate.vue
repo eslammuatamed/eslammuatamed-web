@@ -23,7 +23,7 @@ const tagline = computed(() => props.settings.tagline ?? t('brand.role'))
 const sinceYear = computed(() => props.settings.careerStartYear ?? null)
 
 // The identity stack (owner-profile §8) — Latin proper nouns, kept LTR inside Arabic via `bdi`.
-const stack = ['JavaScript', 'TypeScript', 'Vue', 'Nuxt', 'Node.js', 'Nest.js']
+const stack = ['JavaScript', 'TypeScript', 'Vue', 'Nuxt', 'Node.js', 'NestJS']
 </script>
 
 <template>
