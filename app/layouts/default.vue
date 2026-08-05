@@ -44,14 +44,23 @@ useHead(() => ({
 // from `<title>`. Passing the committed default as `pickMeta`'s last candidate IS the documented
 // tier hierarchy (page → CMS → committed); tier 1 still wins because pages call `useSeoMeta` after
 // this layout. See evidence/ab-request-count.md.
+// Resolved ONCE and reused across the six tags rather than repeating the same tiered expression
+// per tag: `/projects` is measured against a frozen 250 KB budget (doc 20 §1), so six copies of an
+// identical `pickMeta(...)` chain is bytes shipped to every public route for no behavioural gain —
+// and a single computed also guarantees the six tags can never disagree with one another.
+const metaTitle = computed(() => pickMeta(settings.value?.defaultMetaTitle, t('seo.defaultTitle')))
+const metaDescription = computed(() =>
+  pickMeta(settings.value?.defaultMetaDescription, t('seo.siteDescription'))
+)
+
 useSeoMeta({
   ogSiteName: () => siteName.value,
-  title: () => pickMeta(settings.value?.defaultMetaTitle, t('seo.defaultTitle')),
-  description: () => pickMeta(settings.value?.defaultMetaDescription, t('seo.siteDescription')),
-  ogTitle: () => pickMeta(settings.value?.defaultMetaTitle, t('seo.defaultTitle')),
-  ogDescription: () => pickMeta(settings.value?.defaultMetaDescription, t('seo.siteDescription')),
-  twitterTitle: () => pickMeta(settings.value?.defaultMetaTitle, t('seo.defaultTitle')),
-  twitterDescription: () => pickMeta(settings.value?.defaultMetaDescription, t('seo.siteDescription'))
+  title: () => metaTitle.value,
+  description: () => metaDescription.value,
+  ogTitle: () => metaTitle.value,
+  ogDescription: () => metaDescription.value,
+  twitterTitle: () => metaTitle.value,
+  twitterDescription: () => metaDescription.value
 })
 
 if (import.meta.client) {
