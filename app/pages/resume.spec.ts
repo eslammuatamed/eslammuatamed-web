@@ -35,7 +35,7 @@ const messages: Record<string, Record<string, unknown>> = { en: localeFile('en')
 const locale = ref<'en' | 'ar'>('en')
 
 /** Namespaces this page owns. A miss inside one is a real defect and throws. */
-const OWNED = ['resume.', 'seo.resume.', 'nav.', 'common.', 'brand.', 'home.experience.', 'home.techStack.group.', 'experience.technologiesLabel']
+const OWNED = ['resume.', 'seo.resume.', 'nav.', 'common.', 'brand.', 'home.experience.', 'home.techStack.group.', 'home.hero.valueProp', 'experience.technologiesLabel']
 
 function translate(key: string, params: Record<string, unknown> = {}): string {
   const resolved = key
@@ -80,7 +80,10 @@ const pdf: MediaPdf = {
 const settings = (overrides: Partial<SiteSettings> = {}): SiteSettings =>
   ({
     siteName: 'Eslam Muatamed',
-    tagline: 'JavaScript Product Engineer — Frontend Engineer specializing in Vue.js & Nuxt.js',
+    // The approved canonical CMS tagline (positioning-strategy v2.0.0 §2), line break included:
+    // the break is approved copy that travels with the value. The v1.x string this fixture used
+    // to carry is now an explicitly BANNED string (§9), so it cannot stay even as test data.
+    tagline: 'Full-Stack JavaScript\nProduct Engineer',
     profileLinks: [{ label: 'GitHub', url: 'https://github.com/eslammuatamed' }],
     professionalEmail: 'hello@eslammuatamed.com',
     contactEmail: 'contact@eslammuatamed.com',
@@ -136,7 +139,43 @@ describe('resume page — identity', () => {
   it('renders the governed name and tagline verbatim', async () => {
     const wrapper = await render()
     expect(wrapper.find('h1').text()).toBe('Eslam Muatamed')
-    expect(wrapper.text()).toContain('JavaScript Product Engineer — Frontend Engineer specializing in Vue.js & Nuxt.js')
+    expect(wrapper.text()).toContain('Full-Stack JavaScript')
+    expect(wrapper.text()).toContain('Product Engineer')
+  })
+
+  /**
+   * §8: "ONE VALUE, SEVERAL CONSUMERS … no surface may hard-code its own title." The headline is
+   * whatever Site Settings carries — so a settings payload with a DIFFERENT title must produce a
+   * different headline. A test that only asserted the approved string would pass just as happily
+   * against a hard-coded one.
+   */
+  it('takes the headline from Site Settings rather than a local string', async () => {
+    const wrapper = await render({ settings: settings({ tagline: 'Some Other Title' }) })
+    expect(wrapper.text()).toContain('Some Other Title')
+    expect(wrapper.text()).not.toContain('Full-Stack JavaScript')
+  })
+
+  // §8 asks the résumé to carry "the hero description's substance". It renders the one approved
+  // sentence the hero renders, not a résumé-only paraphrase.
+  it('carries the governed summary, the same string the hero renders', async () => {
+    const wrapper = await render()
+    expect(wrapper.text()).toContain(translate('home.hero.valueProp'))
+  })
+
+  it('carries the ARABIC summary on the Arabic route', async () => {
+    locale.value = 'en'
+    const english = translate('home.hero.valueProp')
+    const wrapper = await render({ locale: 'ar' })
+    expect(wrapper.text()).toContain(translate('home.hero.valueProp'))
+    expect(wrapper.text()).not.toContain(english)
+  })
+
+  // §9 bans the v1.x tagline outright, in both locales. It must not survive anywhere on this page.
+  it('renders none of the superseded v1.x positioning strings', async () => {
+    const wrapper = await render()
+    const text = wrapper.text()
+    expect(text).not.toContain('JavaScript Product Engineer — Frontend Engineer specializing in')
+    expect(text).not.toContain('Frontend-led, with end-to-end product delivery experience')
   })
 
   // The professional address, never the website contact inbox.
@@ -252,6 +291,35 @@ describe('resume page — structure', () => {
     const ol = wrapper.find('ol')
     expect(ol.exists()).toBe(true)
     expect(ol.findAll('li').length).toBeGreaterThanOrEqual(2)
+  })
+
+  /**
+   * ORDERING IS THE API'S (D02-11: `isCurrent DESC → startDate DESC → order ASC → id ASC`), and
+   * this page renders the sequence it is handed.
+   *
+   * The fixture is deliberately in an order the page could NOT re-derive: the `startDate`s neither
+   * ascend nor descend with position, and `order` is identical on all three. Any client-side sort
+   * — by date, by `order`, by `isCurrent` — would therefore produce a DIFFERENT DOM order than the
+   * one asserted, so this fails if a sort is ever reintroduced.
+   *
+   * The same expectation is then run against the REVERSED fixture. That is the mutation: if the
+   * assertion were pinned to a fixed list rather than tracking the input, one of the two cases
+   * would fail. Both passing is what proves the page is a pass-through.
+   */
+  it.each([
+    ['as served', false],
+    ['reversed — the mutation that proves the assertion tracks the input', true]
+  ])('renders Experience in the API-given order (%s)', async (_label, reversed) => {
+    const served = [
+      role('e1', { role: 'Alpha', startDate: '2019-01-01T00:00:00.000Z' }),
+      role('e2', { role: 'Beta', startDate: '2024-01-01T00:00:00.000Z' }),
+      role('e3', { role: 'Gamma', startDate: '2021-01-01T00:00:00.000Z' })
+    ]
+    const fixture = reversed ? [...served].reverse() : served
+
+    const wrapper = await render({ experiences: fixture })
+
+    expect(wrapper.findAll('ol h3').map(h => h.text())).toEqual(fixture.map(entry => entry.role))
   })
 
   it('renders exactly one h1 and semantic section headings beneath it', async () => {
