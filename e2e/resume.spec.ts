@@ -203,6 +203,44 @@ test.describe('Print media', () => {
   })
 
   /**
+   * THE ONE PRINT PROPERTY THIS SUITE CANNOT OBSERVE BY RENDERING, asserted directly.
+   *
+   * The impact-bullet marker is a `background-color` on an empty span. Chrome ships its print dialog
+   * with "Background graphics" unchecked (Firefox and Safari likewise), and under that default the
+   * browser paints no element background at all — so the marker survives real paper ONLY because of
+   * `print-color-adjust: exact`.
+   *
+   * Nothing else here can catch its removal. `emulateMedia({ media: 'print' })` swaps the media query
+   * and then rasterises like a screen render: backgrounds paint regardless, so every rendering
+   * assertion in this file stays green whether the property is present or not. That is exactly how
+   * the defect this fixes reached `db298e9` with a green suite and a commit message saying it was
+   * fixed. The property IS readable from the computed style in print media, so this asserts the
+   * declaration rather than its visual effect — the one form of check that discriminates.
+   *
+   * Proof that the underlying concern is real, not theoretical, is in
+   * `scratchpad/evidence/resume-print-evidence.md`: rendered through `page.pdf({printBackground:false})`
+   * with the property mutated back to `economy`, the sheet is pixel-identical to deleting the marker.
+   */
+  test('the impact-bullet marker is exempted from background suppression on paper', async ({ page }) => {
+    await open(page, EN)
+    await page.emulateMedia({ media: 'print' })
+
+    const marker = page.locator('.resume-bullet').first()
+    await expect(marker).toHaveCount(1)
+
+    const painted = await marker.evaluate((el) => {
+      const style = getComputedStyle(el)
+      // The standard property is what resolves here; the `-webkit-` alias is declared alongside it in
+      // the stylesheet for older engines but is not read back, and typing it is not worth a cast.
+      return { adjust: style.printColorAdjust, background: style.backgroundColor }
+    })
+
+    expect(painted.adjust).toBe('exact')
+    // A one-colour printed document: the marker is black ink, not the themed accent border token.
+    expect(painted.background).toBe('rgb(0, 0, 0)')
+  })
+
+  /**
    * The print stylesheet hides the global header and footer, which this page does not own. Those
    * rules are gated on `body:has(.resume-page)` precisely so they cannot survive a client-side
    * navigation away — this asserts that gate, because without it printing any other page after
