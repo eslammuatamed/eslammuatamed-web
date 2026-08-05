@@ -4,6 +4,7 @@ import {
   SOCIAL_IMAGE_PATH,
   SOCIAL_IMAGE_WIDTH,
   absoluteSocialUrl,
+  entitySocialImage,
   isBlank,
   pickMeta,
 } from './metadata'
@@ -86,6 +87,68 @@ describe('absoluteSocialUrl', () => {
     expect(absoluteSocialUrl('/social-card.png', null)).toBeUndefined()
     expect(absoluteSocialUrl('/social-card.png', '   ')).toBeUndefined()
     expect(absoluteSocialUrl('/social-card.png', '/not-absolute')).toBeUndefined()
+  })
+})
+
+describe('entitySocialImage — format gate', () => {
+  const site = 'https://eslammuatamed.com'
+  const base = { width: 1600, height: 900, alt: 'A cover' }
+
+  it('honours a PNG entity image and carries width/height/alt with it', () => {
+    expect(
+      entitySocialImage({ ...base, url: 'https://media.eslammuatamed.com/a/cover.png' }, site),
+    ).toEqual({
+      url: 'https://media.eslammuatamed.com/a/cover.png',
+      width: 1600,
+      height: 900,
+      alt: 'A cover',
+    })
+  })
+
+  it('honours JPEG in both spellings', () => {
+    expect(entitySocialImage({ ...base, url: 'https://m.example.com/a.jpg' }, site)?.url).toBe(
+      'https://m.example.com/a.jpg',
+    )
+    expect(entitySocialImage({ ...base, url: 'https://m.example.com/a.jpeg' }, site)?.url).toBe(
+      'https://m.example.com/a.jpeg',
+    )
+  })
+
+  it('REJECTS WebP — the format the media API actually serves today', () => {
+    // PublicMediaImageDescriptor.url is documented as the widest PUBLIC WebP rendition, so this
+    // is the live case: fall back to the committed PNG rather than emit an unreliable preview.
+    expect(
+      entitySocialImage({ ...base, url: 'https://media.eslammuatamed.com/a/1920-webp.webp' }, site),
+    ).toBeUndefined()
+  })
+
+  it('REJECTS AVIF and any unknown or absent extension', () => {
+    expect(entitySocialImage({ ...base, url: 'https://m.example.com/a.avif' }, site)).toBeUndefined()
+    expect(entitySocialImage({ ...base, url: 'https://m.example.com/a.tiff' }, site)).toBeUndefined()
+    expect(entitySocialImage({ ...base, url: 'https://m.example.com/no-extension' }, site)).toBeUndefined()
+  })
+
+  it('prefers a declared MIME type over the URL extension', () => {
+    // Future-proofing: once the contract declares a type, it wins.
+    expect(
+      entitySocialImage({ ...base, url: 'https://m.example.com/opaque', mimeType: 'image/png' }, site)?.url,
+    ).toBe('https://m.example.com/opaque')
+    expect(
+      entitySocialImage({ ...base, url: 'https://m.example.com/a.png', mimeType: 'image/webp' }, site),
+    ).toBeUndefined()
+  })
+
+  it('does not read a format out of the query string', () => {
+    expect(
+      entitySocialImage({ ...base, url: 'https://m.example.com/a.webp?as=.png' }, site),
+    ).toBeUndefined()
+  })
+
+  it('rejects a missing, blank or relative entity image', () => {
+    expect(entitySocialImage(null, site)).toBeUndefined()
+    expect(entitySocialImage({ ...base, url: '   ' }, site)).toBeUndefined()
+    // Relative: the format is fine but the URL cannot be made absolute without a usable site URL.
+    expect(entitySocialImage({ ...base, url: '/covers/a.png' }, null)).toBeUndefined()
   })
 })
 

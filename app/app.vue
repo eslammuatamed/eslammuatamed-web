@@ -37,17 +37,41 @@ const uiLocale = computed(() => uiLocales[locale.value as keyof typeof uiLocales
 // Title only. Locale-derived tags are the module's (D22-7); description, OG image, structured data
 // and the D22-6 global metas remain page/entity concerns, below and in the pages themselves.
 useHead(() => ({
-  titleTemplate: title => (title ? `${title} — ${brand.value}` : brand.value)
+  // `siteName` is the resolved site title: the CMS value when set, the committed brand otherwise.
+  // Read inside the callback, which head evaluates lazily, so the resolution below is in place.
+  titleTemplate: title => (title ? `${title} — ${siteName.value}` : siteName.value)
 }))
 
-// TIER 3 of the metadata hierarchy (utils/metadata.ts): the committed-default FLOOR.
+// TIERS 2 AND 3 of the metadata hierarchy (utils/metadata.ts), for the site-wide defaults:
+//   tier 2 — the localized public SiteSettings values an operator manages in the CMS
+//   tier 3 — the committed i18n strings and the committed `public/` asset
+// Tier 1 (a page's own content) is applied by the pages themselves in later `useSeoMeta` calls,
+// which is the same precedence `description` has always used here.
 //
-// Everything here comes from committed i18n strings and a committed `public/` asset — there is
-// NO API read on this path. That is deliberate and load-bearing: it makes "a temporary Settings
-// API failure must not remove the title, description or image" true by construction rather than
-// by error handling. Pages override these with tier 1 (their own content) and tier 2 (localized
-// SiteSettings) via later `useSeoMeta` calls, which is the same precedence `description` has
-// always used here.
+// The read is AWAITED so the resolution happens during SSR: `useAsyncData` that is not awaited
+// leaves `data` null while the server renders, which would serialize tier 3 into the HTML and
+// then swap in tier 2 on the client — both a head hydration mismatch and a violation of "the
+// initial server-rendered HTML must already contain the final metadata". It shares the
+// `settings:site:{locale}` key with the footer and the pages, so this adds no extra request on
+// public routes.
+//
+// THE FAILURE GUARANTEE SURVIVES THE READ, and that is the point of doing it through `pickMeta`
+// rather than a conditional: `useAsyncData` does not throw, so a failed or slow Settings response
+// leaves `data` null, and every value below falls through to its committed tier. A whitespace-only
+// CMS value falls through too. So "a temporary Settings API failure must not remove the title,
+// description or image" holds because the committed tier is always the last candidate — not
+// because the API is avoided.
+const { data: settings } = await useSiteSettings()
+
+// `?? brand.value` is unreachable in practice — `brand.value` is a committed, non-empty i18n
+// string, so `pickMeta` always finds a candidate. It is written anyway so the type is `string`
+// rather than `string | undefined`: `titleTemplate` must always produce a title, and an optional
+// type there would let a future edit silently ship a page with no <title> at all.
+const siteName = computed(() => pickMeta(settings.value?.siteName, brand.value) ?? brand.value)
+const defaultTitle = computed(() => pickMeta(settings.value?.defaultMetaTitle, t('seo.defaultTitle')))
+const defaultDescription = computed(() =>
+  pickMeta(settings.value?.defaultMetaDescription, t('seo.siteDescription'))
+)
 //
 // This stays the SINGLE owner of the social tags, for the same reason `useLocaleHead()` is not
 // called for locale tags (D22-7): two owners competing for one tag is how finding F-3 happened.
@@ -61,18 +85,18 @@ const siteConfig = useSiteConfig()
 const socialImage = computed(() => absoluteSocialUrl(SOCIAL_IMAGE_PATH, siteConfig.url))
 
 useSeoMeta({
-  description: () => t('seo.siteDescription'),
+  description: () => defaultDescription.value,
   ogType: 'website',
-  ogSiteName: () => brand.value,
-  ogTitle: () => t('seo.defaultTitle'),
-  ogDescription: () => t('seo.siteDescription'),
+  ogSiteName: () => siteName.value,
+  ogTitle: () => defaultTitle.value,
+  ogDescription: () => defaultDescription.value,
   ogImage: () => socialImage.value,
   ogImageWidth: SOCIAL_IMAGE_WIDTH,
   ogImageHeight: SOCIAL_IMAGE_HEIGHT,
   ogImageAlt: () => t('seo.socialImageAlt'),
   twitterCard: 'summary_large_image',
-  twitterTitle: () => t('seo.defaultTitle'),
-  twitterDescription: () => t('seo.siteDescription'),
+  twitterTitle: () => defaultTitle.value,
+  twitterDescription: () => defaultDescription.value,
   twitterImage: () => socialImage.value,
   twitterImageAlt: () => t('seo.socialImageAlt')
 })
