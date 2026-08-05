@@ -49,8 +49,16 @@ export function useProjectsList(params: ProjectsListParams) {
       const technology = params.technology()
       return api<Paginated<ProjectListItem>>('/projects', {
         locale: locale.value,
-        // Omit `technology` entirely when unset — sending an empty string would be a 422.
-        query: { page: params.page(), ...(technology ? { technology } : {}) }
+        // `perPage` is sent explicitly rather than inherited from the API's default of 12: the page
+        // size is this page's layout decision, and an implicit one would reflow the index if the API
+        // ever changed its default. It is NOT part of the cache key because it is a constant — a key
+        // naming an invariant only makes the key longer.
+        // `technology` is omitted entirely when unset; sending an empty string would be a 422.
+        query: {
+          page: params.page(),
+          perPage: PROJECTS_PER_PAGE,
+          ...(technology ? { technology } : {})
+        }
       })
     },
     { watch: [locale, params.page, params.technology] }
