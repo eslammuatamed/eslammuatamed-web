@@ -409,11 +409,13 @@
     }
   },
   "seo": {
-    "siteDescription": "The portfolio and writing of Eslam Muatamed, a frontend engineer specializing in Vue.js and Nuxt.js.",
+    "defaultTitle": "Eslam Muatamed — Full-Stack JavaScript Product Engineer",
+    "socialImageAlt": "Eslam Muatamed — Full-Stack JavaScript Product Engineer",
+    "siteDescription": "I turn product requirements into production-ready web products, combining strong frontend architecture with reliable backend development and end-to-end delivery.",
     "home": {
-      "title": "Frontend Engineer",
-      "titleFull": "Eslam Muatamed — Frontend Engineer",
-      "description": "Frontend engineer specializing in Vue.js and Nuxt.js, building fast, accessible, SEO-focused web interfaces."
+      "title": "Full-Stack JavaScript Product Engineer",
+      "titleFull": "Eslam Muatamed — Full-Stack JavaScript Product Engineer",
+      "description": "I turn product requirements into production-ready web products, combining strong frontend architecture with reliable backend development and end-to-end delivery."
     },
     "blog": {
       "title": "Blog",

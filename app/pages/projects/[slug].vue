@@ -81,12 +81,27 @@ const crumbs = computed(() => [
 // markup and the structured data cannot disagree.
 useProjectSchema(project, crumbs)
 
+// TIER 1 of the metadata hierarchy (utils/metadata.ts): the project's own localized values win.
+// `pickMeta` replaces the `||` chain so a whitespace-only authored override falls through to the
+// display value instead of rendering a blank tag ('' is falsy and was already handled; '   ' was not).
+//
+// The image is emitted ONLY when the project actually carries one; otherwise every image tag is
+// inherited from the committed floor in `app.vue`. Width/height/alt travel WITH the url.
+const siteConfig = useSiteConfig()
+const socialImage = computed(() => entitySocialImage(project.value?.ogImage, siteConfig.url))
+
 useSeoMeta({
-  title: () => project.value?.metaTitle || project.value?.title,
-  description: () => project.value?.metaDescription || project.value?.summary,
-  ogTitle: () => project.value?.metaTitle || project.value?.title,
-  ogDescription: () => project.value?.metaDescription || project.value?.summary,
-  ogType: 'article'
+  title: () => pickMeta(project.value?.metaTitle, project.value?.title),
+  description: () => pickMeta(project.value?.metaDescription, project.value?.summary),
+  ogTitle: () => pickMeta(project.value?.metaTitle, project.value?.title),
+  ogDescription: () => pickMeta(project.value?.metaDescription, project.value?.summary),
+  ogType: 'article',
+  ogImage: () => socialImage.value?.url,
+  ogImageWidth: () => socialImage.value?.width,
+  ogImageHeight: () => socialImage.value?.height,
+  ogImageAlt: () => socialImage.value?.alt,
+  twitterImage: () => socialImage.value?.url,
+  twitterImageAlt: () => socialImage.value?.alt
 })
 </script>
 

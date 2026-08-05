@@ -40,11 +40,41 @@ useHead(() => ({
   titleTemplate: title => (title ? `${title} — ${brand.value}` : brand.value)
 }))
 
+// TIER 3 of the metadata hierarchy (utils/metadata.ts): the committed-default FLOOR.
+//
+// Everything here comes from committed i18n strings and a committed `public/` asset — there is
+// NO API read on this path. That is deliberate and load-bearing: it makes "a temporary Settings
+// API failure must not remove the title, description or image" true by construction rather than
+// by error handling. Pages override these with tier 1 (their own content) and tier 2 (localized
+// SiteSettings) via later `useSeoMeta` calls, which is the same precedence `description` has
+// always used here.
+//
+// This stays the SINGLE owner of the social tags, for the same reason `useLocaleHead()` is not
+// called for locale tags (D22-7): two owners competing for one tag is how finding F-3 happened.
+// Pages set `ogImage`/`twitterImage` only when they have a real image of their own.
+//
+// The image is emitted as an ABSOLUTE URL — Open Graph and Twitter both drop relative ones — and
+// `absoluteSocialUrl` returns undefined rather than a broken relative value if the governed site
+// URL is somehow blank, so the tag is omitted instead of emitted empty. The site URL is baked at
+// build time (config/site-url.ts), so this resolves during SSR with no client involvement.
+const siteConfig = useSiteConfig()
+const socialImage = computed(() => absoluteSocialUrl(SOCIAL_IMAGE_PATH, siteConfig.url))
+
 useSeoMeta({
   description: () => t('seo.siteDescription'),
   ogType: 'website',
   ogSiteName: () => brand.value,
-  twitterCard: 'summary_large_image'
+  ogTitle: () => t('seo.defaultTitle'),
+  ogDescription: () => t('seo.siteDescription'),
+  ogImage: () => socialImage.value,
+  ogImageWidth: SOCIAL_IMAGE_WIDTH,
+  ogImageHeight: SOCIAL_IMAGE_HEIGHT,
+  ogImageAlt: () => t('seo.socialImageAlt'),
+  twitterCard: 'summary_large_image',
+  twitterTitle: () => t('seo.defaultTitle'),
+  twitterDescription: () => t('seo.siteDescription'),
+  twitterImage: () => socialImage.value,
+  twitterImageAlt: () => t('seo.socialImageAlt')
 })
 </script>
 

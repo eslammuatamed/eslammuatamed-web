@@ -51,12 +51,30 @@ const publishedLabel = computed(() =>
   article.value?.publishAt ? formatDate(article.value.publishAt, locale.value) : ''
 )
 
+// TIER 1 of the metadata hierarchy (utils/metadata.ts): the article's own localized values win.
+// `metaTitle`/`metaDescription` are the authored SEO overrides and are preferred over the display
+// title/excerpt — `/projects/{slug}` already did this and the article route did not, so the two
+// routes disagreed about whether authored SEO copy was honoured. `pickMeta` also means a
+// whitespace-only override falls through instead of rendering a blank tag.
+//
+// The image is emitted ONLY when the article actually carries one; otherwise every image tag is
+// inherited from the committed floor in `app.vue`. Width/height/alt travel WITH the url so they
+// always describe the same file.
+const siteConfig = useSiteConfig()
+const socialImage = computed(() => entitySocialImage(article.value?.ogImage, siteConfig.url))
+
 useSeoMeta({
-  title: () => article.value?.title,
-  description: () => article.value?.excerpt,
-  ogTitle: () => article.value?.title,
-  ogDescription: () => article.value?.excerpt,
-  ogType: 'article'
+  title: () => pickMeta(article.value?.metaTitle, article.value?.title),
+  description: () => pickMeta(article.value?.metaDescription, article.value?.excerpt),
+  ogTitle: () => pickMeta(article.value?.metaTitle, article.value?.title),
+  ogDescription: () => pickMeta(article.value?.metaDescription, article.value?.excerpt),
+  ogType: 'article',
+  ogImage: () => socialImage.value?.url,
+  ogImageWidth: () => socialImage.value?.width,
+  ogImageHeight: () => socialImage.value?.height,
+  ogImageAlt: () => socialImage.value?.alt,
+  twitterImage: () => socialImage.value?.url,
+  twitterImageAlt: () => socialImage.value?.alt
 })
 </script>
 

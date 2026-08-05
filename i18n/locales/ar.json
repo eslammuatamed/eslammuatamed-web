@@ -334,11 +334,13 @@
     }
   },
   "seo": {
-    "siteDescription": "أعمال وكتابات إسلام معتمد، مهندس واجهات أمامية متخصص في Vue.js و Nuxt.js.",
+    "defaultTitle": "إسلام معتمد — Full-Stack JavaScript Product Engineer",
+    "socialImageAlt": "إسلام معتمد — Full-Stack JavaScript Product Engineer",
+    "siteDescription": "أحوّل متطلبات المنتج إلى منتجات ويب جاهزة للإطلاق، من خلال الجمع بين بنية قوية للواجهات الأمامية وتطوير موثوق للواجهة الخلفية وتنفيذ متكامل من البداية إلى النهاية.",
     "home": {
-      "title": "مهندس واجهات أمامية",
-      "titleFull": "إسلام معتمد — مهندس واجهات أمامية",
-      "description": "مهندس واجهات أمامية متخصص في Vue.js و Nuxt.js، يبني واجهات ويب سريعة وسهلة الوصول ومهيأة لمحركات البحث."
+      "title": "Full-Stack JavaScript Product Engineer",
+      "titleFull": "إسلام معتمد — Full-Stack JavaScript Product Engineer",
+      "description": "أحوّل متطلبات المنتج إلى منتجات ويب جاهزة للإطلاق، من خلال الجمع بين بنية قوية للواجهات الأمامية وتطوير موثوق للواجهة الخلفية وتنفيذ متكامل من البداية إلى النهاية."
     },
     "blog": {
       "title": "المدوّنة",
