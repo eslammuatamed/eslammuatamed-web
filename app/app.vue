@@ -42,11 +42,10 @@ useHead(() => ({
   titleTemplate: title => (title ? `${title} — ${siteName.value}` : siteName.value)
 }))
 
-// TIERS 2 AND 3 of the metadata hierarchy (utils/metadata.ts), for the site-wide defaults:
-//   tier 2 — the localized public SiteSettings values an operator manages in the CMS
-//   tier 3 — the committed i18n strings and the committed `public/` asset
-// Tier 1 (a page's own content) is applied by the pages themselves in later `useSeoMeta` calls,
-// which is the same precedence `description` has always used here.
+// TIER 3 of the metadata hierarchy (utils/metadata.ts): the committed-default FLOOR.
+// Tier 2 (localized public SiteSettings) is layered on by `layouts/default.vue`; tier 1 (a page's
+// own content) by the pages. Later `useSeoMeta` calls win, which is the precedence `description`
+// has always used here — so floor -> public settings -> page content resolves in that order.
 //
 // The read is AWAITED so the resolution happens during SSR: `useAsyncData` that is not awaited
 // leaves `data` null while the server renders, which would serialize tier 3 into the HTML and
@@ -61,17 +60,18 @@ useHead(() => ({
 // CMS value falls through too. So "a temporary Settings API failure must not remove the title,
 // description or image" holds because the committed tier is always the last candidate — not
 // because the API is avoided.
-const { data: settings } = await useSiteSettings()
-
-// `?? brand.value` is unreachable in practice — `brand.value` is a committed, non-empty i18n
-// string, so `pickMeta` always finds a candidate. It is written anyway so the type is `string`
-// rather than `string | undefined`: `titleTemplate` must always produce a title, and an optional
-// type there would let a future edit silently ship a page with no <title> at all.
-const siteName = computed(() => pickMeta(settings.value?.siteName, brand.value) ?? brand.value)
-const defaultTitle = computed(() => pickMeta(settings.value?.defaultMetaTitle, t('seo.defaultTitle')))
-const defaultDescription = computed(() =>
-  pickMeta(settings.value?.defaultMetaDescription, t('seo.siteDescription'))
-)
+// NO API READ HERE, DELIBERATELY. `app.vue` wraps EVERY route, including `/dashboard/*` (its own
+// `dashboard`/`auth` layouts, authenticated, English-only chrome, noindex). Awaiting the PUBLIC
+// `/settings/site` read here made every dashboard navigation block on a public endpoint it has no
+// use for, and made an authenticated surface fail to render when the public API was down — a
+// breach of the dashboard's isolation from public reads. Tier 2 therefore belongs to the PUBLIC
+// layout (`layouts/default.vue`), which is the surface that actually has public settings.
+//
+// What stays here is the committed tier, which needs no network and is what guarantees that no
+// route — public, dashboard or error — can ever render an empty title, description or image.
+const siteName = computed(() => brand.value)
+const defaultTitle = computed(() => t('seo.defaultTitle'))
+const defaultDescription = computed(() => t('seo.siteDescription'))
 //
 // This stays the SINGLE owner of the social tags, for the same reason `useLocaleHead()` is not
 // called for locale tags (D22-7): two owners competing for one tag is how finding F-3 happened.

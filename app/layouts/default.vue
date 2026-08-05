@@ -7,6 +7,43 @@ const main = useTemplateRef<HTMLElement>('main')
 const router = useRouter()
 const nuxtApp = useNuxtApp()
 
+// TIER 2 of the metadata hierarchy (utils/metadata.ts): the localized public SiteSettings values
+// an operator manages in the CMS. This lives in the PUBLIC layout rather than `app.vue` on
+// purpose — `app.vue` wraps the dashboard and auth shells too, and awaiting a public read there
+// made authenticated routes block on (and fail with) an endpoint they never consume. Only public
+// pages have public settings, so only the public shell reads them.
+//
+// This shares the `settings:site:{locale}` key with the footer and the pages, so it reuses their
+// cached entry rather than introducing a new key. NOT YET MEASURED: a public route currently
+// issues 3 `/settings/site` requests per SSR render, which predates this change and is worth
+// investigating separately — do not read the shared key as proof the total is unchanged.
+// It IS awaited: an un-awaited `useAsyncData` leaves `data` null while the server
+// renders, which would serialize the committed tier and then swap the CMS value in on the client —
+// a head hydration mismatch, and a violation of "the initial server-rendered HTML must already
+// contain the final metadata".
+//
+// The tier-3 guarantee is untouched: `useAsyncData` does not throw, so a failed or slow response
+// leaves `data` null and every `pickMeta` below falls through to the committed value `app.vue`
+// already emitted. A whitespace-only CMS value falls through for the same reason. Pages override
+// these afterwards with their own content (tier 1).
+const { data: settings } = await useSiteSettings()
+
+const siteName = computed(() => pickMeta(settings.value?.siteName, t('brand.name')) ?? t('brand.name'))
+
+useHead(() => ({
+  titleTemplate: title => (title ? `${title} — ${siteName.value}` : siteName.value)
+}))
+
+useSeoMeta({
+  ogSiteName: () => siteName.value,
+  title: () => pickMeta(settings.value?.defaultMetaTitle),
+  description: () => pickMeta(settings.value?.defaultMetaDescription),
+  ogTitle: () => pickMeta(settings.value?.defaultMetaTitle),
+  ogDescription: () => pickMeta(settings.value?.defaultMetaDescription),
+  twitterTitle: () => pickMeta(settings.value?.defaultMetaTitle),
+  twitterDescription: () => pickMeta(settings.value?.defaultMetaDescription)
+})
+
 if (import.meta.client) {
   const initialPath = router.currentRoute.value.fullPath
   let initialPageFinished = false
