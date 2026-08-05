@@ -445,7 +445,7 @@
     },
     "experience": {
       "title": "Experience",
-      "description": "The roles Eslam Muatamed has held, what each involved, and the technologies used."
+      "description": "The frontend developer and full stack developer roles Eslam Muatamed has held, what each involved, and the technologies used."
     },
     "resume": {
       "title": "Résumé",
@@ -453,7 +453,7 @@
     },
     "about": {
       "title": "About",
-      "description": "Eslam Muatamed is a JavaScript Product Engineer — frontend-led, with end-to-end product delivery experience in Vue.js and Nuxt.js."
+      "description": "How Eslam Muatamed works as a frontend engineer: deep Vue, Nuxt and TypeScript architecture, real backend engineering in Node.js and NestJS, and end-to-end ownership from requirements to production."
     },
     "contact": {
       "title": "Contact",
