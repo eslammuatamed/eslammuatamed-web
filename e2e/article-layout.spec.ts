@@ -1,3 +1,4 @@
+import AxeBuilder from '@axe-core/playwright'
 import { expect, test } from '@playwright/test'
 
 /**
@@ -26,17 +27,33 @@ import { expect, test } from '@playwright/test'
  * is the only signal that the Arabic reading measure is still real.
  */
 
-/** Prism answers any slug with the contract example, so these are the real routes, not fixtures. */
+/**
+ * Prism answers any slug with the contract example, so these are the real routes, not fixtures.
+ *
+ * `column` is the EXACT expected width, and it is exact on purpose — see `MAX_COLUMN_PX` below for
+ * why the loose bound alone is not enough. `--measure-prose` is `32em` (Latin) / `28em` (Arabic) and
+ * the reading size is `--text-body-lg` (1.125rem = 18px), so 32 × 18 = 576 and 28 × 18 = 504. Unlike
+ * `ch`, `em` does not depend on the loaded font's glyph metrics, so these are deterministic integers
+ * rather than something that shifts if a webfont is slow or substituted.
+ */
 const ROUTE = {
-  en: '/blog/staying-inside-performance-budget-nuxt',
-  ar: '/ar/blog/albaqaa-dimn-mizaniyat-ada-nuxt'
+  en: { path: '/blog/staying-inside-performance-budget-nuxt', column: 576 },
+  ar: { path: '/ar/blog/albaqaa-dimn-mizaniyat-ada-nuxt', column: 504 }
 }
 
 /**
- * The stated upper bound for the reading column at ANY viewport. The measured widths are 576px (EN)
- * and 504px (AR); 640px is deliberately loose enough that a legitimate token adjustment inside the
- * governed band does not fail the gate, and tight enough that the pre-015 behaviour (748px prose in
- * a 1216px container) cannot pass.
+ * The stated upper bound for the reading column at ANY viewport. 640px is deliberately loose enough
+ * that a legitimate token adjustment inside the governed band does not fail the gate, and tight
+ * enough that the pre-015 behaviour (748px prose in a 1216px container) cannot pass.
+ *
+ * THE BOUND AND THE EXACT WIDTH DO DIFFERENT JOBS, which is why both are asserted. The bound catches
+ * an UNBOUNDED column. The exact width catches a MISRESOLVED one — and that is the failure mode that
+ * would otherwise ship silently. `--measure-prose` is in `em`, so it only produces the intended
+ * character count when the reading font-size is on the SAME element that carries the max-width. Move
+ * `text-body-lg` down onto a child and `em` resolves at the 16px UI size instead: the column becomes
+ * 512px/448px — still bounded, still centred, still symmetric, still narrower in AR than EN — so
+ * every other assertion in this file keeps passing while the measure quietly falls out of the
+ * governed 65–75 character band. Only the exact number notices.
  */
 const MAX_COLUMN_PX = 640
 
@@ -61,7 +78,7 @@ async function readColumn(page: import('@playwright/test').Page) {
   })
 }
 
-for (const [locale, path] of Object.entries(ROUTE)) {
+for (const [locale, { path, column }] of Object.entries(ROUTE)) {
   test.describe(`Article reading column (${locale})`, () => {
     test('is bounded and centred, and does not grow with the viewport', async ({ page }) => {
       await page.setViewportSize({ width: 1280, height: 900 })
@@ -74,6 +91,13 @@ for (const [locale, path] of Object.entries(ROUTE)) {
       // Bounded: the defect being fixed is a column that keeps growing with the container.
       expect(atWide.column).toBeGreaterThan(0)
       expect(atWide.column).toBeLessThanOrEqual(MAX_COLUMN_PX)
+
+      // Resolved against the right font-size. A mismatch here means `em` was computed somewhere
+      // other than the element carrying the reading size, and the character band is wrong even
+      // though the column still looks fixed. Re-tuning the token SHOULD have to change this number —
+      // that is the point of stating it.
+      expect(atWide.column).toBe(column)
+      expect(atDesktop.column).toBe(column)
 
       // 640px more viewport buys the reader NO extra line length. This is the regression that a
       // container-width body would fail.
@@ -117,16 +141,27 @@ for (const [locale, path] of Object.entries(ROUTE)) {
         expect(id).toMatch(/^user-content-/)
       }
     })
+
+    // The header was restructured, not merely re-widthed — a kicker paragraph now precedes the h1, a
+    // standfirst follows it and the byline sits behind a rule. That is exactly the kind of change
+    // that costs contrast or heading order without anyone noticing, so it is scanned, on the surface
+    // that changed, in both locales. Every sibling spec in this suite carries the same scan.
+    test('has no accessibility violations', async ({ page }) => {
+      await page.setViewportSize({ width: 1280, height: 900 })
+      await page.goto(path)
+      const results = await new AxeBuilder({ page }).analyze()
+      expect(results.violations).toEqual([])
+    })
   })
 }
 
 test('the reading measure is calibrated per script, not shared', async ({ page }) => {
   await page.setViewportSize({ width: 1920, height: 900 })
 
-  await page.goto(ROUTE.en)
+  await page.goto(ROUTE.en.path)
   const en = await readColumn(page)
 
-  await page.goto(ROUTE.ar)
+  await page.goto(ROUTE.ar.path)
   await expect(page.locator('html')).toHaveAttribute('dir', 'rtl')
   const ar = await readColumn(page)
 
