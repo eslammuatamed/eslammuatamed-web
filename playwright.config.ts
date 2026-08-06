@@ -130,7 +130,14 @@ export default defineConfig({
   projects: [
     {
       name: 'contract',
-      testIgnore: ['scenarios/**', 'readiness/**', 'resume-pdf/**', 'dashboard/**', 'dedupe/**'],
+      // `dashboard-media/**` is listed SEPARATELY and must stay that way: `dashboard/**` does not
+      // match it. Every other project selects with `testMatch`, so this is the one project that
+      // silently ADOPTS any directory it forgets to exclude — and it did. Measured: the media specs
+      // ran a second time here against Prism, which serves a static example and holds no mutable
+      // state, producing 19 failures that described the wrong backend rather than the product.
+      testIgnore: [
+        'scenarios/**', 'readiness/**', 'resume-pdf/**', 'dashboard/**', 'dashboard-media/**', 'dedupe/**'
+      ],
       use: { ...devices['Desktop Chrome'], baseURL: `http://127.0.0.1:${CONTRACT_PORT}` }
     },
     {
