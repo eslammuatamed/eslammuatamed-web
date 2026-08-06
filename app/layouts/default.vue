@@ -46,7 +46,18 @@ const { data: settings } = await useSiteSettings()
 
 const siteName = computed(() => pickMeta(settings.value?.siteName, t('brand.name')) ?? t('brand.name'))
 
+// `data-shell="public"` marks the PUBLIC document shell (024). It exists for exactly one reason: the
+// viewport scrollbar. `::-webkit-scrollbar` and `scrollbar-color` can only be addressed at the root
+// element, so a violet scrollbar written the obvious way would also restyle every `/dashboard/**`
+// route — a segregated surface this layout has no business touching. Marking the shell lets the
+// scrollbar rules in `main.css` re-point one inherited custom property here and nowhere else, so the
+// dashboard resolves the identical neutral value it does today rather than merely looking unchanged.
+//
+// It lives in the head rather than on a wrapper element because the scrollbar belongs to `<html>`;
+// no wrapper inside the layout can reach it. The dashboard and auth layouts never set the attribute,
+// and unhead removes it when this layout unmounts, so the two shells cannot leak into each other.
 useHead(() => ({
+  htmlAttrs: { 'data-shell': 'public' },
   titleTemplate: title => (title ? `${title} — ${siteName.value}` : siteName.value)
 }))
 
