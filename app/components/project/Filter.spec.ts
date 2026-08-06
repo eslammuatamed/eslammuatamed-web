@@ -147,15 +147,24 @@ describe('ProjectFilter', () => {
     for (const chip of chips(wrapper)) expect(chip.attributes('disabled')).toBeDefined()
   })
 
-  it('keeps the row scrollable rather than wrapping on narrow viewports, without clipping the focus ring', async () => {
+  // This row WRAPS rather than scrolling, and that is a change from the pre-facets behaviour.
+  //
+  // The scroller was tuned for a single flat row: wrapping would have pushed the list below the
+  // fold. Grouping put a heading inside the row, and a full-width heading can only start a new line
+  // where wrapping is on — inside a nowrap scroller it collapsed to min-content and sat INLINE
+  // between chips (measured at 375px: 2 chips shared the heading's line). Scrolling is also the
+  // wrong behaviour for a grouped row, because options panned off-screen are options a visitor
+  // never finds. The blog's ungrouped row keeps the scroller; `ChipFilter.spec.ts` covers it.
+  it('wraps rather than scrolling, so a group heading can start its own line', async () => {
     const wrapper = await mountSuspended(ProjectFilter, {
       props: { facets, modelValue: undefined }
     })
 
     const group = wrapper.find('#projects-filter')
-    expect(group.classes()).toContain('overflow-x-auto')
-    // The padding is what stops `overflow-x-auto` clipping the offset focus ring on the edge chips;
-    // deleting it is a silent a11y regression with no visual signal in the common case.
+    expect(group.classes()).toContain('flex-wrap')
+    expect(group.classes()).not.toContain('overflow-x-auto')
+    // The padding still keeps the offset focus ring off the container edge; deleting it is a silent
+    // a11y regression with no visual signal in the common case.
     expect(group.classes()).toContain('p-1')
   })
 
