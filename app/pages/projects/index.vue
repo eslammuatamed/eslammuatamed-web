@@ -190,12 +190,12 @@ useSeoMeta({
     </UiRequestState>
 
     <div v-if="data && data.data.length && data.meta.totalPages > 1" class="mt-12 flex justify-center">
-      <UPagination
+      <UiPagePagination
         :page="page"
         :total="data.meta.total"
         :items-per-page="data.meta.perPage"
         :to="pageLink"
-      />
+        />
     </div>
   </UContainer>
 </template>

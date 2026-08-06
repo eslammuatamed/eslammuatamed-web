@@ -19,8 +19,10 @@ const readingLabel = computed(() => t('blog.minRead', { count: props.article.rea
 </script>
 
 <template>
+  <!-- Same shared `row-glass` affordance as the project index row (024, D03-15) — one class, so the
+       two repeated public row types cannot drift apart. -->
   <article
-    class="group relative grid gap-x-10 gap-y-3 border-t border-default py-7 first:border-t-0 md:grid-cols-[1fr_auto] md:items-baseline"
+    class="group row-glass relative grid gap-x-10 gap-y-3 rounded-control border-t border-default py-7 transition first:border-t-0 md:grid-cols-[1fr_auto] md:items-baseline"
   >
     <div>
       <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-caption text-dimmed">

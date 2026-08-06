@@ -232,6 +232,28 @@
      inner lift on the top edge only. */
   --glass-highlight: inset 0 1px 0 rgb(255 255 255 / 0.55);
   --glass-shadow: 0 1px 3px rgb(0 0 0 / 0.04);
+
+  /* Violet-glass extension (024). THREE tokens, deliberately — the section treatment reuses every
+     existing glass mechanism rather than standing up a parallel one.
+
+     `--glass-tint` is a TRANSLUCENT violet wash applied as a `background-image` layer ON TOP of the
+     already-gated `--glass-surface-elevated`. That composition is the whole reason this costs almost
+     nothing: the surface token already carries the `@supports (backdrop-filter)` translucency and the
+     `prefers-reduced-transparency` reset, so the tint inherits all three states — translucent glass,
+     no-support opaque, reduced-transparency opaque — without one extra `@supports` block. It is a
+     `background-image`, not a `background-color`, precisely so it composes with the
+     `bg-[var(--glass-surface-elevated)]` utility D14-8 requires instead of competing with it.
+
+     `--glass-edge` is the violet-leaning hairline. It MIXES INTO `--ui-border` rather than replacing
+     it, so the edge is the semantic border nudged toward the accent — D03-3's border-led depth is
+     still what draws the surface, which is the constraint D03-14 set and this extension keeps.
+
+     `--scroll-thumb` is the public scrollbar thumb. It is a TOKEN rather than a value in the
+     scrollbar rules below so the violet can be re-pointed for the public shell alone, leaving the
+     dashboard on the neutral thumb it ships with today (see the scrollbar block). */
+  --glass-tint: color-mix(in srgb, var(--ui-color-primary-500) 5%, transparent);
+  --glass-edge: color-mix(in srgb, var(--ui-color-primary-500) 22%, var(--ui-border));
+  --scroll-thumb: var(--ui-bg-accented);
 }
 
 .dark {
@@ -243,6 +265,18 @@
      shadows, especially in dark). */
   --glass-highlight: inset 0 1px 0 rgb(255 255 255 / 0.06);
   --glass-shadow: 0 1px 2px rgb(0 0 0 / 0.30);
+
+  /* Dark carries slightly more violet than light, and the asymmetry is measured, not stylistic: the
+     same wash that is already clearly violet over near-white paper is nearly invisible over
+     near-black. Both values are deliberately LOW — the owner's review of the first iteration was that
+     the dark sections read as explicit purple bands, so the target is a surface whose FIRST read is
+     dark neutral, with violet arriving as depth rather than as fill. 7 % is where the tint stops
+     announcing itself and starts reading as the surface having a temperature.
+     The tint also moves the two themes in opposite luminance directions — it LIGHTENS the dark
+     surface and DARKENS the light one — so each value is checked against the text with the least
+     contrast headroom on its side (doc 03 §4). */
+  --glass-tint: color-mix(in srgb, var(--ui-color-primary-400) 7%, transparent);
+  --glass-edge: color-mix(in srgb, var(--ui-color-primary-400) 26%, var(--ui-border));
 }
 
 @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
@@ -331,6 +365,28 @@ html[lang="ar"] {
   color: var(--ui-link);
 }
 
+/* ACCENT GLASS (024) — the shared selected/active treatment for controls that ALREADY carry a solid
+   violet fill: the pressed filter chip, the active pagination page, the primary action. It adds only
+   LIGHTING — a top inner highlight and an accent ring. The fill, the text colour and the weight
+   difference all stay where they are, so the state is still conveyed by more than colour (WCAG 1.4.1)
+   and the control keeps its measured contrast; this class changes no text and no background, so it
+   cannot lower a ratio.
+
+   A `@utility`, NOT a `@layer components` class, and that is a functional requirement rather than a
+   style preference. Nuxt UI's Pagination puts the active state on a `data-selected` attribute, so the
+   treatment has to be reachable as `data-selected:accent-glass` — and Tailwind can only build a
+   variant of something it knows as a utility. Declaring it in the components layer would also put it
+   BELOW Nuxt UI's own utilities in the cascade, where the button's variant background would win.
+
+   ONE declaration, and no reduced-transparency reset. An inner top highlight is edge LIGHTING on an
+   opaque violet fill — there is no transparency for a reduced-transparency user to be spared, and no
+   backdrop being sampled, so switching it off would remove a state cue for no benefit. (The outer
+   accent ring the first version also carried was dropped: on a control that is already a solid violet
+   block, a violet ring around it read as a halo rather than as depth.) */
+@utility accent-glass {
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.25);
+}
+
 /* Kicker — the small section label / eyebrow, the one recurring structural device (007). In Latin it is
    the engineer's register: mono, uppercase, tracked. Arabic has no case, no monospace, and is a connected
    script where letter-spacing is actively harmful — so under the Arabic root it becomes the Plex Arabic
@@ -388,7 +444,7 @@ html[lang="ar"] [class*="tracking-"] {
 @media (pointer: fine) {
   html {
     scrollbar-width: thin;
-    scrollbar-color: var(--ui-bg-accented) transparent;
+    scrollbar-color: var(--scroll-thumb) transparent;
   }
   ::-webkit-scrollbar {
     width: 12px;
@@ -398,15 +454,50 @@ html[lang="ar"] [class*="tracking-"] {
     background: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    background-color: var(--ui-bg-accented);
+    background-color: var(--scroll-thumb);
     border: 3px solid var(--ui-bg);
     border-radius: 999px;
   }
   ::-webkit-scrollbar-thumb:hover {
     background-color: var(--ui-color-primary-500);
   }
+  /* Active is a distinct, firmer state — dragging should not look identical to hovering. */
+  ::-webkit-scrollbar-thumb:active {
+    background-color: var(--ui-color-primary-600);
+  }
   ::-webkit-scrollbar-corner {
     background: transparent;
+  }
+}
+
+/* PUBLIC-ONLY scrollbar accent (024). The rules above are UNCHANGED in what they select — they now
+   read a token instead of a literal, and this is the only rule that moves it.
+
+   WHY A TOKEN AND A SHELL ATTRIBUTE RATHER THAN JUST RESTYLING. `::-webkit-scrollbar` and
+   `scrollbar-color` at `html`/`:root` are inherently global: they reach the viewport scrollbar on
+   EVERY route, `/dashboard/**` included, which is another agent's ownership area. Re-pointing one
+   inherited custom property under a public-shell attribute means the dashboard keeps the exact
+   neutral thumb it ships today — not "probably unaffected", but resolving the identical value.
+   `data-shell="public"` is set by `layouts/default.vue`, the public layout; the dashboard and auth
+   layouts never set it, so they never match.
+
+   LIGHT ONLY, and that is a finding rather than a saving. The reported defect was a thumb too faint
+   against the light track, and it measures: the shipped neutral thumb (`--ui-bg-accented`,
+   `rgb(244,244,245)`) against the `rgb(250,250,250)` track is **1.05:1** — very nearly invisible.
+   Dark's neutral thumb already separates cleanly from a near-black track, so tinting it as well would
+   be the "brighter than necessary" the brief rules out, and leaving it alone keeps dark's resting
+   scrollbar byte-identical to what ships today.
+
+   80 % IS SET BY THE CONTRAST FLOOR, NOT BY TASTE. A custom-styled scrollbar is an author UI
+   component, so WCAG 2.2 AA 1.4.11 asks for 3:1 against its adjacent colour. Measured against the
+   light track: 42 % -> 1.81:1 (fails), 60 % -> 2.35:1, 75 % -> 2.93:1 — still short — and 80 % ->
+   **3.15:1**, the first value that clears it. The first iteration shipped 42 % and would have looked
+   better while still failing, which is exactly why this was measured rather than eyeballed.
+   Hover (violet-500, 4.22:1) and active (violet-600, 5.65:1) keep the existing colours, so the state
+   ladder rises monotonically with no fourth colour. Width is untouched (12 px). */
+@media (pointer: fine) {
+  html[data-shell="public"]:not(.dark) {
+    --scroll-thumb: color-mix(in srgb, var(--ui-color-primary-500) 80%, var(--ui-bg-accented));
   }
 }
 @media (forced-colors: active) {
@@ -544,9 +635,26 @@ html[lang="ar"] [class*="tracking-"] {
     border-radius: var(--radius-control);
   }
 
+  /* AMBIENT VIOLET FIELD (024) — the thing that makes section glass mean something. D03-14's argument
+     against glass on ordinary surfaces was correct as stated: glass over a STATIC ground is decoration,
+     because nothing passes behind it. This field is what removes that premise — it is one page-level
+     gradient set on `body`, so a translucent section has a real, non-uniform ground behind it that
+     changes as the page scrolls past.
+
+     ON `body`, deliberately, and this is the cheap AND the correct choice at once. Per-section glows
+     would be N stacked layers that restart at every section edge (visible seams, and the per-card
+     decoration §1 bans); one body layer is continuous down the whole document for a single paint.
+     Nothing is `fixed` and nothing is animated, so it composites once and cannot cause scroll jank.
+
+     `no-repeat` is load-bearing: the default `repeat` would tile the blobs down a long page into a
+     pattern, which is exactly the "noisy purple wash" this must not be. */
   body {
     background-color: var(--ui-bg);
     color: var(--ui-text);
+    background-image:
+      radial-gradient(60rem 40rem at 12% 8%, var(--glass-tint), transparent 62%),
+      radial-gradient(52rem 36rem at 88% 44%, var(--glass-tint), transparent 62%);
+    background-repeat: no-repeat;
   }
 
   /* Per-locale switch (D14-5): set `font-family` directly on the Arabic root; body and headings
@@ -681,6 +789,97 @@ html:not([lang="ar"]) .nameplate {
       -webkit-backdrop-filter: none;
       backdrop-filter: none;
       box-shadow: none;
+    }
+  }
+
+  /* SECTION GLASS (024) — and the notable thing is what is NOT here.
+
+     A glass spread is composed ENTIRELY from mechanisms that already existed: `.glass` (blur + edge
+     lighting, already `@supports`- and reduced-transparency-gated), `border-y border-default`, and
+     the `bg-[var(--glass-surface-elevated)]` utility D14-8 requires the surface be applied with.
+     Every one of those already ships. The section tone therefore costs **zero new CSS**, which under
+     a stylesheet budget with ~105 bytes of headroom (doc 20 §1, measured) is not a micro-optimization
+     but the difference between the treatment existing and not existing.
+
+     `ink-glass` is `.on-ink` + this tint and NOTHING else — no surface utility, no `backdrop-filter`.
+     Both omissions are corrections of a defect that was built, measured in the browser, and undone:
+
+       1. A custom property's `var()` references are substituted where the property is DECLARED, not
+          where it is used. `--glass-surface` therefore keeps the page-tone value it computed at
+          `:root`; `.on-ink` re-pointing `--ui-bg` does not re-derive it. Verified: on an ink section
+          the token still read `color-mix(in srgb, oklch(98.5% 0 0) 85%, transparent)` — near-white.
+       2. `.on-ink` is UNLAYERED, so its own `background-color` outranks any `bg-*` utility. The
+          section therefore painted fully opaque while still running a live `backdrop-filter` — "no
+          visible glass, full compositing cost", the precise failure D14-8 was written to prevent.
+
+     The blur was not worth rescuing. A full-bleed spread has nothing moving behind it, only the flat
+     page ground and the low-frequency ambient field, and blurring a smooth gradient looks
+     near-identical to not blurring it while costing a compositor re-sample of the whole band every
+     frame — which is D03-14's own argument for keeping glass off static surfaces.
+
+     Staying opaque ink is also what protects accessibility here. Converting Technologies away from
+     ink would have composited the technology brand dots (JS `#f7df1e` and friends) onto a near-white
+     surface in light theme, where yellow and green effectively vanish. The fix was to keep the
+     section ink — not to change the brand colours.
+
+     The one shared rule below is the violet itself — a single translucent wash, layered as a
+     `background-image` so it composes with the surface utility instead of competing with it. */
+  .spread-tint {
+    background-image: linear-gradient(var(--glass-tint), var(--glass-tint));
+  }
+
+  /* INTERACTIVE ROW (024) — the repeated project/article index rows. Deliberately NOT `.glass`: these
+     repeat many times down a page, and an independent `backdrop-filter` per row is the expensive
+     compositing case (D14-8's own note). A translucent tint plus an inset hairline reads as the same
+     material at a fraction of the cost, and it re-uses the section tokens so the row and the surface
+     it sits on are demonstrably the same violet.
+     `:focus-within` is listed with `:hover`, not as an afterthought — keyboard focus must reach the
+     same affordance as the pointer (WCAG 2.2 AA; hover is never the only signal).
+
+     REVISED after the owner's visual review, which read the first version as a violet CARD rather
+     than an interactive row. Three things caused that and all three are gone:
+       - the card radius (10 px) is now the CONTROL radius (6 px) — a row is a control-sized target,
+         not a card;
+       - the inline padding + negative margin, which pushed the fill out past the text column and gave
+         the row a floating card's footprint, are removed, so the fill now aligns with the list;
+       - the four-sided `inset 0 0 0 1px` ring became TOP AND BOTTOM hairlines only. Left/right edges
+         are what made it read as a detached box; horizontal rules read as list structure, which is
+         what this actually is, and they sit with the existing dividers rather than fighting them.
+
+     Both edge and fill are `box-shadow` and `background-color`, never a real `border`. That is a
+     correctness requirement, not a preference: a border that appears on `:hover` changes the border
+     box and moves the row, and this site has a governed CLS gate. An inset shadow paints inside the
+     existing box and cannot shift layout, so "no movement when the edge appears" holds by
+     construction rather than by being careful.
+
+     ONE RULE, deliberately. The resting state — the radius and the transition — is carried by the
+     `rounded-control` and `transition` utilities on the element itself, because Tailwind already
+     emits both for other components (the chips and the button base), so reusing them costs nothing
+     while a `.row-glass` base rule here would be new bytes for declarations that already exist in the
+     stylesheet. Against a budget with ~105 bytes of headroom that is the difference between this
+     treatment fitting and not. */
+  .row-glass:hover,
+  .row-glass:focus-within {
+    background-color: var(--glass-tint);
+    box-shadow:
+      inset 0 1px 0 var(--glass-edge),
+      inset 0 -1px 0 var(--glass-edge);
+  }
+
+  /* Reduced transparency drops the LIGHTING and removes the ambient field outright. The surfaces
+     themselves stay — the tokens have already turned opaque by this point — so the result is the
+     flat, fully-legible design rather than a broken one. `body` is reachable from the components
+     layer (it beats the `@layer base` rule that sets the gradient) so this stays one block.
+     `.accent-glass` is NOT listed here; it is a utility and carries its own reset (see below). */
+  @media (prefers-reduced-transparency: reduce) {
+    .row-glass:hover,
+    .row-glass:focus-within {
+      box-shadow: none;
+    }
+
+    body,
+    .spread-tint {
+      background-image: none;
     }
   }
 

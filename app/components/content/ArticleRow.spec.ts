@@ -31,6 +31,14 @@ const article = (overrides: Partial<ArticleListItem> = {}): ArticleListItem => (
 })
 
 describe('ContentArticleRow', () => {
+  // Same guard as the project index row: `row-glass` carries `:focus-within` as well as `:hover`, so
+  // dropping it takes the keyboard affordance with it. Asserted on both row types independently —
+  // they share the class precisely so they cannot drift, and a guard on only one would not catch it.
+  it('carries the shared interactive-row treatment', async () => {
+    const wrapper = await mountSuspended(ArticleRow, { props: { article: article() }, global: { stubs } })
+    expect(wrapper.find('article').classes()).toContain('row-glass')
+  })
+
   it('renders the title linking to /blog/{slug}', async () => {
     const wrapper = await mountSuspended(ArticleRow, { props: { article: article() }, global: { stubs } })
     const link = wrapper.find('h3 a')

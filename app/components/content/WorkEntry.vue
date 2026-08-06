@@ -22,8 +22,12 @@ withDefaults(defineProps<Props>(), { headingLevel: 'h3' })
 </script>
 
 <template>
+  <!-- `row-glass` makes the WHOLE row the affordance (024, D03-15): before it, only the title colour
+       and the arrow moved, so the clickable area was invisible until the pointer found the title.
+       The class carries hover AND `:focus-within`, so a keyboard user reaches the identical state —
+       the stretched link inside is what puts focus in the row's subtree. -->
   <article
-    class="group relative grid gap-x-10 gap-y-3 border-t border-default py-8 first:border-t-0 sm:grid-cols-[4rem_1fr]"
+    class="group row-glass relative grid gap-x-10 gap-y-3 rounded-control border-t border-default py-8 transition first:border-t-0 sm:grid-cols-[4rem_1fr]"
   >
     <p v-if="project.year" class="font-mono text-body-sm text-dimmed sm:pt-2.5">{{ project.year }}</p>
 
