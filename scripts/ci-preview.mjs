@@ -144,6 +144,16 @@ const BACKENDS = {
     label: 'settings-count backend (one-read-per-render guard)',
     command: process.execPath,
     args: () => ['scripts/e2e/settings-count-server.ts']
+  },
+  // Media Library + Profile. Mutable for three reasons at once: an upload adds an asset, a delete
+  // removes one OR is refused when the asset is referenced, and a settings PATCH changes what the
+  // next GET returns. Its own process rather than an extension of `dashboard`, because what makes a
+  // mutable lane serial is being ONE spec file — a second file under `dashboard/**` would run in a
+  // second worker and the two would reset each other's fixtures mid-assertion.
+  media: {
+    label: 'media backend (Media Library + Profile, mutable)',
+    command: process.execPath,
+    args: () => ['scripts/e2e/media-server.ts']
   }
 }
 

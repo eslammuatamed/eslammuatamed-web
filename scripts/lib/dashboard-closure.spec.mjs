@@ -259,10 +259,23 @@ describe('dashboard closure — detects route-owned chunks, keeps public isolate
  * report a number it could not justify — the exact failure mode its design rejects.
  */
 describe('dashboard closure — governed routes must always be measurable', () => {
-  it('names exactly the three routes D20-23 governs', () => {
+  // This assertion is deliberately exact rather than a `toContain`, and it earned that: it is what
+  // catches a dashboard route being ADDED without being registered for measurement, which is how a
+  // route ships with no budget at all. Extending the list is the correct response to it failing —
+  // loosening it would remove the only thing that notices.
+  it('names exactly the routes D20-23 governs', () => {
     expect(DASHBOARD_ROUTES.map(r => r.route)).toEqual([
-      '/dashboard/login', '/dashboard', '/dashboard/messages'
+      '/dashboard/login', '/dashboard', '/dashboard/messages',
+      '/dashboard/media', '/dashboard/profile'
     ])
+  })
+
+  it('resolves a page module for every governed route, with no duplicates', () => {
+    const routes = DASHBOARD_ROUTES.map(r => r.route)
+    expect(new Set(routes).size).toBe(routes.length)
+    for (const { route, pageModule } of DASHBOARD_ROUTES) {
+      expect(pageModule, `${route} must name a page module`).toMatch(/^app\/pages\/dashboard\/.+\.vue$/)
+    }
   })
 
   /**

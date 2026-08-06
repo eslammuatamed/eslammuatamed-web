@@ -45,6 +45,22 @@ export function useDashboardNav() {
     {
       key: 'communication',
       items: [{ key: 'messages', to: '/dashboard/messages', icon: 'i-lucide-inbox', badge }]
+    },
+    // Doc 04's Library and System groups, arriving as entries in this array exactly as the model
+    // intended — the shell is unchanged. Both routes EXIST, so neither is a placeholder destination.
+    //
+    // STILL NO `roles` PREDICATE. Media and Profile are permission-gated on the API, and the
+    // temptation here is to hide what the operator cannot use — but the session exposes a role name
+    // and no permission grants, so any predicate would be guessing. Authorization is answered by the
+    // API through each page's `forbidden` state (D11-2), which is a real answer rather than an
+    // inference, and navigation stays filtered by route existence only.
+    {
+      key: 'library',
+      items: [{ key: 'media', to: '/dashboard/media', icon: 'i-lucide-image' }]
+    },
+    {
+      key: 'system',
+      items: [{ key: 'profile', to: '/dashboard/profile', icon: 'i-lucide-user-round' }]
     }
   ])
 

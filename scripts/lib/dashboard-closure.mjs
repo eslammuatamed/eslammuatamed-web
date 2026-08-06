@@ -172,5 +172,10 @@ export function resolveDashboardClosure(chunks, pageModule) {
 export const DASHBOARD_ROUTES = [
   { route: '/dashboard/login', pageModule: 'app/pages/dashboard/login.vue' },
   { route: '/dashboard', pageModule: 'app/pages/dashboard/index.vue' },
-  { route: '/dashboard/messages', pageModule: 'app/pages/dashboard/messages.vue' }
+  { route: '/dashboard/messages', pageModule: 'app/pages/dashboard/messages.vue' },
+  // This list is explicit, so a new dashboard route ships UNMEASURED until it is added here. Media
+  // carries the heaviest new surface in the dashboard (grid, modal, upload), which is precisely the
+  // kind of route D20-23 exists to keep honest.
+  { route: '/dashboard/media', pageModule: 'app/pages/dashboard/media.vue' },
+  { route: '/dashboard/profile', pageModule: 'app/pages/dashboard/profile.vue' }
 ]

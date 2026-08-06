@@ -65,6 +65,13 @@ const DASHBOARD_API_PORT = Number(process.env.CI_DASHBOARD_MOCK_PORT ?? 3501)
 const SETTINGS_COUNT_PORT = Number(process.env.CI_SETTINGS_COUNT_PORT ?? 3600)
 const SETTINGS_COUNT_API_PORT = Number(process.env.CI_SETTINGS_COUNT_MOCK_PORT ?? 3601)
 
+// The Media Library + Profile lane. Its own preview + backend pair for the same reason as the
+// Dashboard Inbox: this backend is MUTABLE in three ways at once (upload adds, delete removes or is
+// refused, settings PATCH changes the next GET), and none of that can be shared with a lane that
+// asserts a fixed fixture set.
+const MEDIA_PORT = Number(process.env.CI_MEDIA_PORT ?? 3700)
+const MEDIA_API_PORT = Number(process.env.CI_MEDIA_MOCK_PORT ?? 3701)
+
 // Fail with an actionable message instead of a connection-refused timeout 90 s later. `ci-preview.mjs`
 // boots `.output/server/index.mjs` directly, so a missing build is a setup mistake, not a test failure.
 if (!existsSync('.output/server/index.mjs')) {
@@ -123,7 +130,14 @@ export default defineConfig({
   projects: [
     {
       name: 'contract',
-      testIgnore: ['scenarios/**', 'readiness/**', 'resume-pdf/**', 'dashboard/**', 'dedupe/**'],
+      // `dashboard-media/**` is listed SEPARATELY and must stay that way: `dashboard/**` does not
+      // match it. Every other project selects with `testMatch`, so this is the one project that
+      // silently ADOPTS any directory it forgets to exclude — and it did. Measured: the media specs
+      // ran a second time here against Prism, which serves a static example and holds no mutable
+      // state, producing 19 failures that described the wrong backend rather than the product.
+      testIgnore: [
+        'scenarios/**', 'readiness/**', 'resume-pdf/**', 'dashboard/**', 'dashboard-media/**', 'dedupe/**'
+      ],
       use: { ...devices['Desktop Chrome'], baseURL: `http://127.0.0.1:${CONTRACT_PORT}` }
     },
     {
@@ -168,6 +182,17 @@ export default defineConfig({
       // option, so what actually makes this lane serial is keeping it to a SINGLE spec file.
       fullyParallel: false,
       use: { ...devices['Desktop Chrome'], baseURL: `http://127.0.0.1:${SETTINGS_COUNT_PORT}` }
+    },
+    {
+      name: 'dashboard-media',
+      testMatch: 'dashboard-media/**/*.spec.ts',
+      // SERIAL, for the same reason as `dashboard` and `settings-dedupe`, and with the same caveat:
+      // what actually makes this lane serial is keeping it to a SINGLE spec file, because `workers`
+      // is a top-level option and `fullyParallel: false` only serialises tests within a file. A
+      // second spec file here would run in a second worker and reset this backend's fixtures
+      // mid-assertion. A repeat sweep over this project must pass `--workers=1`.
+      fullyParallel: false,
+      use: { ...devices['Desktop Chrome'], baseURL: `http://127.0.0.1:${MEDIA_PORT}` }
     }
   ],
 
@@ -183,6 +208,7 @@ export default defineConfig({
     previewServer('resume-pdf', RESUME_PDF_PORT, RESUME_PDF_API_PORT),
     previewServer('dashboard', DASHBOARD_PORT, DASHBOARD_API_PORT),
     // `/about` carries no SWR rule, so probing it leaves every route this lane measures cold.
-    previewServer('settings-count', SETTINGS_COUNT_PORT, SETTINGS_COUNT_API_PORT, '/about')
+    previewServer('settings-count', SETTINGS_COUNT_PORT, SETTINGS_COUNT_API_PORT, '/about'),
+    previewServer('media', MEDIA_PORT, MEDIA_API_PORT)
   ]
 })
