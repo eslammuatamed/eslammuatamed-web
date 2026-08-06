@@ -321,7 +321,7 @@
     "builtWith": "مُصمّم ومبنيّ بعناية.",
     "colophon": "مبنيّ بـ Nuxt وVue وTypeScript وTailwind — ثنائي اللغة وبدعم كامل للاتجاهين.",
     "downloadResume": "تنزيل السيرة الذاتية",
-    "whatsapp": "راسلني على واتساب"
+    "whatsappLabel": "راسل إسلام عبر واتساب"
   },
   "error": {
     "notFoundTitle": "الصفحة غير موجودة",
