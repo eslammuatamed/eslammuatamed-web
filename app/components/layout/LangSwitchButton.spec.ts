@@ -32,16 +32,28 @@ describe('LayoutLangSwitchButton', () => {
     expect(wrapper.text().trim()).toBe('AR')
   })
 
-  // The visible label is the current locale; the accessible name has to state the ACTION, because
-  // "EN" on its own tells a screen-reader user nothing about what activating it does.
-  it('names the action, not the code, for assistive technology', async () => {
-    locale.value = 'en'
-    const en = await mountSuspended(LangSwitchButton)
-    expect(en.find('[aria-label]').attributes('aria-label')).toBe('Switch to Arabic')
+  // The accessible name must do BOTH jobs, and it previously did only one.
+  //
+  // It has to state the ACTION, because "EN" alone tells a screen-reader user nothing about what
+  // activating it does — that was this test's original point and it still holds. But it must ALSO
+  // CONTAIN THE VISIBLE TEXT: WCAG 2.5.3 (Label in Name) exists so a voice-control user who says
+  // "click EN" actually activates the control they can see. Naming only the action failed that, and
+  // Lighthouse flagged it as `label-content-name-mismatch` on `/projects`.
+  //
+  // Asserted as two properties rather than one literal, so the copy can be reworded in either
+  // locale without silently dropping either guarantee.
+  it('names the action AND contains the visible label (WCAG 2.5.3)', async () => {
+    for (const [code, visible, action] of [
+      ['en', 'EN', 'Switch to Arabic'],
+      ['ar', 'AR', 'التبديل إلى الإنجليزية'],
+    ] as const) {
+      locale.value = code
+      const wrapper = await mountSuspended(LangSwitchButton)
+      const name = wrapper.find('[aria-label]').attributes('aria-label')!
 
-    locale.value = 'ar'
-    const ar = await mountSuspended(LangSwitchButton)
-    expect(ar.find('[aria-label]').attributes('aria-label')).toBe('التبديل إلى الإنجليزية')
+      expect(name).toContain(visible)
+      expect(name).toContain(action)
+    }
   })
 
   it('targets the OTHER locale', async () => {

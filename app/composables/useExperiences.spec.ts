@@ -103,9 +103,9 @@ describe('useExperiences', () => {
     apiMock.mockResolvedValue({
       data: [
         role('r1', '2025-01-01T00:00:00.000Z', [
-          { id: 't3', label: 'Vue.js' },
-          { id: 't1', label: 'Nuxt.js' },
-          { id: 't2', label: 'TypeScript' }
+          { id: 't3', slug: 'vue', label: 'Vue.js' },
+          { id: 't1', slug: 'nuxt', label: 'Nuxt.js' },
+          { id: 't2', slug: 'typescript', label: 'TypeScript' }
         ])
       ]
     })

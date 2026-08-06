@@ -1819,6 +1819,8 @@ export interface components {
         PublicSkillEntity: {
             /** Format: uuid */
             id: string;
+            /** @example typescript */
+            slug: string;
             /** @example TypeScript */
             label: string;
             /** @enum {string} */
@@ -1842,6 +1844,8 @@ export interface components {
         AdminSkillEntity: {
             /** Format: uuid */
             id: string;
+            /** @example typescript */
+            slug: string;
             /** @enum {string} */
             group: "LANGUAGE" | "FRONTEND" | "BACKEND" | "DELIVERY";
             /** @example 1 */
@@ -1860,6 +1864,11 @@ export interface components {
             label: string;
         };
         CreateSkillDto: {
+            /**
+             * @description Stable, locale-independent public identity, used in `GET /projects?technology=`. Lowercase kebab-case, and MUST NOT be shaped like a uuid (8-4-4-4-12 lowercase hex) — that form is reserved for the legacy technology filter, so a uuid-shaped slug would be unreachable. The uuid exclusion cannot be expressed in `pattern`, so it is stated here: a value can satisfy `pattern` and still be rejected with 422.
+             * @example typescript
+             */
+            slug: string;
             /**
              * @example LANGUAGE
              * @enum {string}
@@ -1912,7 +1921,9 @@ export interface components {
         ExperienceTechnologyEntity: {
             /** Format: uuid */
             id: string;
-            /** @example Nuxt.js */
+            /** @example nuxt */
+            slug: string;
+            /** @example Nuxt */
             label: string;
         };
         PublicExperienceEntity: {
@@ -2137,6 +2148,8 @@ export interface components {
         ProjectTechnologyEntity: {
             /** Format: uuid */
             id: string;
+            /** @example nestjs */
+            slug: string;
             /** @example NestJS */
             label: string;
         };
@@ -5981,7 +5994,7 @@ export interface operations {
                 perPage?: number;
                 /** @description Two-letter locale code, validated against enabled locales. */
                 locale?: string;
-                /** @description Filter to projects linked to this Skill id. */
+                /** @description Filter to projects linked to this Skill, by slug. A Skill uuid is accepted for backward compatibility only. Unknown values return an empty page. */
                 technology?: string;
             };
             header?: never;

@@ -19,8 +19,8 @@ const project = (overrides: Partial<ProjectListItem> = {}): ProjectListItem => (
   featured: true,
   year: 2026,
   technologies: [
-    { id: 't1', label: 'NestJS' },
-    { id: 't2', label: 'PostgreSQL' }
+    { id: 't1', slug: 'nestjs', label: 'NestJS' },
+    { id: 't2', slug: 'postgresql', label: 'PostgreSQL' }
   ],
   availableLocales: ['en'],
   ...overrides

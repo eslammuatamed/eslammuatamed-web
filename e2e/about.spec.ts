@@ -103,11 +103,18 @@ test.describe('Locale-owned head metadata (D22-7)', () => {
     await expect(page.locator('meta[name="description"]')).toHaveAttribute('content', /[؀-ۿ]/)
   })
 
-  test('emits no og:image, because no branded social-card fallback exists (finding F-1)', async ({ page }) => {
+  // F-1 is CLOSED by web-013: a committed, branded 1200×630 PNG now ships in `public/`, so the
+  // reason this route previously omitted the tag — "a URL that does not resolve is worse than
+  // inheriting nothing" — no longer applies. The requirement it protected is unchanged and asserted
+  // below: the URL must be ABSOLUTE, because relative og:image values do not resolve for crawlers.
+  test('emits the branded social card as a single absolute og:image (F-1 closed)', async ({ page }) => {
     await open(page, EN)
 
-    // Omitting the tag is deliberate: a URL that does not resolve is worse than inheriting nothing.
-    await expect(page.locator('meta[property="og:image"]')).toHaveCount(0)
+    const image = page.locator('meta[property="og:image"]')
+    await expect(image).toHaveCount(1)
+    await expect(image).toHaveAttribute('content', /^https?:\/\/.+\/social-card\.png$/)
+    await expect(page.locator('meta[property="og:image:width"]')).toHaveAttribute('content', '1200')
+    await expect(page.locator('meta[property="og:image:height"]')).toHaveAttribute('content', '630')
   })
 })
 

@@ -211,8 +211,12 @@ for (const { label, path, locale, lang, dir, og } of CASES) {
         'content',
         locale === 'ar' ? /[؀-ۿ]/ : /.{20,}/
       )
-      // Still no og:image while no branded fallback exists (finding F-1).
-      await expect(page.locator('meta[property="og:image"]')).toHaveCount(0)
+      // F-1 closed by web-013. This lane matters most for it: the portrait is NULL here, so the
+      // branded committed card is the only social image available — and it must still be emitted
+      // exactly once, absolute, in BOTH locales.
+      const image = page.locator('meta[property="og:image"]')
+      await expect(image).toHaveCount(1)
+      await expect(image).toHaveAttribute('content', /^https?:\/\/.+\/social-card\.png$/)
     })
 
     test('unfiltered axe scan reports no violations', async ({ page }) => {

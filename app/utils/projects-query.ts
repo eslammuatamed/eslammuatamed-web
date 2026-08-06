@@ -9,16 +9,21 @@ import type { LocationQuery } from 'vue-router'
  *   - emitting `page=1` or `technology=` would create a second URL for the same content.
  */
 
+/**
+ * Projects shown per page (FR-PUB-030). Sent explicitly rather than left to the API's default of 12:
+ * the page size is a LAYOUT decision — six case-study cards is what fills the index without turning it
+ * into a scroll — and leaving it implicit would mean a change to the API's default silently reflows
+ * this page. It lives here, beside the page/filter rules, because `meta.totalPages` (and therefore
+ * whether pagination renders at all) is derived from it.
+ *
+ * Within the contract's `perPage` bounds (1–50), so it can never be rejected as out of range.
+ */
+export const PROJECTS_PER_PAGE = 6
+
 /** Read the active technology filter. Only a non-empty string is a filter; anything else is "all". */
 export function readTechnology(query: LocationQuery): string | undefined {
   const value = query.technology
   return typeof value === 'string' && value.length > 0 ? value : undefined
-}
-
-/** Read the current page, defaulting to 1 for absent, malformed, or out-of-range values. */
-export function readPage(query: LocationQuery): number {
-  const value = Number(query.page)
-  return Number.isInteger(value) && value > 0 ? value : 1
 }
 
 /** Query for a filter change — deliberately drops `page`, resetting to the first page. */

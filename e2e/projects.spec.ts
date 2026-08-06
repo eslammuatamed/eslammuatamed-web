@@ -43,7 +43,7 @@ test.describe('F-P1 — hiring-manager journey (EN)', () => {
 
     // The journey ends in a direct-email action, never a link to the not-yet-built /contact route.
     const cta = page.getByRole('link', { name: /Email me/i })
-    await expect(cta).toHaveAttribute('href', 'mailto:eslammuatemed@gmail.com')
+    await expect(cta).toHaveAttribute('href', 'mailto:contact@eslammuatamed.com')
     await expect(page.locator('main a[href="/contact"], aside a[href="/contact"]')).toHaveCount(0)
   })
 })
@@ -63,7 +63,7 @@ test.describe('F-P1 — hiring-manager journey (AR, RTL)', () => {
 
     await expect(page.getByRole('link', { name: /راسلني عبر البريد/ })).toHaveAttribute(
       'href',
-      'mailto:eslammuatemed@gmail.com'
+      'mailto:contact@eslammuatamed.com'
     )
   })
 })
@@ -87,23 +87,61 @@ test.describe('Projects index', () => {
   test('technology filter round-trips through the URL and is keyboard reachable', async ({ page }) => {
     await page.goto('/projects')
 
-    const filter = page.getByLabel('Technology')
+    // The filter is a labelled GROUP of `<button aria-pressed>` chips, not a select. Asserting the
+    // group by its accessible name is what proves the visible label is actually wired to the control.
+    const filter = page.getByRole('group', { name: 'Technology' })
     await expect(filter).toBeVisible()
 
-    // Reachable by keyboard alone — no pointer-only affordance (doc 21). Tab from the top of the
-    // document until the filter takes focus; a bounded walk, so a regression fails rather than hangs.
-    await page.locator('body').press('Tab')
-    let focusedFilter = false
-    for (let i = 0; i < 40 && !focusedFilter; i += 1) {
-      focusedFilter = await page.evaluate(() => document.activeElement?.id === 'projects-filter')
-      if (!focusedFilter) await page.keyboard.press('Tab')
-    }
-    expect(focusedFilter).toBe(true)
+    // "All" is a real chip and is pressed while nothing is filtered — the unfiltered state has its own
+    // visible, pressable control rather than being the absence of one.
+    await expect(filter.getByRole('button', { name: 'All technologies' })).toHaveAttribute('aria-pressed', 'true')
 
-    // A filtered view is linkable and restores from the URL.
+    // Reachable by keyboard alone — no pointer-only affordance (doc 21). Tab from the top of the
+    // document until focus lands INSIDE the group; a bounded walk, so a regression fails rather than
+    // hangs. Focus lands on a chip, not the group: the group is a labelling wrapper, and each chip is
+    // its own tab stop (the deliberate consequence of `aria-pressed` toggles over a radiogroup).
+    await page.locator('body').press('Tab')
+    let focusedChip = false
+    for (let i = 0; i < 40 && !focusedChip; i += 1) {
+      focusedChip = await page.evaluate(() =>
+        document.activeElement?.closest('#projects-filter') !== null
+        && document.activeElement?.tagName === 'BUTTON'
+      )
+      if (!focusedChip) await page.keyboard.press('Tab')
+    }
+    expect(focusedChip).toBe(true)
+
+    // A filtered view is linkable and restores from the URL. The uuid form is used here on purpose:
+    // it is the BACKWARD-COMPATIBLE form (D10-17), so this is the regression test for a link shared
+    // before the slug contract landed.
     await page.goto('/projects?technology=019f89b5-3050-7161-af37-3e9a2cbf41ed')
     await expect(page).toHaveURL(/technology=/)
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
+  })
+
+  test('pressing a technology chip writes its SLUG to the URL and presses that chip', async ({ page }) => {
+    await page.goto('/projects')
+
+    const filter = page.getByRole('group', { name: 'Technology' })
+    // The first non-"All" chip — Prism serves the contract's own skills list, so the label is the
+    // mock's, but the VALUE written to the URL is the assertion that matters and it must be a slug.
+    const chip = filter.getByRole('button').nth(1)
+    const label = (await chip.textContent())?.trim()
+    await chip.click()
+
+    // A slug, never a uuid and never a localized label: the URL must not change meaning with the
+    // language, and a uuid in a freshly written URL would mean the contract adoption regressed.
+    await expect(page).toHaveURL(/[?&]technology=[a-z0-9]+(-[a-z0-9]+)*(&|$)/)
+    await expect(page).not.toHaveURL(/technology=[0-9a-f]{8}-[0-9a-f]{4}-/)
+
+    // The pressed state follows the URL, so a reload or a shared link shows the same control state.
+    await expect(filter.getByRole('button', { name: label! })).toHaveAttribute('aria-pressed', 'true')
+    await expect(filter.getByRole('button', { name: 'All technologies' })).toHaveAttribute('aria-pressed', 'false')
+
+    // Back returns to the unfiltered index AND to the unfiltered control state.
+    await page.goBack()
+    await expect(page).toHaveURL(/\/projects$/)
+    await expect(filter.getByRole('button', { name: 'All technologies' })).toHaveAttribute('aria-pressed', 'true')
   })
 
   test('a filtered view canonicalizes to the unfiltered index', async ({ page }) => {
@@ -126,9 +164,17 @@ test.describe('Case study', () => {
 
     const headings = await page.locator('article h2').allInnerTexts()
 
-    // The eight FR-CNT-020 sections, in narrative order. The gallery heading legitimately follows
-    // them inside the same <article>, so this pins the prefix rather than the whole list.
-    expect(headings.slice(0, 8)).toEqual([
+    // The facts card leads: it is the at-a-glance summary and it precedes the narrative in DOM order
+    // at every width, sticky desktop column or not. Then the eight FR-CNT-020 sections in narrative
+    // order, then the gallery — the whole h2 run, pinned exactly, so an extra or missing heading
+    // fails here rather than only in the axe pass.
+    //
+    // 'AT A GLANCE' is uppercase because `allInnerTexts` reports RENDERED text and the facts heading
+    // wears the `.kicker` treatment — the deliberate visual split between a card label and the
+    // narrative headings it introduces. The Arabic page keeps its authored casing: `.kicker` drops
+    // `text-transform` under `html[lang="ar"]`, since Arabic has no case.
+    expect(headings).toEqual([
+      'AT A GLANCE',
       'Overview',
       'The problem',
       'The solution',
@@ -136,9 +182,36 @@ test.describe('Case study', () => {
       'Architecture',
       'Challenges',
       'Key features',
-      'What I took away'
+      'What I took away',
+      'Gallery'
     ])
-    expect(headings.slice(8)).toEqual(['Gallery'])
+
+    // One h1 on the page. The closing CTA used to carry `text-h1` display type, which read as a
+    // second headline; it is an h2 in a compact card now.
+    await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1)
+  })
+
+  test('summarizes the contract facts once, in the facts card, and keeps it out of the flow on mobile', async ({ page }) => {
+    await page.goto(`/projects/${SLUG}`)
+
+    const facts = page.locator('article section[aria-labelledby="project-facts-heading"]')
+    await expect(facts).toBeVisible()
+
+    // Stated ONCE. The year and the technology list used to sit in the <header> as well; two copies of
+    // the same fact on one screen is what this change removed.
+    await expect(facts.getByRole('term')).toHaveText(['Year', 'Stack', 'Links'])
+    await expect(page.locator('article header bdi')).toHaveCount(0)
+
+    // Sticky is a DESKTOP affordance only — on a small viewport a pinned card steals reading space,
+    // so the card must be a normal block in the flow. Computed style is the assertion because the
+    // behaviour is CSS-only (breakpoint-scoped utilities, no JS).
+    const position = () => facts.evaluate(node => getComputedStyle(node).position)
+
+    await page.setViewportSize({ width: 1280, height: 900 })
+    expect(await position()).toBe('sticky')
+
+    await page.setViewportSize({ width: 390, height: 844 })
+    expect(await position()).toBe('static')
   })
 
   test('renders optional live and repository links safely when both exist', async ({ page }) => {

@@ -238,15 +238,27 @@ test.describe('contact submission mechanics', () => {
 })
 
 test.describe('contact direct methods and locale', () => {
+  // SCOPED TO `main` since 018. The footer carries its own WhatsApp action on every public page, so a
+  // page-wide `wa.me` count on /contact now asserts the direct-methods list AND site-wide chrome at
+  // once and cannot distinguish them. The counts below are not relaxed — each region is pinned
+  // separately, so the page still has exactly two `wa.me` links and both are accounted for.
   test('renders email, phone and WhatsApp actions from settings', async ({ page }) => {
     await page.goto('/contact')
-    await expect(page.locator('a[href^="mailto:"]')).toHaveCount(1)
-    await expect(page.locator('a[href^="tel:"]')).toHaveCount(1)
-    await expect(page.locator('a[href*="wa.me/"]')).toHaveCount(1)
+    await expect(page.locator('main a[href^="mailto:"]')).toHaveCount(1)
+    await expect(page.locator('main a[href^="tel:"]')).toHaveCount(1)
+    await expect(page.locator('main a[href*="wa.me/"]')).toHaveCount(1)
+    await expect(page.locator('footer a[href*="wa.me/"]')).toHaveCount(1)
+    await expect(page.locator('a[href*="wa.me/"]')).toHaveCount(2)
     // The prefilled WhatsApp message is URL-encoded, never raw.
-    const wa = await page.locator('a[href*="wa.me/"]').getAttribute('href')
+    const wa = await page.locator('main a[href*="wa.me/"]').getAttribute('href')
     expect(wa).toContain('?text=')
     expect(wa).not.toContain(' ')
+    // The footer's action is built by the same shared derivation, so it carries the same encoding
+    // guarantee and points at the same number.
+    const footerWa = await page.locator('footer a[href*="wa.me/"]').getAttribute('href')
+    expect(footerWa).toContain('?text=')
+    expect(footerWa).not.toContain(' ')
+    expect(new URL(footerWa!).pathname).toBe(new URL(wa!).pathname)
   })
 
   test('switching locale clears entered values and the status', async ({ page }) => {
@@ -280,8 +292,12 @@ test.describe('contact direct methods and locale', () => {
     // markup this design replaced; what has to hold is that the number is still printed in full and
     // that each action still carries it in its accessible name.
     await expect(page.locator('main')).toContainText('+20 100 278 5408')
-    await expect(page.locator('a[href^="tel:"]')).toHaveAttribute('aria-label', /\+20 100 278 5408$/)
-    await expect(page.locator('a[href*="wa.me/"]')).toHaveAttribute('aria-label', /\+20 100 278 5408$/)
+    await expect(page.locator('main a[href^="tel:"]')).toHaveAttribute('aria-label', /\+20 100 278 5408$/)
+    // Scoped to `main` since 018 — see the note on the first test in this describe. The footer's own
+    // WhatsApp action deliberately does NOT carry the number (it is an action, not a directory), so
+    // a page-wide selector here would match an element that is correct precisely for not matching.
+    await expect(page.locator('main a[href*="wa.me/"]')).toHaveAttribute('aria-label', /\+20 100 278 5408$/)
+    await expect(page.locator('footer a[href*="wa.me/"]')).toHaveAccessibleName('راسلني على واتساب')
 
     // Left-to-right is asserted as a RENDERED OUTCOME rather than as a mechanism: the leading `+`
     // must be PAINTED to the left of the final digit. Asserting the wrapper element, or even its

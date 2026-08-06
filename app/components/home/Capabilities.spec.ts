@@ -17,6 +17,7 @@ const stubs = {
 
 const skill = (overrides: Partial<Skill>): Skill => ({
   id: 'id',
+  slug: 'slug',
   label: 'Label',
   group: 'LANGUAGE',
   order: 0,

@@ -33,6 +33,16 @@ import net from 'node:net'
 import process from 'node:process'
 import { setTimeout as sleep } from 'node:timers/promises'
 import { shutdownAll, startTracked } from './lib/process-group.mjs'
+import { resolveMockPort, resolvePreviewPort } from './lib/preview-base.mjs'
+
+/**
+ * Where Prism itself listens when the locale proxy is holding the public mock port.
+ *
+ * `+40` keeps it clear of every lane's allocated pair — the lanes are spaced by 100 (3000/3001,
+ * 3100/3101, 3200/3201, 3300/3301, 3500/3501, 3600/3601) — so the offset stays free whatever port
+ * block a worktree is assigned. Derived rather than a constant for exactly that reason.
+ */
+const prismUpstreamPort = port => String(Number(port) + 40)
 
 const BACKENDS = {
   // The RESOLVED binary, not `npx`: the npx shim spawns Prism as a grandchild, so the process we
@@ -40,10 +50,51 @@ const BACKENDS = {
   // the port. Invoking the binary directly makes the listener our direct child, which is what makes
   // the shutdown below sufficient — and keeps every child inside our process group, where
   // Playwright's `webServer` teardown and Ctrl+C already reap them.
+  // A PAIR, not one process: Prism on an internal port, and a thin locale-selecting proxy holding
+  // the port Nitro actually talks to (`scripts/e2e/prism-locale-proxy.mjs`).
+  //
+  // Prism replays ONE body per operation, so with only schema-level (locale-blind) property
+  // examples it answered `?locale=ar` with the English identity — every Arabic page in every gate
+  // rendered a Latin `h1` under an Arabic font stack. The contract now carries named `en`/`ar`
+  // response examples and the proxy selects between them per request with `Prefer: example=<name>`.
+  //
+  // BOTH are direct children of this orchestrator, so the existing observed-shutdown path reaps
+  // them unchanged — the same reason the resolved binary is invoked instead of the `npx` shim.
+  // Readiness still gates on the single mock port because the proxy deliberately does not bind
+  // until Prism is listening, so "the mock port accepts connections" continues to mean the whole
+  // backend can answer.
   prism: {
-    label: 'prism (contract mock)',
+    label: 'prism (contract mock, locale-selecting)',
     command: 'node_modules/.bin/prism',
-    args: port => ['mock', 'openapi/openapi.json', '--port', port]
+    args: port => ['mock', 'openapi/openapi.json', '--port', prismUpstreamPort(port)],
+    sidecar: {
+      name: 'prism-locale-proxy',
+      command: process.execPath,
+      args: port => ['scripts/e2e/prism-locale-proxy.mjs', port, prismUpstreamPort(port)]
+    },
+    // READINESS IS ASSERTED ON CONTENT, NOT ON A STATUS CODE. An open port only proves something
+    // is listening; it does not prove the locale actually resolved. The failure this replaces was
+    // exactly that shape — every gate ran green against an Arabic page carrying the ENGLISH site
+    // name, and the only symptom was a layout-shift budget failing further downstream. Asserting
+    // Arabic CMS prose here makes a mis-wired fixture fail at startup, in this file, with a message
+    // that names the cause.
+    //
+    // THE ASSERTED STRING MUST COME FROM THE API AND NOWHERE ELSE, and this bit was measured rather
+    // than assumed: the obvious choice — the Arabic site name — ALSO lives in `i18n/locales/ar.json`
+    // (as the tier-3 title fallback), so `/ar/about` still contained it with locale selection
+    // deliberately broken. It would have been a readiness gate that could not fail. This substring
+    // is from the governed `aboutBio`, which exists only in the settings response.
+    //
+    // `/ar/about` and NOT `/ar` or `/ar/resume`: `/ar` carries `swr: 60` (nuxt.config routeRules),
+    // so probing it would render and CACHE a page before any gate runs — the INF-A cache-poisoning
+    // defect. `/ar/resume` is the route the Lighthouse gate measures and must stay cold. `/ar/about`
+    // has no SWR rule, so probing it cannot poison anything.
+    readiness: {
+      path: '/ar/about',
+      mustContain: 'أحوّل متطلبات المنتج',
+      description:
+        'Arabic CMS prose from the settings response, proving ?locale=ar resolved through the mock'
+    }
   },
   // Node 24 runs TypeScript directly, so the fixtures stay typed with the generated OpenAPI-derived
   // types instead of drifting as untyped JSON. Same reasoning as above: this IS the listener.
@@ -84,6 +135,15 @@ const BACKENDS = {
     label: 'dashboard backend (Feature 012, mutable)',
     command: process.execPath,
     args: () => ['scripts/e2e/dashboard-server.ts']
+  },
+  // Another DIFFERENT server, and mutable for the same reason as `dashboard`: it counts
+  // `/settings/site` requests so the `settings-dedupe` lane can assert that one public SSR render
+  // performs exactly one. That count cannot be taken in the browser — the read happens inside Nitro
+  // — and it cannot live in `scenario-server.ts` without giving up that server's stateless invariant.
+  'settings-count': {
+    label: 'settings-count backend (one-read-per-render guard)',
+    command: process.execPath,
+    args: () => ['scripts/e2e/settings-count-server.ts']
   }
 }
 
@@ -100,8 +160,10 @@ if (!BACKEND) {
   process.exit(1)
 }
 
-const WEB_PORT = process.env.CI_PREVIEW_PORT ?? '3000'
-const API_PORT = process.env.CI_MOCK_PORT ?? '3001'
+// Same resolver `check-route-size.mjs` measures through, so the server this file starts and the URL
+// that gate reads can no longer be defaulted to different ports. See `lib/preview-base.mjs`.
+const WEB_PORT = resolvePreviewPort()
+const API_PORT = resolveMockPort()
 
 const children = []
 let shuttingDown = false
@@ -140,6 +202,14 @@ function start(name, command, args, env) {
 
 // 1. The API backend first — the Nitro server fetches it during SSR.
 start(BACKEND_NAME, BACKEND.command, BACKEND.args(API_PORT), { CI_MOCK_PORT: API_PORT, ...BACKEND.env })
+
+// 1b. Its sidecar, when the backend is a pair (Prism + the locale-selecting proxy). Started here
+// rather than spawned by the backend itself so BOTH listeners stay DIRECT children of this
+// orchestrator: the `shutdownAll` path observes real exits and releases both ports, and neither can
+// be reparented to init the way the old `npx` shim's grandchild was.
+if (BACKEND.sidecar) {
+  start(BACKEND.sidecar.name, BACKEND.sidecar.command, BACKEND.sidecar.args(API_PORT), BACKEND.env)
+}
 
 // 2. The built Nitro server. Its runtime API base points at the mock.
 start('nitro', 'node', ['.output/server/index.mjs'], {
@@ -184,7 +254,36 @@ async function waitForPort(name, port, timeoutMs = 90_000) {
 const ready = (await waitForPort(BACKEND.label, API_PORT))
   && (await waitForPort('nitro (web preview)', WEB_PORT))
 
+/**
+ * The content half of the readiness gate. Both ports accepting connections proves the processes are
+ * alive; it does not prove they are serving the RIGHT thing. This renders one real page through the
+ * whole stack — Nitro → locale proxy → Prism → the named contract example — and refuses to announce
+ * readiness unless the expected localized content actually came back.
+ *
+ * It also catches `error.vue`: an outage render returns 200 with the error page, which every
+ * status-only probe accepts and which silently changes what a gate measures.
+ */
+async function assertReadyContent({ path, mustContain, description }) {
+  try {
+    const response = await fetch(`http://127.0.0.1:${WEB_PORT}${path}`)
+    const html = await response.text()
+    if (response.ok && html.includes(mustContain)) return true
+
+    console.error(
+      `[ci-preview] readiness assertion FAILED on ${path} (HTTP ${response.status}): expected `
+        + `${description} — "${mustContain}" — in the rendered HTML. The backend is listening but is `
+        + 'not serving the expected localized content, so every gate downstream would measure the '
+        + 'wrong fixture.'
+    )
+  } catch (error) {
+    console.error(`[ci-preview] readiness assertion could not fetch ${path}: ${error.message}`)
+  }
+  return false
+}
+
 if (!ready) {
+  await shutdown(1)
+} else if (BACKEND.readiness && !(await assertReadyContent(BACKEND.readiness))) {
   await shutdown(1)
 } else {
   console.log(`[ci-preview] listening on http://127.0.0.1:${WEB_PORT} (${BACKEND.label} on ${API_PORT})`)

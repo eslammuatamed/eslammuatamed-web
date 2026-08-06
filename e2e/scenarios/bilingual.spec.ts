@@ -80,9 +80,15 @@ test.describe('EN/AR project differentiation', () => {
   })
 
   test('every section heading and body differs between the locales', async ({ page }) => {
-    // The gallery is also a <section> inside the <article>; excluding it by its labelling id keeps
-    // this about the eight FR-CNT-020 fields rather than silently counting nine.
-    const narrative = 'article section:not([aria-labelledby="project-gallery-heading"])'
+    // The gallery and the facts card are also <section>s inside the <article>; excluding them by
+    // their labelling ids keeps this about the eight FR-CNT-020 fields rather than silently counting
+    // ten. Named explicitly rather than as `:not([aria-labelledby])` so a future labelled section
+    // fails this count instead of quietly disappearing from it.
+    const narrative = [
+      'article section',
+      ':not([aria-labelledby="project-gallery-heading"])',
+      ':not([aria-labelledby="project-facts-heading"])'
+    ].join('')
 
     await page.goto(`/projects/${SLUG.bilingual.en}`)
     const englishSections = await page.locator(narrative).allInnerTexts()
@@ -104,12 +110,16 @@ test.describe('EN/AR project differentiation', () => {
     // <bdi> keeps a Latin identifier from being reordered against neighbouring RTL text. The labels
     // here are Arabic, but the isolation must be present regardless — it is a property of the markup,
     // not of the current content.
-    const isolated = page.locator('article header bdi')
+    //
+    // Scoped to the facts card, which is where the technology list now lives: it used to be a loose
+    // strip in the <article> <header>, duplicating what the card states.
+    const stack = 'article section[aria-labelledby="project-facts-heading"] bdi'
+    const isolated = page.locator(stack)
     await expect(isolated).toHaveCount(2)
     await expect(isolated.first()).toHaveText('نكست')
 
     await page.goto(`/projects/${SLUG.bilingual.en}`)
-    await expect(page.locator('article header bdi').first()).toHaveText('Nuxt')
+    await expect(page.locator(stack).first()).toHaveText('Nuxt')
   })
 
   test('locale switching targets the equivalent localized slug, not this locale\'s slug', async ({ page }) => {

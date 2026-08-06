@@ -14,7 +14,12 @@ import { SLUG } from './backend.ts'
  * "should not exist" assertion below would pass while the positive ones failed.
  */
 
+// The facts card heading leads the run: it is inside the <article> and precedes the narrative in DOM
+// order. The eight FR-CNT-020 sections follow; 'Gallery' is what a populated project would add.
+// Uppercase because these are RENDERED texts and the facts heading wears the `.kicker` treatment —
+// the Arabic list below keeps its authored casing, since `.kicker` drops the transform for Arabic.
 const EN_SECTIONS = [
+  'AT A GLANCE',
   'Overview',
   'The problem',
   'The solution',
@@ -46,8 +51,9 @@ test.describe('Project detail with an empty gallery — English', () => {
   test('the rest of FR-CNT-020 remains visible, in order, with correct heading levels', async ({ page }) => {
     await page.goto(`/projects/${SLUG.emptyGallery.en}`)
 
-    // Exactly the eight sections and nothing after them — with a populated gallery this list ends
-    // with 'Gallery', so the shorter list IS the assertion that the region was dropped cleanly.
+    // The facts card plus the eight sections and nothing after them — with a populated gallery this
+    // list ends with 'Gallery', so the shorter list IS the assertion that the region was dropped
+    // cleanly.
     expect(await page.locator('article h2').allInnerTexts()).toEqual(EN_SECTIONS)
 
     // Each section still has its body; a heading with no prose would be the other way to fail this.
@@ -68,7 +74,7 @@ test.describe('Project detail with an empty gallery — English', () => {
     await expect(page.getByRole('link', { name: 'Live product' })).toBeVisible()
     await expect(page.getByRole('link', { name: /Email me/i })).toHaveAttribute(
       'href',
-      'mailto:eslammuatemed@gmail.com'
+      'mailto:contact@eslammuatamed.com'
     )
   })
 
@@ -89,6 +95,7 @@ test.describe('Project detail with an empty gallery — Arabic', () => {
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('مشروع بلا وسائط في المعرض')
 
     expect(await page.locator('article h2').allInnerTexts()).toEqual([
+      'لمحة سريعة',
       'نظرة عامة',
       'المشكلة',
       'الحل',

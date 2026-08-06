@@ -103,6 +103,6 @@ describe('HomeNameplate', () => {
   it('renders the 6-item technology stack', async () => {
     const wrapper = await mountSuspended(Nameplate, { props: { settings: base() }, global: { stubs } })
     const items = wrapper.findAll('ul li bdi').map(bdi => bdi.text())
-    expect(items).toEqual(['JavaScript', 'TypeScript', 'Vue', 'Nuxt', 'Node.js', 'Nest.js'])
+    expect(items).toEqual(['JavaScript', 'TypeScript', 'Vue', 'Nuxt', 'Node.js', 'NestJS'])
   })
 })

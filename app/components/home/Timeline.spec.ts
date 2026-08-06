@@ -5,9 +5,8 @@ import { mockNuxtImport, mountSuspended } from '@nuxt/test-utils/runtime'
 import type { Experience } from '~/types/models'
 import Timeline from './Timeline.vue'
 
-// Timeline (FR-PUB-013) sorts the current role first — even over a past role with a later-looking
-// start date (code-review WD-7) — then orders the rest by startDate desc. Empty result omits the
-// section unless loading/erroring (NFR-DEGRADE).
+// Timeline (FR-PUB-013) renders the API's order VERBATIM (D02-11) — it does not sort. Empty result
+// omits the section unless loading/erroring (NFR-DEGRADE).
 mockNuxtImport('useI18n', () => () => ({ t: (key: string) => key, locale: ref('en') }))
 
 const stubs = {
@@ -49,7 +48,7 @@ describe('HomeTimeline', () => {
   // the assertion that fails if a later change flips the default or adds the prop here.
   it('never enables technology chips, even when the API supplies them', async () => {
     const experiences: Experience[] = [
-      experience({ role: 'With stack', technologies: [{ id: 't1', label: 'Nuxt.js' }] }),
+      experience({ role: 'With stack', technologies: [{ id: 't1', slug: 'nuxt', label: 'Nuxt.js' }] }),
       experience({ role: 'Without stack', technologies: [] })
     ]
     const wrapper = await mountSuspended(Timeline, { props: { experiences }, global: { stubs } })
@@ -59,15 +58,40 @@ describe('HomeTimeline', () => {
     expect(wrapper.text()).not.toContain('Nuxt.js')
   })
 
-  it('sorts the current role first, then the rest by startDate desc', async () => {
+  // D02-11: ordering is `isCurrent` DESC -> `startDate` DESC -> `order` ASC -> `id` ASC and the API
+  // owns it. Home used to re-sort locally, which is the rejected alternative the decision names, and
+  // it is why Home could disagree with `/experience` and `/resume` — neither of which sorts.
+  //
+  // THE FIXTURE IS DELIBERATELY IN AN ORDER NO CLIENT SORT WOULD PRODUCE. The old comparator
+  // (`isCurrent` first, then `startDate` desc) would rearrange this into
+  // ['Current role', 'Ended, later start', 'Ended, earlier start']. Asserting the input order back
+  // therefore fails the moment anyone reintroduces a local sort — which a fixture already in sorted
+  // order could never detect.
+  it('renders the API order verbatim and does not re-sort', async () => {
     const experiences: Experience[] = [
-      experience({ role: 'Older, not current, later start', isCurrent: false, startDate: '2026-01-01T00:00:00.000Z' }),
+      experience({ role: 'Ended, later start', isCurrent: false, startDate: '2026-01-01T00:00:00.000Z' }),
       experience({ role: 'Current role', isCurrent: true, startDate: '2020-01-01T00:00:00.000Z' }),
-      experience({ role: 'Past role, earlier start', isCurrent: false, startDate: '2022-01-01T00:00:00.000Z' })
+      experience({ role: 'Ended, earlier start', isCurrent: false, startDate: '2022-01-01T00:00:00.000Z' })
     ]
     const wrapper = await mountSuspended(Timeline, { props: { experiences }, global: { stubs } })
     const roles = wrapper.findAll('.entry').map(el => el.text())
-    expect(roles).toEqual(['Current role', 'Older, not current, later start', 'Past role, earlier start'])
+    expect(roles).toEqual(['Ended, later start', 'Current role', 'Ended, earlier start'])
+  })
+
+  // `order` is the owner's dashboard-controlled tie-breaker, and the removed comparator could not
+  // express it: two roles sharing a start date sorted by whatever the comparator returned, so the
+  // owner's arrangement was discarded whenever it disagreed. Same `isCurrent` and same `startDate`,
+  // ascending `order` — the API's sequence must survive untouched.
+  it('preserves the owner-controlled `order` tie-breaker within an identical start date', async () => {
+    const experiences: Experience[] = [
+      experience({ role: 'Owner placed second', order: 1, startDate: '2024-01-01T00:00:00.000Z' }),
+      experience({ role: 'Owner placed first', order: 0, startDate: '2024-01-01T00:00:00.000Z' })
+    ]
+    const wrapper = await mountSuspended(Timeline, { props: { experiences }, global: { stubs } })
+    expect(wrapper.findAll('.entry').map(el => el.text())).toEqual([
+      'Owner placed second',
+      'Owner placed first'
+    ])
   })
 
   it('hides when there are no experiences and the section is idle', async () => {

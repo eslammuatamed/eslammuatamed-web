@@ -72,6 +72,13 @@ export type MediaPdf = Schemas['PublicMediaPdfDescriptor']
 /** Category/tag ref carried on article list items. */
 export type ArticleTaxonomyRef = Schemas['ArticleTaxonomyRefEntity']
 
+/**
+ * A blog category, as `GET /categories` returns it — the source of the blog index's filter chips.
+ * Its `slug` is PER-LOCALE (D04-2), unlike `Skill.slug`, so the same category has a different slug in
+ * each language and a `?category=` URL only means something in the locale that produced it.
+ */
+export type Category = Schemas['PublicCategoryEntity']
+
 /** Auth (D11-1): login returns the access token + user; refresh rotates only the access token. */
 export type AuthUser = Schemas['AuthUserEntity']
 export type AuthSession = Schemas['LoginResponse']
