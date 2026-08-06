@@ -27,7 +27,7 @@ withDefaults(defineProps<Props>(), { headingLevel: 'h3' })
        The class carries hover AND `:focus-within`, so a keyboard user reaches the identical state —
        the stretched link inside is what puts focus in the row's subtree. -->
   <article
-    class="group row-glass relative grid gap-x-10 gap-y-3 border-t border-default py-8 first:border-t-0 sm:grid-cols-[4rem_1fr]"
+    class="group row-glass relative grid gap-x-10 gap-y-3 rounded-control border-t border-default py-8 transition first:border-t-0 sm:grid-cols-[4rem_1fr]"
   >
     <p v-if="project.year" class="font-mono text-body-sm text-dimmed sm:pt-2.5">{{ project.year }}</p>
 

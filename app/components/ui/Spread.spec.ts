@@ -53,19 +53,35 @@ describe('UiSpread', () => {
     expect(wrapper.classes()).toContain('bg-[var(--glass-surface-elevated)]')
     expect(wrapper.classes()).toContain('border-y')
     expect(wrapper.classes()).toContain('border-default')
-    // A glass spread must NOT re-point the semantic tokens the way an ink spread does: the surface is
-    // translucent over the page, so the page's own theme is still the correct one for its content.
+    expect(wrapper.classes()).toContain('spread-tint')
+    // A plain glass spread must NOT re-point the semantic tokens the way an ink spread does: the
+    // surface is translucent over the page, so the page's own theme is right for its content.
     expect(wrapper.classes()).not.toContain('on-ink')
-    expect(wrapper.classes()).not.toContain('spread-glass-strong')
   })
 
-  it('tone="glass-strong" is the glass tone PLUS the stronger wash, never a replacement for it', async () => {
-    const wrapper = await mountSuspended(Spread, { props: { tone: 'glass-strong' }, global: { stubs } })
-    expect(wrapper.classes()).toContain('spread-glass-strong')
-    // The strong tone only adds a second tint layer; if it ever stopped carrying the base classes it
-    // would lose the blur and the gated surface and would render as a bare violet block.
-    expect(wrapper.classes()).toContain('glass')
-    expect(wrapper.classes()).toContain('bg-[var(--glass-surface-elevated)]')
+  // The single most important assertion in this file. `on-ink` is what keeps the technology brand
+  // dots (JS #f7df1e and friends) on a dark ground; without it they composite onto a near-white
+  // surface in light theme and effectively disappear — a WCAG regression that is release-blocking
+  // here, and one that no snapshot of the component alone would reveal.
+  it('tone="ink-glass" KEEPS the ink token context and adds only the tint', async () => {
+    const wrapper = await mountSuspended(Spread, { props: { tone: 'ink-glass' }, global: { stubs } })
+    expect(wrapper.classes()).toContain('on-ink')
+    expect(wrapper.classes()).toContain('spread-tint')
+    // NO `backdrop-filter` on an ink spread. `.on-ink` is unlayered, so its opaque background beats
+    // any surface utility — pairing it with `.glass` produced a fully opaque panel that still ran a
+    // live backdrop-filter (verified in the browser): the exact "no visible glass, full compositing
+    // cost" defect D14-8 exists to prevent. This assertion is what stops it coming back.
+    expect(wrapper.classes()).not.toContain('glass')
+    expect(wrapper.classes()).not.toContain('bg-[var(--glass-surface)]')
+  })
+
+  // The ink tone is retained and unchanged — it is still the plain opaque feature spread, and
+  // `ink-glass` must not have quietly become an alias for it (nor the reverse).
+  it('tone="ink" stays the untinted opaque spread', async () => {
+    const wrapper = await mountSuspended(Spread, { props: { tone: 'ink' }, global: { stubs } })
+    expect(wrapper.classes()).toContain('on-ink')
+    expect(wrapper.classes()).not.toContain('glass')
+    expect(wrapper.classes()).not.toContain('spread-tint')
   })
 
   it('renders the requested `as` element', async () => {
