@@ -43,13 +43,56 @@ import { expect, test } from '@playwright/test'
  */
 const API = (path: string) => `http://127.0.0.1:${process.env.CI_SETTINGS_COUNT_MOCK_PORT ?? 3601}${path}`
 
+/**
+ * Reset the counter, then PROVE it is quiet before the test navigates.
+ *
+ * A bare reset is not enough, and this was MEASURED rather than anticipated: CI run 31080237659
+ * failed `/about … ONE request` with `got 2: …locale=ar, …locale=en` — an ARABIC read counted on an
+ * English route, and counted BEFORE the route's own render. Nothing in that test can produce it.
+ * It leaks from the preceding test: its page prefetches the alternate-locale link, Nitro renders
+ * `/ar` server-side to answer the payload request, and that render's `/settings/site` call can land
+ * on this shared counter AFTER the next test has already reset it. Closing the page ends the
+ * browser side of that work, not the server side already in flight.
+ *
+ * The file header already names link prefetch as a hazard, but only in the direction of WARMING an
+ * SWR route. This is the other direction: prefetch CONTAMINATING the counter.
+ *
+ * Settling rather than filtering is deliberate. Ignoring reads whose locale is not the one under
+ * test would also hide a real regression — a route issuing an extra cross-locale read is exactly
+ * the WD-6 defect class this lane exists to catch. So the straggler is waited out, not excluded.
+ *
+ * `?fail=1` is a persistent MODE on the server, not a one-shot, so a straggler landing inside the
+ * settle window cannot consume it and re-resetting cannot lose it.
+ *
+ * HONEST LIMIT: this waits for observed quiescence, it does not make the window zero — a straggler
+ * could still arrive between the final zero reading and the navigation. What it removes is the case
+ * that actually occurs: a render already in flight when the previous test ended. If this ever throws,
+ * that is information worth having rather than a count silently attributed to the wrong test.
+ */
+async function resetCountSettled(
+  request: import('@playwright/test').APIRequestContext,
+  { fail = false } = {}
+) {
+  const query = fail ? '?fail=1' : ''
+  for (let attempt = 1; attempt <= 6; attempt++) {
+    await request.get(API(`/__settings-count/reset${query}`))
+    await new Promise(resolve => setTimeout(resolve, 250))
+    const { count } = await readCount(request)
+    if (count === 0) return
+  }
+  throw new Error(
+    'the settings counter never went quiet: a render from an earlier test is still arriving after '
+      + 'six resets. Measuring now would attribute another test\'s request to this one.'
+  )
+}
+
 async function resetCount(request: import('@playwright/test').APIRequestContext) {
-  await request.get(API('/__settings-count/reset'))
+  await resetCountSettled(request)
 }
 
 /** Reset AND put `/settings/site` into the 503 outage path for the next render (BLK-2). */
 async function resetCountFailing(request: import('@playwright/test').APIRequestContext) {
-  await request.get(API('/__settings-count/reset?fail=1'))
+  await resetCountSettled(request, { fail: true })
 }
 
 async function readCount(request: import('@playwright/test').APIRequestContext) {
