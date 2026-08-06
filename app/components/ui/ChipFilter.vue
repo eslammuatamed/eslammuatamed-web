@@ -25,6 +25,16 @@ interface Option {
   value: string
   /** Display text. Already localized by the caller, and never used as the value. */
   label: string
+  /**
+   * Optional sub-heading this option is filed under, already localized (`/projects` files
+   * technologies under Frontend/Backend). OPTIONAL so the ungrouped callers are untouched: when no
+   * option carries one, the rendered DOM is byte-for-byte what it was before grouping existed.
+   *
+   * A group with no options cannot be rendered, because sections are derived FROM the options rather
+   * than from a fixed list — "hide empty groups" is therefore structural, not a conditional to
+   * forget.
+   */
+  group?: string
 }
 
 interface Props {
@@ -62,6 +72,35 @@ const chips = computed(() => [
   }))
 ])
 
+/**
+ * The row split into sections, preserving the caller's option order.
+ *
+ * Ungrouped (blog) → ONE unheaded section holding every chip, which is exactly the previous markup.
+ * Grouped (projects) → the "all" chip in its own unheaded section, then one section per group, in
+ * first-appearance order. Sections come from the options themselves, so a group with nothing in it
+ * has no section to render and empty groups cannot appear.
+ */
+const grouped = computed(() => props.options.some(option => option.group))
+
+const sections = computed(() => {
+  const [all, ...rest] = chips.value
+  if (!grouped.value) return [{ key: '__row__', heading: undefined as string | undefined, chips: chips.value }]
+
+  const byGroup = new Map<string, typeof rest>()
+  props.options.forEach((option, index) => {
+    const chip = rest[index]
+    if (!chip || !option.group) return
+    const bucket = byGroup.get(option.group)
+    if (bucket) bucket.push(chip)
+    else byGroup.set(option.group, [chip])
+  })
+
+  return [
+    { key: '__all__', heading: undefined as string | undefined, chips: all ? [all] : [] },
+    ...[...byGroup].map(([heading, groupChips]) => ({ key: heading, heading, chips: groupChips }))
+  ]
+})
+
 /** A chip is pressed when its value IS the active filter; "all" is pressed exactly when none is. */
 function isPressed(value: string | undefined): boolean {
   return props.modelValue === value
@@ -93,11 +132,24 @@ function select(value: string | undefined): void {
       the moment a keyboard user needs it. The matching `-m-1` keeps the row optically aligned with the
       heading above. Both are symmetric, so neither needs an RTL counterpart.
     -->
+    <!--
+      UNGROUPED keeps the tuned single-row behaviour: a horizontal scroller below `sm`, wrapping
+      above it.
+
+      GROUPED wraps at EVERY width instead. A full-width heading can only start a new line where
+      wrapping is on, so inside the nowrap scroller the heading — the one shrinkable item among
+      `shrink-0` chips — collapsed to min-content and sat INLINE between chips. Measured at 375px
+      before this fix: 2 chips shared the heading's line. Scrolling is also the wrong behaviour for
+      a grouped row, because options panned off-screen are options a visitor never finds; the
+      original scroller reasoning ("wrapping pushes the list below the fold") assumed one flat row,
+      which grouping has already stopped being.
+    -->
     <div
       :id="id"
       role="group"
       :aria-labelledby="labelId"
-      class="-m-1 flex gap-2 overflow-x-auto p-1 sm:flex-wrap sm:overflow-x-visible"
+      class="-m-1 flex gap-2 p-1"
+      :class="grouped ? 'flex-wrap' : 'overflow-x-auto sm:flex-wrap sm:overflow-x-visible'"
     >
       <!--
         The pressed state differs by MORE than colour — filled surface, inverted text and a heavier
@@ -105,20 +157,32 @@ function select(value: string | undefined): void {
         colour-only chip leaves the active filter unreadable to a visitor who cannot perceive the hue.
         `shrink-0` + `whitespace-nowrap` keep a two-word label one chip instead of two in the scroller.
       -->
-      <button
-        v-for="chip in chips"
-        :key="chip.key"
-        type="button"
-        :aria-pressed="isPressed(chip.value)"
-        :disabled="disabled"
-        class="shrink-0 rounded-control px-3 py-1.5 text-body-sm whitespace-nowrap ring ring-inset transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-75"
-        :class="isPressed(chip.value)
-          ? 'bg-primary text-white font-semibold ring-primary'
-          : 'bg-elevated text-muted ring-accented hover:text-highlighted'"
-        @click="select(chip.value)"
-      >
-        {{ chip.label }}
-      </button>
+      <template v-for="section in sections" :key="section.key">
+        <!--
+          The group name is a plain span, not a nested `role="group"`: the row is already one group
+          labelled by the heading above, and nesting a second landmark inside it would announce the
+          same chips twice. `basis-full` breaks the flex row so each named group starts a new line,
+          and it is inert to a screen reader's chip traversal.
+        -->
+        <span
+          v-if="section.heading"
+          class="basis-full text-body-sm text-dimmed sm:mt-1"
+        >{{ section.heading }}</span>
+        <button
+          v-for="chip in section.chips"
+          :key="chip.key"
+          type="button"
+          :aria-pressed="isPressed(chip.value)"
+          :disabled="disabled"
+          class="shrink-0 rounded-control px-3 py-1.5 text-body-sm whitespace-nowrap ring ring-inset transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-75"
+          :class="isPressed(chip.value)
+            ? 'bg-primary text-white font-semibold ring-primary'
+            : 'bg-elevated text-muted ring-accented hover:text-highlighted'"
+          @click="select(chip.value)"
+        >
+          {{ chip.label }}
+        </button>
+      </template>
     </div>
   </div>
 </template>

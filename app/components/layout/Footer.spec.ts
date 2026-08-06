@@ -77,7 +77,12 @@ describe('LayoutFooter', () => {
   // stays at zero while a live, focusable, labelled link to nowhere sits in the footer. The name is
   // what a visitor and a screen reader actually encounter, so that is what must be absent.
   const IS_WA = (href: string | undefined) => (href ?? '').startsWith('https://wa.me/')
-  const WA_LABEL = 'footer.whatsapp'
+  // The affordance is now icon-only, so its accessible name lives in `aria-label` rather than in
+  // visible text. The absence assertions below still key on the NAME for the reason above — they
+  // just have to read it from the attribute now.
+  const WA_LABEL = 'footer.whatsappLabel'
+  const waLinks = (wrapper: { findAll: (s: string) => { attributes: (a: string) => string | undefined }[] }) =>
+    wrapper.findAll('a').filter(a => a.attributes('aria-label') === WA_LABEL)
 
   it('renders one WhatsApp action, opening safely, when the number is present', async () => {
     settingsRef.value = full
@@ -89,16 +94,65 @@ describe('LayoutFooter', () => {
     )
     expect(links[0]!.attributes('target')).toBe('_blank')
     expect(links[0]!.attributes('rel')).toBe('noopener noreferrer')
-    // The accessible name comes from the visible label, so it cannot drift out of sync with it.
-    expect(links[0]!.text()).toContain('footer.whatsapp')
+    // Icon-only now, so the accessible name is the aria-label — an icon with no name is unusable.
+    expect(links[0]!.attributes('aria-label')).toBe(WA_LABEL)
     // The Footer is an action, not a directory: the number itself belongs on /contact.
     expect(wrapper.text()).not.toContain('+201002785408')
+  })
+
+  // The correction itself: WhatsApp belongs INSIDE the social icon row, not under it.
+  it('renders WhatsApp as the last chip inside the social icon row, not as a standalone row', async () => {
+    settingsRef.value = full
+    const wrapper = await mountSuspended(Footer, { global: { stubs } })
+
+    const row = wrapper.find('ul.flex-wrap')
+    expect(row.exists()).toBe(true)
+
+    // Inside the row — and specifically the LAST item, so the order is GitHub → LinkedIn → Email →
+    // WhatsApp rather than merely "somewhere in the group".
+    const items = row.findAll('li')
+    const last = items[items.length - 1]!
+    const wa = last.find('a')
+    expect(wa.attributes('aria-label')).toBe(WA_LABEL)
+    expect(IS_WA(wa.attributes('href'))).toBe(true)
+
+    // No WhatsApp anchor may exist outside the row — that is exactly the standalone block removed.
+    expect(waLinks(wrapper)).toHaveLength(1)
+    expect(row.findAll('a').filter(a => IS_WA(a.attributes('href')))).toHaveLength(1)
+
+    // The old standalone visible label is gone, in both the key and any rendered text.
+    expect(wrapper.text()).not.toContain('footer.whatsapp"')
+    expect(wa.text().trim()).toBe('')
+  })
+
+  // "Match the existing buttons" has to be structural, not approximate: the WhatsApp chip must carry
+  // the same class list as its siblings, so size, border, hover, focus ring and theme response are
+  // the same by construction rather than by two lists that happen to agree today.
+  it('gives WhatsApp the same chip classes as the other social buttons', async () => {
+    settingsRef.value = full
+    const wrapper = await mountSuspended(Footer, { global: { stubs } })
+
+    const anchors = wrapper.find('ul.flex-wrap').findAll('a')
+    const wa = anchors.find(a => IS_WA(a.attributes('href')))!
+    const sibling = anchors.find(a => !IS_WA(a.attributes('href')))!
+    expect([...wa.classes()].sort()).toEqual([...sibling.classes()].sort())
+  })
+
+  // The row still renders when WhatsApp is the ONLY affordance — a guard on `socialLinks.length`
+  // alone would silently drop it for an owner with no profile links configured.
+  it('renders the row with WhatsApp alone when there are no profile links', async () => {
+    settingsRef.value = { ...full, profileLinks: [] }
+    const wrapper = await mountSuspended(Footer, { global: { stubs } })
+
+    const row = wrapper.find('ul.flex-wrap')
+    expect(row.exists()).toBe(true)
+    expect(waLinks(wrapper)).toHaveLength(1)
   })
 
   it('renders no WhatsApp affordance at all when the number is absent', async () => {
     settingsRef.value = { ...full, whatsappPhone: null }
     const wrapper = await mountSuspended(Footer, { global: { stubs } })
-    expect(wrapper.findAll('a').filter(a => a.text().includes(WA_LABEL))).toHaveLength(0)
+    expect(waLinks(wrapper)).toHaveLength(0)
     expect(wrapper.findAll('a').filter(a => IS_WA(a.attributes('href')))).toHaveLength(0)
     expect(wrapper.text()).not.toContain(WA_LABEL)
   })
@@ -107,7 +161,7 @@ describe('LayoutFooter', () => {
     // Bad data must not become a link to nowhere — the shared gate is the same one /contact uses.
     settingsRef.value = { ...full, whatsappPhone: '0100 not a number' }
     const wrapper = await mountSuspended(Footer, { global: { stubs } })
-    expect(wrapper.findAll('a').filter(a => a.text().includes(WA_LABEL))).toHaveLength(0)
+    expect(waLinks(wrapper)).toHaveLength(0)
     expect(wrapper.findAll('a').filter(a => IS_WA(a.attributes('href')))).toHaveLength(0)
     expect(wrapper.text()).not.toContain(WA_LABEL)
   })

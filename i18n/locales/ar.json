@@ -131,7 +131,11 @@
     "filter": {
       "label": "التقنية",
       "all": "كل التقنيات",
-      "clear": "إزالة التصفية"
+      "clear": "إزالة التصفية",
+      "group": {
+        "frontend": "الواجهة الأمامية",
+        "backend": "الواجهة الخلفية"
+      }
     },
     "resultCount": "دراسات الحالة: {count}",
     "breadcrumbLabel": "مسار التنقّل",
@@ -321,7 +325,7 @@
     "builtWith": "مُصمّم ومبنيّ بعناية.",
     "colophon": "مبنيّ بـ Nuxt وVue وTypeScript وTailwind — ثنائي اللغة وبدعم كامل للاتجاهين.",
     "downloadResume": "تنزيل السيرة الذاتية",
-    "whatsapp": "راسلني على واتساب"
+    "whatsappLabel": "راسل إسلام عبر واتساب"
   },
   "error": {
     "notFoundTitle": "الصفحة غير موجودة",

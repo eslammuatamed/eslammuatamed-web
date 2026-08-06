@@ -1,19 +1,25 @@
 <script setup lang="ts">
-import type { Skill } from '~/types/models'
+import type { ProjectTechnologyFacet } from '~/types/models'
 
-// Technology filter for the projects index (FR-PUB-030). Options come from the Skills registry, not
-// free text (doc 04 §5) — the value sent to the API is the skill's `slug`, the canonical form of
-// `GET /projects?technology=` (D10-17); labels are display-only and arrive already localized, so a
-// label must never become the filter value or the URL would change meaning with the language.
+// Technology filter for the projects index (FR-PUB-030).
 //
-// This component is now only the Skills→options MAPPING; the control itself is `UiChipFilter`, shared
-// with the blog index. It is kept rather than inlined because the mapping is the part with a contract
-// to get wrong (slug vs id vs label), and it is what these tests pin.
+// Options are the API's FACETS (D10-19), not the global Skills registry. That distinction is the
+// whole point: a Skill is a taxonomy entry, and a taxonomy entry is not evidence that any published
+// project uses it. Building the filter from `/skills` offered chips that return an empty page — on
+// live Production, 13 of 18 options — plus Delivery & Quality entries, which are ways of working
+// rather than things a project is built with. A facet exists only because a published project in
+// this locale uses it, so every chip is guaranteed to lead somewhere.
 //
-// Skill `slug` is LOCALE-INDEPENDENT, unlike a Category slug (D04-2). That is why a `?technology=` URL
-// survives a locale switch unchanged and `?category=` does not — see `app/pages/blog/index.vue`.
+// It also removes a request: the facets ride along on the list response the page already awaits.
+//
+// This component remains only the facets→options MAPPING; the control is `UiChipFilter`, shared with
+// the blog index. It is kept rather than inlined because the mapping is the part with a contract to
+// get wrong (slug vs id vs label), and it is what these tests pin.
+//
+// Skill `slug` is LOCALE-INDEPENDENT, unlike a Category slug (D04-2). That is why a `?technology=`
+// URL survives a locale switch unchanged and `?category=` does not.
 interface Props {
-  technologies: readonly Skill[]
+  facets: readonly ProjectTechnologyFacet[]
   /**
    * The active filter value, or `undefined` for the unfiltered list. Canonically a Skill `slug`; a
    * uuid from a link shared before the slug contract landed is still valid and still round-trips.
@@ -27,8 +33,19 @@ const emit = defineEmits<{ 'update:modelValue': [value: string | undefined] }>()
 
 const { t } = useI18n()
 
+// Group headings are translated HERE, from the contract's stable `frontend`/`backend` keys — the API
+// deliberately sends the key, not a display string, so the label follows the UI locale rather than
+// whatever language the request happened to resolve.
+//
+// A group with no facets produces no heading at all: `UiChipFilter` derives its sections from the
+// options it is given, so "hide empty groups" needs no branch here and cannot be forgotten. That
+// matters in practice — live Production currently has exactly one backend technology.
 const options = computed(() =>
-  props.technologies.map(technology => ({ value: technology.slug, label: technology.label }))
+  props.facets.map(facet => ({
+    value: facet.slug,
+    label: facet.label,
+    group: t(`projects.filter.group.${facet.group}`)
+  }))
 )
 </script>
 
