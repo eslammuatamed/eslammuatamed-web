@@ -36,6 +36,38 @@ describe('UiSpread', () => {
     expect(wrapper.classes()).toContain('border-t')
   })
 
+  // The glass tones are asserted class-by-class rather than against a whole string, because each
+  // class is load-bearing for a DIFFERENT reason and they fail independently:
+  //   `glass`                              — the blur + edge lighting, and the `@supports` /
+  //                                          reduced-transparency gating that rides on it
+  //   `bg-[var(--glass-surface-elevated)]` — D14-8 requires the surface be an arbitrary UTILITY; a
+  //                                          background declared in `@layer components` loses to
+  //                                          Nuxt UI's `bg-default` and silently yields an opaque
+  //                                          panel that still pays for a live backdrop-filter
+  //   `border-y border-default`            — D03-3's border-led depth, which glass supplements
+  // A single `toBe('glass border-y …')` assertion would pass or fail as one lump and would not say
+  // which guarantee broke.
+  it('tone="glass" composes the blur, the gated surface utility and the semantic border', async () => {
+    const wrapper = await mountSuspended(Spread, { props: { tone: 'glass' }, global: { stubs } })
+    expect(wrapper.classes()).toContain('glass')
+    expect(wrapper.classes()).toContain('bg-[var(--glass-surface-elevated)]')
+    expect(wrapper.classes()).toContain('border-y')
+    expect(wrapper.classes()).toContain('border-default')
+    // A glass spread must NOT re-point the semantic tokens the way an ink spread does: the surface is
+    // translucent over the page, so the page's own theme is still the correct one for its content.
+    expect(wrapper.classes()).not.toContain('on-ink')
+    expect(wrapper.classes()).not.toContain('spread-glass-strong')
+  })
+
+  it('tone="glass-strong" is the glass tone PLUS the stronger wash, never a replacement for it', async () => {
+    const wrapper = await mountSuspended(Spread, { props: { tone: 'glass-strong' }, global: { stubs } })
+    expect(wrapper.classes()).toContain('spread-glass-strong')
+    // The strong tone only adds a second tint layer; if it ever stopped carrying the base classes it
+    // would lose the blur and the gated surface and would render as a bare violet block.
+    expect(wrapper.classes()).toContain('glass')
+    expect(wrapper.classes()).toContain('bg-[var(--glass-surface-elevated)]')
+  })
+
   it('renders the requested `as` element', async () => {
     const wrapper = await mountSuspended(Spread, { props: { as: 'header' }, global: { stubs } })
     expect(wrapper.element.tagName.toLowerCase()).toBe('header')

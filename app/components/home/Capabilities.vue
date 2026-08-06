@@ -38,7 +38,7 @@ const show = computed(() => props.pending || props.error || hasData.value)
 </script>
 
 <template>
-  <UiSpread v-if="show" tone="ink" aria-labelledby="capabilities-title">
+  <UiSpread v-if="show" tone="glass" aria-labelledby="capabilities-title">
     <div class="flex flex-col gap-y-4 md:flex-row md:items-end md:justify-between">
       <div>
         <p class="kicker text-link">

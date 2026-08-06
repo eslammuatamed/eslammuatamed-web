@@ -22,7 +22,7 @@ const show = computed(() => props.pending || props.error || hasData.value)
 </script>
 
 <template>
-  <UiSpread v-if="show" tone="lift" aria-labelledby="voices-title">
+  <UiSpread v-if="show" tone="glass" aria-labelledby="voices-title">
     <UiSectionHead
       :eyebrow="t('home.testimonials.eyebrow')"
       :title="t('home.testimonials.title')"

@@ -6,10 +6,22 @@
 //   tone="lift"  — one surface step up, hairline-fenced (depth from surface steps, not shadow — D03-3).
 //   tone="ink"   — a full-bleed dark feature spread; `.on-ink` re-points the semantic tokens so the
 //                  slot content stays theme-agnostic and mirrors correctly in both themes (see main.css).
+//   tone="glass" — a translucent violet-tinted spread over the page's ambient field (024, D03-15).
+//   tone="glass-strong" — the same surface one step more present, for a closing/primary spread.
 // Wraps <section> + <UContainer> (the doc 04 content measure). Vertical rhythm is one token so the
 // beat is consistent; the *composition* inside each spread is what varies. Logical padding only (RTL).
+//
+// The glass tones are composed from THREE existing pieces rather than a new bespoke class: `.glass`
+// (blur + edge lighting, already `@supports`- and reduced-transparency-gated), the
+// `bg-[var(--glass-surface-elevated)]` utility that D14-8 requires the surface be applied with — a
+// background set in `@layer components` loses to Nuxt UI's `bg-default`, which is a bug this project
+// has already paid for once — and `.spread-glass`, which adds only the violet wash and the accent
+// hairline. `glass-strong` layers one more class that re-points two tokens.
+//
+// Unlike `ink`, the glass tones do NOT re-point the semantic `--ui-*` tokens: the surface is
+// translucent over the page, so the page's own theme is still the right one for the content on it.
 interface Props {
-  tone?: 'paper' | 'lift' | 'ink'
+  tone?: 'paper' | 'lift' | 'ink' | 'glass' | 'glass-strong'
   /** Rendered landmark/element — defaults to a plain content `section`. */
   as?: string
   /** Draw a top hairline — used to separate adjacent paper spreads without a surface change. */
@@ -18,9 +30,16 @@ interface Props {
 
 const props = withDefaults(defineProps<Props>(), { tone: 'paper', as: 'section', ruled: false })
 
+// Every class here already exists in the shipped stylesheet — `.glass` from the D03-14 chrome
+// treatment, `border-y`/`border-default` from the `lift` tone, and the surface utility from the
+// mobile drawer. Composing the tone from them is what makes it free against the CSS budget.
+const GLASS_BASE = 'glass border-y border-default bg-[var(--glass-surface-elevated)]'
+
 const toneClass = computed(() => {
   if (props.tone === 'ink') return 'on-ink'
   if (props.tone === 'lift') return 'border-y border-default bg-elevated'
+  if (props.tone === 'glass') return GLASS_BASE
+  if (props.tone === 'glass-strong') return `${GLASS_BASE} spread-glass-strong`
   return props.ruled ? 'border-t border-default' : ''
 })
 </script>

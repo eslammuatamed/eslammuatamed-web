@@ -26,7 +26,7 @@ const isHttp = (url: string) => /^https?:\/\//.test(url)
 </script>
 
 <template>
-  <UiSpread tone="ink" aria-labelledby="contact-title">
+  <UiSpread tone="glass-strong" aria-labelledby="contact-title">
     <div class="flex flex-col gap-x-16 gap-y-12 lg:flex-row lg:items-end lg:justify-between">
       <div class="max-w-2xl">
         <p class="kicker text-link">{{ t('home.contact.eyebrow') }}</p>

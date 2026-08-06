@@ -232,6 +232,25 @@
      inner lift on the top edge only. */
   --glass-highlight: inset 0 1px 0 rgb(255 255 255 / 0.55);
   --glass-shadow: 0 1px 3px rgb(0 0 0 / 0.04);
+
+  /* Violet-glass extension (024). THREE tokens, deliberately — the section treatment reuses every
+     existing glass mechanism rather than standing up a parallel one.
+
+     `--glass-tint` is a TRANSLUCENT violet wash applied as a `background-image` layer ON TOP of the
+     already-gated `--glass-surface-elevated`. That composition is the whole reason this costs almost
+     nothing: the surface token already carries the `@supports (backdrop-filter)` translucency and the
+     `prefers-reduced-transparency` reset, so the tint inherits all three states — translucent glass,
+     no-support opaque, reduced-transparency opaque — without one extra `@supports` block. It is a
+     `background-image`, not a `background-color`, precisely so it composes with the
+     `bg-[var(--glass-surface-elevated)]` utility D14-8 requires instead of competing with it.
+
+     `--glass-edge` is the violet-leaning hairline. It MIXES INTO `--ui-border` rather than replacing
+     it, so the edge is the semantic border nudged toward the accent — D03-3's border-led depth is
+     still what draws the surface, which is the constraint D03-14 set and this extension keeps.
+
+     `--glass-glow` is the page-level ambient field (applied once on `body`, never per section). */
+  --glass-tint: color-mix(in srgb, var(--ui-color-primary-500) 6%, transparent);
+  --glass-edge: color-mix(in srgb, var(--ui-color-primary-500) 20%, var(--ui-border));
 }
 
 .dark {
@@ -243,6 +262,14 @@
      shadows, especially in dark). */
   --glass-highlight: inset 0 1px 0 rgb(255 255 255 / 0.06);
   --glass-shadow: 0 1px 2px rgb(0 0 0 / 0.30);
+
+  /* Dark carries MORE violet than light, and that asymmetry is measured, not stylistic. A 6% violet
+     wash over a near-black surface is invisible; the same 6% over near-white paper is already clearly
+     violet. The tint also moves the two themes in opposite luminance directions — it LIGHTENS the dark
+     surface and DARKENS the light one — so the percentages are set against the text that has the least
+     contrast headroom on each side (see the `--glass-edge` note in doc 14 §2.1). */
+  --glass-tint: color-mix(in srgb, var(--ui-color-primary-400) 10%, transparent);
+  --glass-edge: color-mix(in srgb, var(--ui-color-primary-400) 24%, var(--ui-border));
 }
 
 @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
@@ -544,9 +571,26 @@ html[lang="ar"] [class*="tracking-"] {
     border-radius: var(--radius-control);
   }
 
+  /* AMBIENT VIOLET FIELD (024) — the thing that makes section glass mean something. D03-14's argument
+     against glass on ordinary surfaces was correct as stated: glass over a STATIC ground is decoration,
+     because nothing passes behind it. This field is what removes that premise — it is one page-level
+     gradient set on `body`, so a translucent section has a real, non-uniform ground behind it that
+     changes as the page scrolls past.
+
+     ON `body`, deliberately, and this is the cheap AND the correct choice at once. Per-section glows
+     would be N stacked layers that restart at every section edge (visible seams, and the per-card
+     decoration §1 bans); one body layer is continuous down the whole document for a single paint.
+     Nothing is `fixed` and nothing is animated, so it composites once and cannot cause scroll jank.
+
+     `no-repeat` is load-bearing: the default `repeat` would tile the blobs down a long page into a
+     pattern, which is exactly the "noisy purple wash" this must not be. */
   body {
     background-color: var(--ui-bg);
     color: var(--ui-text);
+    background-image:
+      radial-gradient(60rem 40rem at 12% 8%, var(--glass-tint), transparent 62%),
+      radial-gradient(52rem 36rem at 88% 44%, var(--glass-tint), transparent 62%);
+    background-repeat: no-repeat;
   }
 
   /* Per-locale switch (D14-5): set `font-family` directly on the Arabic root; body and headings
@@ -681,6 +725,79 @@ html:not([lang="ar"]) .nameplate {
       -webkit-backdrop-filter: none;
       backdrop-filter: none;
       box-shadow: none;
+    }
+  }
+
+  /* SECTION GLASS (024) — and the notable thing is what is NOT here.
+
+     A glass spread is composed ENTIRELY from mechanisms that already existed: `.glass` (blur + edge
+     lighting, already `@supports`- and reduced-transparency-gated), `border-y border-default`, and
+     the `bg-[var(--glass-surface-elevated)]` utility D14-8 requires the surface be applied with.
+     Every one of those already ships. The section tone therefore costs **zero new CSS**, which under
+     a stylesheet budget with ~105 bytes of headroom (doc 20 §1, measured) is not a micro-optimization
+     but the difference between the treatment existing and not existing.
+
+     The VIOLET does not come from a tint layer painted on the surface. It comes from the ambient field
+     on `body`, seen THROUGH the translucent surface. That is both cheaper and more honest: it is the
+     literal behaviour of glass, and it is the direct answer to D03-14's objection that glass over a
+     static ground is decoration — here there is genuinely something behind the surface.
+
+     Only `glass-strong` adds a rule, and it adds exactly one declaration: a second wash for the
+     closing invitation, reusing the `--glass-tint` token the interactive rows already need. */
+  .spread-glass-strong {
+    background-image: linear-gradient(var(--glass-tint), var(--glass-tint));
+  }
+
+  /* INTERACTIVE ROW (024) — the repeated project/article index rows. Deliberately NOT `.glass`: these
+     repeat many times down a page, and an independent `backdrop-filter` per row is the expensive
+     compositing case (D14-8's own note). A translucent tint plus an inset hairline reads as the same
+     material at a fraction of the cost, and it re-uses the section tokens so the row and the surface
+     it sits on are demonstrably the same violet.
+     `:focus-within` is listed with `:hover`, not as an afterthought — keyboard focus must reach the
+     same affordance as the pointer (WCAG 2.2 AA; hover is never the only signal). The inline padding
+     is symmetric, so it needs no RTL counterpart, and the matching negative margin keeps the row
+     optically aligned with the section heading. */
+  .row-glass {
+    border-radius: var(--radius-card);
+    padding-inline: 1rem;
+    margin-inline: -1rem;
+    transition:
+      background-color var(--duration-standard) var(--ease-standard),
+      box-shadow var(--duration-standard) var(--ease-standard);
+  }
+
+  .row-glass:hover,
+  .row-glass:focus-within {
+    background-color: var(--glass-tint);
+    box-shadow: inset 0 0 0 1px var(--glass-edge);
+  }
+
+  /* ACCENT GLASS (024) — the shared selected/active treatment for controls that already carry a solid
+     violet fill (pressed filter chip, active pagination page, primary action). It adds ONLY lighting:
+     a top inner highlight and an accent ring. The fill, the text colour and the weight difference all
+     stay where they are, so the state is still conveyed by more than colour (WCAG 1.4.1) and the
+     control keeps its measured AA contrast — this class cannot lower it, because it changes no
+     text and no background. */
+  .accent-glass {
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.25),
+      0 0 0 1px var(--glass-edge);
+  }
+
+  /* Reduced transparency drops the LIGHTING everywhere and removes the ambient field outright. The
+     surfaces themselves stay — the tokens have already turned opaque by this point — so the result is
+     the flat, fully-legible design rather than a broken one. `body` is reachable from the components
+     layer (it beats the `@layer base` rule that sets the gradient) so this stays one block. */
+  @media (prefers-reduced-transparency: reduce) {
+    .row-glass:hover,
+    .row-glass:focus-within,
+    .accent-glass {
+      box-shadow: none;
+    }
+
+    body,
+    .spread-glass-strong {
+      background-image: none;
     }
   }
 
