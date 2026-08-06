@@ -1081,7 +1081,7 @@ export interface components {
             resumeAsset: components["schemas"]["PublicMediaPdfDescriptor"] | null;
             /** Format: uuid */
             portraitAssetId: string | null;
-            /** @description Resolved About portrait descriptor (FR-PUB-020); null when no portrait is configured. */
+            /** @description Resolved About portrait descriptor (FR-PUB-020); null when no portrait is configured. Its `alt` is the per-usage localized alt for this locale, never the asset-level default. */
             portrait: components["schemas"]["PublicMediaImageDescriptor"] | null;
             /**
              * @description Professional address (CV, resume, outreach).
@@ -1133,6 +1133,8 @@ export interface components {
             engineeringPhilosophy: string | null;
             /** @description Plain text. */
             currentFocus: string | null;
+            /** @description Localized alt for the About portrait in this locale. Per-usage: overrides the asset-level default. */
+            portraitAlt: string | null;
         };
         AdminSiteSettingsEntity: {
             /** Format: uuid */
@@ -1142,7 +1144,7 @@ export interface components {
             resumeAssetId: string | null;
             /** Format: uuid */
             portraitAssetId: string | null;
-            /** @description Resolved portrait descriptor for the media picker; null when unset. Read-only — write via portraitAssetId. */
+            /** @description Resolved portrait descriptor for the media picker; null when unset. Read-only — write via portraitAssetId. Its `alt` is the asset-level library default, NOT the published About alt: that lives in translations[locale].portraitAlt and must never be prefilled from here. */
             portrait: components["schemas"]["PublicMediaImageDescriptor"] | null;
             professionalEmail: string | null;
             contactEmail: string | null;
@@ -1203,6 +1205,11 @@ export interface components {
             engineeringPhilosophy?: string;
             /** @example Building bilingual product platforms. */
             currentFocus?: string;
+            /**
+             * @description Localized alt text for the About portrait in THIS locale, or null to clear. Per-usage: it overrides the asset-level MediaAssetAlt default.
+             * @example Eslam Muatamed, smiling, in front of a bookshelf.
+             */
+            portraitAlt?: string | null;
         };
         UpdateSettingsDto: {
             profileLinks?: components["schemas"]["ProfileLinkDto"][];
@@ -1877,7 +1884,7 @@ export interface components {
             /** @example 1 */
             order: number;
             /** @example #3178C6 */
-            brandColor?: Record<string, never> | null;
+            brandColor?: string | null;
             /**
              * @description Whether the skill appears in public listings. Hidden skills stay linked to their projects and experiences.
              * @default true
@@ -1902,7 +1909,7 @@ export interface components {
             /** @example 1 */
             order?: number;
             /** @example #3178C6 */
-            brandColor?: Record<string, never> | null;
+            brandColor?: string | null;
             /**
              * @description Whether the skill appears in public listings. Hidden skills stay linked to their projects and experiences.
              * @default true
@@ -1996,7 +2003,7 @@ export interface components {
              * Format: date
              * @example 2024-06-30
              */
-            endDate?: Record<string, never> | null;
+            endDate?: string | null;
             /** @example true */
             isCurrent: boolean;
             /**
@@ -2031,7 +2038,7 @@ export interface components {
              * Format: date
              * @example 2024-06-30
              */
-            endDate?: Record<string, never> | null;
+            endDate?: string | null;
             /** @example true */
             isCurrent?: boolean;
             /**
@@ -2106,7 +2113,7 @@ export interface components {
              * Format: uuid
              * @example 8b4d...
              */
-            avatarId?: Record<string, never> | null;
+            avatarId?: string | null;
             /** @example 1 */
             order: number;
             /** @example true */
@@ -2128,7 +2135,7 @@ export interface components {
              * Format: uuid
              * @example 8b4d...
              */
-            avatarId?: Record<string, never> | null;
+            avatarId?: string | null;
             /** @example 1 */
             order?: number;
             /** @example true */
@@ -2445,7 +2452,7 @@ export interface components {
         };
         ProjectGalleryCaptionDto: {
             /** @example Admin dashboard overview. */
-            caption?: Record<string, never> | null;
+            caption?: string | null;
         };
         ProjectGalleryItemDto: {
             /**
@@ -2480,14 +2487,14 @@ export interface components {
              * Format: uri
              * @example https://example.com
              */
-            liveUrl?: Record<string, never> | null;
+            liveUrl?: string | null;
             /**
              * Format: uri
              * @example https://github.com/eslammuatamed/example
              */
-            repoUrl?: Record<string, never> | null;
+            repoUrl?: string | null;
             /** @example 2026 */
-            year?: Record<string, never> | null;
+            year?: number | null;
             /** @description At least one complete project translation. */
             translations: components["schemas"]["ProjectTranslationDto"][];
             /**
@@ -2514,14 +2521,14 @@ export interface components {
              * Format: uri
              * @example https://example.com
              */
-            liveUrl?: Record<string, never> | null;
+            liveUrl?: string | null;
             /**
              * Format: uri
              * @example https://github.com/eslammuatamed/example
              */
-            repoUrl?: Record<string, never> | null;
+            repoUrl?: string | null;
             /** @example 2026 */
-            year?: Record<string, never> | null;
+            year?: number | null;
             /** @description At least one complete project translation. */
             translations?: components["schemas"]["ProjectTranslationDto"][];
             /**
