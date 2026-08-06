@@ -22,6 +22,20 @@ export type Envelope<T> = { readonly data: T }
 export type PaginationMeta = Schemas['PageMeta']
 export type Paginated<T> = { readonly data: readonly T[], readonly meta: PaginationMeta }
 
+/**
+ * `/projects` widens its list meta with the technology facets (D10-19) — list-scoped data that
+ * genuinely is not per-item, since a facet describes the whole published set rather than a page of
+ * it. Kept as its own envelope rather than widening `Paginated` for everyone: only this list has
+ * facets, and a shared optional field would let a caller read `meta.facets` on a list that never
+ * sends them.
+ */
+export type ProjectTechnologyFacet = Schemas['ProjectTechnologyFacetEntity']
+export type ProjectListMeta = Schemas['ProjectListMeta']
+export type PaginatedProjects = {
+  readonly data: readonly ProjectListItem[]
+  readonly meta: ProjectListMeta
+}
+
 /** `GET /settings/site` — resolved single-locale public settings (D10-6). */
 export type SiteSettings = Schemas['PublicSiteSettingsEntity']
 export type ProfileLink = Schemas['ProfileLinkEntity']

@@ -18,7 +18,11 @@ const { data, status, error, refresh } = await useProjectsList({
   page: () => page.value,
   technology: () => technology.value
 })
-const { data: technologies } = await useProjectTechnologies()
+
+// Facets ride on the list response (D10-19) — no second request, and no chance of the filter options
+// disagreeing with the list they filter. `?? []` covers the pre-hydration/error window where `data`
+// is null; the chip row then renders "All projects" alone rather than disappearing.
+const facets = computed(() => data.value?.meta.facets ?? [])
 
 // Split pending into initial-load (skeleton) vs a filter/page change with content already on screen
 // (branded overlay) — useAsyncData keeps the previous `data` while refetching (doc 13 §9.1).
@@ -92,7 +96,7 @@ useSeoMeta({
 
     <div class="mt-10">
       <ProjectFilter
-        :technologies="technologies ?? []"
+        :facets="facets"
         :model-value="technology"
         :disabled="Boolean(error)"
         @update:model-value="onTechnologyChange"

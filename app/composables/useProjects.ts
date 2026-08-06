@@ -1,4 +1,4 @@
-import type { Envelope, Paginated, ProjectDetail, ProjectListItem, Skill } from '~/types/models'
+import type { Envelope, PaginatedProjects, ProjectDetail } from '~/types/models'
 
 /**
  * Projects data reads (FR-PUB-030, FR-PUB-031). Both go through the single API door `useApi()`, which
@@ -47,7 +47,7 @@ export function useProjectsList(params: ProjectsListParams) {
     () => `projects:${locale.value}:${params.page()}:${params.technology() ?? 'all'}`,
     () => {
       const technology = params.technology()
-      return api<Paginated<ProjectListItem>>('/projects', {
+      return api<PaginatedProjects>('/projects', {
         locale: locale.value,
         // `perPage` is sent explicitly rather than inherited from the API's default of 12: the page
         // size is this page's layout decision, and an implicit one would reflow the index if the API
@@ -82,23 +82,6 @@ export function useProjectDetail(slug: () => string) {
       api<Envelope<ProjectDetail>>(`/projects/${encodeURIComponent(slug())}`, {
         locale: locale.value
       }).then(res => res.data),
-    { watch: [locale] }
-  )
-}
-
-/**
- * `GET /skills` — the source of the index's technology filter options (doc 04 §: technologies are drawn
- * from the Skills registry, not free text). The filter sends the skill's `slug` as `?technology=` —
- * the canonical form (D10-17), stable across locales and readable in a shared URL. Labels are
- * display-only and arrive already localized, so they must never become the filter value.
- */
-export function useProjectTechnologies() {
-  const api = useApi()
-  const locale = useRouteLocale()
-
-  return useAsyncData(
-    () => `projects:technologies:${locale.value}`,
-    () => api<Envelope<Skill[]>>('/skills', { locale: locale.value }).then(res => res.data),
     { watch: [locale] }
   )
 }
