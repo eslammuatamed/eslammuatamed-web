@@ -1,3 +1,6 @@
+import { createHash } from 'node:crypto'
+import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test } from '@playwright/test'
 
@@ -116,6 +119,38 @@ test.describe('Locale-owned head metadata (D22-7)', () => {
     await expect(page.locator('meta[property="og:image:width"]')).toHaveAttribute('content', '1200')
     await expect(page.locator('meta[property="og:image:height"]')).toHaveAttribute('content', '630')
   })
+
+  // Closes the loop the tag assertions leave open: they prove the URL is well-formed and the
+  // declared dimensions, but a stale, missing or half-copied file would satisfy every one of them.
+  // This FOLLOWS the advertised URL and compares the bytes a crawler would actually receive against
+  // the committed asset, so "the generated image is the one og:image uses" is verified rather than
+  // assumed. Both locales, because the tag is emitted per-render even though the path is shared.
+  for (const [name, path] of [['EN', EN], ['AR', AR]] as const) {
+    test(`serves the committed social card at the ${name} og:image URL`, async ({ page, request }) => {
+      await open(page, path)
+
+      const url = await page.locator('meta[property="og:image"]').getAttribute('content')
+      expect(url).toBeTruthy()
+
+      // The advertised host is the governed site URL, which is not this test server — fetch the
+      // asset by PATH so the check exercises what this build actually serves.
+      const response = await request.get(new URL(url!).pathname)
+      expect(response.status()).toBe(200)
+      expect(response.headers()['content-type']).toContain('image/png')
+
+      const served = await response.body()
+      const committed = readFileSync(
+        fileURLToPath(new URL('../public/social-card.png', import.meta.url)),
+      )
+      const sha = (buf: Buffer) => createHash('sha256').update(buf).digest('hex')
+      expect(sha(served)).toBe(sha(committed))
+
+      // PNG IHDR: width and height are big-endian uint32 at byte offsets 16 and 20. Read from the
+      // SERVED bytes, so the declared 1200x630 above is checked against the real image.
+      expect(served.readUInt32BE(16)).toBe(1200)
+      expect(served.readUInt32BE(20)).toBe(630)
+    })
+  }
 })
 
 test.describe('Structured data (D22-8)', () => {
