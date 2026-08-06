@@ -2175,6 +2175,49 @@ export interface components {
              */
             availableLocales: string[];
         };
+        ProjectTechnologyFacetEntity: {
+            /** @example nestjs */
+            slug: string;
+            /**
+             * @description Localized label for the requested locale. Display only.
+             * @example NestJS
+             */
+            label: string;
+            /**
+             * @description Which group the filter renders this facet under.
+             * @enum {string}
+             */
+            group: "frontend" | "backend";
+            /**
+             * @description Published projects using this technology in the requested locale. Always ≥ 1, and computed over the whole published set — independent of the current page AND of the active technology filter.
+             * @example 3
+             */
+            count: number;
+        };
+        ProjectListMeta: {
+            /**
+             * @description Current page (1-based).
+             * @example 1
+             */
+            page: number;
+            /**
+             * @description Items per page (max 50).
+             * @example 12
+             */
+            perPage: number;
+            /**
+             * @description Total matching items.
+             * @example 42
+             */
+            total: number;
+            /**
+             * @description Total pages for the current perPage.
+             * @example 4
+             */
+            totalPages: number;
+            /** @description Selectable technology filters. Empty when no published project in this locale carries an eligible technology; a group with no facets is simply absent. */
+            facets: components["schemas"]["ProjectTechnologyFacetEntity"][];
+        };
         PublicProjectGalleryItemEntity: {
             /** Format: uuid */
             mediaAssetId: string;
@@ -6003,7 +6046,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Featured-first paginated published projects. */
+            /** @description Featured-first paginated published projects, plus the technology facets the filter should offer (D10-19). */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -6011,7 +6054,7 @@ export interface operations {
                 content: {
                     "application/json": {
                         data: components["schemas"]["PublicProjectListItemEntity"][];
-                        meta: components["schemas"]["PageMeta"];
+                        meta: components["schemas"]["ProjectListMeta"];
                     };
                 };
             };

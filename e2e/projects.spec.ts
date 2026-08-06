@@ -84,6 +84,39 @@ test.describe('Projects index', () => {
     if (apiOrder) expect(rendered).toEqual(apiOrder)
   })
 
+  // Grouping (D10-19) put a heading INSIDE the chip row, and the row is a horizontal scroller below
+  // `sm` with no `flex-wrap`. A full-width heading only starts a new line where wrapping is on, so on
+  // a phone the headings would otherwise sit inline between chips in the scroller — the desktop
+  // viewport every other test here uses cannot see that.
+  test('groups the technology chips onto their own lines on a phone, without a horizontal scroller', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 800 })
+    await page.goto('/projects')
+
+    const filter = page.getByRole('group', { name: 'Technology' })
+    await expect(filter).toBeVisible()
+
+    const headings = filter.locator('span')
+    const headingCount = await headings.count()
+    // Guard: with no heading rendered this test would pass while proving nothing.
+    expect(headingCount).toBeGreaterThan(0)
+
+    // The row must not scroll sideways: a grouped filter that needs horizontal panning hides options.
+    const overflow = await filter.evaluate(el => el.scrollWidth - el.clientWidth)
+    expect(overflow).toBeLessThanOrEqual(1)
+
+    // Every heading starts its own line — nothing shares its vertical band to the left or right.
+    for (let index = 0; index < headingCount; index += 1) {
+      const heading = headings.nth(index)
+      const box = await heading.boundingBox()
+      expect(box).not.toBeNull()
+      const chipsBesideIt = await filter.getByRole('button').evaluateAll(
+        (els, top: number) => els.filter(el => Math.abs(el.getBoundingClientRect().top - top) < 4).length,
+        box!.y
+      )
+      expect(chipsBesideIt).toBe(0)
+    }
+  })
+
   test('technology filter round-trips through the URL and is keyboard reachable', async ({ page }) => {
     await page.goto('/projects')
 

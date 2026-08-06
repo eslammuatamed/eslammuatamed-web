@@ -131,7 +131,11 @@
     "filter": {
       "label": "Technology",
       "all": "All technologies",
-      "clear": "Clear filter"
+      "clear": "Clear filter",
+      "group": {
+        "frontend": "Frontend",
+        "backend": "Backend"
+      }
     },
     "resultCount": "Case studies: {count}",
     "breadcrumbLabel": "Breadcrumb",
