@@ -237,7 +237,7 @@ const dateFormatter = computed(() => new Intl.DateTimeFormat(locale.value === 'a
               :height="detail.height ?? undefined"
               :alt="libraryAltFor(detail, locale) ?? ''"
               decoding="async"
-              class="max-h-80 w-full object-contain"
+              class="max-h-96 w-full object-contain"
             >
             <div v-else class="flex flex-col items-center gap-3 p-8">
               <UIcon name="i-lucide-file-text" class="size-12 text-muted" aria-hidden="true" />

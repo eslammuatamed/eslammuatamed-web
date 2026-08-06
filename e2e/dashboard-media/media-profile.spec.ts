@@ -428,15 +428,26 @@ test.describe('accessibility — unfiltered WCAG 2.2 AA', () => {
     await axe(page, '/dashboard/profile picker open')
   })
 
-  test('the upload control is ONE tab stop, not two', async ({ page }) => {
-    // The styled button is a presentational span; the `<input type=file>` is the real, named
-    // control. An earlier version made both focusable, which is two tab stops for one action.
+  test('the upload control is ONE tab stop, and the file input is not the second', async ({ page }) => {
+    // The BUTTON is the control; the `<input type=file>` is an implementation detail it opens. An
+    // earlier version made both reachable, which is two tab stops and two announcements for one
+    // action.
     await signIn(page)
     await page.goto('/dashboard/media')
     await settled(page)
-    const focusable = page.locator('[data-media-upload], label [role=button]')
-    await expect(focusable).toHaveCount(1)
-    await expect(page.locator('[data-media-upload]')).toHaveAttribute('aria-label', 'Upload')
+
+    const input = page.locator('[data-media-upload]')
+    await expect(input).toHaveAttribute('tabindex', '-1')
+    await expect(input).toHaveAttribute('aria-hidden', 'true')
+
+    const button = page.locator('[data-media-upload-button]')
+    await expect(button).toHaveCount(1)
+    await expect(button).toHaveAccessibleName('Upload')
+
+    // The button really does open the input — otherwise the single remaining tab stop would be
+    // decorative and the control unreachable by keyboard altogether.
+    await button.click()
+    await expect(input).toBeAttached()
   })
 })
 

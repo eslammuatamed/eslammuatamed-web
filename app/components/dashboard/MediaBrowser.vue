@@ -188,36 +188,37 @@ defineExpose({ reload })
         </UButton>
       </div>
 
-      <!-- ONE control, ONE tab stop. The `<input type="file">` IS the button: it stays in the DOM and
-           in the accessibility tree (`sr-only`, not `display:none`, which would make it unreachable
-           and untargetable by `setInputFiles`), the `<label>` makes the styled span activate it on
-           click, and the native input handles Enter and Space itself.
-           An earlier version put `role="button" tabindex="0"` on the span as well. That is TWO tab
-           stops for one action and a second, fake button announced beside the real one — the span
-           is therefore `aria-hidden` and purely presentational, and the input carries the name.
-           The focus ring has to be driven from the input, because the element that receives focus is
-           the invisible one: `has-[:focus-visible]` puts the ring on the box the operator can see. -->
-      <label class="inline-flex rounded-control has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-primary">
-        <input
-          ref="fileInput"
-          type="file"
-          :accept="accept"
-          :disabled="uploading"
-          :aria-label="t('dashboard.media.upload.label')"
-          data-media-upload
-          class="sr-only"
-          @change="onFileChange"
-        >
-        <UButton
-          as="span"
-          aria-hidden="true"
-          icon="i-lucide-upload"
-          :loading="uploading"
-          :ui="{ base: 'cursor-pointer' }"
-        >
-          {{ uploading ? t('dashboard.media.upload.busy') : t('dashboard.media.upload.label') }}
-        </UButton>
-      </label>
+      <!-- ONE control, ONE tab stop: the BUTTON is the control, and the file input is an
+           implementation detail it opens.
+           Two earlier versions were worse. The first made the styled span a second fake button
+           (`role="button" tabindex="0"`) beside the focusable input — two tab stops and two
+           announcements for one action. The second kept the input as the control and painted its
+           focus ring onto the visible box with `has-[:focus-visible]:*`, which was correct but cost
+           three bespoke `:has()` rules in a stylesheet with 40 B of budget headroom.
+           A real `UButton` needs no custom focus CSS at all — it brings its own ring — and the input
+           is removed from the tab order and the accessibility tree entirely. It stays `sr-only`
+           rather than `display:none`, because a detached input cannot be targeted by
+           `setInputFiles` and could not be clicked programmatically. -->
+      <input
+        ref="fileInput"
+        type="file"
+        :accept="accept"
+        :disabled="uploading"
+        tabindex="-1"
+        aria-hidden="true"
+        data-media-upload
+        class="sr-only"
+        @change="onFileChange"
+      >
+      <UButton
+        icon="i-lucide-upload"
+        :loading="uploading"
+        :disabled="uploading"
+        data-media-upload-button
+        @click="fileInput?.click()"
+      >
+        {{ uploading ? t('dashboard.media.upload.busy') : t('dashboard.media.upload.label') }}
+      </UButton>
     </div>
 
     <!-- Upload outcomes are ANNOUNCED, not only coloured. Both live in one polite region so a
@@ -247,7 +248,7 @@ defineExpose({ reload })
 
     <!-- ── results ────────────────────────────────────────────────────────────────────────────── -->
     <div v-if="pending" class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4" :aria-label="t('dashboard.media.loading')" aria-busy="true">
-      <USkeleton v-for="i in 8" :key="i" class="aspect-[4/3] w-full" />
+      <USkeleton v-for="i in 8" :key="i" class="aspect-square w-full" />
     </div>
 
     <!-- The subtle error title defaults to the 500 red, which measures 3.15:1 on its own tinted

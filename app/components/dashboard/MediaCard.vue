@@ -55,7 +55,7 @@ const label = computed(() =>
     <!-- A fixed 4:3 frame so the grid does not reflow as thumbnails of different shapes arrive —
          the images are lazy and arrive over many frames, and an unreserved box would move every
          card below each time one landed. -->
-    <span class="flex aspect-[4/3] w-full items-center justify-center overflow-hidden bg-elevated">
+    <span class="flex aspect-square w-full items-center justify-center overflow-hidden bg-elevated">
       <img
         v-if="thumbnail"
         :src="thumbnail.url"
