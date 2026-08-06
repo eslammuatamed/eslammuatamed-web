@@ -1,0 +1,291 @@
+<script setup lang="ts">
+import type { MediaAsset } from '~/types/models'
+import { MEDIA_PER_PAGE, type MediaKind } from '~/utils/media-query'
+
+/**
+ * The Media Library's browse surface: search, kind filter, upload, grid, pagination, and the
+ * loading / empty / forbidden / error states.
+ *
+ * ONE COMPONENT, TWO STATE HOMES — this is the point of the design. Search, kind and page arrive as
+ * PROPS and leave as events; where they actually live is the parent's decision:
+ *
+ *   - `/dashboard/media` keeps them in the ROUTE QUERY, because on a page the URL genuinely is the
+ *     state: Back/Forward, reload and a shared link all have to reproduce the same grid.
+ *   - the PICKER keeps them in component-local refs, because it opens inside someone else's page.
+ *     Writing `?q=` from a modal would rewrite the host page's address, leave parameters behind when
+ *     it closed, and make a `?page=` meant for the picker indistinguishable from the host's own.
+ *
+ * Owning the state internally would have forced one of those two to be wrong, and hoisting the
+ * FETCHING into the parents would have duplicated the request logic this exists to share.
+ */
+const props = defineProps<{
+  q?: string
+  kind?: MediaKind
+  page: number
+  /**
+   * Restricts the browser to one kind and HIDES the kind filter. The picker passes `IMAGE` for the
+   * portrait; the library page passes nothing and lets the operator filter freely.
+   */
+  allowedKind?: MediaKind
+  /** The currently-selected asset, in a selecting context. Renders the pressed state. */
+  selectedId?: string | null
+}>()
+
+const emit = defineEmits<{
+  'update:q': [value: string | undefined]
+  'update:kind': [value: MediaKind | undefined]
+  'update:page': [value: number]
+  'select': [asset: MediaAsset]
+  /** An upload landed. The parent may adopt it (picker) or simply note the library changed (page). */
+  'uploaded': [asset: MediaAsset, deduplicated: boolean]
+}>()
+
+const { t } = useI18n()
+const library = useMediaLibrary()
+const { items, total, totalPages, pending, forbidden, failed } = library
+
+/** `allowedKind` always wins: a locked browser must not be widened by a stale prop. */
+const effectiveKind = computed(() => props.allowedKind ?? props.kind)
+
+async function reload(): Promise<void> {
+  await library.load({ q: props.q, kind: effectiveKind.value, page: props.page })
+}
+
+/**
+ * The search box's own text, so typing is not fighting a round-trip through the parent's state.
+ *
+ * Bound directly to the prop, the input would re-render from whatever the parent had committed on
+ * the previous debounce tick and the caret would jump mid-word. This holds the keystrokes; the
+ * debounce below is what promotes them to the parent.
+ */
+const search = ref(props.q ?? '')
+// Kept in sync when the query changes from OUTSIDE the box — Back/Forward, or a cleared filter.
+watch(() => props.q, (value) => {
+  if ((value ?? '') !== search.value.trim()) search.value = value ?? ''
+})
+
+let searchTimer: ReturnType<typeof setTimeout> | undefined
+watch(search, (value) => {
+  clearTimeout(searchTimer)
+  searchTimer = setTimeout(() => {
+    const next = value.trim()
+    // `undefined` rather than `''` so "no search" has exactly ONE representation; `?q=` and no `q`
+    // must not be two states that fetch two different URLs.
+    emit('update:q', next.length > 0 ? next : undefined)
+    // A new search invalidates the page number: staying on page 3 of the previous result set would
+    // usually land past the end of the new one and render an empty grid for a query with matches.
+    if (props.page !== 1) emit('update:page', 1)
+  }, 300)
+})
+onUnmounted(() => clearTimeout(searchTimer))
+
+function selectKind(next: MediaKind | undefined): void {
+  emit('update:kind', next)
+  if (props.page !== 1) emit('update:page', 1)
+}
+
+// One watcher over everything the request depends on, rather than a reload call in each handler:
+// a handler that forgot one would silently show results for the previous filter.
+watch(() => [props.q, effectiveKind.value, props.page] as const, () => void reload(), { immediate: true })
+
+// ── upload ──────────────────────────────────────────────────────────────────────────────────────
+const fileInput = useTemplateRef<HTMLInputElement>('fileInput')
+const uploading = ref(false)
+const uploadError = ref<string | null>(null)
+const uploadNotice = ref<string | null>(null)
+
+/**
+ * `accept` narrows the OS file dialog; it is a convenience, never the enforcement. The API validates
+ * the real bytes and rejects a spoofed content type with a 422 — a renamed `.exe` is caught there,
+ * not here, and this attribute could be bypassed by choosing "all files" in any browser.
+ */
+const accept = computed(() => {
+  if (props.allowedKind === 'IMAGE') return 'image/*'
+  if (props.allowedKind === 'PDF') return 'application/pdf'
+  return 'image/*,application/pdf'
+})
+
+async function onFileChange(event: Event): Promise<void> {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  // Always clear the input, and clear it EARLY: a file input holds its value, so re-choosing the
+  // same file after a failed upload would fire no `change` event at all and the retry would appear
+  // to do nothing.
+  input.value = ''
+  if (!file) return
+
+  uploading.value = true
+  uploadError.value = null
+  uploadNotice.value = null
+  try {
+    const { asset, deduplicated } = await library.upload(file)
+    // Deduplication is a SUCCESS with a different story: the operator uploaded bytes that already
+    // exist, so no new asset appears in the grid and saying nothing would look like a failed upload.
+    uploadNotice.value = deduplicated
+      ? t('dashboard.media.upload.deduplicated', { filename: asset.originalFilename })
+      : t('dashboard.media.upload.done', { filename: asset.originalFilename })
+    emit('uploaded', asset, deduplicated)
+    // Back to page 1: uploads land newest-first, so the new asset is on the first page and nowhere
+    // else. Reloading in place would leave the operator looking at a page it cannot be on.
+    if (props.page !== 1) emit('update:page', 1)
+    else await reload()
+  } catch (error) {
+    uploadError.value = error instanceof ApiError && error.status === 422
+      ? (error.detail ?? error.message)
+      : t('dashboard.media.upload.failed')
+  } finally {
+    uploading.value = false
+  }
+}
+
+defineExpose({ reload })
+</script>
+
+<template>
+  <div class="flex flex-col gap-4">
+    <!-- ── controls ───────────────────────────────────────────────────────────────────────────── -->
+    <div class="flex flex-wrap items-center gap-2">
+      <UInput
+        v-model="search"
+        type="search"
+        icon="i-lucide-search"
+        class="min-w-48 flex-1"
+        :placeholder="t('dashboard.media.searchPlaceholder')"
+        :aria-label="t('dashboard.media.searchLabel')"
+      />
+
+      <!-- Hidden entirely when the browser is locked to one kind: a filter with a single legal value
+           is a control that cannot do anything. -->
+      <div
+        v-if="!allowedKind"
+        class="flex items-center gap-1"
+        role="group"
+        :aria-label="t('dashboard.media.kindLabel')"
+      >
+        <UButton
+          v-for="option in ([undefined, 'IMAGE', 'PDF'] as const)"
+          :key="option ?? 'all'"
+          size="sm"
+          :color="kind === option ? 'primary' : 'neutral'"
+          :variant="kind === option ? 'solid' : 'ghost'"
+          :aria-pressed="kind === option"
+          :ui="kind === option ? { base: 'bg-primary-600 text-white hover:bg-primary-700 active:bg-primary-700' } : undefined"
+          @click="selectKind(option)"
+        >
+          {{ option ? t(`dashboard.media.kind.${option}`) : t('dashboard.media.kind.all') }}
+        </UButton>
+      </div>
+
+      <!-- The input is the real control and stays in the DOM and in the accessibility tree; `sr-only`
+           hides it visually only. A `display:none` input cannot be activated by a click forwarded to
+           it, and Playwright's `setInputFiles` needs a real, attached input to target. -->
+      <label class="inline-flex">
+        <span class="sr-only">{{ t('dashboard.media.upload.label') }}</span>
+        <input
+          ref="fileInput"
+          type="file"
+          :accept="accept"
+          :disabled="uploading"
+          data-media-upload
+          class="sr-only"
+          @change="onFileChange"
+        >
+        <UButton
+          as="span"
+          role="button"
+          tabindex="0"
+          icon="i-lucide-upload"
+          :loading="uploading"
+          :ui="{ base: 'cursor-pointer' }"
+          @keydown.enter.prevent="fileInput?.click()"
+          @keydown.space.prevent="fileInput?.click()"
+        >
+          {{ uploading ? t('dashboard.media.upload.busy') : t('dashboard.media.upload.label') }}
+        </UButton>
+      </label>
+    </div>
+
+    <!-- Upload outcomes are ANNOUNCED, not only coloured. Both live in one polite region so a
+         success replacing a failure is a single announcement rather than two competing ones. -->
+    <div aria-live="polite" class="empty:hidden">
+      <UAlert
+        v-if="uploadError"
+        color="error"
+        variant="subtle"
+        icon="i-lucide-triangle-alert"
+        :ui="{ title: 'text-error-700 dark:text-error-300' }"
+        :title="t('dashboard.media.upload.failedTitle')"
+        :description="uploadError"
+        close
+        @update:open="uploadError = null"
+      />
+      <UAlert
+        v-else-if="uploadNotice"
+        color="neutral"
+        variant="subtle"
+        icon="i-lucide-check"
+        :description="uploadNotice"
+        close
+        @update:open="uploadNotice = null"
+      />
+    </div>
+
+    <!-- ── results ────────────────────────────────────────────────────────────────────────────── -->
+    <div v-if="pending" class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4" :aria-label="t('dashboard.media.loading')" aria-busy="true">
+      <USkeleton v-for="i in 8" :key="i" class="aspect-[4/3] w-full" />
+    </div>
+
+    <!-- The subtle error title defaults to the 500 red, which measures 3.15:1 on its own tinted
+         background — under the 4.5:1 AA minimum. The 700 shade is 5.32:1, matching the treatment
+         the Inbox standardised on for exactly this reason. -->
+    <UAlert
+      v-else-if="forbidden"
+      color="error"
+      variant="subtle"
+      icon="i-lucide-lock"
+      :ui="{ title: 'text-error-700 dark:text-error-300' }"
+      :title="t('dashboard.media.forbiddenTitle')"
+      :description="t('dashboard.media.forbiddenBody')"
+    />
+
+    <div v-else-if="failed" class="rounded-control border border-default p-6 text-center">
+      <p class="font-medium text-highlighted">{{ t('dashboard.media.errorTitle') }}</p>
+      <p class="mt-1 text-sm text-muted">{{ t('dashboard.media.errorBody') }}</p>
+      <UButton class="mt-4" color="neutral" variant="subtle" @click="reload()">
+        {{ t('dashboard.media.retry') }}
+      </UButton>
+    </div>
+
+    <!-- An empty LIBRARY and an empty SEARCH are different situations with different next actions:
+         one says "upload something", the other says "try a different search". -->
+    <div v-else-if="items.length === 0" class="rounded-control border border-default p-10 text-center">
+      <p class="font-medium text-highlighted">
+        {{ q || kind || allowedKind ? t('dashboard.media.noMatchTitle') : t('dashboard.media.emptyTitle') }}
+      </p>
+      <p class="mt-1 text-sm text-muted">
+        {{ q || kind || allowedKind ? t('dashboard.media.noMatchBody') : t('dashboard.media.emptyBody') }}
+      </p>
+    </div>
+
+    <template v-else>
+      <ul class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+        <li v-for="asset in items" :key="asset.id">
+          <DashboardMediaCard
+            :asset="asset"
+            :selected="selectedId === undefined ? undefined : selectedId === asset.id"
+            @select="$emit('select', $event)"
+          />
+        </li>
+      </ul>
+
+      <div v-if="totalPages > 1" class="flex justify-center">
+        <UPagination
+          :page="page"
+          :total="total"
+          :items-per-page="MEDIA_PER_PAGE"
+          @update:page="$emit('update:page', $event)"
+        />
+      </div>
+    </template>
+  </div>
+</template>

@@ -101,3 +101,31 @@ export type LoginCredentials = Schemas['LoginDto']
 
 /** Admin inbox message descriptor (FR-DSH-060, D10-16 (d) — `email`/`phone` nullable, never both). */
 export type ContactMessage = Schemas['ContactMessageEntity']
+
+/**
+ * Media Library (doc 07). `MediaAsset` is the admin descriptor — variants, per-locale library alt,
+ * content hash and dimensions — as `GET /admin/media` and `POST /admin/media` return it.
+ *
+ * `MediaAssetAlt` is ASSET-LEVEL LIBRARY DEFAULT metadata (D09-22). It is not the published alt for
+ * any usage that defines its own; see `portrait-form.ts`, which is where that rule is enforced.
+ */
+export type MediaAsset = Schemas['AdminMediaAssetEntity']
+export type MediaAssetAlt = Schemas['AdminMediaAltEntity']
+export type MediaVariant = Schemas['AdminMediaVariantEntity']
+
+/**
+ * One record that references an asset. Returned by `GET /admin/media/:id/usages` and the reason a
+ * delete can be refused: every media relation is `onDelete: Restrict`, so an in-use asset cannot be
+ * removed and the operator is shown WHAT is holding it rather than a bare failure.
+ */
+export type MediaUsage = Schemas['MediaUsageEntity']
+
+/**
+ * Admin site settings. `translations` is a MAP keyed by locale on READ and an ARRAY of per-locale
+ * upserts on WRITE — an asymmetry in the contract, not a modelling choice here, and the reason
+ * `portrait-form.ts` builds the write payload explicitly rather than echoing the read shape back.
+ */
+export type AdminSiteSettings = Schemas['AdminSiteSettingsEntity']
+export type AdminSettingsTranslation = Schemas['SiteSettingsTranslationEntity']
+export type UpdateSettingsPayload = Schemas['UpdateSettingsDto']
+export type SettingsTranslationInput = Schemas['SettingsTranslationDto']

@@ -325,7 +325,11 @@
       "messages": "Messages",
       "openMenu": "Open navigation",
       "closeMenu": "Close navigation",
-      "primary": "Dashboard"
+      "primary": "Dashboard",
+      "library": "Library",
+      "media": "Media",
+      "system": "System",
+      "profile": "Profile"
     },
     "messages": {
       "title": "Messages",
@@ -393,6 +397,123 @@
       },
       "updateErrorTitle": "The change did not save",
       "updateErrorBody": "Try again in a moment."
+    },
+    "media": {
+      "title": "Media",
+      "description": "Images and PDFs used across the site.",
+      "searchLabel": "Search media",
+      "searchPlaceholder": "Search by filename or alt text",
+      "kindLabel": "Filter by type",
+      "kind": {
+        "all": "All",
+        "IMAGE": "Image",
+        "PDF": "PDF"
+      },
+      "unit": {
+        "kb": "KB",
+        "mb": "MB"
+      },
+      "cardLabel": "{filename}, {kind}",
+      "loading": "Loading media…",
+      "retry": "Try again",
+      "upload": {
+        "label": "Upload",
+        "busy": "Uploading…",
+        "done": "{filename} uploaded.",
+        "deduplicated": "{filename} matches a file already in the library, so the existing one was used.",
+        "failedTitle": "The upload did not complete",
+        "failed": "The file could not be uploaded. This is usually temporary."
+      },
+      "emptyTitle": "No media yet",
+      "emptyBody": "Upload an image or a PDF to get started.",
+      "noMatchTitle": "Nothing matches",
+      "noMatchBody": "Try a different search, or clear the filter.",
+      "forbiddenTitle": "You do not have access to media",
+      "forbiddenBody": "This account is not permitted to manage the media library.",
+      "errorTitle": "Media could not be loaded",
+      "errorBody": "The request did not complete. This is usually temporary.",
+      "detail": {
+        "title": "Media asset",
+        "filename": "Filename",
+        "type": "Type",
+        "size": "Size",
+        "dimensions": "Dimensions",
+        "uploaded": "Uploaded",
+        "openPdf": "Open PDF",
+        "libraryAlt": "Library alt text",
+        "libraryAltNone": "None set",
+        "libraryAltHint": "The library default for this image. Each place the image is used can define its own alt text, which is what publishes there.",
+        "usageHeading": "Used by",
+        "usageNone": "Not used anywhere.",
+        "usageFailed": "The usage list could not be loaded."
+      },
+      "usage": {
+        "article-cover": "Article cover image",
+        "article-og": "Article social image",
+        "project-og": "Project social image",
+        "project-gallery": "Project gallery image",
+        "testimonial-avatar": "Testimonial portrait",
+        "page-seo-og": "Page social image",
+        "settings-resume": "Resume PDF",
+        "settings-portrait": "About portrait"
+      },
+      "delete": {
+        "start": "Delete",
+        "confirm": "Delete permanently",
+        "cancel": "Keep",
+        "warning": "The file and every generated size are removed from storage. This cannot be undone.",
+        "inUseHint": "This file is in use and cannot be deleted. Remove it from the places listed above first.",
+        "blockedTitle": "This file is still in use",
+        "blockedBody": "It was referenced while you were looking at it. The updated list is above.",
+        "errorTitle": "The file was not deleted",
+        "errorBody": "The request did not complete. This is usually temporary."
+      }
+    },
+    "picker": {
+      "none": "Nothing selected.",
+      "select": "Select",
+      "replace": "Replace",
+      "clear": "Clear",
+      "selectFor": "Select media for {field}",
+      "replaceFor": "Replace the media for {field}",
+      "clearFor": "Clear the media for {field}",
+      "dialogTitle": "Select media for {field}",
+      "dialogDescription": "Choose an existing file, or upload a new one without leaving this page.",
+      "resolveFailedTitle": "The selected file could not be loaded",
+      "resolveFailedBody": "The reference is still saved. Reload the page, or select a different file."
+    },
+    "profile": {
+      "title": "Profile",
+      "description": "The portrait shown on the About page.",
+      "loading": "Loading profile…",
+      "retry": "Try again",
+      "save": "Save",
+      "saved": "Saved.",
+      "noChanges": "No unsaved changes.",
+      "saveErrorTitle": "The change did not save",
+      "saveErrorBody": "Your edits are still here. The request did not complete — try again.",
+      "forbiddenTitle": "You do not have access to the profile",
+      "forbiddenBody": "This account is not permitted to manage site settings.",
+      "errorTitle": "The profile could not be loaded",
+      "errorBody": "The request did not complete. This is usually temporary.",
+      "portrait": {
+        "heading": "About portrait",
+        "help": "A single image, shown beside the About page introduction.",
+        "remove": "Remove portrait",
+        "removeConfirm": "Remove it",
+        "removeCancel": "Keep it",
+        "removeWarning": "The image stays in the media library. Its alt text for the About page is cleared, so a portrait selected later starts with a description written for it.",
+        "altHeading": "Alt text for the About page",
+        "altHelp": "Describe the image for someone who cannot see it. This text is used on the About page only, so write it for that context. Both languages are required.",
+        "altLabel": {
+          "en": "English alt text",
+          "ar": "Arabic alt text"
+        },
+        "altRequired": "Alt text is required in this language before the portrait can be saved.",
+        "libraryDefaultLabel": "Library description of this image",
+        "libraryDefaultHint": "Shown for reference only. It is not used on the About page — write the text above yourself so it suits this context.",
+        "publishNote": "The About page shows the portrait once both languages have alt text. Until then it keeps its current state."
+      }
     }
   },
   "footer": {
