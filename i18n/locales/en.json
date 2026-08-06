@@ -400,7 +400,7 @@
     "builtWith": "Designed and built with care.",
     "colophon": "Built with Nuxt, Vue, TypeScript and Tailwind — bilingual and RTL-first.",
     "downloadResume": "Download résumé",
-    "whatsapp": "Message me on WhatsApp"
+    "whatsappLabel": "Message Eslam on WhatsApp"
   },
   "error": {
     "notFoundTitle": "Page not found",

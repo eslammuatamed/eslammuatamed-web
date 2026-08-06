@@ -59,8 +59,21 @@ const isHttp = (url: string) => /^https?:\/\//.test(url)
 
         <!-- Icon-only social (007): the platform icon is the affordance; the visible name is dropped but
              the accessible name is carried on the link via aria-label. Padded icon buttons keep a
-             comfortable target even without visible text. -->
-        <ul v-if="socialLinks.length" class="mt-6 flex flex-wrap items-center gap-3">
+             comfortable target even without visible text.
+
+             WhatsApp is the LAST chip in this same row, not a row of its own. The earlier treatment
+             gave it a visible label on the reasoning that one unfamiliar affordance needs its name
+             to carry it; in practice it read as a stray full-width link under a tidy icon row, so
+             the owner moved it in. Order is GitHub → LinkedIn → Email → WhatsApp: the governed
+             `profileLinks` order supplies the first three and WhatsApp is appended, so it stays last
+             without this component sorting anything.
+
+             `wrap` is on the row, so a narrow viewport reflows all four as ONE group — WhatsApp must
+             never fall back to a standalone full-width row. -->
+        <ul
+          v-if="socialLinks.length || whatsappUrl"
+          class="mt-6 flex flex-wrap items-center gap-3"
+        >
           <li v-for="link in socialLinks" :key="link.url">
             <a
               :href="link.url"
@@ -72,24 +85,24 @@ const isHttp = (url: string) => /^https?:\/\//.test(url)
               <UIcon :name="link.icon || 'i-lucide-link'" class="size-5" aria-hidden="true" />
             </a>
           </li>
-        </ul>
 
-        <!-- The number itself is NOT printed here (018): /contact is where the number is shown, the
-             Footer is an action. A visible label rather than the social row's icon-only treatment —
-             this is a single unfamiliar affordance in the chrome, not one of a row of recognisable
-             platform marks, so its name carries it. `rel` omits `me`: wa.me is a message endpoint,
-             not a profile the owner claims. -->
-        <p v-if="whatsappUrl" class="mt-6">
-          <a
-            :href="whatsappUrl"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="inline-flex items-center gap-2 text-body-sm text-muted transition-colors hover:text-highlighted"
-          >
-            <UIcon name="i-simple-icons-whatsapp" class="size-5 shrink-0" aria-hidden="true" />
-            {{ t('footer.whatsapp') }}
-          </a>
-        </p>
+          <!-- The number itself is NOT printed here (018): /contact is where the number is shown, the
+               Footer is an action. The class list is copied verbatim from the sibling above — same
+               size, border, hover, focus and theme behaviour — because "matches the other buttons"
+               has to be true structurally, not approximately. `rel` omits `me`: wa.me is a message
+               endpoint, not a profile the owner claims. -->
+          <li v-if="whatsappUrl">
+            <a
+              :href="whatsappUrl"
+              :aria-label="t('footer.whatsappLabel')"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="grid size-10 place-items-center rounded-full border border-default text-muted transition-colors hover:border-primary hover:text-primary"
+            >
+              <UIcon name="i-simple-icons-whatsapp" class="size-5" aria-hidden="true" />
+            </a>
+          </li>
+        </ul>
 
         <div class="mt-8 flex items-center gap-2">
           <LayoutLangToggle />
