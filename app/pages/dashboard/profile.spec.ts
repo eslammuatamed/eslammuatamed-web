@@ -89,6 +89,19 @@ describe('the alt inputs are NEVER prefilled from the asset-level default (D09-2
     expect(altInput(wrapper, 'ar').element.value).not.toBe('ASSET DEFAULT')
   })
 
+  it('HIDES the reference once the selection differs from the saved portrait', async () => {
+    // `settings` changes only on load and save, while the selection changes immediately — so an
+    // ungated block would keep describing the PREVIOUS portrait under a label saying "this image",
+    // for the whole replace flow. Showing nothing is the honest answer.
+    const wrapper = await mount(trapSettings(null, null))
+    expect(wrapper.find('[data-portrait-library-default]').exists()).toBe(true)
+
+    await wrapper.findComponent({ name: 'DashboardMediaPicker' }).vm.$emit('update:modelValue', 'asset-2')
+    await flushPromises()
+
+    expect(wrapper.find('[data-portrait-library-default]').exists()).toBe(false)
+  })
+
   it('seeds each input from ITS OWN locale per-usage alt, not from the default or the other locale', async () => {
     const wrapper = await mount(trapSettings('Per-usage English', 'نص عربي'))
     expect(altInput(wrapper, 'en').element.value).toBe('Per-usage English')

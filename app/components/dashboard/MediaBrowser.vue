@@ -19,9 +19,12 @@ import { MEDIA_PER_PAGE, type MediaKind } from '~/utils/media-query'
  * FETCHING into the parents would have duplicated the request logic this exists to share.
  */
 const props = defineProps<{
-  q?: string
-  kind?: MediaKind
-  page: number
+  /**
+   * Search, kind and page as ONE value, and emitted back as one. See `MediaBrowseState` — a
+   * URL-backed parent must perform exactly one navigation per interaction, and separate events for
+   * "the filter changed" and "so the page resets" produce two pushes that overwrite each other.
+   */
+  state: MediaBrowseState
   /**
    * Restricts the browser to one kind and HIDES the kind filter. The picker passes `IMAGE` for the
    * portrait; the library page passes nothing and lets the operator filter freely.
@@ -32,9 +35,7 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  'update:q': [value: string | undefined]
-  'update:kind': [value: MediaKind | undefined]
-  'update:page': [value: number]
+  'update:state': [value: MediaBrowseState]
   'select': [asset: MediaAsset]
   /** An upload landed. The parent may adopt it (picker) or simply note the library changed (page). */
   'uploaded': [asset: MediaAsset, deduplicated: boolean]
@@ -45,10 +46,21 @@ const library = useMediaLibrary()
 const { items, total, totalPages, pending, forbidden, failed } = library
 
 /** `allowedKind` always wins: a locked browser must not be widened by a stale prop. */
-const effectiveKind = computed(() => props.allowedKind ?? props.kind)
+const effectiveKind = computed(() => props.allowedKind ?? props.state.kind)
 
 async function reload(): Promise<void> {
-  await library.load({ q: props.q, kind: effectiveKind.value, page: props.page })
+  await library.load({ q: props.state.q, kind: effectiveKind.value, page: props.state.page })
+}
+
+/**
+ * Emit the next browse state as ONE value.
+ *
+ * Every caller resets the page unless it is explicitly setting one, because a new search or filter
+ * invalidates the page number: staying on page 3 of the previous result set usually lands past the
+ * end of the new one and renders an empty grid for a query that has matches.
+ */
+function browse(patch: Partial<MediaBrowseState>): void {
+  emit('update:state', { q: props.state.q, kind: props.state.kind, page: 1, ...patch })
 }
 
 /**
@@ -58,9 +70,9 @@ async function reload(): Promise<void> {
  * the previous debounce tick and the caret would jump mid-word. This holds the keystrokes; the
  * debounce below is what promotes them to the parent.
  */
-const search = ref(props.q ?? '')
+const search = ref(props.state.q ?? '')
 // Kept in sync when the query changes from OUTSIDE the box — Back/Forward, or a cleared filter.
-watch(() => props.q, (value) => {
+watch(() => props.state.q, (value) => {
   if ((value ?? '') !== search.value.trim()) search.value = value ?? ''
 })
 
@@ -71,22 +83,22 @@ watch(search, (value) => {
     const next = value.trim()
     // `undefined` rather than `''` so "no search" has exactly ONE representation; `?q=` and no `q`
     // must not be two states that fetch two different URLs.
-    emit('update:q', next.length > 0 ? next : undefined)
-    // A new search invalidates the page number: staying on page 3 of the previous result set would
-    // usually land past the end of the new one and render an empty grid for a query with matches.
-    if (props.page !== 1) emit('update:page', 1)
+    browse({ q: next.length > 0 ? next : undefined })
   }, 300)
 })
 onUnmounted(() => clearTimeout(searchTimer))
 
 function selectKind(next: MediaKind | undefined): void {
-  emit('update:kind', next)
-  if (props.page !== 1) emit('update:page', 1)
+  browse({ kind: next })
 }
 
 // One watcher over everything the request depends on, rather than a reload call in each handler:
 // a handler that forgot one would silently show results for the previous filter.
-watch(() => [props.q, effectiveKind.value, props.page] as const, () => void reload(), { immediate: true })
+watch(
+  () => [props.state.q, effectiveKind.value, props.state.page] as const,
+  () => void reload(),
+  { immediate: true }
+)
 
 // ── upload ──────────────────────────────────────────────────────────────────────────────────────
 const fileInput = useTemplateRef<HTMLInputElement>('fileInput')
@@ -127,7 +139,7 @@ async function onFileChange(event: Event): Promise<void> {
     emit('uploaded', asset, deduplicated)
     // Back to page 1: uploads land newest-first, so the new asset is on the first page and nowhere
     // else. Reloading in place would leave the operator looking at a page it cannot be on.
-    if (props.page !== 1) emit('update:page', 1)
+    if (props.state.page !== 1) browse({ page: 1 })
     else await reload()
   } catch (error) {
     uploadError.value = error instanceof ApiError && error.status === 422
@@ -166,39 +178,42 @@ defineExpose({ reload })
           v-for="option in ([undefined, 'IMAGE', 'PDF'] as const)"
           :key="option ?? 'all'"
           size="sm"
-          :color="kind === option ? 'primary' : 'neutral'"
-          :variant="kind === option ? 'solid' : 'ghost'"
-          :aria-pressed="kind === option"
-          :ui="kind === option ? { base: 'bg-primary-600 text-white hover:bg-primary-700 active:bg-primary-700' } : undefined"
+          :color="state.kind === option ? 'primary' : 'neutral'"
+          :variant="state.kind === option ? 'solid' : 'ghost'"
+          :aria-pressed="state.kind === option"
+          :ui="state.kind === option ? { base: 'bg-primary-600 text-white hover:bg-primary-700 active:bg-primary-700' } : undefined"
           @click="selectKind(option)"
         >
           {{ option ? t(`dashboard.media.kind.${option}`) : t('dashboard.media.kind.all') }}
         </UButton>
       </div>
 
-      <!-- The input is the real control and stays in the DOM and in the accessibility tree; `sr-only`
-           hides it visually only. A `display:none` input cannot be activated by a click forwarded to
-           it, and Playwright's `setInputFiles` needs a real, attached input to target. -->
-      <label class="inline-flex">
-        <span class="sr-only">{{ t('dashboard.media.upload.label') }}</span>
+      <!-- ONE control, ONE tab stop. The `<input type="file">` IS the button: it stays in the DOM and
+           in the accessibility tree (`sr-only`, not `display:none`, which would make it unreachable
+           and untargetable by `setInputFiles`), the `<label>` makes the styled span activate it on
+           click, and the native input handles Enter and Space itself.
+           An earlier version put `role="button" tabindex="0"` on the span as well. That is TWO tab
+           stops for one action and a second, fake button announced beside the real one — the span
+           is therefore `aria-hidden` and purely presentational, and the input carries the name.
+           The focus ring has to be driven from the input, because the element that receives focus is
+           the invisible one: `has-[:focus-visible]` puts the ring on the box the operator can see. -->
+      <label class="inline-flex rounded-control has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-primary">
         <input
           ref="fileInput"
           type="file"
           :accept="accept"
           :disabled="uploading"
+          :aria-label="t('dashboard.media.upload.label')"
           data-media-upload
           class="sr-only"
           @change="onFileChange"
         >
         <UButton
           as="span"
-          role="button"
-          tabindex="0"
+          aria-hidden="true"
           icon="i-lucide-upload"
           :loading="uploading"
           :ui="{ base: 'cursor-pointer' }"
-          @keydown.enter.prevent="fileInput?.click()"
-          @keydown.space.prevent="fileInput?.click()"
         >
           {{ uploading ? t('dashboard.media.upload.busy') : t('dashboard.media.upload.label') }}
         </UButton>
@@ -260,10 +275,10 @@ defineExpose({ reload })
          one says "upload something", the other says "try a different search". -->
     <div v-else-if="items.length === 0" class="rounded-control border border-default p-10 text-center">
       <p class="font-medium text-highlighted">
-        {{ q || kind || allowedKind ? t('dashboard.media.noMatchTitle') : t('dashboard.media.emptyTitle') }}
+        {{ state.q || state.kind || allowedKind ? t('dashboard.media.noMatchTitle') : t('dashboard.media.emptyTitle') }}
       </p>
       <p class="mt-1 text-sm text-muted">
-        {{ q || kind || allowedKind ? t('dashboard.media.noMatchBody') : t('dashboard.media.emptyBody') }}
+        {{ state.q || state.kind || allowedKind ? t('dashboard.media.noMatchBody') : t('dashboard.media.emptyBody') }}
       </p>
     </div>
 
@@ -280,10 +295,10 @@ defineExpose({ reload })
 
       <div v-if="totalPages > 1" class="flex justify-center">
         <UPagination
-          :page="page"
+          :page="state.page"
           :total="total"
           :items-per-page="MEDIA_PER_PAGE"
-          @update:page="$emit('update:page', $event)"
+          @update:page="browse({ page: $event })"
         />
       </div>
     </template>

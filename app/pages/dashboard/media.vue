@@ -28,17 +28,31 @@ const library = useMediaLibrary()
 useHead({ title: () => `${t('dashboard.media.title')} · ${t('dashboard.title')}` })
 
 /** ONE canonical parse of the route query; every read below derives from it. */
-const parsedQuery = computed(() => parseMediaQuery(route.query))
-const q = computed(() => parsedQuery.value.q)
-const kind = computed(() => parsedQuery.value.kind)
-const page = computed(() => parsedQuery.value.page)
+const browseState = computed<MediaBrowseState>(() => parseMediaQuery(route.query))
 
-function setQuery(patch: Record<string, string | undefined>): void {
-  // Build the next query by filtering rather than deleting: `undefined` means "drop this parameter",
-  // stated without mutating the route's own query object, and unrelated parameters are preserved.
-  const merged = { ...route.query, ...patch }
-  const next = Object.fromEntries(Object.entries(merged).filter(([, v]) => v !== undefined))
-  void router.push({ query: next })
+/**
+ * ONE navigation per interaction — this is load-bearing, not tidiness.
+ *
+ * `router.push` does not update `route.query` synchronously, so two pushes in the same tick both
+ * build their target from the SAME pre-interaction query and the LAST one wins, silently discarding
+ * the first. That is why the browser emits the whole `{ q, kind, page }` triple rather than one
+ * event per field: selecting a kind while on page 2 is one interaction that changes two parameters,
+ * and as two events it dropped the filter entirely and landed on a bare URL.
+ *
+ * Unrelated parameters are preserved by merging over the current query; a parameter this page owns
+ * is DROPPED when its value is absent, so `?q=` never lingers as an empty string.
+ */
+function applyBrowse(next: MediaBrowseState): void {
+  const merged = {
+    ...route.query,
+    q: next.q,
+    kind: next.kind,
+    // Page 1 is the default and is left out of the URL entirely, so the first page has exactly one
+    // address rather than two that render identically.
+    page: next.page === 1 ? undefined : String(next.page)
+  }
+  const query = Object.fromEntries(Object.entries(merged).filter(([, v]) => v !== undefined))
+  void router.push({ query })
 }
 
 const browser = useTemplateRef<{ reload: () => Promise<void> }>('browser')
@@ -188,12 +202,8 @@ const dateFormatter = computed(() => new Intl.DateTimeFormat(locale.value === 'a
 
     <DashboardMediaBrowser
       ref="browser"
-      :q="q"
-      :kind="kind"
-      :page="page"
-      @update:q="setQuery({ q: $event })"
-      @update:kind="setQuery({ kind: $event })"
-      @update:page="setQuery({ page: $event === 1 ? undefined : String($event) })"
+      :state="browseState"
+      @update:state="applyBrowse"
       @select="openDetail"
     />
 
@@ -203,7 +213,20 @@ const dateFormatter = computed(() => new Intl.DateTimeFormat(locale.value === 'a
       :description="detail ? t(`dashboard.media.kind.${detail.kind}`) : ''"
     >
       <template #body>
-        <div v-if="detail" class="flex flex-col gap-5">
+        <!-- `tabindex="0"` gives the slideover's SCROLLABLE body keyboard access.
+             The scrolling element is `USlideover`'s own body slot, which we cannot add attributes
+             to — and when the asset is in use there is no delete control and no link, so the region
+             contains nothing focusable at all and a keyboard user cannot scroll it. axe reports
+             exactly that (`scrollable-region-focusable`). Making the panel's content focusable is
+             the documented remedy: it adds one stop that can be scrolled with the arrow keys, and
+             the label says what was reached. -->
+        <div
+          v-if="detail"
+          tabindex="0"
+          role="group"
+          :aria-label="t('dashboard.media.detail.regionLabel', { filename: detail.originalFilename })"
+          class="flex flex-col gap-5 focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+        >
           <!-- PREVIEW. An image previews itself; a PDF cannot be shown inline without embedding a
                viewer, so it gets an explicit open-in-new-tab link instead of a blank frame. -->
           <div class="overflow-hidden rounded-card border border-default bg-elevated">
@@ -256,10 +279,15 @@ const dateFormatter = computed(() => new Intl.DateTimeFormat(locale.value === 'a
                  not what any usage publishes; shown here because this IS the library. -->
             <div v-if="detail.kind === 'IMAGE'">
               <dt class="text-muted">{{ t('dashboard.media.detail.libraryAlt') }}</dt>
+              <!-- The hint lives INSIDE the `<dd>`. A `<div>` inside a `<dl>` may hold only `<dt>`
+                   and `<dd>` children, so a sibling `<p>` breaks the definition-list structure —
+                   caught by axe (`definition-list`), not by eye. -->
               <dd dir="auto" class="font-medium text-highlighted">
                 {{ libraryAltFor(detail, locale) ?? t('dashboard.media.detail.libraryAltNone') }}
+                <span class="mt-1 block text-xs font-normal text-muted">
+                  {{ t('dashboard.media.detail.libraryAltHint') }}
+                </span>
               </dd>
-              <p class="mt-1 text-xs text-muted">{{ t('dashboard.media.detail.libraryAltHint') }}</p>
             </div>
           </dl>
 
@@ -338,6 +366,7 @@ const dateFormatter = computed(() => new Intl.DateTimeFormat(locale.value === 'a
               variant="subtle"
               icon="i-lucide-trash-2"
               data-delete-start
+              :ui="{ base: 'text-error-700 dark:text-error-300' }"
               @click="startDelete()"
             >
               {{ t('dashboard.media.delete.start') }}

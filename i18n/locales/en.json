@@ -445,7 +445,8 @@
         "libraryAltHint": "The library default for this image. Each place the image is used can define its own alt text, which is what publishes there.",
         "usageHeading": "Used by",
         "usageNone": "Not used anywhere.",
-        "usageFailed": "The usage list could not be loaded."
+        "usageFailed": "The usage list could not be loaded.",
+        "regionLabel": "Details for {filename}"
       },
       "usage": {
         "article-cover": "Article cover image",

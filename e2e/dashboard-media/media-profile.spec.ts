@@ -1,4 +1,5 @@
 import process from 'node:process'
+import AxeBuilder from '@axe-core/playwright'
 import { expect, test, type Page } from '@playwright/test'
 import { ASSET } from '../../scripts/e2e/media-server'
 
@@ -70,6 +71,17 @@ const PNG = Buffer.from(
   'base64'
 )
 
+/** Full unfiltered WCAG 2.2 AA scan. No rule disabled and no region excluded. */
+async function axe(page: Page, label: string) {
+  const { violations } = await new AxeBuilder({ page })
+    .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'])
+    .analyze()
+  expect(
+    violations,
+    `${label}: ${JSON.stringify(violations.map(v => ({ id: v.id, help: v.help, nodes: v.nodes.length })), null, 2)}`
+  ).toEqual([])
+}
+
 test.beforeEach(async ({ page }) => {
   await resetBackend(page)
 })
@@ -112,6 +124,31 @@ test.describe('the media library', () => {
     await expect(page).toHaveURL(/[?&]kind=PDF/)
     await expect(cards(page)).toHaveCount(1)
     await expect(card(page, ASSET.resume)).toBeVisible()
+  })
+
+  test('changing a filter FROM PAGE 2 keeps the filter — one navigation per interaction', async ({ page }) => {
+    // Regression. Search/kind and the page reset are ONE interaction that changes two parameters.
+    // Emitted as two events they became two `router.push` calls in the same tick, both built from
+    // the same pre-interaction `route.query` — and the second, which had never seen the filter,
+    // won. Measured: this landed on a bare `/dashboard/media` with no filter at all.
+    await signIn(page)
+
+    await page.goto('/dashboard/media?page=2')
+    await settled(page)
+    await page.getByRole('button', { name: 'PDF', exact: true }).click()
+    await settled(page)
+    await expect(page).toHaveURL(/[?&]kind=PDF/)
+    await expect(page).not.toHaveURL(/[?&]page=2/)
+    await expect(cards(page)).toHaveCount(1)
+
+    // The same interaction through the SEARCH box, which resets the page on the same code path.
+    await page.goto('/dashboard/media?page=2')
+    await settled(page)
+    await page.locator('input[type=search]').fill('desk-setup')
+    await expect(page).toHaveURL(/[?&]q=desk-setup/, { timeout: 10_000 })
+    await settled(page)
+    await expect(page).not.toHaveURL(/[?&]page=2/)
+    await expect(cards(page)).toHaveCount(1)
   })
 
   test('a deep-linked query reproduces the same grid on a cold load', async ({ page }) => {
@@ -224,6 +261,25 @@ test.describe('the About portrait section of /dashboard/profile', () => {
 
     await expect(altInput(page, 'en')).toHaveValue('')
     await expect(altInput(page, 'ar')).toHaveValue('')
+  })
+
+  test('the library-description block never describes a portrait other than the selected one', async ({ page }) => {
+    // Regression. `settings` changes only on load and save, while the picker changes the selection
+    // immediately — so a block keyed off `settings.portrait.alt` kept describing the PREVIOUS
+    // portrait, under a label reading "this image", throughout the replace flow.
+    await setBackendState(page, { portraitAssetId: ASSET.portrait })
+    await signIn(page)
+    await page.goto('/dashboard/profile')
+    await settled(page)
+    await expect(page.locator('[data-portrait-library-default]')).toBeVisible()
+
+    // Replace with a DIFFERENT asset, whose own library alt is empty.
+    await page.locator('[data-picker-open]').click()
+    await page.locator('[role=dialog]').locator(`[data-media-id="${ASSET.desk}"]`).click()
+    await expect(page.locator('[data-picker-filename]')).toHaveText('desk-setup.jpg')
+
+    // The previous portrait's description must be GONE rather than re-labelled onto this one.
+    await expect(page.locator('[data-portrait-library-default]')).toHaveCount(0)
   })
 
   test('requires BOTH locales before it will save', async ({ page }) => {
@@ -347,6 +403,43 @@ test.describe('the About portrait section of /dashboard/profile', () => {
   })
 })
 
+test.describe('accessibility — unfiltered WCAG 2.2 AA', () => {
+  test('/dashboard/media reports no violations, grid and detail alike', async ({ page }) => {
+    await signIn(page)
+    await page.goto('/dashboard/media')
+    await settled(page)
+    await axe(page, '/dashboard/media grid')
+
+    await card(page, ASSET.inUse).click()
+    await expect(page.locator('[data-usage-list]')).toBeVisible()
+    await axe(page, '/dashboard/media detail')
+  })
+
+  test('/dashboard/profile reports no violations, including the open picker', async ({ page }) => {
+    await setBackendState(page, { portraitAssetId: ASSET.portrait })
+    await signIn(page)
+    await page.goto('/dashboard/profile')
+    await settled(page)
+    await axe(page, '/dashboard/profile')
+
+    await page.locator('[data-picker-open]').click()
+    await expect(page.locator('[role=dialog]')).toBeVisible()
+    await settled(page)
+    await axe(page, '/dashboard/profile picker open')
+  })
+
+  test('the upload control is ONE tab stop, not two', async ({ page }) => {
+    // The styled button is a presentational span; the `<input type=file>` is the real, named
+    // control. An earlier version made both focusable, which is two tab stops for one action.
+    await signIn(page)
+    await page.goto('/dashboard/media')
+    await settled(page)
+    const focusable = page.locator('[data-media-upload], label [role=button]')
+    await expect(focusable).toHaveCount(1)
+    await expect(page.locator('[data-media-upload]')).toHaveAttribute('aria-label', 'Upload')
+  })
+})
+
 test.describe('navigation and RTL', () => {
   test('both routes are reachable from the dashboard navigation', async ({ page }) => {
     await signIn(page)
@@ -383,4 +476,18 @@ test.describe('navigation and RTL', () => {
     await expect(page.locator('html')).toHaveAttribute('dir', 'rtl')
     await expect(cards(page)).toHaveCount(12)
   })
+
+  // NO ASSERTION HERE ON THE ARABIC CHROME STRINGS, deliberately.
+  //
+  // `ar.json` carries no `dashboard.*` keys beyond the four shell ones (doc 02 §8 lists dashboard
+  // localization as a non-goal), and there is no `fallbackLocale`, so vue-i18n renders the KEY PATH:
+  // `/ar/dashboard/media` shows `dashboard.media.title`. That is NOT introduced here — the untouched
+  // Inbox shows `dashboard.messages.title` and the shared sidebar shows `dashboard.nav.messages`,
+  // both measured. See `evidence/m4-a/agent1/ar-dashboard-chrome-finding.md`.
+  //
+  // It is left unasserted rather than pinned: a test that locks in broken output makes the defect
+  // permanent, and every candidate fix (a global `fallbackLocale`, full Arabic chrome, or excluding
+  // `/dashboard/**` from localized routing) is a governed decision outside this lane. What IS
+  // asserted above is everything this lane owns and the M4 flow depends on — RTL document direction,
+  // a working grid under `/ar`, and the per-field direction of the bilingual alt inputs.
 })

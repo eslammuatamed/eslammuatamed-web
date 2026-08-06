@@ -40,10 +40,15 @@ const library = useMediaLibrary()
 
 const open = ref(false)
 
-/** Browsing state — LOCAL, never the route query. See `media-query.ts` for why this is load-bearing. */
-const q = ref<string | undefined>(undefined)
-const kind = ref<MediaKind | undefined>(undefined)
-const page = ref(1)
+/**
+ * Browsing state — LOCAL, never the route query. See `media-query.ts` for why that split matters:
+ * a picker writing `?q=` would rewrite its HOST page's address and leave parameters behind on close.
+ *
+ * One ref holding the whole triple, matching what the browser emits. Nothing here needs the
+ * one-navigation-per-interaction discipline the URL-backed page does — a local assignment is
+ * immediate — but keeping one shape means the two consumers cannot drift apart.
+ */
+const browse = ref<MediaBrowseState>({ page: 1 })
 
 /** The resolved descriptor for the current `modelValue`, for the preview. */
 const selected = ref<MediaAsset | null>(null)
@@ -203,9 +208,7 @@ function openPicker(): void {
     >
       <template #body>
         <DashboardMediaBrowser
-          v-model:q="q"
-          v-model:kind="kind"
-          v-model:page="page"
+          v-model:state="browse"
           :allowed-kind="allowedKind"
           :selected-id="modelValue"
           @select="choose"

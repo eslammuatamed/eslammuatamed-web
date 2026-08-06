@@ -58,6 +58,25 @@ export const mediaQuerySchema = z.object({
   page: z.preprocess(firstValue, z.coerce.number().int().positive().catch(1))
 })
 
+/**
+ * The browse state, as ONE value.
+ *
+ * It is a single object rather than three separate props/events for a reason that is not stylistic.
+ * A URL-backed consumer must issue exactly ONE navigation per interaction: `router.push` does not
+ * update `route.query` synchronously, so two pushes in the same tick both build their target from
+ * the SAME pre-interaction query and the second silently discards the first. Measured — selecting a
+ * kind filter while on page 2 emitted `kind` and then `page: 1`, and the second push, built from a
+ * query that had never seen `kind`, dropped the filter and landed on a bare URL.
+ *
+ * Changing the filter and resetting the page are ONE interaction, so they travel as one value and
+ * there is only ever one push to get wrong.
+ */
+export interface MediaBrowseState {
+  readonly q?: string
+  readonly kind?: MediaKind
+  readonly page: number
+}
+
 export type MediaQuery = z.output<typeof mediaQuerySchema>
 
 /**

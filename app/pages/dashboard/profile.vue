@@ -76,8 +76,19 @@ const dirty = computed(() => isPortraitFormDirty(form.value, initial.value))
  *
  * Held in its own computed with an explicit name so it can never be confused with a form value: it
  * is read in the template beneath the inputs and is not reachable from the form model at all.
+ *
+ * GATED ON THE SELECTION STILL BEING THE SAVED ONE, which is not a detail. `settings` only changes
+ * on load and on save, while `form.assetId` changes the instant the picker returns — so during a
+ * REPLACE, the flow this page exists for, the block would go on rendering the OLD portrait's library
+ * description under a label that says "this image". Showing nothing is the honest answer: a
+ * misattributed reference inside the feature built to prevent misattribution is worse than an
+ * absent one, and it is the single string the operator has been invited to read and consider.
  */
-const assetDefaultAlt = computed(() => settings.value?.portrait?.alt ?? null)
+const assetDefaultAlt = computed(() =>
+  form.value.assetId !== null && form.value.assetId === settings.value?.portraitAssetId
+    ? (settings.value?.portrait?.alt ?? null)
+    : null
+)
 
 /** Removing a portrait is confirmed explicitly — it unpublishes the About page's portrait. */
 const confirmingRemove = ref(false)
@@ -195,6 +206,7 @@ async function save(): Promise<void> {
           variant="subtle"
           icon="i-lucide-trash-2"
           data-portrait-remove
+          :ui="{ base: 'text-error-700 dark:text-error-300' }"
           @click="startRemove()"
         >
           {{ t('dashboard.profile.portrait.remove') }}
