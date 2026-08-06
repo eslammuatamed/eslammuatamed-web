@@ -297,7 +297,16 @@ test.describe('contact direct methods and locale', () => {
     // WhatsApp action deliberately does NOT carry the number (it is an action, not a directory), so
     // a page-wide selector here would match an element that is correct precisely for not matching.
     await expect(page.locator('main a[href*="wa.me/"]')).toHaveAttribute('aria-label', /\+20 100 278 5408$/)
-    await expect(page.locator('footer a[href*="wa.me/"]')).toHaveAccessibleName('راسلني على واتساب')
+    // The NAME changed in #44, the INTENT did not: the footer action is named, and its name is a
+    // label rather than the number, which is what makes the `main`-scoping above meaningful.
+    //
+    // Why this broke silently: #44 renamed `footer.whatsapp` → `footer.whatsappLabel` and reworded
+    // it, and the pre-merge check grepped for the KEY. A test that asserts the rendered STRING is
+    // invisible to that search. When renaming an i18n key, grep the VALUE in both locales too —
+    // `e2e/` asserts translated text directly in several places.
+    await expect(page.locator('footer a[href*="wa.me/"]')).toHaveAccessibleName(
+      'راسل إسلام عبر واتساب'
+    )
 
     // Left-to-right is asserted as a RENDERED OUTCOME rather than as a mechanism: the leading `+`
     // must be PAINTED to the left of the final digit. Asserting the wrapper element, or even its
