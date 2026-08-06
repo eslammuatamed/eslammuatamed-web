@@ -2,17 +2,22 @@
 import type { Skill } from '~/types/models'
 
 // Technology filter for the projects index (FR-PUB-030). Options come from the Skills registry, not
-// free text (doc 04 §5) — the value sent to the API is the skill's canonical UUID, which is the only
-// form `GET /projects?technology=` accepts; labels are display-only and arrive already localized.
+// free text (doc 04 §5) — the value sent to the API is the skill's `slug`, the canonical form of
+// `GET /projects?technology=` (D10-17); labels are display-only and arrive already localized, so a
+// label must never become the filter value or the URL would change meaning with the language.
 //
-// "All technologies" is the PLACEHOLDER, not a list option: reka-ui reserves the empty string for
-// clearing a select and rejects an item whose value is `''` ("A <SelectItem /> must have a value prop
-// that is not an empty string"). So the unfiltered state is the empty model value, and clearing is an
-// explicit control that appears only while a filter is active — which also keeps the option list to
-// real technologies instead of a permanent redundant row.
+// This component is now only the Skills→options MAPPING; the control itself is `UiChipFilter`, shared
+// with the blog index. It is kept rather than inlined because the mapping is the part with a contract
+// to get wrong (slug vs id vs label), and it is what these tests pin.
+//
+// Skill `slug` is LOCALE-INDEPENDENT, unlike a Category slug (D04-2). That is why a `?technology=` URL
+// survives a locale switch unchanged and `?category=` does not — see `app/pages/blog/index.vue`.
 interface Props {
   technologies: readonly Skill[]
-  /** Canonical technology UUID, or `undefined` for the unfiltered list. */
+  /**
+   * The active filter value, or `undefined` for the unfiltered list. Canonically a Skill `slug`; a
+   * uuid from a link shared before the slug contract landed is still valid and still round-trips.
+   */
   modelValue: string | undefined
   disabled?: boolean
 }
@@ -22,45 +27,19 @@ const emit = defineEmits<{ 'update:modelValue': [value: string | undefined] }>()
 
 const { t } = useI18n()
 
-const items = computed(() =>
-  props.technologies.map(technology => ({ label: technology.label, value: technology.id }))
+const options = computed(() =>
+  props.technologies.map(technology => ({ value: technology.slug, label: technology.label }))
 )
-
-const selected = computed({
-  get: () => props.modelValue ?? '',
-  // An empty selection means "no filter"; it must reach the query as `undefined`, never as
-  // `technology=`, which the contract rejects with a 422 rather than treating as unfiltered.
-  set: (value: string) => emit('update:modelValue', value === '' ? undefined : value)
-})
 </script>
 
 <template>
-  <div class="flex flex-wrap items-center gap-3">
-    <!-- A visible label, not just an aria-label: the control's purpose must be readable, and the
-         label is also a larger pointer target (doc 21). `for` binds it to the select trigger. -->
-    <label id="projects-filter-label" class="kicker text-dimmed" for="projects-filter">
-      {{ t('projects.filter.label') }}
-    </label>
-
-    <USelect
-      id="projects-filter"
-      v-model="selected"
-      :items="items"
-      :disabled="disabled"
-      :placeholder="t('projects.filter.all')"
-      aria-labelledby="projects-filter-label"
-      class="min-w-52"
-    />
-
-    <UButton
-      v-if="modelValue"
-      variant="ghost"
-      color="neutral"
-      size="sm"
-      icon="i-lucide-x"
-      @click="emit('update:modelValue', undefined)"
-    >
-      {{ t('projects.filter.clear') }}
-    </UButton>
-  </div>
+  <UiChipFilter
+    id="projects-filter"
+    :label="t('projects.filter.label')"
+    :all-label="t('projects.filter.all')"
+    :options="options"
+    :model-value="modelValue"
+    :disabled="disabled"
+    @update:model-value="emit('update:modelValue', $event)"
+  />
 </template>

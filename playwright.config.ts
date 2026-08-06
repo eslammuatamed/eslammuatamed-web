@@ -60,6 +60,11 @@ const RESUME_PDF_API_PORT = Number(process.env.CI_RESUME_PDF_MOCK_PORT ?? 3301)
 const DASHBOARD_PORT = Number(process.env.CI_DASHBOARD_PORT ?? 3500)
 const DASHBOARD_API_PORT = Number(process.env.CI_DASHBOARD_MOCK_PORT ?? 3501)
 
+// The settings-dedupe lane. Its own preview + backend pair again, because its backend COUNTS
+// requests: any other lane sharing the process would add renders to the count under test.
+const SETTINGS_COUNT_PORT = Number(process.env.CI_SETTINGS_COUNT_PORT ?? 3600)
+const SETTINGS_COUNT_API_PORT = Number(process.env.CI_SETTINGS_COUNT_MOCK_PORT ?? 3601)
+
 // Fail with an actionable message instead of a connection-refused timeout 90 s later. `ci-preview.mjs`
 // boots `.output/server/index.mjs` directly, so a missing build is a setup mistake, not a test failure.
 if (!existsSync('.output/server/index.mjs')) {
@@ -69,11 +74,20 @@ if (!existsSync('.output/server/index.mjs')) {
   )
 }
 
-/** Shared `webServer` policy. Never reuse a stray server: it may be running a stale build. */
-function previewServer(backend: string, webPort: number, apiPort: number) {
+/**
+ * Shared `webServer` policy. Never reuse a stray server: it may be running a stale build.
+ *
+ * `readyPath` exists because the readiness probe is not free of side effects. Playwright GETs this
+ * URL to decide the server is up, and `nuxt.config.ts` puts `swr: 60` on `/` — so probing the
+ * default `/` RENDERS AND CACHES the home page before any test runs. The `settings-dedupe` lane then
+ * measured that cache instead of the application: its outage test asserted against a healthy `/`
+ * that had been rendered while the backend was still answering 200. Lanes that count requests point
+ * the probe at a route with no SWR rule; the rest keep `/`, which is the cheapest liveness signal.
+ */
+function previewServer(backend: string, webPort: number, apiPort: number, readyPath = '/') {
   return {
     command: `node scripts/ci-preview.mjs --backend ${backend}`,
-    url: `http://127.0.0.1:${webPort}`,
+    url: `http://127.0.0.1:${webPort}${readyPath}`,
     env: { CI_PREVIEW_PORT: String(webPort), CI_MOCK_PORT: String(apiPort) },
     reuseExistingServer: false,
     timeout: 120_000,
@@ -109,7 +123,7 @@ export default defineConfig({
   projects: [
     {
       name: 'contract',
-      testIgnore: ['scenarios/**', 'readiness/**', 'resume-pdf/**', 'dashboard/**'],
+      testIgnore: ['scenarios/**', 'readiness/**', 'resume-pdf/**', 'dashboard/**', 'dedupe/**'],
       use: { ...devices['Desktop Chrome'], baseURL: `http://127.0.0.1:${CONTRACT_PORT}` }
     },
     {
@@ -145,14 +159,30 @@ export default defineConfig({
       // the normal `npm run test:e2e` invocation is unaffected because each test runs once.
       fullyParallel: false,
       use: { ...devices['Desktop Chrome'], baseURL: `http://127.0.0.1:${DASHBOARD_PORT}` }
+    },
+    {
+      name: 'settings-dedupe',
+      testMatch: 'dedupe/**/*.spec.ts',
+      // SERIAL, for the same reason as `dashboard`: its backend holds a mutable counter that each
+      // test resets, so concurrent tests would count each other's renders. `workers` is a TOP-LEVEL
+      // option, so what actually makes this lane serial is keeping it to a SINGLE spec file.
+      fullyParallel: false,
+      use: { ...devices['Desktop Chrome'], baseURL: `http://127.0.0.1:${SETTINGS_COUNT_PORT}` }
     }
   ],
 
   webServer: [
-    previewServer('prism', CONTRACT_PORT, CONTRACT_API_PORT),
+    // Readiness probes `/about`, NOT `/` (INF-A). `/` carries `swr: 60` (nuxt.config.ts:85), so a
+    // probe that lands before Prism is listening caches the API-unavailable render and Nitro serves
+    // that stale entry to every subsequent `/` request for the rest of the lane — the whole contract
+    // run then asserts against the error state. `/about` has no SWR rule, so probing it cannot poison
+    // a cache. `settings-count` below already probes `/about` for the same reason.
+    previewServer('prism', CONTRACT_PORT, CONTRACT_API_PORT, '/about'),
     previewServer('scenarios', SCENARIO_PORT, SCENARIO_API_PORT),
     previewServer('about-readiness', READINESS_PORT, READINESS_API_PORT),
     previewServer('resume-pdf', RESUME_PDF_PORT, RESUME_PDF_API_PORT),
-    previewServer('dashboard', DASHBOARD_PORT, DASHBOARD_API_PORT)
+    previewServer('dashboard', DASHBOARD_PORT, DASHBOARD_API_PORT),
+    // `/about` carries no SWR rule, so probing it leaves every route this lane measures cold.
+    previewServer('settings-count', SETTINGS_COUNT_PORT, SETTINGS_COUNT_API_PORT, '/about')
   ]
 })

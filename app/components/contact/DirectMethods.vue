@@ -46,13 +46,15 @@ function formatE164(value: string): string {
   return `${code} ${parts.filter(Boolean).join(' ')}`
 }
 
-// wa.me takes the number WITHOUT the leading plus. The prefilled text is localized and URL-encoded;
-// it lives in the locale files rather than here so it stays reviewable copy.
-const whatsappUrl = computed(() => {
-  if (!whatsapp.value) return null
-  const digits = whatsapp.value.replace(/^\+/, '')
-  return `https://wa.me/${digits}?text=${encodeURIComponent(t('contact.whatsappMessage'))}`
-})
+// The URL is derived by the shared `buildWhatsappUrl` (018), not built here: the Footer and the
+// project CTA now offer the same action, and three inline copies of "strip the plus, encode the
+// message" is three chances for one surface to link a number another surface hides. The prefilled
+// text stays localized and lives in the locale files rather than here so it stays reviewable copy.
+//
+// The shared util also GATES on `isPlausibleE164`, which this row did not. An implausible
+// `whatsappPhone` therefore no longer renders a WhatsApp affordance at all, where it previously
+// emitted a `wa.me` link to nowhere. The rendered output for every valid number is unchanged.
+const whatsappUrl = computed(() => buildWhatsappUrl(whatsapp.value, t('contact.whatsappMessage')))
 
 // Are the two numbers the same LINE, regardless of how each was written? Compared on the canonical
 // E.164 form, so `+20 100 278 5408` and `+201002785408` are recognised as one number.

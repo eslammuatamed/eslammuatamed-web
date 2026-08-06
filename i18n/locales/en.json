@@ -1,7 +1,7 @@
 {
   "brand": {
     "name": "Eslam Muatamed",
-    "role": "JavaScript Product Engineer"
+    "role": "Full-Stack JavaScript\nProduct Engineer"
   },
   "nav": {
     "projects": "Projects",
@@ -52,7 +52,7 @@
     "hero": {
       "viewWork": "View work",
       "contact": "Get in touch",
-      "valueProp": "I build fast, accessible web interfaces with Vue and Nuxt — and I document the engineering decisions behind them.",
+      "valueProp": "I turn product requirements into production-ready web products, combining strong frontend architecture with reliable backend development and end-to-end delivery.",
       "stackLabel": "Working across",
       "since": "Shipping to production since {year}",
       "unavailableTitle": "Content unavailable",
@@ -64,9 +64,9 @@
       "title": "Technologies I work with",
       "group": {
         "LANGUAGE": "Languages",
-        "FRAMEWORK": "Frameworks",
-        "TOOLING": "Tooling",
-        "PRACTICE": "Practices"
+        "FRONTEND": "Frontend Engineering",
+        "BACKEND": "Backend Engineering",
+        "DELIVERY": "Delivery & Quality"
       }
     },
     "featured": {
@@ -103,6 +103,15 @@
     "title": "Blog",
     "description": "Notes on engineering, architecture, and building for the web.",
     "minRead": "{count} min read",
+    "filter": {
+      "label": "Category",
+      "all": "All topics",
+      "clear": "Clear filter"
+    },
+    "emptyFilteredTitle": "No articles in this topic yet",
+    "emptyFilteredBody": "Nothing is published under this topic. Clear the filter to see every article.",
+    "emptyUnknownCategoryTitle": "That topic does not exist in this language",
+    "emptyUnknownCategoryBody": "Topic links are language-specific, so a link from the other language does not carry over. Pick a topic above to continue.",
     "emptyTitle": "No articles yet",
     "emptyBody": "New writing will appear here soon.",
     "errorTitle": "Couldn't load articles",
@@ -124,6 +133,7 @@
       "all": "All technologies",
       "clear": "Clear filter"
     },
+    "resultCount": "Case studies: {count}",
     "breadcrumbLabel": "Breadcrumb",
     "sections": {
       "overview": "Overview",
@@ -143,10 +153,17 @@
       "eyebrow": "Next step",
       "title": "Have a problem shaped like this one?",
       "body": "If this kind of work is what you need, the fastest route is a direct email — it reaches me straight away.",
-      "action": "Email me"
+      "action": "Email me",
+      "whatsappAction": "Message on WhatsApp"
     },
     "gallery": {
       "heading": "Gallery"
+    },
+    "facts": {
+      "heading": "At a glance",
+      "year": "Year",
+      "stack": "Stack",
+      "links": "Links"
     }
   },
   "experience": {
@@ -378,7 +395,8 @@
     "rights": "© {year} {name}. All rights reserved.",
     "builtWith": "Designed and built with care.",
     "colophon": "Built with Nuxt, Vue, TypeScript and Tailwind — bilingual and RTL-first.",
-    "downloadResume": "Download résumé"
+    "downloadResume": "Download résumé",
+    "whatsapp": "Message me on WhatsApp"
   },
   "error": {
     "notFoundTitle": "Page not found",
@@ -409,11 +427,13 @@
     }
   },
   "seo": {
-    "siteDescription": "The portfolio and writing of Eslam Muatamed, a frontend engineer specializing in Vue.js and Nuxt.js.",
+    "defaultTitle": "Eslam Muatamed — Full-Stack JavaScript Product Engineer",
+    "socialImageAlt": "Eslam Muatamed — Full-Stack JavaScript Product Engineer",
+    "siteDescription": "I turn product requirements into production-ready web products, combining strong frontend architecture with reliable backend development and end-to-end delivery.",
     "home": {
-      "title": "Frontend Engineer",
-      "titleFull": "Eslam Muatamed — Frontend Engineer",
-      "description": "Frontend engineer specializing in Vue.js and Nuxt.js, building fast, accessible, SEO-focused web interfaces."
+      "title": "Full-Stack JavaScript Product Engineer",
+      "titleFull": "Eslam Muatamed — Full-Stack JavaScript Product Engineer",
+      "description": "I turn product requirements into production-ready web products, combining strong frontend architecture with reliable backend development and end-to-end delivery."
     },
     "blog": {
       "title": "Blog",
@@ -425,7 +445,7 @@
     },
     "experience": {
       "title": "Experience",
-      "description": "The roles Eslam Muatamed has held, what each involved, and the technologies used."
+      "description": "The frontend developer and full stack developer roles Eslam Muatamed has held, what each involved, and the technologies used."
     },
     "resume": {
       "title": "Résumé",
@@ -433,7 +453,7 @@
     },
     "about": {
       "title": "About",
-      "description": "Eslam Muatamed is a JavaScript Product Engineer — frontend-led, with end-to-end product delivery experience in Vue.js and Nuxt.js."
+      "description": "How Eslam Muatamed works as a frontend engineer: deep Vue, Nuxt and TypeScript architecture, real backend engineering in Node.js and NestJS, and end-to-end ownership from requirements to production."
     },
     "contact": {
       "title": "Contact",

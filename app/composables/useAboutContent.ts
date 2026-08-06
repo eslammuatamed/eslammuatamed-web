@@ -1,5 +1,3 @@
-import type { Envelope, SiteSettings } from '~/types/models'
-
 /**
  * `GET /settings/site` for ABOUT PAGE CONTENT — the About prose, the portrait descriptor and the
  * positioning that feed `/about` (FR-PUB-020).
@@ -21,19 +19,17 @@ import type { Envelope, SiteSettings } from '~/types/models'
  *
  * The `useAsyncData` key uses the SAME `settings:site:{locale}` namespace as `useSiteSettings()`,
  * only derived from the route instead of the UI. Whenever the two locales agree — every SSR render
- * and every initial load — the keys are identical and Nuxt serves both callers from one request.
+ * and every initial load — the keys are identical and both callers resolve from one request.
  * They diverge only during the D03-13 deferred commit, and then divergence is the point: the page
  * gets the incoming language while the chrome still holds the outgoing one, each under its own key,
- * and the chrome finds the payload already cached when it catches up. No request is duplicated in
- * either case.
+ * and the chrome finds the payload already cached when it catches up.
+ *
+ * That collapse comes from the two mechanisms inside `useSettingsRead`, NOT from the shared key by
+ * itself. Nuxt's default resolver returns nothing during SSR, so before `sharedSettingsCachedData`
+ * this page issued its own request on top of the footer's — measured, 2 on `/about`; and on the
+ * outage path, where no payload is ever written, it takes `sharedSettingsRequest` as well (BLK-2).
+ * See utils/settings-cache.ts and utils/settings-request.ts.
  */
 export function useAboutContent() {
-  const api = useApi()
-  const locale = useRouteLocale()
-
-  return useAsyncData(
-    () => `settings:site:${locale.value}`,
-    () => api<Envelope<SiteSettings>>('/settings/site', { locale: locale.value }).then(res => res.data),
-    { watch: [locale] }
-  )
+  return useSettingsRead(useRouteLocale())
 }

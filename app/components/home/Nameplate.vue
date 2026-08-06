@@ -23,7 +23,7 @@ const tagline = computed(() => props.settings.tagline ?? t('brand.role'))
 const sinceYear = computed(() => props.settings.careerStartYear ?? null)
 
 // The identity stack (owner-profile §8) — Latin proper nouns, kept LTR inside Arabic via `bdi`.
-const stack = ['JavaScript', 'TypeScript', 'Vue', 'Nuxt', 'Node.js', 'Nest.js']
+const stack = ['JavaScript', 'TypeScript', 'Vue', 'Nuxt', 'Node.js', 'NestJS']
 </script>
 
 <template>
@@ -41,12 +41,20 @@ const stack = ['JavaScript', 'TypeScript', 'Vue', 'Nuxt', 'Node.js', 'Nest.js']
           <bdi>{{ settings.availabilityStatus }}</bdi>
         </p>
 
-        <h1 class="mt-8 font-nameplate text-mega text-highlighted text-balance">{{ name }}</h1>
+        <!-- Two classes, two jobs (019): `font-nameplate` selects the FACE per script (Reem Kufi under
+             the Arabic root, D03-12); `.nameplate` carries the Latin SETTING and is script-scoped, so the
+             Arabic hero is byte-for-byte what it was. No `UiWordmark` here on purpose — the mark already
+             sits ~100px above in the sticky header, and this hero's thesis is that the name itself is the
+             graphic, so a second Monolith would compete with it rather than identify it. -->
+        <h1 class="mt-8 font-nameplate nameplate text-mega text-highlighted text-balance">{{ name }}</h1>
 
         <!-- Deliberate block gap below the name (bigger in Arabic, where the Reem Kufi name has taller
-             verticals): responsive margin only — no spacer element / <br> / nbsp / locale hack. -->
-        <p class="mt-7 kicker text-muted sm:mt-9">
-          <bdi>{{ tagline }}</bdi>
+             verticals): responsive margin only — no spacer element / <br> / nbsp / locale hack.
+             `whitespace-pre-line` honours the line break the governed title carries: the approved
+             professional title is a two-line composition, and the break travels with the value
+             rather than being re-invented here (no <br>, no per-locale split, no second string). -->
+        <p class="mt-7 kicker whitespace-pre-line text-muted sm:mt-9">
+          <bdi lang="en">{{ tagline }}</bdi>
         </p>
         <p class="mt-6 max-w-2xl text-body-lg text-default text-pretty">{{ t('home.hero.valueProp') }}</p>
 

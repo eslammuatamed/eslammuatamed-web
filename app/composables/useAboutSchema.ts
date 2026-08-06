@@ -51,7 +51,7 @@ export function useAboutSchema(
   useSchemaOrg(() => [
     definePerson({
       name: settings.value?.siteName ?? t('brand.name'),
-      jobTitle: settings.value?.tagline ?? t('brand.role'),
+      jobTitle: singleLineTitle(settings.value?.tagline ?? t('brand.role')),
       sameAs: (settings.value?.profileLinks ?? []).map(link => link.url),
       email: settings.value?.professionalEmail ?? undefined,
       image: settings.value?.portrait?.url ?? undefined

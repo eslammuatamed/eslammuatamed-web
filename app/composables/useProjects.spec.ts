@@ -47,17 +47,53 @@ describe('useProjectsList', () => {
     await run(() => useProjectsList({ page: () => 1, technology: () => undefined }))
 
     // An empty string would be a contract 422, not "unfiltered".
-    expect(apiMock).toHaveBeenCalledWith('/projects', { locale: 'en', query: { page: 1 } })
+    expect(apiMock).toHaveBeenCalledWith('/projects', {
+      locale: 'en',
+      query: { page: 1, perPage: PROJECTS_PER_PAGE }
+    })
   })
 
-  it('sends the canonical technology UUID when a filter is active', async () => {
+  it('sends the page size explicitly rather than inheriting the API default', async () => {
     apiMock.mockClear()
-    apiMock.mockResolvedValue({ data: [], meta: { page: 1, perPage: 12, total: 0, totalPages: 0 } })
+    apiMock.mockResolvedValue({ data: [], meta: { page: 1, perPage: 6, total: 0, totalPages: 0 } })
+
+    // Page 7 rather than 1: `useAsyncData` caches by key, and reusing the first test's key
+    // (`projects:en:1:all`) would resolve from that cache without ever calling the mock — a test that
+    // passes because nothing happened.
+    await run(() => useProjectsList({ page: () => 7, technology: () => undefined }))
+
+    // Pinned to the value, not merely to "some perPage": the six-per-page layout is the requirement,
+    // and asserting `expect.anything()` here would pass even if the parameter silently reverted to 12.
+    expect(apiMock.mock.calls[0]?.[1]?.query?.perPage).toBe(6)
+    // Inside the contract's documented 1..50 bounds, so it can never come back as a 422.
+    expect(PROJECTS_PER_PAGE).toBeGreaterThanOrEqual(1)
+    expect(PROJECTS_PER_PAGE).toBeLessThanOrEqual(50)
+  })
+
+  it('sends the canonical technology SLUG when a filter is active', async () => {
+    apiMock.mockClear()
+    apiMock.mockResolvedValue({ data: [], meta: { page: 1, perPage: 6, total: 0, totalPages: 0 } })
+
+    await run(() => useProjectsList({ page: () => 2, technology: () => 'nestjs' }))
+
+    expect(apiMock).toHaveBeenCalledWith('/projects', {
+      locale: 'en',
+      query: { page: 2, perPage: PROJECTS_PER_PAGE, technology: 'nestjs' }
+    })
+  })
+
+  it('still forwards a uuid unchanged — the backward-compatible filter form (D10-17)', async () => {
+    apiMock.mockClear()
+    apiMock.mockResolvedValue({ data: [], meta: { page: 1, perPage: 6, total: 0, totalPages: 0 } })
     const uuid = '019f89b5-3050-7161-af37-3e9a2cbf41ed'
 
     await run(() => useProjectsList({ page: () => 2, technology: () => uuid }))
 
-    expect(apiMock).toHaveBeenCalledWith('/projects', { locale: 'en', query: { page: 2, technology: uuid } })
+    // A link shared before the slug contract landed must keep filtering, not silently show everything.
+    expect(apiMock).toHaveBeenCalledWith('/projects', {
+      locale: 'en',
+      query: { page: 2, perPage: PROJECTS_PER_PAGE, technology: uuid }
+    })
   })
 
   it('preserves the API order verbatim — the client never re-sorts (D09-8)', async () => {

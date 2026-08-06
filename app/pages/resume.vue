@@ -13,8 +13,11 @@ const localePath = useLocalePath()
 const { settings, experiences, skills } = useResumeData()
 
 // Identity, taken verbatim. `tagline` is the ONE governed public title
-// (positioning-strategy v1.1.0, seeded through `PUBLIC_TAGLINE`); no surface may hard-code its
-// own, so this renders the contract value and never a local string.
+// (positioning-strategy v2.0.0 §2, seeded through `PUBLIC_TAGLINE`); §8 states the rule as "ONE
+// VALUE, SEVERAL CONSUMERS — no surface may hard-code its own title", so this renders the contract
+// value and never a local string. The approved value is a two-line composition and the break
+// travels with it; only the hero opts into displaying that break, and a résumé headline reads it
+// as prose, so the newline collapses here exactly as §2 prescribes.
 const name = computed(() => settings.data.value?.siteName ?? null)
 const tagline = computed(() => settings.data.value?.tagline ?? null)
 
@@ -56,8 +59,8 @@ useSchemaOrg(() => [
 // Title, description and OG/Twitter title+description only. Canonical, hreflang/x-default,
 // og:locale, og:url and <html lang/dir> belong to @nuxtjs/i18n under strict SEO (D22-7) —
 // writing them here would duplicate the tags and fight the global owner (that is how F-3
-// happened). No `ogImage`: F-1 remains open (no branded social-image fallback exists), and
-// emitting a URL that does not resolve is worse than inheriting nothing.
+// happened). No `ogImage` of its own — web-013 CLOSED F-1 by committing a branded social card, so
+// this route inherits the absolute site-wide image `app.vue` emits instead of carrying none.
 useSeoMeta({
   title: () => t('seo.resume.title'),
   description: () => t('seo.resume.description'),
@@ -76,144 +79,184 @@ useSeoMeta({
       :label="t('resume.breadcrumbLabel')"
     />
 
-    <!-- ── Identity ─────────────────────────────────────────────────────────────────────
-         A résumé leads with who this is, so the name is the h1 and the governed positioning
-         line sits directly beneath it. Both come from Site Settings. -->
-    <header class="mt-10 max-w-3xl print:mt-0">
-      <p class="kicker text-dimmed print:hidden">{{ t('nav.resume') }}</p>
+    <!-- ONE measure for the whole document, set once rather than per section, so the identity
+         block, the section rules and both rails share a single left and right edge. A résumé is
+         read as one sheet; three independently constrained blocks read as three cards.
 
-      <h1 class="mt-4 font-display text-display text-highlighted text-balance print:mt-0">
-        {{ name ?? t('resume.title') }}
-      </h1>
+         `4xl`, where `/experience` uses `3xl`: the rail spends 10rem of the measure before any
+         content starts, so at `3xl` the content column came out ~176px NARROWER than the timeline
+         it is supposed to be denser than. At `4xl` the two pages have the same content measure and
+         this one simply spends fewer vertical inches on it. Prose is exempt — the summary keeps
+         its own narrower measure below, because a 720px line of running text is not readable. -->
+    <div class="mt-8 max-w-4xl print:mt-0">
+      <!-- ── Identity ───────────────────────────────────────────────────────────────────
+           A résumé leads with who this is, so the name is the h1, the governed positioning
+           line sits directly beneath it, and the summary follows. Name and positioning come
+           from Site Settings. -->
+      <header>
+        <p class="kicker text-dimmed print:hidden">{{ t('nav.resume') }}</p>
 
-      <p v-if="tagline" class="mt-3 text-body-lg text-muted text-pretty">{{ tagline }}</p>
+        <h1 class="mt-3 nameplate font-display text-display text-highlighted text-balance print:mt-0">
+          {{ name ?? t('resume.title') }}
+        </h1>
 
-      <!-- Contact row: the professional email and the owner's public links, in API order.
-           A list, so it is announced with a count rather than as a run of adjacent links.
-           No phone number and no postal address — neither is required by FR-PUB-023 and a
-           résumé page is a public URL. -->
-      <ul
-        v-if="email || links.length"
-        class="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 text-body-sm"
-        :aria-label="t('resume.contactLabel')"
-      >
-        <li v-if="email">
-          <a
-            class="text-muted underline decoration-default underline-offset-4 transition-colors hover:text-default print:no-underline"
-            :href="`mailto:${email}`"
-          >{{ email }}</a>
-        </li>
-        <li v-for="link in links" :key="link.url">
-          <a
-            class="text-muted underline decoration-default underline-offset-4 transition-colors hover:text-default print:no-underline"
-            :href="link.url"
-            rel="noopener me"
-            target="_blank"
-          >{{ link.label }}</a>
-        </li>
-      </ul>
+        <!-- `lang="en"`: the governed title is English in BOTH locales (positioning-strategy §3), so it
+             is Latin-script CONTENT on an Arabic page, not page chrome. Declaring that is what selects
+             the Latin display face; `<bdi>` isolates the run inside RTL flow without forcing the
+             block's direction — the treatment `HomeNameplate` already gives this same string. -->
+        <p v-if="tagline" lang="en" class="mt-3 font-display text-h3 text-muted text-pretty"><bdi>{{ tagline }}</bdi></p>
 
-      <ResumeActions class="mt-8" :resume="resume" />
-    </header>
+        <!-- The summary positioning-strategy v2.0.0 §8 asks a résumé to carry: "Headline =
+             displayed title; summary carries the hero description's substance". It is the
+             SAME governed string the hero renders (`home.hero.valueProp`, the approved hero
+             description of §2), reused rather than re-authored — a résumé-only paraphrase
+             would be a second source of truth for the one approved sentence, one edit away
+             from the two surfaces describing the same person differently. This is the
+             established idiom on this page, which already reuses the skill-group labels and
+             the employment-type labels for exactly that reason. -->
+        <p class="mt-4 max-w-2xl text-body text-muted text-pretty">{{ t('home.hero.valueProp') }}</p>
 
-    <!-- ── Experience ───────────────────────────────────────────────────────────────────
-         The SAME records as /experience, from the same composable, in the API's order,
-         rendered compactly (FR-PUB-024). -->
-    <section class="mt-14 max-w-3xl print:mt-8" :aria-labelledby="'resume-experience'">
-      <h2 id="resume-experience" class="font-display text-h2 text-highlighted">
-        {{ t('resume.experienceTitle') }}
-      </h2>
-
-      <div
-        v-if="experiences.error.value"
-        class="mt-6 rounded-card border border-default bg-elevated p-6"
-        role="alert"
-      >
-        <p class="font-display text-h4 text-highlighted">{{ t('resume.experienceErrorTitle') }}</p>
-        <p class="mt-2 text-body-sm text-muted">{{ t('resume.experienceErrorBody') }}</p>
-        <UButton
-          class="print:hidden mt-4"
-          variant="subtle"
-          color="neutral"
-          @click="experiences.refresh()"
+        <!-- Contact row: the professional email and the owner's public links, in API order.
+             A list, so it is announced with a count rather than as a run of adjacent links.
+             No phone number and no postal address — neither is required by FR-PUB-023 and a
+             résumé page is a public URL. -->
+        <ul
+          v-if="email || links.length"
+          class="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 text-body-sm"
+          :aria-label="t('resume.contactLabel')"
         >
-          {{ t('common.retry') }}
-        </UButton>
-      </div>
+          <li v-if="email">
+            <a
+              class="text-muted underline decoration-default underline-offset-4 transition-colors hover:text-default print:no-underline"
+              :href="`mailto:${email}`"
+            >{{ email }}</a>
+          </li>
+          <li v-for="link in links" :key="link.url">
+            <a
+              class="text-muted underline decoration-default underline-offset-4 transition-colors hover:text-default print:no-underline"
+              :href="link.url"
+              rel="noopener me"
+              target="_blank"
+            >{{ link.label }}</a>
+          </li>
+        </ul>
 
-      <p v-else-if="experiencesEmpty" class="mt-6 text-body-sm text-muted">
-        {{ t('resume.experienceEmpty') }}
-      </p>
+        <ResumeActions class="mt-6" :resume="resume" />
+      </header>
 
-      <!-- An ORDERED list: reverse-chronological order is meaningful and must survive with CSS
-           off. Order is the API's, rendered verbatim — no client-side sort. -->
-      <ol v-else class="mt-6 flex flex-col" :aria-label="t('resume.experienceListLabel')">
-        <ResumeEntry
-          v-for="experience in entries"
-          :key="experience.id"
-          :experience="experience"
-        />
-      </ol>
-    </section>
+      <!-- ── Experience ─────────────────────────────────────────────────────────────────
+           The SAME records as /experience, from the same composable, in the API's order,
+           rendered compactly (FR-PUB-024).
 
-    <!-- ── Skills ───────────────────────────────────────────────────────────────────────
-         The Skill registry's own groups and order. No proficiency percentages, no
-         years-per-skill, no résumé-only list — none of those exist in the contract and
-         inventing them would be a second source of truth. -->
-    <section class="mt-12 max-w-3xl print:mt-8" :aria-labelledby="'resume-skills'">
-      <h2 id="resume-skills" class="font-display text-h2 text-highlighted">
-        {{ t('resume.skillsTitle') }}
-      </h2>
+           The section label is a `kicker` rather than a display-sized heading: on a résumé the
+           roles are the content and the section name is only a signpost, so it takes the
+           smallest structural register the design system has and a hairline rule carries the
+           separation instead of a stack of empty margin. `kicker` is also the locale-aware
+           device — it drops the mono/uppercase/tracked treatment under the Arabic root, which a
+           hand-rolled `font-mono uppercase tracking-wide` label does not. -->
+      <section class="mt-10 border-t border-default pt-8 print:mt-6 print:pt-4" :aria-labelledby="'resume-experience'">
+        <h2 id="resume-experience" class="kicker text-muted">
+          {{ t('resume.experienceTitle') }}
+        </h2>
 
-      <div
-        v-if="skills.error.value"
-        class="mt-6 rounded-card border border-default bg-elevated p-6"
-        role="alert"
-      >
-        <p class="font-display text-h4 text-highlighted">{{ t('resume.skillsErrorTitle') }}</p>
-        <p class="mt-2 text-body-sm text-muted">{{ t('resume.skillsErrorBody') }}</p>
-        <UButton
-          class="print:hidden mt-4"
-          variant="subtle"
-          color="neutral"
-          @click="skills.refresh()"
-        >
-          {{ t('common.retry') }}
-        </UButton>
-      </div>
-
-      <p v-else-if="skillsEmpty" class="mt-6 text-body-sm text-muted">
-        {{ t('resume.skillsEmpty') }}
-      </p>
-
-      <dl v-else class="mt-6 flex flex-col gap-4">
         <div
-          v-for="skillGroup in skillGroups"
-          :key="skillGroup.group"
-          class="resume-entry break-inside-avoid sm:grid sm:grid-cols-[10rem_1fr] sm:gap-4"
+          v-if="experiences.error.value"
+          class="mt-6 rounded-card border border-default bg-elevated p-6"
+          role="alert"
         >
-          <!-- The contract's `group` is an ENUM TOKEN (`LANGUAGE`…`PRACTICE`), not a label.
-               Its localized labels already exist for the home capabilities section, so they are
-               REUSED here — a résumé-only copy of the same four strings would be exactly the
-               second source of truth FR-PUB-024 forbids, one translation drift away from the
-               two surfaces naming the same group differently. -->
-          <dt class="font-mono text-caption text-dimmed uppercase tracking-wide sm:pt-0.5">
-            {{ t(`home.techStack.group.${skillGroup.group}`) }}
-          </dt>
-          <dd class="mt-1.5 sm:mt-0">
-            <ul class="flex flex-wrap gap-1.5">
-              <li
-                v-for="skill in skillGroup.skills"
-                :key="skill.id"
-                class="rounded-full border border-default px-2.5 py-0.5 font-mono text-caption text-muted"
-              >
-                {{ skill.label }}
-              </li>
-            </ul>
-          </dd>
+          <p class="font-display text-h3 text-highlighted">{{ t('resume.experienceErrorTitle') }}</p>
+          <p class="mt-2 text-body-sm text-muted">{{ t('resume.experienceErrorBody') }}</p>
+          <UButton
+            class="print:hidden mt-4"
+            variant="subtle"
+            color="neutral"
+            @click="experiences.refresh()"
+          >
+            {{ t('common.retry') }}
+          </UButton>
         </div>
-      </dl>
-    </section>
+
+        <p v-else-if="experiencesEmpty" class="mt-6 text-body-sm text-muted">
+          {{ t('resume.experienceEmpty') }}
+        </p>
+
+        <!-- An ORDERED list: reverse-chronological order is meaningful and must survive with CSS
+             off. Order is the API's, rendered verbatim — no client-side sort. The API owns it
+             (`isCurrent DESC → startDate DESC → order ASC → id ASC`, D02-11) and re-deriving it
+             here would put a second, silently divergent ordering in the Web app. -->
+        <ol v-else class="mt-6 flex flex-col gap-7" :aria-label="t('resume.experienceListLabel')">
+          <ResumeEntry
+            v-for="experience in entries"
+            :key="experience.id"
+            :experience="experience"
+          />
+        </ol>
+      </section>
+
+      <!-- ── Skills ─────────────────────────────────────────────────────────────────────
+           The Skill registry's own groups and order — which IS the approved taxonomy
+           (positioning-strategy v2.0.0 §5: Languages · Frontend Engineering · Backend
+           Engineering · Delivery & Quality, in that order, unrated). No proficiency
+           percentages, no years-per-skill, no résumé-only list: §5 and §9 both ban rating a
+           skill, and a résumé-only list would be a second source of truth. Exclusion from the
+           taxonomy is a server-side visibility concern (§5, "hidden, never deleted"), so this
+           surface renders what the public listing returns and filters nothing itself. -->
+      <section class="mt-10 border-t border-default pt-8 print:mt-6 print:pt-4" :aria-labelledby="'resume-skills'">
+        <h2 id="resume-skills" class="kicker text-muted">
+          {{ t('resume.skillsTitle') }}
+        </h2>
+
+        <div
+          v-if="skills.error.value"
+          class="mt-6 rounded-card border border-default bg-elevated p-6"
+          role="alert"
+        >
+          <p class="font-display text-h3 text-highlighted">{{ t('resume.skillsErrorTitle') }}</p>
+          <p class="mt-2 text-body-sm text-muted">{{ t('resume.skillsErrorBody') }}</p>
+          <UButton
+            class="print:hidden mt-4"
+            variant="subtle"
+            color="neutral"
+            @click="skills.refresh()"
+          >
+            {{ t('common.retry') }}
+          </UButton>
+        </div>
+
+        <p v-else-if="skillsEmpty" class="mt-6 text-body-sm text-muted">
+          {{ t('resume.skillsEmpty') }}
+        </p>
+
+        <dl v-else class="mt-6 flex flex-col gap-4">
+          <div
+            v-for="skillGroup in skillGroups"
+            :key="skillGroup.group"
+            class="resume-entry break-inside-avoid sm:grid sm:grid-cols-[10rem_1fr] sm:gap-x-4"
+          >
+            <!-- The contract's `group` is an ENUM TOKEN (`LANGUAGE`…`DELIVERY`), not a label.
+                 Its localized labels already exist for the home capabilities section, so they are
+                 REUSED here — a résumé-only copy of the same four strings would be exactly the
+                 second source of truth FR-PUB-024 forbids, one translation drift away from the
+                 two surfaces naming the same group differently. They already carry the §5 wording
+                 in both locales, so the approved taxonomy needs no résumé-side restatement. -->
+            <dt class="kicker text-dimmed sm:pt-1">
+              {{ t(`home.techStack.group.${skillGroup.group}`) }}
+            </dt>
+            <dd class="mt-1.5 sm:mt-0">
+              <ul class="flex flex-wrap gap-1.5">
+                <li
+                  v-for="skill in skillGroup.skills"
+                  :key="skill.id"
+                  class="rounded-full border border-default px-2.5 py-0.5 font-mono text-caption text-muted"
+                >
+                  {{ skill.label }}
+                </li>
+              </ul>
+            </dd>
+          </div>
+        </dl>
+      </section>
+    </div>
   </UContainer>
 </template>
 
@@ -252,6 +295,39 @@ useSeoMeta({
     display: none !important;
   }
 
+  /**
+   * PRINT TYPE IS RESTATED IN PHYSICAL UNITS, by redefining the scale's own custom properties
+   * for this subtree rather than by overriding utilities one at a time.
+   *
+   * The screen scale is fluid and viewport-derived: `--text-display` is
+   * `clamp(2.5rem, 1.3rem + 5vw, 4rem)`, which at an A4 content width (~794px at 96dpi) resolves
+   * to about 60px ≈ 45pt. That is a poster, not a résumé headline, and it spent most of the first
+   * sheet on the name. Every `text-*` utility reads `var(--text-*)`, so redefining the tokens on
+   * `.resume-page` re-scales the whole document in one place and no utility is duplicated.
+   *
+   * THIS LIST IS EXPLICIT AND CLOSED-ENDED — custom properties have no wildcard. Any token in the
+   * scale that is NOT named below keeps its viewport-derived screen definition on paper. Adding a
+   * token to the scale therefore means adding it here too; nothing detects the omission for you.
+   * `--text-mega` is listed for exactly that reason: it is not used under `.resume-page` today, so
+   * it changes no output, but leaving it out is what makes the next omission look normal.
+   *
+   * The values are the conventional print register for a CV: 20pt name, 10pt body, 8.5pt
+   * captions, and a section label that reads as a label rather than a heading.
+   */
+  .resume-page {
+    --text-mega: 24pt;
+    --text-display: 20pt;
+    --text-h1: 16pt;
+    --text-h2: 13pt;
+    --text-h3: 11.5pt;
+    --text-body-lg: 10.5pt;
+    --text-body: 10pt;
+    --text-body-sm: 9.5pt;
+    --text-caption: 8.5pt;
+
+    font-size: 10pt;
+  }
+
   /* Ink efficiency + contrast: the screen theme is a dark-capable token system, and printing
      a dark surface would flood the page. Force a white ground and black text regardless of
      which theme the visitor had on screen — `color-adjust` is NOT set to `exact`, so the
@@ -263,9 +339,53 @@ useSeoMeta({
     color: #000 !important;
   }
 
+  /**
+   * ...and settle there INSTANTLY. The contact links carry `transition-colors` for their hover
+   * treatment, so switching to print media starts a colour transition rather than applying one —
+   * and a running transition outranks `!important`. Measured on the print render: the links were
+   * still `oklab(0.3646 …)`, a mid-grey, for the length of the transition. Whether the rasteriser
+   * catches that frame is a race, and a résumé that sometimes prints grey links is not a print
+   * deliverable. Nothing on paper animates, so nothing on paper needs a transition.
+   */
+  .resume-page * {
+    transition: none !important;
+    animation: none !important;
+  }
+
   .resume-page {
     max-width: none !important;
     padding: 0 !important;
+  }
+
+  /* The single document measure is a screen concern — on paper the sheet margin (`@page`) is
+     the measure, and a 56rem cap would leave a wide empty gutter on A4 and on Letter alike. The
+     summary's own narrower measure is released with it: a printed sheet is already a narrow
+     column, so constraining prose twice would only lengthen the document. */
+  .resume-page .max-w-4xl,
+  .resume-page .max-w-2xl {
+    max-width: none !important;
+  }
+
+  /**
+   * Impact-bullet markers survive the ink rule. They are `background-color` on an empty span —
+   * a decorative dot with no glyph — so `background: transparent` above erased every one of them
+   * and the printed bullets became bare indented lines. Measured on the print render before this
+   * rule existed. Black rather than the accented border token: the printed document is a
+   * one-colour document by design.
+   *
+   * `print-color-adjust: exact` IS REQUIRED HERE and is not belt-and-braces. Chrome ships its print
+   * dialog with "Background graphics" unchecked, Firefox with "Print backgrounds" off, and Safari
+   * likewise; under those defaults the browser paints NO element background whatever the stylesheet
+   * says, and this marker is nothing but a background. Without it the rule above is honoured in the
+   * test environment and silently dropped on real paper — `page.emulateMedia({ media: 'print' })`
+   * rasterises like a screen render, so every print test in this repo would keep passing while the
+   * bullets vanished in the only place that matters. The property is scoped to this one decorative
+   * dot deliberately: the sheet-wide policy of NOT forcing colour (see the ink rule above) stands.
+   */
+  .resume-page .resume-bullet {
+    background: #000 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
 
   /* Borders stay, but as hairlines rather than themed surfaces, so the technology and skill
@@ -300,6 +420,28 @@ useSeoMeta({
   .resume-page h2 {
     /* A section heading pulls its first entry with it rather than orphaning at a page foot. */
     margin-top: 0.6cm;
+  }
+
+  /* A section rule landing as the first mark on a sheet would read as a stray line. What prevents
+     it is the `break-after: avoid` on the headings above — the rule is drawn by the section's
+     heading block, so keeping the heading with what follows keeps the rule with it.
+
+     There was a `.resume-page section { break-before: auto }` here claiming to do this. It did
+     nothing: `auto` is the initial value of `break-before` and nothing in this app, Tailwind's
+     preflight or Nuxt UI sets that property, so it overrode nothing. Removed rather than left to
+     look like a solved problem. `break-inside: avoid` on the section is NOT substituted for it —
+     that would try to hold an entire Experience section on one sheet and push a large blank area
+     onto the previous one, which is worse than the stray line it would prevent. */
+
+  /* Prose that survives a page break breaks with company, not one stranded line.
+     Both values restate the CSS initial value; they are declared explicitly because this sheet's
+     whole point is that the printed register is stated rather than inherited, and a future reader
+     changing the pagination rules should see the intended minimum. Do not read them as the cause
+     of the behaviour — remove them and printed prose still keeps two lines together. */
+  .resume-page p,
+  .resume-page li {
+    orphans: 2;
+    widows: 2;
   }
 
   /* Nothing on the printed page may overflow the sheet horizontally. */

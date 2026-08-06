@@ -2,8 +2,19 @@
 import type { Experience } from '~/types/models'
 
 // Experience (FR-PUB-013) — the career as a vertical timeline on a lifted surface (the section where a
-// real sequence earns an ordered structure). A current role always leads, even if an older past role has
-// a later-looking start (code-review WD-7). Empty → omitted; error → inline retry (NFR-DEGRADE).
+// real sequence earns an ordered structure). Empty → omitted; error → inline retry (NFR-DEGRADE).
+//
+// ORDER IS THE API'S, RENDERED VERBATIM (D02-11). This component used to re-sort locally by
+// `isCurrent` then `startDate` desc. D02-11 names that exact practice as the rejected alternative —
+// and names this component as the defect: "`/experience`, `/resume` and Home must not be able to
+// disagree — they did, precisely because Home sorted locally while the others rendered the API order
+// verbatim."
+//
+// The governed order is `isCurrent` DESC → `startDate` DESC → `order` ASC → `id` ASC. The local sort
+// implemented only the first two terms, so it silently discarded `order` — the owner's
+// dashboard-controlled tie-breaker — whenever it moved a row, and it could not express `id` at all.
+// WD-7's "a current role always leads" is preserved: it is the API sort's leading term, not something
+// this component has to add.
 interface Props {
   experiences: readonly Experience[] | null
   error?: boolean
@@ -14,14 +25,7 @@ const props = withDefaults(defineProps<Props>(), { error: false, pending: false 
 defineEmits<{ retry: [] }>()
 const { t } = useI18n()
 
-const items = computed(() =>
-  (props.experiences ?? [])
-    .slice()
-    .sort((a, b) => {
-      if (a.isCurrent !== b.isCurrent) return a.isCurrent ? -1 : 1
-      return new Date(b.startDate).getTime() - new Date(a.startDate).getTime()
-    })
-)
+const items = computed(() => props.experiences ?? [])
 const hasData = computed(() => items.value.length > 0)
 // Split pending into initial-load (skeleton) vs revalidation with content on screen (overlay).
 const initialPending = computed(() => props.pending && !hasData.value)

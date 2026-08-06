@@ -35,6 +35,20 @@
    declaration weight in the render-blocking stylesheet. */
 @import "@fontsource/jetbrains-mono/latin-400.css";
 
+/* Metric-narrowed stand-in for the Latin display face, used only while Space Grotesk is in flight.
+   It downloads NOTHING — every source is `local()`, so it costs one declaration and no request.
+   Liberation Sans leads because it is the Arial-metric face present on the Linux CI image; the
+   others cover macOS/Windows. `size-adjust: 96%` is deliberately conservative: the goal is not to
+   match Space Grotesk exactly but to guarantee the fallback is NARROWER, so a line that fits when
+   the webfont arrives also fits before it does. If none of these resolve, the stack falls through
+   to `ui-sans-serif` exactly as before. See the `--font-display` note below for the measurement. */
+@font-face {
+  font-family: "Display Fallback";
+  src: local("Liberation Sans"), local("Arial"), local("Helvetica Neue"), local("Helvetica");
+  size-adjust: 96%;
+  font-display: swap;
+}
+
 /* ---------------------------------------------------------------------------------------
    Theme tokens — names generate Tailwind utilities and CSS variables (Tailwind v4 @theme).
    ------------------------------------------------------------------------------------- */
@@ -42,7 +56,17 @@
   /* Families (doc 03 §3, revised 007). The Arabic stacks are swapped in at html[lang="ar"] —
      the per-locale switch lives in exactly one place (D14-5). `--font-display` / `-arabic`
      generate the `.font-display` utility; the Arabic swap is one rule in @layer base. */
-  --font-display: "Space Grotesk Variable", "Geist Variable", ui-sans-serif, system-ui,
+  /* "Display Fallback" (not "Geist Variable") is the first fallback, and this is a MEASURED fix for
+     a governed CLS failure rather than a preference. A webfont standing in for another webfont is a
+     wrap-parity hazard: whichever arrives first paints, and the two have different advance widths.
+     Measured at the mobile viewport (412 px, container 380 px), the approved tagline
+     "Full-Stack JavaScript Product Engineer" renders at Space Grotesk 380 px — it fits on ONE line
+     with ZERO pixels to spare — while Geist renders it at 381 px, so the fallback paint wrapped to
+     TWO lines. The 27 px collapse on swap moved the whole résumé body up 26 px, which CI scored as
+     CLS 0.1204 on /ar/resume and 0.0540 on /resume against a 0.05 budget. See
+     `scratchpad/evidence/font-swap-offset.mjs`, which measures the delta deterministically.
+     `size-adjust` keeps the stand-in comfortably inside the line so the wrap count cannot change. */
+  --font-display: "Space Grotesk Variable", "Display Fallback", ui-sans-serif, system-ui,
     sans-serif;
   --font-display-arabic: "Cairo Variable", "IBM Plex Sans Arabic", ui-sans-serif, system-ui,
     sans-serif;
@@ -265,6 +289,20 @@
   --leading-prose: 1.7;
   --leading-prose-arabic: 1.9;
 
+  /* Reading measure (doc 03 §3: 65–75 characters, BOTH scripts). Stated in `em`, not `ch`, and
+     calibrated per script — both choices are measurements, not taste.
+       `em` because the character count then holds at ANY font-size: the column and the glyphs
+       scale together, so the same token is correct at the 16px UI size and the 18px article size.
+       Per script because a single value cannot satisfy both. Measured average character advance
+       of real prose in each body face: Geist 0.454em, IBM Plex Sans Arabic 0.394em. So
+       32em → ~70 Latin characters and 28em → ~71 Arabic characters — mid-band in both.
+     NOT `ch`. `ch` is the advance of "0", which is 0.688em in Geist — far from the average
+     character — and the Arabic body face is imported as an ARABIC-ONLY subset with no "0" glyph
+     at all, so `ch` silently falls back to the 0.5em default there. One shared `68ch` therefore
+     produced two unrelated columns: 748px (~103 characters) in EN and 544px (~86) in AR, both
+     outside the governed band. See scratchpad/reports/article-detail-layout.md for the numbers. */
+  --measure-prose: 32em;
+
   --duration-micro: 120ms;
   --duration-standard: 200ms;
   --duration-structural: 320ms;
@@ -276,6 +314,15 @@
 
   /* Nuxt UI derives component radii from this base; 6px aligns controls to doc 03 §4. */
   --ui-radius: 0.375rem;
+}
+
+/* The Arabic measure REBINDS the same token rather than adding a second one (the
+   `--leading-prose-arabic` shape). A second token would force every consumer to carry its own
+   `html[lang="ar"]` rule and to remember that it exists; rebinding here means a consumer writes
+   `var(--measure-prose)` once and is correct in both scripts. Unlayered and one specificity step
+   above the `:root` default above, so it wins without `!important`. */
+html[lang="ar"] {
+  --measure-prose: 28em;
 }
 
 /* Accent-text utility for links — kept distinct from Nuxt UI's fill-driven `text-primary`
@@ -540,12 +587,54 @@ html[lang="ar"] .font-display {
   font-family: var(--font-display-arabic);
 }
 
+/* CONTENT LANGUAGE WINS OVER PAGE LANGUAGE for the display face. Some governed strings are English
+   in BOTH locales by owner decision — positioning-strategy §3 keeps the professional title
+   `Full-Stack JavaScript Product Engineer` identical on `/` and `/ar`, because it is the industry's
+   term of art. Rendering that Latin string through the Arabic stack selects Cairo's LATIN subset,
+   which is neither the governed Latin display face nor metrically related to the fallback that
+   precedes it — a measured source of layout shift on `/ar`.
+   Selecting on `:lang(en)` makes the TYPOGRAPHY FOLLOW THE SCRIPT OF THE CONTENT, so any element
+   that honestly declares `lang="en"` is covered — no route-specific rule, and nothing to remember.
+   Reuses `--font-display` rather than restating the stack. One step more specific than the rule
+   above, so it wins without `!important`. */
+html[lang="ar"] .font-display:lang(en) {
+  font-family: var(--font-display);
+}
+
 /* Arabic nameplate (D03-12): Reem Kufi at the top of its weight axis carries the same visual
    mass as the heavy Space Grotesk Latin name. Its taller Kufi forms receive extra line-height. */
 html[lang="ar"] .font-nameplate {
   font-family: var(--font-nameplate-arabic);
   font-weight: 700;
   line-height: 1.12;
+}
+
+/* Latin nameplate SETTING (019) — the counterpart the rule above has always assumed. Its comment
+   pairs Reem Kufi 700 against "the heavy Space Grotesk Latin name", but the Latin name was never
+   heavy: it inherited `--text-mega--font-weight: 600` in the hero and `font-semibold` in the chrome,
+   so the bilingual pair was 700 against 600. 700 is the TOP of Space Grotesk's variable axis
+   (`fvar wght 300–700`, read from the shipped woff2), so this costs no new font file and no new
+   weight instance — it moves the one axis the installed face actually has.
+
+   WHY A SEPARATE CLASS FROM `.font-nameplate`. That utility selects the FACE and is script-aware, and
+   Reem Kufi is the Arabic HERO face only (D03-12 — "not on body/section titles"). Putting
+   `.font-nameplate` on the header/footer wordmark would therefore swap the Arabic chrome to Reem Kufi
+   AND fetch `reem-kufi-arabic-*.woff2` on every /ar route that has no hero, against the D20-15 font
+   budget. `.nameplate` carries the setting only, so a surface adopts the treatment with whatever face
+   its script sanctions: the hero pairs it with `font-nameplate`, the chrome with `font-display`.
+
+   WHY SCOPED POSITIVELY TO NON-ARABIC rather than neutralised under `html[lang="ar"]` the way
+   `.kicker` is: there is no single value to neutralise BACK to. The Arabic chrome is 600 (Cairo) and
+   the Arabic nameplate is 700 (Reem Kufi, the rule above), so one restoring rule would be wrong on
+   one of them. Stating the Latin register once, positively, leaves every Arabic surface byte-identical
+   — which is also why `font-semibold` stays on the chrome wordmark: under `html[lang="ar"]` it is the
+   declaration still doing the work.
+
+   Unlayered for the same reason as the block above: it must beat `.text-mega`'s own
+   `font-weight: 600` and the chrome's `font-semibold`, both of which live in Tailwind's utilities
+   layer, without resorting to `!important`. */
+html:not([lang="ar"]) .nameplate {
+  font-weight: 700;
 }
 
 /* ---------------------------------------------------------------------------------------

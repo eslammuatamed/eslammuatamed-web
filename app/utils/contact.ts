@@ -1,6 +1,12 @@
 // Pure helpers for the public Contact form (FR-PUB-050/051/053). Nuxt-free so the anti-spam timing
 // and the rate-limit copy can be unit-tested without a runtime — the two places where a subtle bug
 // would either lose a genuine message or state something untrue to the visitor.
+//
+// `isPlausibleE164` moved OUT of this file to `./e164` in 018 and is imported back in. It is now
+// also the Footer's gate, and the Footer is on every public route — importing it from here dragged
+// this module's dial-code tables and form validator onto every page and broke the frozen app-owned
+// budget on `/`. The predicate is still singular; only its module changed. See `./e164`.
+import { isPlausibleE164 } from './e164'
 
 /**
  * The human fill-time threshold, mirrored from the API's `MIN_FILL_MS` (anti-spam.ts, D02-1).
@@ -240,16 +246,6 @@ export function validatePhone(dialCode: DialCode, normalized: string): boolean {
   if (!rule.nationalLengths.includes(national.length)) return false
   if (rule.nationalPrefixes.length > 0 && !rule.nationalPrefixes.some(p => national.startsWith(p))) return false
   return true
-}
-
-/**
- * A deliberately shallow shape check: `+`, a non-zero leading digit, plausible total length.
- *
- * Must stay permissive — a client that rejected more than the API would turn a valid number into an
- * error the visitor cannot resolve, and D13-6 is explicit that the API is authoritative.
- */
-export function isPlausibleE164(value: string): boolean {
-  return /^\+[1-9]\d{6,14}$/.test(value)
 }
 
 // ── feature-local validation (D13-6 fallback) ─────────────────────────────────────────────────

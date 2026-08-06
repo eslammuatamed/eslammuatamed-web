@@ -27,6 +27,13 @@ const socialLinks = computed(() =>
 const availability = computed(() => settings.value?.availabilityStatus ?? null)
 const resume = computed(() => settings.value?.resumeAsset ?? null)
 
+// WhatsApp as site-wide chrome (018). Derived by the shared `buildWhatsappUrl` so the Footer can
+// never offer a number `/contact` withholds — one gate, one URL shape, three surfaces. It is a
+// FIELD READ on the settings call already made above, not a second reader: adding a reader is the
+// regression BLK-2 removed, and the settings-dedupe lane is the gate that proves it.
+// `null` here means the row does not render at all: no placeholder, no disabled control.
+const whatsappUrl = computed(() => buildWhatsappUrl(settings.value?.whatsappPhone, t('contact.whatsappMessage')))
+
 const isHttp = (url: string) => /^https?:\/\//.test(url)
 </script>
 
@@ -36,7 +43,7 @@ const isHttp = (url: string) => /^https?:\/\//.test(url)
       <div class="max-w-sm">
         <AppLink to="/" class="inline-flex items-center gap-2.5">
           <UiBrandMark :size="20" class="text-primary" />
-          <span class="font-display text-lg font-semibold tracking-tight text-highlighted">
+          <span class="nameplate font-display text-lg font-semibold tracking-tight text-highlighted">
             {{ t('brand.name') }}
           </span>
         </AppLink>
@@ -66,6 +73,23 @@ const isHttp = (url: string) => /^https?:\/\//.test(url)
             </a>
           </li>
         </ul>
+
+        <!-- The number itself is NOT printed here (018): /contact is where the number is shown, the
+             Footer is an action. A visible label rather than the social row's icon-only treatment —
+             this is a single unfamiliar affordance in the chrome, not one of a row of recognisable
+             platform marks, so its name carries it. `rel` omits `me`: wa.me is a message endpoint,
+             not a profile the owner claims. -->
+        <p v-if="whatsappUrl" class="mt-6">
+          <a
+            :href="whatsappUrl"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="inline-flex items-center gap-2 text-body-sm text-muted transition-colors hover:text-highlighted"
+          >
+            <UIcon name="i-simple-icons-whatsapp" class="size-5 shrink-0" aria-hidden="true" />
+            {{ t('footer.whatsapp') }}
+          </a>
+        </p>
 
         <div class="mt-8 flex items-center gap-2">
           <LayoutLangToggle />

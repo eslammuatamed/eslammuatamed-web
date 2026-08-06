@@ -15,11 +15,12 @@
 | المجلد/الملف | الدور |
 |---|---|
 | `AppLink.vue` | رابط واعٍ باللغة: داخلي عبر `useLocalePath`، خارجي بـ `target=_blank` + `rel=noopener` (قائمة سماح مخطّطات `WD-5`) |
-| `layout/Header.vue` | `<LayoutHeader>` — الترويسة، أُعيد بناؤها لـ007 وحُدِّثت في مرحلة القبول: علامة Monolith (`UiBrandMark`) بجوار وسم الاسم بخطّ العرض (`D03-11`) + تنقّل رئيسي بأربعة عناصر مع علامة نشاط بنفسجية + رابط Résumé دائم + زرّ تواصل بنفسجي + `LayoutLangToggle` + `LayoutThemeToggle` + درج جوّال (`USlideover`) بعرض ~70vw من الحافّة الأمامية (منطقيًّا حسب RTL) فوق تعتيم يُبقي الصفحة خلفه مرئية، بفخّ تركيز/Escape/قفل تمرير من Reka |
-| `layout/Footer.vue` | `<LayoutFooter>` — التذييل، أُعيد بناؤه لـ007 بوصفه **colophon** وحُدِّث في مرحلة القبول: علامة Monolith (`UiBrandMark`) بجوار الاسم + سطر بناء (colophon) + تنقّل مكرّر + حالة التوفّر + روابط تواصل اجتماعي **أيقونية فقط** (الاسم المرئي أُسقط، الاسم المتاح لتقنية المساعدة عبر `aria-label`؛ مُرشَّحة بالمخطّط `WD-5`) + تنزيل السيرة الذاتية (من `SiteSettings` عبر `useSiteSettings`، مُتشارَك مع `HomeNameplate`) + `LayoutLangToggle`/`LayoutThemeToggle` + سطر الحقوق السنوي (`FR-PUB-003`) |
+| `layout/Header.vue` | `<LayoutHeader>` — الترويسة، أُعيد بناؤها لـ007 وحُدِّثت في مرحلة القبول: وسم الاسم في شريط الترويسة وفي عنوان درج الجوّال صار كلاهما `UiWordmark` واحدًا (019) بدل سلسلتَي أصناف مُطابَقتَين يدويًّا (`D03-11`) + تنقّل رئيسي بأربعة عناصر مع علامة نشاط بنفسجية + رابط Résumé دائم + زرّ تواصل بنفسجي + `LayoutLangToggle` + `LayoutThemeToggle` + درج جوّال (`USlideover`) بعرض ~70vw من الحافّة الأمامية (منطقيًّا حسب RTL) فوق تعتيم يُبقي الصفحة خلفه مرئية، بفخّ تركيز/Escape/قفل تمرير من Reka |
+| `layout/Footer.vue` | `<LayoutFooter>` — التذييل، أُعيد بناؤه لـ007 بوصفه **colophon** وحُدِّث في مرحلة القبول: علامة Monolith (`UiBrandMark`) بجوار الاسم + سطر بناء (colophon) + تنقّل مكرّر + حالة التوفّر + روابط تواصل اجتماعي **أيقونية فقط** (الاسم المرئي أُسقط، الاسم المتاح لتقنية المساعدة عبر `aria-label`؛ مُرشَّحة بالمخطّط `WD-5`) + تنزيل السيرة الذاتية (من `SiteSettings` عبر `useSiteSettings`، مُتشارَك مع `HomeNameplate`) + إجراء **واتساب** (018) مُشتقّ من `buildWhatsappUrl` المشترك ويختفي كليًّا حين يغيب الرقم أو يكون غير صالح، ولا يطبع الرقم نفسه — `/contact` مكان عرض الرقم والتذييل مكان الإجراء + `LayoutLangToggle`/`LayoutThemeToggle` + سطر الحقوق السنوي (`FR-PUB-003`) |
 | `layout/LangToggle.vue` | `<LayoutLangToggle>` — **جديد (007، يحلّ محلّ `LocaleSwitcher`):** مبدّل لغة ثنائي (EN/AR) كعنصر segmented يعرض الخيارين معًا في آنٍ (لا قائمة منسدلة)؛ اللغة النشطة بسطح مملوء بنفسجي + `aria-current`، وكل خيار رابط `NuxtLink` إلى المسار المُحلَّل مسبقًا عبر `useSwitchLocalePath` |
 | `layout/ThemeToggle.vue` | `<LayoutThemeToggle>` — تبديل السمة (`useColorMode`) داخل `ClientOnly` (بلا وميض) |
 | `ui/BrandMark.vue` | `<UiBrandMark>` — **جديد (007، أُعيدت في مرحلة القبول، `D03-11`):** علامة Monolith الأساسية — شكل واحد متّصل بتناظر دوراني 180° يُقرأ متطابقًا في LTR وRTL؛ SVG مضمّن بتعبئة `currentColor` وحيدة، زخرفي/`aria-hidden` لأنّ الاسم المجاور هو الهوية المتاحة (`AP-9`)؛ تظهر بجوار الاسم في الترويسة والتذييل ودرج الجوّال وطبقة `UiDataLoadingOverlay` |
+| `ui/Wordmark.vue` | `<UiWordmark>` — **جديد (019):** قفل الاسم (lockup) — علامة Monolith بجوار الاسم كنصّ حقيقي (`AP-9`: العلامة زخرفية والنصّ هو الهوية المتاحة). سبب وجوده أنّ الترويسة كانت تضبط الهوية نفسها مرّتين يدويًّا وباختلاف: علامة 20px بجوار نصّ 15px في الشريط، و18px بجوار ~16px في الدرج. العلامة والفجوة مقيستان بـ`em` نسبةً إلى سجلّ النصّ الذي يحمله الجذر، فتثبت النسبة (1.1em) في أيّ سجلّ — بما فيه قفزة الترويسة المتجاوبة 15px → 18px التي لا يستطيع مقاس px تتبّعها. يستخدم `font-display` عمدًا لا `font-nameplate`: **Reem Kufi وجه لوحة الاسم العربية للبطل فقط** (`D03-12`)، ووضعه في الترويسة كان سيبدّل وجه الكروم العربي ويجلب ملفّ خطّه في كلّ مسار `/ar` بلا بطل. المعالجة اللاتينية تصل عبر صنف `.nameplate` المحصور بغير العربية |
 | `ui/Spread.vue` | `<UiSpread>` — **جديد (007):** غلاف الصفحة القابل لإعادة الاستخدام (`<section>` + `<UContainer>`)؛ الصفحة تُركَّب كسلسلة "spreads" كاملة العرض يتناوب سطحها: `tone='paper'` (أرضية الصفحة) \| `'lift'` (خطوة سطح واحدة بحدّ رفيع، `D03-3`) \| `'ink'` (قسم حبر داكن كامل العرض، يضيف صنف `.on-ink` الذي يعيد توجيه الرموز الدلالية فتبقى المكوّنات الفرعية غير واعية بالسمة). يحلّ محلّ `UiSection` |
 | `ui/SectionHead.vue` | `<UiSectionHead>` — **جديد (007):** جهاز الترويسة المتكرّر الوحيد للأقسام: eyebrow بنمط `.kicker` فوق عنوان بخطّ العرض، مع إجراء ذيلي اختياري (رابط "عرض الكل") يقابل العنوان على الشاشات الواسعة؛ `title-id` يربط `aria-labelledby` بالمعلم المالك. يحلّ محلّ `UiDatumLabel`/`UiSectionHeader` |
 | `ui/StateError.vue` | `<UiStateError>` — حالة فشل تحميل قسم: رسالة + إعادة محاولة (`emit retry`) — عزل الخطأ لكل قسم (`NFR-DEGRADE`)؛ منذ مرحلة القبول تُستهلَك افتراضيًّا (فتحة `#error`) من داخل `UiRequestState` بدل الاستدعاء المباشر من أقسام الرئيسية |
@@ -43,12 +44,14 @@
 ## خريطة الاتصال
 
 - **وارد:** التخطيطات (`LayoutHeader`/`LayoutFooter`/`UiBackToTop` في `default.vue`)، الصفحات (`HomeNameplate`, `HomeCapabilities`, `HomeSelectedWork`, `HomeTimeline`, `HomeWriting`, `HomeVoices`, `HomeContact`, `ContentArticleRow`, `ContentProse`، `UiSpread`، `UiSectionHead`، `UiRequestState`).
-- **صادر:** مكوّنات `Nuxt UI`، `useI18n`/`useLocalePath`/`useSwitchLocalePath`/`useColorMode`، ومركّبات البيانات (`useSiteSettings`/`useHomeData`/`useSiteSchema`)، و`utils` (`formatDate`/`formatMonthYear`/`formatExperiencePeriod`)، وبدائيّات الواجهة الجديدة (`UiSpread`/`UiSectionHead`/`UiBrandMark`/`UiRequestState`/`LayoutLangToggle`).
+- **صادر:** مكوّنات `Nuxt UI`، `useI18n`/`useLocalePath`/`useSwitchLocalePath`/`useColorMode`، ومركّبات البيانات (`useSiteSettings`/`useHomeData`/`useSiteSchema`)، و`utils` (`formatDate`/`formatMonthYear`/`formatExperiencePeriod`)، وبدائيّات الواجهة الجديدة (`UiSpread`/`UiSectionHead`/`UiWordmark`/`UiBrandMark`/`UiRequestState`/`LayoutLangToggle`).
 
 ### مكوّنات المشاريع (005)
 
 - **`project/Filter.vue`** — مرشّح التقنيات من سجلّ المهارات لا من نصّ حرّ؛ القيمة المُرسَلة هي
-  `UUID` القياسي (الشكل الوحيد الذي يقبله العقد)، والتسميات للعرض فقط. «كل التقنيات» **عنصر نائب**
+  `slug` المهارة، وهو الشكل القياسي لـ `?technology=` (`D10-17`)؛ ويظلّ `UUID` مقبولًا **للتوافق
+  الخلفي فقط**، فرابط قديم لا يتوقّف عن العمل. والتسميات للعرض فقط لأنّها مترجَمة، فلو صارت هي
+  القيمة لتغيّر معنى الرابط بتغيّر اللغة. «كل التقنيات» **عنصر نائب**
   لا خيار في القائمة: `reka-ui` تحجز السلسلة الفارغة لمسح الاختيار وترفض عنصرًا قيمته `''`؛ فالمسح
   إجراء صريح يظهر فقط أثناء وجود مرشّح.
 - **`project/Gallery.vue`** — `srcset` مبني من `variants` الواردة في العقد نفسه، لا من تحويل وقت
@@ -57,6 +60,20 @@
   البديل» فتُخفى الصورة من شجرة الإتاحة، والثانية تعني «زخرفيّة عن قصد».
 - **`project/Links.vue`** — يعرض `liveUrl`/`repoUrl` بالتوليفات الأربع، ولا يعرض **أيّ** منطقة حين
   يكونان معًا `null`.
+- **`project/Facts.vue`** (016) — بطاقة «لمحة سريعة»: الملخّص الهندسي السريع لدراسة الحالة. محتواها
+  يحدّده **العقد** لا التصميم؛ فـ `GET /projects/{slug}` لا يحمل سوى أربع حقائق قصيرة: `year`
+  و`technologies` و`liveUrl` و`repoUrl`. لا حالة ارتباط ولا مدّة زمنيّة (`year` رقم مفرد قابل
+  لأن يكون `null`)، و`role` أحد حقول `FR-CNT-020` الثمانية بصيغة Markdown مُعتِمة أي قسم لا حقيقة
+  في سطر — وهذه الثلاثة بنود متابعة على الـ API لا تُخمَّن في الواجهة. يُحذف الصفّ كاملًا حين يغيب
+  حقله، وتُحذف البطاقة كاملة حين لا توجد أيّ حقيقة، على قاعدة `Links.vue` نفسها. `section` بعنوان
+  `h2` يمنحها اسمًا في شجرة الإتاحة، والعنوان بمظهر `kicker` كي لا ينافس عناوين السرد بصريًّا.
+- **`project/ContactCta.vue`** — دعوة ختامية **مضغوطة** (016): كانت `UiSpread tone="ink"` كاملة
+  العرض بخطّ `text-h1`، فكان في الصفحة عنوانان بحجم العنوان الرئيسي وقسم كامل من الفراغ لأربع
+  كلمات؛ صارت بطاقة واحدة على أرضيّة الصفحة بالنصّ المُعتمد نفسه (وهذا يزيل أيضًا تداخل
+  `UContainer` داخل `UContainer`). الوجهة بريد مباشر فقط، والعنوان يُقرأ من روابط الملف الشخصي في
+  الـ API مع عنوان احتياطي ثابت كي لا يختفي مسار التحويل الوحيد عند تعذّر الإعدادات.
+  وأُضيف في 018 إجراء **واتساب ثانوي** بجوار زرّ البريد: البريد يبقى المسار الأساسي المضمون
+  (`D05-4`) لأنّه وحده يملك عنوانًا احتياطيًّا، أمّا واتساب فإضافيّ ويختفي كليًّا حين يغيب الرقم.
 - **`ui/Breadcrumbs.vue`** — `nav` دلالي بقائمة مرتّبة، والعنصر الأخير يحمل `aria-current="page"`
   وليس رابطًا، وبخصائص CSS منطقيّة فينعكس المسار تلقائيًّا في RTL.
 
@@ -81,7 +98,7 @@
 
 ## الاختبارات
 
-`content/Prose.spec.ts`، `content/WorkEntry.spec.ts`، `content/TimelineEntry.spec.ts`، `content/ArticleRow.spec.ts`، `content/QuoteBlock.spec.ts`، `home/Nameplate.spec.ts`، `home/Capabilities.spec.ts`، `home/SelectedWork.spec.ts`، `home/Timeline.spec.ts`، `home/Writing.spec.ts`، `home/Voices.spec.ts`، `home/Contact.spec.ts`، `ui/Spread.spec.ts`، `ui/SectionHead.spec.ts`، `ui/ContentSkeleton.spec.ts`، `ui/DataLoadingOverlay.spec.ts`، `ui/RequestState.spec.ts`، `ui/BackToTop.spec.ts`، `layout/Footer.spec.ts` (يشمل إسقاط المخطّط غير الآمن `WD-5`)، `layout/LangToggle.spec.ts`. تُغطّى الحالات الثلاث (مملوء/فارغ/خطأ) وكلا اللغتين.
+`content/Prose.spec.ts`، `content/WorkEntry.spec.ts`، `content/TimelineEntry.spec.ts`، `content/ArticleRow.spec.ts`، `content/QuoteBlock.spec.ts`، `home/Nameplate.spec.ts`، `home/Capabilities.spec.ts`، `home/SelectedWork.spec.ts`، `home/Timeline.spec.ts`، `home/Writing.spec.ts`، `home/Voices.spec.ts`، `home/Contact.spec.ts`، `ui/Spread.spec.ts`، `ui/SectionHead.spec.ts`، `ui/ContentSkeleton.spec.ts`، `ui/DataLoadingOverlay.spec.ts`، `ui/RequestState.spec.ts`، `ui/BackToTop.spec.ts`، `ui/Wordmark.spec.ts`، `layout/Footer.spec.ts` (يشمل إسقاط المخطّط غير الآمن `WD-5`، وغياب إجراء واتساب مؤكَّدًا على **الاسم المتاح** لا على الـ `href` وحده)، `layout/Header.spec.ts` (الاسم المتاح لرابط الصفحة الرئيسية)، `project/ContactCta.spec.ts`، `layout/LangToggle.spec.ts`. تُغطّى الحالات الثلاث (مملوء/فارغ/خطأ) وكلا اللغتين.
 
 ## أخطاء شائعة
 

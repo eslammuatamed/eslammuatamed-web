@@ -60,17 +60,26 @@ const GOVERNED_PROSE = {
 }
 
 /**
- * The approved public tagline (positioning-strategy v1.1.0 §2/§3), seeded by API `254f6cd0` and
- * carried verbatim by this lane's fixtures. `Person.jobTitle` derives from it (D22-8), so asserting
- * the exact string here is what proves the identity is API-owned and not hard-coded anywhere.
+ * The approved public tagline (positioning-strategy v2.0.0 §2/§3), carried verbatim by this lane's
+ * fixtures. `Person.jobTitle` derives from it (D22-8), so asserting the exact string here is what
+ * proves the identity is API-owned and not hard-coded anywhere.
+ *
+ * Same value in both locales: the professional title stays in English on the Arabic site. The
+ * stored value is two lines; `jobTitle` is the single-line form, because a structured-data field
+ * read by machines carries the title, not the hero's typography.
  */
 const APPROVED_TAGLINE = {
-  en: 'JavaScript Product Engineer — Frontend Engineer specializing in Vue.js & Nuxt.js',
-  ar: 'مهندس برمجيات للمنتجات — متخصص في هندسة الواجهات الأمامية باستخدام Vue.js وNuxt.js'
+  en: 'Full-Stack JavaScript Product Engineer',
+  ar: 'Full-Stack JavaScript Product Engineer'
 }
 
 /** Superseded titles; their reappearance anywhere is a regression. */
-const SUPERSEDED_TITLES = ['Frontend Engineer — Vue.js & Nuxt.js', 'مهندس واجهات أمامية — Vue.js و Nuxt.js']
+const SUPERSEDED_TITLES = [
+  'Frontend Engineer — Vue.js & Nuxt.js',
+  'مهندس واجهات أمامية — Vue.js و Nuxt.js',
+  'JavaScript Product Engineer — Frontend Engineer specializing in Vue.js & Nuxt.js',
+  'مهندس برمجيات للمنتجات — متخصص في هندسة الواجهات الأمامية باستخدام Vue.js وNuxt.js'
+]
 
 const CASES = [
   { label: 'English', path: EN, locale: 'en' as const, lang: 'en-US', dir: 'ltr', og: 'en_US' },
@@ -202,8 +211,12 @@ for (const { label, path, locale, lang, dir, og } of CASES) {
         'content',
         locale === 'ar' ? /[؀-ۿ]/ : /.{20,}/
       )
-      // Still no og:image while no branded fallback exists (finding F-1).
-      await expect(page.locator('meta[property="og:image"]')).toHaveCount(0)
+      // F-1 closed by web-013. This lane matters most for it: the portrait is NULL here, so the
+      // branded committed card is the only social image available — and it must still be emitted
+      // exactly once, absolute, in BOTH locales.
+      const image = page.locator('meta[property="og:image"]')
+      await expect(image).toHaveCount(1)
+      await expect(image).toHaveAttribute('content', /^https?:\/\/.+\/social-card\.png$/)
     })
 
     test('unfiltered axe scan reports no violations', async ({ page }) => {

@@ -18,7 +18,14 @@ import type { Envelope, Paginated, ProjectDetail, ProjectListItem, Skill } from 
 /** Reactive query inputs for the index. Getters, so the caller owns where the state lives (the URL). */
 interface ProjectsListParams {
   page: () => number
-  /** Canonical technology UUID, or `undefined` for the unfiltered list. */
+  /**
+   * The technology filter value, or `undefined` for the unfiltered list.
+   *
+   * The CANONICAL form is the Skill's `slug` (D10-17). A Skill uuid is still accepted by the API for
+   * backward compatibility only, so this stays a plain string rather than a narrowed slug type: a
+   * link shared before the slug contract landed carries a uuid, and narrowing here would silently
+   * unfilter it instead of honouring it.
+   */
   technology: () => string | undefined
 }
 
@@ -42,8 +49,16 @@ export function useProjectsList(params: ProjectsListParams) {
       const technology = params.technology()
       return api<Paginated<ProjectListItem>>('/projects', {
         locale: locale.value,
-        // Omit `technology` entirely when unset — sending an empty string would be a 422.
-        query: { page: params.page(), ...(technology ? { technology } : {}) }
+        // `perPage` is sent explicitly rather than inherited from the API's default of 12: the page
+        // size is this page's layout decision, and an implicit one would reflow the index if the API
+        // ever changed its default. It is NOT part of the cache key because it is a constant — a key
+        // naming an invariant only makes the key longer.
+        // `technology` is omitted entirely when unset; sending an empty string would be a 422.
+        query: {
+          page: params.page(),
+          perPage: PROJECTS_PER_PAGE,
+          ...(technology ? { technology } : {})
+        }
       })
     },
     { watch: [locale, params.page, params.technology] }
@@ -73,8 +88,9 @@ export function useProjectDetail(slug: () => string) {
 
 /**
  * `GET /skills` — the source of the index's technology filter options (doc 04 §: technologies are drawn
- * from the Skills registry, not free text). The filter sends the skill's UUID as `?technology=`, which
- * is the only accepted form; labels are display-only.
+ * from the Skills registry, not free text). The filter sends the skill's `slug` as `?technology=` —
+ * the canonical form (D10-17), stable across locales and readable in a shared URL. Labels are
+ * display-only and arrive already localized, so they must never become the filter value.
  */
 export function useProjectTechnologies() {
   const api = useApi()

@@ -42,6 +42,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import process from 'node:process'
 import { assertH2, createEphemeralCert, startH2Proxy } from './lib/h2-proxy.mjs'
+import { describeIncompleteRender, inspectHomeRender } from './lib/home-prime.mjs'
 import { assertCleanSourceState, governedBuildEnv, headSha, validateProvenance, writeReportProvenance } from './lib/build-provenance.mjs'
 import { assertCollectionUsedH2, formatProtocolSummary } from './lib/lh-protocol.mjs'
 import { browserProfileDir, trackProcessTree } from './lib/process-tree.mjs'
@@ -55,6 +56,20 @@ const H2_PORT = Number(process.env.LH_H2_PORT ?? 0)
 // loaded CI runner is genuinely slow; overridable so the lifecycle tests can exercise the
 // startup-failure path in seconds instead of minutes.
 const PORT_TIMEOUT_MS = Number(process.env.LH_PORT_TIMEOUT_MS ?? 120_000)
+// SWR priming (see `primeSwrRoute`). The TTL mirrors `swr: 60` in nuxt.config's routeRules and must
+// stay >= it, because the repair depends on the entry having actually expired. Overridable for the
+// same reason as the timeout above — the spec proves the refusal and the repair without waiting a
+// real minute per case. `PRIME_ATTEMPTS` is 3, not unbounded: a fixture that cannot render the page
+// twice over is broken in a way another wait will not fix.
+const PRIME_TTL_MS = Number(process.env.LH_PRIME_TTL_MS ?? 61_000)
+const PRIME_REVALIDATE_MS = Number(process.env.LH_PRIME_REVALIDATE_MS ?? 1_500)
+const PRIME_ATTEMPTS = Number(process.env.LH_PRIME_ATTEMPTS ?? 3)
+
+const sleep = ms => new Promise(r => setTimeout(r, ms))
+
+/** One preview render, read whole. `maxBuffer` is raised because the Home document inlines its payload. */
+const fetchRoute = path =>
+  execFileSync('curl', ['-s', `http://127.0.0.1:${WEB_PORT}${path}`], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 })
 
 /**
  * Everything we own, torn down in reverse order exactly once, plus the two acquisition guards that
@@ -238,12 +253,27 @@ async function run(cmd, args, env = {}) {
   })
 }
 
+/**
+ * A LIVENESS probe, and deliberately nothing more.
+ *
+ * It used to poll `curl -sf http://127.0.0.1:PORT/`, which made the first successful poll the first
+ * render of `/` — a route carrying `swr: 60`. A liveness check was therefore silently deciding what
+ * the governed matrix measured, and it accepted any 2xx, including the D13-1 outage state. The
+ * priming step below is where that decision belongs, because it is the only place that verifies.
+ *
+ * So this asks for a path that renders nothing cacheable and accepts ANY HTTP status: a 404 from
+ * Nitro proves the server is answering just as well as a 200, and unlike a 200 on `/` it cannot
+ * become the measured artifact. `-f` is dropped for exactly that reason — with it, the 404 this
+ * path is expected to produce would read as "not up".
+ */
+const LIVENESS_PATH = '/__ci-liveness'
+
 async function waitForPort(port, label, timeoutMs = PORT_TIMEOUT_MS) {
   const deadline = Date.now() + timeoutMs
   while (Date.now() < deadline) {
     try {
       await new Promise((res, rej) => {
-        const c = spawn('curl', ['-sf', '-o', '/dev/null', `http://127.0.0.1:${port}/`])
+        const c = spawn('curl', ['-s', '-o', '/dev/null', `http://127.0.0.1:${port}${LIVENESS_PATH}`])
         c.on('exit', code => (code === 0 ? res() : rej(new Error('not up'))))
         c.on('error', rej)
       })
@@ -350,6 +380,62 @@ function assertProfileProtocol(profile) {
   return summary
 }
 
+/**
+ * Render an SWR-cached route and PROVE the cached document is the complete page.
+ *
+ * `/` and `/ar` carry `swr: 60`, so the first render after the preview starts is frozen and all
+ * three readings of the matrix come from it. A cold-start transient therefore does not cost one
+ * noisy sample that a median absorbs — it silently redefines what the gate measures, for every
+ * reading, in a way that looks exactly like a layout regression. See `lib/home-prime.mjs`.
+ *
+ * ## The repair, and why waiting is the mechanism
+ *
+ * A retry cannot simply re-request the route: within the TTL the cache serves the same frozen stub
+ * back, so an immediate retry re-reads the failure and proves nothing. Waiting out the TTL is what
+ * makes a fresh render possible — after expiry the first request serves the stale entry ONE more
+ * time and revalidates behind it, so the second request observes the new render. That is not an
+ * assumption about Nitro: it is visible in run 31061969098's own artifacts, where the poisoned
+ * entry was served at 01:27:48 and the correct 240-element page at 01:28:02.
+ *
+ * ## Why this is not "re-running until green"
+ *
+ * Doc 20 §1 forbids re-rolling a MEASUREMENT until the number falls under a threshold. This re-does
+ * the FIXTURE until it is provably the page the gate is specified to measure, and then measures it
+ * exactly once. No threshold, budget or reading is touched, and a repair is never silent: every
+ * attempt is logged, so a run that needed one is distinguishable from a run that did not.
+ */
+async function primeSwrRoute(path) {
+  for (let attempt = 1; attempt <= PRIME_ATTEMPTS; attempt++) {
+    if (attempt > 1) {
+      // Past the TTL, then a discarded stale-serve that triggers revalidation behind it.
+      console.log(`[lighthouse:ci] waiting ${PRIME_TTL_MS} ms for the ${path} SWR entry to expire…`)
+      await sleep(PRIME_TTL_MS)
+      fetchRoute(path)
+      await sleep(PRIME_REVALIDATE_MS)
+    }
+
+    const html = fetchRoute(path)
+    const { complete, missing } = inspectHomeRender(html)
+    if (complete) {
+      if (attempt > 1) console.log(`[lighthouse:ci] ${path} re-primed successfully on attempt ${attempt}.`)
+      else console.log(`[lighthouse:ci] ${path} primed and verified — complete Home render cached.`)
+      return html
+    }
+
+    console.error(
+      `[lighthouse:ci] PRIMING ATTEMPT ${attempt}/${PRIME_ATTEMPTS} FAILED\n`
+      + describeIncompleteRender(path, html, missing)
+    )
+  }
+
+  throw new Error(
+    `${path} never rendered the complete Home page in ${PRIME_ATTEMPTS} attempts — refusing to `
+    + 'measure. The governed matrix would have reported layout, LCP and CLS figures for the D13-1 '
+    + 'outage state rather than for the page under test. This is an infrastructure failure of the '
+    + 'fixture, NOT a threshold regression: do not re-baseline anything on the strength of it.'
+  )
+}
+
 async function main() {
   const marker = await ensureGovernedBuild()
 
@@ -391,9 +477,14 @@ async function main() {
   const origin = owned.proxy.origin
   console.log(`[lighthouse:ci] HTTP/2 frontend: ${origin} -> http://127.0.0.1:${WEB_PORT}`)
 
-  // A real first-party asset, discovered from the document rather than guessed at.
-  const html = execFileSync('curl', ['-s', `http://127.0.0.1:${WEB_PORT}/`], { encoding: 'utf8' })
-  const asset = html.match(/\/_nuxt\/[A-Za-z0-9_.-]+\.js/)?.[0]
+  // Prime the SWR-cached routes the matrix measures, and PROVE what got cached. See
+  // `lib/home-prime.mjs` for why a status code and an asset reference are not enough.
+  const primedHome = await primeSwrRoute('/')
+  await primeSwrRoute('/ar')
+
+  // A real first-party asset, discovered from the document rather than guessed at — now taken from
+  // the render that was just proven complete, so discovery can no longer succeed against a stub.
+  const asset = primedHome.match(/\/_nuxt\/[A-Za-z0-9_.-]+\.js/)?.[0]
   if (!asset) throw new Error('could not discover a first-party /_nuxt/ asset to assert the protocol against')
 
   console.log('[lighthouse:ci] asserting browser-facing protocol BEFORE the matrix…')

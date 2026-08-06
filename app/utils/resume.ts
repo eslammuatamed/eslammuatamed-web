@@ -9,9 +9,9 @@ import type { ProfileLink, SiteSettings, Skill } from '~/types/models'
 /**
  * One skill group, in the API's group order, holding its skills in the API's `order`.
  *
- * `group` is the contract's ENUM (`LANGUAGE | FRAMEWORK | TOOLING | PRACTICE`), required and
+ * `group` is the contract's ENUM (`LANGUAGE | FRONTEND | BACKEND | DELIVERY`), required and
  * never null — not free text. It is a token, not a label: rendering it directly would print
- * "FRAMEWORK" on both locales. The localized labels already exist at
+ * "FRONTEND" on both locales. The localized labels already exist at
  * `home.techStack.group.{GROUP}` and are reused rather than duplicated.
  */
 export interface SkillGroup {

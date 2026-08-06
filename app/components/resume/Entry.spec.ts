@@ -2,6 +2,9 @@
 import { describe, expect, it } from 'vitest'
 import { ref } from 'vue'
 import { mockNuxtImport, mountSuspended } from '@nuxt/test-utils/runtime'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
+import process from 'node:process'
 import type { Experience } from '~/types/models'
 import Entry from './Entry.vue'
 
@@ -37,10 +40,41 @@ describe('ResumeEntry', () => {
     expect(wrapper.text()).toContain('Egypt')
   })
 
-  // The governed public positioning must never overwrite an employment title.
+  // The governed public positioning must never overwrite an employment title
+  // (positioning-strategy v2.0.0 §4, "Does not change"). Both the current displayed title and the
+  // superseded v1.x one are checked: a stale title leaking onto an employment row would be the
+  // same defect wearing last quarter's wording.
   it('does not substitute the governed public positioning for the employment title', async () => {
     const wrapper = await mountSuspended(Entry, { props: { experience: experience() } })
+    expect(wrapper.text()).not.toContain('Full-Stack JavaScript Product Engineer')
     expect(wrapper.text()).not.toContain('JavaScript Product Engineer')
+  })
+
+  /**
+   * REGRESSION GUARD, and the reason this entry's role heading changed size.
+   *
+   * `text-h4` sat on this heading and did nothing. The scale defines `--text-mega`, `--text-display`,
+   * `--text-h1`, `--text-h2` and `--text-h3` — there is no `--text-h4` — so Tailwind emitted no
+   * utility at all and the role, the densest and most important line in the entry, rendered at
+   * inherited body size with no typographic rank. A missing token fails silently by construction,
+   * which is exactly why it is asserted rather than trusted.
+   */
+  it('uses only type-scale classes the theme actually defines', async () => {
+    const css = readFileSync(resolve(process.cwd(), 'app/assets/css/main.css'), 'utf8')
+    const wrapper = await mountSuspended(Entry, { props: { experience: experience() } })
+
+    // Class ATTRIBUTES only, not the serialized HTML: template comments survive into the dev-mode
+    // render, and this component's comments name the very token they warn about.
+    const used = wrapper
+      .findAll('[class]')
+      .flatMap(element => (element.attributes('class') ?? '').split(/\s+/))
+      .map(name => /^text-(mega|display|h\d|body-lg|body-sm|body|caption)$/.exec(name)?.[1])
+      .filter((token): token is string => !!token)
+
+    expect(used.length).toBeGreaterThan(0)
+    for (const token of new Set(used)) {
+      expect(css, `--text-${token} is not defined in the type scale`).toContain(`--text-${token}:`)
+    }
   })
 
   it('splits the Markdown impact into list items with markers stripped', async () => {
@@ -81,9 +115,9 @@ describe('ResumeEntry', () => {
       props: {
         experience: experience({
           technologies: [
-            { id: 't1', label: 'Vue.js' },
-            { id: 't2', label: 'Tailwind CSS' },
-            { id: 't3', label: 'Angular' }
+            { id: 't1', slug: 'vue', label: 'Vue.js' },
+            { id: 't2', slug: 'tailwind-css', label: 'Tailwind CSS' },
+            { id: 't3', slug: 'angular', label: 'Angular' }
           ]
         })
       }
@@ -116,6 +150,14 @@ describe('ResumeEntry', () => {
   it('carries the resume-entry hook the print stylesheet targets', async () => {
     const wrapper = await mountSuspended(Entry, { props: { experience: experience() } })
     expect(wrapper.find('li').classes()).toContain('resume-entry')
+  })
+
+  // The bullet marker is a background on an empty span, and print flattens backgrounds to save
+  // ink — which erased every marker until the stylesheet exempted this hook. Losing the class
+  // would silently reintroduce bullets with no bullet on paper.
+  it('carries the resume-bullet hook the print stylesheet exempts from the ink rule', async () => {
+    const wrapper = await mountSuspended(Entry, { props: { experience: experience() } })
+    expect(wrapper.findAll('.resume-bullet').length).toBe(2)
   })
 
   // The entry is an <li>: the page wraps entries in an ordered list so reverse-chronological

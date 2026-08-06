@@ -11,7 +11,7 @@
 | الملف | الدور |
 |---|---|
 | `useApi.ts` | يبني عميل `$fetch` مُهيّأ ويُرجِع دالّة `apiFetch<T>` |
-| `useSiteSettings.ts` | قراءة `GET /settings/site` مُشتركة، مُفتَّحة باللغة — يستهلكها البطل والتذييل، و`Nuxt` يُوحّد الطلب حسب المفتاح (بلا جلب مزدوج) |
+| `useSiteSettings.ts` | قراءة `GET /settings/site` مُشتركة، مُفتَّحة باللغة — يستهلكها البطل والتذييل؛ التوحيد في طلب واحد يأتي من `utils/settings-cache.ts` (`sharedSettingsCachedData`) لا من المفتاح المشترك وحده، لأن `getCachedData` الافتراضي في `Nuxt` يقرأ `static.data` الفارغ أثناء `SSR` فيعيد كل موضع استدعاء الجلب |
 | `useHomeData.ts` | بيانات أقسام الصفحة الرئيسية (`FR-PUB-011…016`): `useAsyncData` لكل قسم، بالتوازي، وكلٌّ يعزل خطأه فلا يُفرِّغ قسمٌ الصفحةَ (`NFR-DEGRADE`) |
 | `useExperiences.ts` | قراءة `GET /experiences` (`FR-PUB-021`) بلغة المسار (`D06-6`)؛ يُرجِع المصفوفة بعد فكّ المغلّف — الترتيب وترتيب التقنيات ملك للـ API ولا يُعاد ترتيبهما |
 | `useSiteSchema.ts` | بيانات `Person` + `WebSite` المنظَّمة للصفحة الرئيسية عبر `useSchemaOrg` من بيانات الـ API (`doc 22 §4`) — مصدر واحد للحقيقة |
