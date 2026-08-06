@@ -1081,7 +1081,7 @@ export interface components {
             resumeAsset: components["schemas"]["PublicMediaPdfDescriptor"] | null;
             /** Format: uuid */
             portraitAssetId: string | null;
-            /** @description Resolved About portrait descriptor (FR-PUB-020); null when no portrait is configured. */
+            /** @description Resolved About portrait descriptor (FR-PUB-020); null when no portrait is configured. Its `alt` is the per-usage localized alt for this locale, never the asset-level default. */
             portrait: components["schemas"]["PublicMediaImageDescriptor"] | null;
             /**
              * @description Professional address (CV, resume, outreach).
@@ -1133,6 +1133,8 @@ export interface components {
             engineeringPhilosophy: string | null;
             /** @description Plain text. */
             currentFocus: string | null;
+            /** @description Localized alt for the About portrait in this locale. Per-usage: overrides the asset-level default. */
+            portraitAlt: string | null;
         };
         AdminSiteSettingsEntity: {
             /** Format: uuid */
@@ -1142,7 +1144,7 @@ export interface components {
             resumeAssetId: string | null;
             /** Format: uuid */
             portraitAssetId: string | null;
-            /** @description Resolved portrait descriptor for the media picker; null when unset. Read-only — write via portraitAssetId. */
+            /** @description Resolved portrait descriptor for the media picker; null when unset. Read-only — write via portraitAssetId. Its `alt` is the asset-level library default, NOT the published About alt: that lives in translations[locale].portraitAlt and must never be prefilled from here. */
             portrait: components["schemas"]["PublicMediaImageDescriptor"] | null;
             professionalEmail: string | null;
             contactEmail: string | null;
@@ -1203,6 +1205,11 @@ export interface components {
             engineeringPhilosophy?: string;
             /** @example Building bilingual product platforms. */
             currentFocus?: string;
+            /**
+             * @description Localized alt text for the About portrait in THIS locale, or null to clear. Per-usage: it overrides the asset-level MediaAssetAlt default.
+             * @example Eslam Muatamed, smiling, in front of a bookshelf.
+             */
+            portraitAlt?: string | null;
         };
         UpdateSettingsDto: {
             profileLinks?: components["schemas"]["ProfileLinkDto"][];
