@@ -87,23 +87,46 @@ beforeEach(async () => {
   // The REAL orchestrator and the REAL libraries it exercises.
   mkdirSync(join(sandbox, 'scripts', 'lib'), { recursive: true })
   copyFileSync(join(REAL_SCRIPTS, 'lighthouse-ci.mjs'), join(sandbox, 'scripts', 'lighthouse-ci.mjs'))
-  for (const lib of ['h2-proxy.mjs', 'build-provenance.mjs', 'lh-protocol.mjs', 'lifecycle-guard.mjs', 'process-tree.mjs']) {
+  for (const lib of ['h2-proxy.mjs', 'build-provenance.mjs', 'home-prime.mjs', 'lh-protocol.mjs', 'lifecycle-guard.mjs', 'process-tree.mjs']) {
     copyFileSync(join(REAL_SCRIPTS, 'lib', lib), join(sandbox, 'scripts', 'lib', lib))
   }
 
   // Stand-in for Nitro + Prism: serves a document that references a first-party /_nuxt/ asset,
   // which is what the preflight discovers and asserts against.
+  //
+  // It now also stands in for the SWR-cached Home page, because the orchestrator verifies what it
+  // primed (`primeSwrRoute`). The default document carries the section-heading ids that
+  // `app/pages/index.vue` only renders inside `v-if="settings"`; `FAKE_PREVIEW_HOME` swaps in the
+  // D13-1 outage stub, which — exactly like the real one — answers 200 and still references the
+  // first-party asset, so it satisfies every check that existed before this verification did.
   writeFileSync(join(sandbox, 'scripts', 'ci-preview.mjs'), `
 import http from 'node:http'
-import { writeFileSync } from 'node:fs'
+import { appendFileSync, writeFileSync } from 'node:fs'
 if (process.env.FAKE_PREVIEW_MODE === 'die') { process.exit(3) }
 writeFileSync(process.env.FAKE_PREVIEW_PIDFILE, String(process.pid))
-const html = '<!doctype html><html><head><link rel="stylesheet" href="/_nuxt/entry.css"></head>'
-  + '<body><h1>hi</h1><script type="module" src="/_nuxt/app.js"></script></body></html>'
+const head = '<!doctype html><html><head><link rel="stylesheet" href="/_nuxt/entry.css"></head><body>'
+const tail = '<script type="module" src="/_nuxt/app.js"></script></body></html>'
+const sections = ['capabilities-title', 'work-title', 'experience-title', 'writing-title', 'voices-title']
+const complete = head + '<h1>hi</h1>'
+  + sections.map(id => '<h2 id="' + id + '">s</h2>').join('') + tail
+// The outage state: chrome and tagline present, every section gone.
+const stub = head + '<p>Content unavailable</p>' + tail
+const homeMode = process.env.FAKE_PREVIEW_HOME ?? 'complete'
+const seen = new Map()
+function homeDoc(url) {
+  const n = (seen.get(url) ?? 0) + 1
+  seen.set(url, n)
+  if (homeMode === 'stub') return stub
+  // Models a poisoned SWR entry that the TTL wait clears: the first render of a route is the
+  // outage state, every later one is the real page.
+  if (homeMode === 'stub-then-complete') return n === 1 ? stub : complete
+  return complete
+}
 const web = http.createServer((req, res) => {
+  if (process.env.FAKE_PREVIEW_REQLOG) appendFileSync(process.env.FAKE_PREVIEW_REQLOG, req.url + '\\n')
   if (req.url.startsWith('/_nuxt/app.js')) { res.writeHead(200, { 'content-type': 'text/javascript' }); res.end('export const a=1') ; return }
   if (req.url.startsWith('/_nuxt/entry.css')) { res.writeHead(200, { 'content-type': 'text/css' }); res.end('body{color:red}'); return }
-  res.writeHead(200, { 'content-type': 'text/html;charset=utf-8' }); res.end(html)
+  res.writeHead(200, { 'content-type': 'text/html;charset=utf-8' }); res.end(homeDoc(req.url))
 })
 web.listen(Number(process.env.CI_PREVIEW_PORT), '127.0.0.1')
 const api = http.createServer((req, res) => { res.writeHead(200, { 'content-type': 'application/json' }); res.end('{}') })
@@ -577,5 +600,96 @@ describe('governed orchestrator — interruption', () => {
     expect(certDirs().filter(d => !before.includes(d))).toHaveLength(0)
     expect(await until(async () => !isAlive(previewPid(pidfile)))).toBe(true)
     expect(await until(() => portIsFree(webPort))).toBe(true)
+  }, 60_000)
+})
+
+/**
+ * The SWR priming gate (`primeSwrRoute`).
+ *
+ * WHY THIS IS A LIFECYCLE CONCERN AND NOT A UNIT ONE. `/` and `/ar` carry `swr: 60`, so the first
+ * render after the preview starts is frozen and supplies all three readings of the matrix. The
+ * property under test is therefore about ORDER and OWNERSHIP — that nothing is measured before a
+ * complete render is proven cached — which no test of a pure predicate can observe.
+ *
+ * These reproduce run 31061969098: the priming render returned the D13-1 outage state, HTTP 200,
+ * with the first-party asset still referenced, and the whole governed matrix measured it.
+ */
+describe('governed orchestrator — SWR priming is verified, not assumed', () => {
+  it('35 — REFUSES to measure when the primed Home render is the D13-1 outage state', async () => {
+    const { done } = runOrchestrator({
+      FAKE_PREVIEW_HOME: 'stub',
+      LH_PRIME_TTL_MS: '50',
+      LH_PRIME_REVALIDATE_MS: '10'
+    })
+    const { code, out, pidfile } = await done
+
+    // The exact regression: before this gate the run proceeded and reported figures for the stub.
+    expect(code).not.toBe(0)
+    expect(out).toMatch(/never rendered the complete Home page/)
+    expect(out).toMatch(/missing section markers/)
+    expect(out).toMatch(/capabilities-title/)
+    // Attributed as infrastructure, so nobody reads it as a threshold breach and re-baselines.
+    expect(out).toMatch(/NOT a threshold regression/)
+    // It must refuse BEFORE the matrix, or it has saved nothing.
+    expect(out).not.toMatch(/collecting MOBILE matrix/)
+    // Bounded, and every attempt is on the record.
+    expect(out).toMatch(/PRIMING ATTEMPT 3\/3 FAILED/)
+    // And it still tears everything down.
+    expect(await until(() => portIsFree(webPort))).toBe(true)
+    expect(await until(async () => !isAlive(previewPid(pidfile)))).toBe(true)
+  }, 60_000)
+
+  it('36 — REPAIRS a poisoned entry by waiting out the TTL, then measures the real page', async () => {
+    const { done } = runOrchestrator({
+      FAKE_PREVIEW_HOME: 'stub-then-complete',
+      LH_PRIME_TTL_MS: '50',
+      LH_PRIME_REVALIDATE_MS: '10'
+    })
+    const { code, out } = await done
+
+    expect(code).toBe(0)
+    // The repair happened and SAYS SO. A silent retry is indistinguishable from never having had
+    // the problem, which is precisely the information an operator needs.
+    expect(out).toMatch(/PRIMING ATTEMPT 1\/3 FAILED/)
+    expect(out).toMatch(/waiting 50 ms for the \/ SWR entry to expire/)
+    expect(out).toMatch(/re-primed successfully on attempt 2/)
+    expect(out).toMatch(/browser-session protocol PROVEN h2/)
+  }, 60_000)
+
+  it('38 — the LIVENESS probe no longer renders the measured route', async () => {
+    // The regression this closes is subtle and was the true first cause: `waitForPort` polled
+    // `curl -sf .../`, so the first successful liveness poll was the first render of `/` — a route
+    // carrying `swr: 60`. A check that only asks "is anything answering?" was choosing the document
+    // the whole governed matrix would measure, and it accepted the D13-1 outage state because that
+    // answers 200. Priming must be the FIRST touch of `/`, or verifying the prime proves nothing
+    // about what got cached.
+    // Deliberately OUTSIDE the sandbox: the orchestrator re-verifies build provenance at
+    // measurement time, so a file growing inside the tree would fail the run for an unrelated
+    // reason and this test would "prove" its point by never getting there.
+    const reqlog = join(mkdtempSync(join(tmpdir(), 'lh-reqlog-')), 'requests.log')
+    const { done } = runOrchestrator({ FAKE_PREVIEW_REQLOG: reqlog })
+    const { code } = await done
+    expect(code).toBe(0)
+
+    const requests = readFileSync(reqlog, 'utf8').split('\n').filter(Boolean)
+    // The probe ran at all (otherwise this test would pass by measuring nothing)…
+    expect(requests).toContain('/__ci-liveness')
+    // …and nothing rendered `/` before it.
+    expect(requests.indexOf('/__ci-liveness')).toBeLessThan(requests.indexOf('/'))
+  }, 60_000)
+
+  it('37 — verifies BOTH measured locales, not just the default one', async () => {
+    // `/ar` is primed by the same preflight and carries the same `swr: 60`. Verifying only `/`
+    // would leave the gate one coin-flip away from the identical failure in Arabic.
+    const { done } = runOrchestrator({
+      FAKE_PREVIEW_HOME: 'complete',
+      LH_PRIME_TTL_MS: '50',
+      LH_PRIME_REVALIDATE_MS: '10'
+    })
+    const { code, out } = await done
+
+    expect(code).toBe(0)
+    expect(out).toMatch(/\/ primed and verified/)
+    expect(out).toMatch(/\/ar primed and verified/)
   }, 60_000)
 })
