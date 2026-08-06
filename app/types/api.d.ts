@@ -1884,7 +1884,7 @@ export interface components {
             /** @example 1 */
             order: number;
             /** @example #3178C6 */
-            brandColor?: Record<string, never> | null;
+            brandColor?: string | null;
             /**
              * @description Whether the skill appears in public listings. Hidden skills stay linked to their projects and experiences.
              * @default true
@@ -1909,7 +1909,7 @@ export interface components {
             /** @example 1 */
             order?: number;
             /** @example #3178C6 */
-            brandColor?: Record<string, never> | null;
+            brandColor?: string | null;
             /**
              * @description Whether the skill appears in public listings. Hidden skills stay linked to their projects and experiences.
              * @default true
@@ -2003,7 +2003,7 @@ export interface components {
              * Format: date
              * @example 2024-06-30
              */
-            endDate?: Record<string, never> | null;
+            endDate?: string | null;
             /** @example true */
             isCurrent: boolean;
             /**
@@ -2038,7 +2038,7 @@ export interface components {
              * Format: date
              * @example 2024-06-30
              */
-            endDate?: Record<string, never> | null;
+            endDate?: string | null;
             /** @example true */
             isCurrent?: boolean;
             /**
@@ -2113,7 +2113,7 @@ export interface components {
              * Format: uuid
              * @example 8b4d...
              */
-            avatarId?: Record<string, never> | null;
+            avatarId?: string | null;
             /** @example 1 */
             order: number;
             /** @example true */
@@ -2135,7 +2135,7 @@ export interface components {
              * Format: uuid
              * @example 8b4d...
              */
-            avatarId?: Record<string, never> | null;
+            avatarId?: string | null;
             /** @example 1 */
             order?: number;
             /** @example true */
@@ -2452,7 +2452,7 @@ export interface components {
         };
         ProjectGalleryCaptionDto: {
             /** @example Admin dashboard overview. */
-            caption?: Record<string, never> | null;
+            caption?: string | null;
         };
         ProjectGalleryItemDto: {
             /**
@@ -2487,14 +2487,14 @@ export interface components {
              * Format: uri
              * @example https://example.com
              */
-            liveUrl?: Record<string, never> | null;
+            liveUrl?: string | null;
             /**
              * Format: uri
              * @example https://github.com/eslammuatamed/example
              */
-            repoUrl?: Record<string, never> | null;
+            repoUrl?: string | null;
             /** @example 2026 */
-            year?: Record<string, never> | null;
+            year?: number | null;
             /** @description At least one complete project translation. */
             translations: components["schemas"]["ProjectTranslationDto"][];
             /**
@@ -2521,14 +2521,14 @@ export interface components {
              * Format: uri
              * @example https://example.com
              */
-            liveUrl?: Record<string, never> | null;
+            liveUrl?: string | null;
             /**
              * Format: uri
              * @example https://github.com/eslammuatamed/example
              */
-            repoUrl?: Record<string, never> | null;
+            repoUrl?: string | null;
             /** @example 2026 */
-            year?: Record<string, never> | null;
+            year?: number | null;
             /** @description At least one complete project translation. */
             translations?: components["schemas"]["ProjectTranslationDto"][];
             /**
