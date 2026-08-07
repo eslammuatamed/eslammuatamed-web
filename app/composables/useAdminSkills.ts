@@ -1,0 +1,60 @@
+import type { Envelope } from '~/types/models'
+import type { AdminSkill } from '~/composables/admin-project-types'
+import { ApiError } from '~/utils/api-error'
+
+/**
+ * `GET /admin/skills` — the technology vocabulary a project's `technologyIds` are drawn from.
+ *
+ * TECHNOLOGIES ARE SKILLS. The contract says so in as many words ("Skill ids; the project technology
+ * set is replaced on update"), and there is no separate technology entity to fetch. The admin read
+ * is used rather than the public one because a project may legitimately reference a skill with
+ * `isPublic: false` — hidden skills keep their project links — and the public listing would simply
+ * not contain it, leaving a saved technology invisible and un-deselectable in the editor.
+ *
+ * THE LIST IS UNPAGINATED AND UNFILTERED, by contract: the endpoint declares no query parameters and
+ * answers `{ data: [...] }` with no `meta`. So this is one request for the whole vocabulary, and the
+ * picker narrows it in the browser — which is correct HERE and nowhere else in this module, because
+ * this is a closed vocabulary the API hands over whole, not a paginated collection.
+ *
+ * `locale: false`, as every admin call must be — `forbidNonWhitelisted` turns an unsolicited
+ * `?locale=` into a 422 (see `useApi`).
+ */
+export function useAdminSkills() {
+  const api = useApi()
+
+  const skills = ref<AdminSkill[]>([])
+  const pending = ref(false)
+  const forbidden = ref(false)
+  const failed = ref(false)
+
+  async function load(): Promise<void> {
+    pending.value = true
+    forbidden.value = false
+    failed.value = false
+    try {
+      const res = await api<Envelope<AdminSkill[]>>('/admin/skills', { locale: false })
+      skills.value = [...res.data]
+    } catch (error) {
+      skills.value = []
+      if (error instanceof ApiError && error.status === 403) forbidden.value = true
+      else failed.value = true
+    } finally {
+      pending.value = false
+    }
+  }
+
+  return { skills, pending, forbidden, failed, load }
+}
+
+/**
+ * The label to show for one skill.
+ *
+ * Falls back to the SLUG, never to the other locale's label: a slug is a neutral, unambiguous
+ * identifier the operator can still act on, while an Arabic label rendered as if it were the English
+ * one is a confident wrong answer. The dashboard chrome is English-only today (`dashboard.nav.*`
+ * exists in `en.json` alone), so `en` is the label locale here.
+ */
+export function skillLabel(skill: AdminSkill): string {
+  const label = skill.translations.en?.label
+  return label && label.trim().length > 0 ? label : skill.slug
+}

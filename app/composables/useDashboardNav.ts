@@ -42,6 +42,19 @@ export function useDashboardNav() {
       key: null,
       items: [{ key: 'overview', to: '/dashboard', icon: 'i-lucide-layout-dashboard', exact: true }]
     },
+    // Doc 04's CONTENT group, arriving the way the model intended — an entry in this array, with no
+    // change to the shell. `/dashboard/projects` EXISTS, so it is not a placeholder destination, and
+    // its child routes (`/new`, `/:id`) are covered by the prefix match in `isNavItemActive` rather
+    // than by entries of their own: an editor is a place you are IN the Projects section, not a
+    // sibling of it.
+    //
+    // STILL NO `roles` PREDICATE, for the reason the header gives. Projects are permission-gated on
+    // the API like everything else here, and the page answers that with its `forbidden` state
+    // (D11-2) — a real answer, rather than an inference from a role name.
+    {
+      key: 'content',
+      items: [{ key: 'projects', to: '/dashboard/projects', icon: 'i-lucide-folder-kanban' }]
+    },
     {
       key: 'communication',
       items: [{ key: 'messages', to: '/dashboard/messages', icon: 'i-lucide-inbox', badge }]
