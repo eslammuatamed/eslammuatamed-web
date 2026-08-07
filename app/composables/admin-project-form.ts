@@ -257,13 +257,15 @@ export function validateProjectForm(form: ProjectFormState, saved: AdminProject 
     /**
      * EMPTY, but the server has a translation here.
      *
-     * This is blocked rather than sent, because the two possible readings of the contract disagree
-     * about what an omitted locale means. `technologyIds` and `gallery` are documented as REPLACED
-     * on update; `translations` carries no such wording, which points at a per-locale upsert — under
-     * which omitting the locale is a silent no-op, and the operator who just cleared every Arabic
-     * box would be told the save succeeded while nothing changed. Under the other reading it is a
-     * silent DELETE of a published case study. Refusing the save is the only answer that is right
-     * under both, and deleting a translation is not a capability this screen claims to have.
+     * `PATCH` UPSERTS TRANSLATIONS PER LOCALE — verified against the API source, not inferred:
+     * `ProjectsAdminService.update` issues a `projectTranslation.upsert` per locale in the payload
+     * and no `deleteMany` anywhere, unlike `technologyIds` and `gallery`, which really are cleared
+     * and rebuilt. So a locale left out of the payload is not deleted; it is UNTOUCHED.
+     *
+     * That is precisely why this is blocked. An operator who has just cleared every Arabic box has
+     * asked for something the endpoint cannot express, and sending the save would report success
+     * while the Arabic case study stayed exactly where it was — the silent no-op being mistaken for
+     * a deletion. Deleting a translation is not a capability this screen has, so it says so.
      */
     if (saved && hasTranslation(saved, locale)) clearedLocales.push(locale)
   }
@@ -370,21 +372,27 @@ function galleryInput(item: ProjectGalleryItemForm, index: number): ProjectGalle
  *
  * ── WHY `PATCH` SENDS THE WHOLE DOCUMENT EVEN THOUGH IT IS A PARTIAL UPDATE ─────────────────────
  *
- * `isPublished` CANNOT SAFELY BE OMITTED. `UpdateProjectDto` declares no `required` array, but
- * `isPublished` carries `default: false` — which is why openapi-typescript emits it as a
- * non-optional property. An omitted `isPublished` is therefore indistinguishable from an explicit
- * `false` at the DTO boundary, and a content-only save would unpublish a live case study. Sending
- * the form's value — which is seeded from the server and moved only by the publication control —
- * is correct whichever way the API resolves that default, and costs one field. Do not "simplify"
- * this back into a partial patch.
+ * `isPublished` IS ALWAYS SENT, and the reason is editorial rather than defensive. Omitting it is
+ * SAFE — verified against the API source: `isPublished` is `@IsOptional()` with no runtime default
+ * (the `default: false` in the contract is Swagger documentation, which is also why
+ * openapi-typescript emits the property as non-optional), and Prisma treats the resulting
+ * `undefined` as "leave this column alone". The same invariant is load-bearing inside the service
+ * itself, where `dto.isPublished ?? existing.isPublished` gates the D04-6 auto-redirect.
  *
- * `technologyIds` and `gallery` are documented as REPLACED when provided, and the form holds the
- * complete set of both, so sending them is the operation the operator performed.
+ * It is sent anyway because publication is a decision THIS form owns and states on screen before
+ * the save: the switch, the "will publish"/"will unpublish"/"stays unpublished" notice and the
+ * payload should all say the same thing, and a field that silently disappears from the request
+ * when untouched makes that harder to reason about, not easier.
  *
- * `translations` carries EVERY locale the form has complete, never only the edited one. That is
- * correct under a per-locale upsert AND under a whole-set replace, so the client does not depend on
- * which one the API implements. Locales that are empty are omitted; a locale that WAS saved and is
- * now empty never reaches here at all — `validateProjectForm` refuses that save.
+ * `technologyIds` and `gallery` are documented as REPLACED when provided — and really are, via a
+ * `deleteMany` and a rebuild — so sending the form's complete set is the operation the operator
+ * performed.
+ *
+ * `translations` carries EVERY locale the form has complete, never only the edited one. The API
+ * upserts per locale, so sending only the edited one would also be correct; sending all of them
+ * keeps one payload shape for create and update and matches what the form re-seeds from. Empty
+ * locales are omitted; a locale that WAS saved and is now empty never reaches here at all —
+ * `validateProjectForm` refuses that save.
  */
 export function buildProjectPayload(form: ProjectFormState): CreateProjectPayload {
   const complete = PROJECT_LOCALES.filter(

@@ -181,9 +181,10 @@ describe('validation — a half-typed language is never silently dropped', () =>
   })
 
   /**
-   * The destructive case. Under a per-locale upsert an omitted locale is a silent no-op; under a
-   * whole-set replace it is a silent DELETE of a published case study. Refusing is the only answer
-   * that is right under both, and deleting a translation is not something this screen claims to do.
+   * The endpoint upserts translations per locale (verified in the API service — a `upsert` per
+   * payload locale, no `deleteMany`), so a locale left out is untouched rather than deleted.
+   * Sending this save would therefore report success while the Arabic case study stayed exactly
+   * where it was. Refusing says what is true: this screen cannot delete a translation.
    */
   it('BLOCKS emptying a language the server has saved', () => {
     const saved = project()
@@ -225,9 +226,10 @@ describe('the payload — publication is always stated, never inferred', () => {
   })
 
   /**
-   * `UpdateProjectDto` declares no `required` array but gives `isPublished` a `default: false`, so
-   * an omitted `isPublished` is indistinguishable from an explicit `false` at the DTO boundary. A
-   * content-only save that omitted it could therefore unpublish a live case study.
+   * Publication is a decision this form owns and states on screen before the save, so the switch,
+   * the notice and the payload all say the same thing. (Omitting the field would also be safe —
+   * the API's `isPublished` is `@IsOptional()` with no runtime default — but a request whose shape
+   * changes with what was touched is harder to reason about than one that always states it.)
    */
   it('SENDS isPublished on every save, in both states', () => {
     expect(buildProjectPayload(base({ isPublished: false }))).toHaveProperty('isPublished', false)

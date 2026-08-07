@@ -25,9 +25,9 @@ import type { ApiError } from '~/utils/api-error'
  * ── THE THREE THINGS THIS SURFACE MUST NOT GET WRONG ────────────────────────────────────────────
  *
  * 1. EDITING NEVER SILENTLY CHANGES PUBLICATION. `isPublished` lives in the form, is seeded from the
- *    server, and moves only when the operator moves its switch. It is always SENT — see
- *    `buildProjectPayload` for why omitting it is unsafe — and what the save will do to publication
- *    is stated on screen before the operator commits to it.
+ *    server, and moves only when the operator moves its switch. It is always sent — see
+ *    `buildProjectPayload` for why the payload states it rather than omitting it — and what the
+ *    save will do to publication is stated on screen before the operator commits to it.
  *
  * 2. NO CROSS-LOCALE FALLBACK, ANYWHERE. A locale with no translation renders as empty boxes and is
  *    labelled "Not written". Nothing is ever prefilled from the other language.
