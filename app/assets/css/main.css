@@ -760,23 +760,6 @@ html:not([lang="ar"]) .nameplate {
     }
   }
 
-  /* SECTION WASH (025) — the violet on the two dark feature spreads (Technologies, Contact CTA).
-
-     Deliberately NOT `.glass`. `.on-ink` is UNLAYERED, so its own `background-color` outranks any
-     layered `bg-*` utility; pairing it with `.glass` yields a fully OPAQUE panel that nevertheless
-     runs a live `backdrop-filter` — no visible glass, full compositing cost, which is the exact
-     failure D14-8 exists to prevent. A full-bleed spread also has nothing moving behind it, so the
-     blur would resample the whole band every frame to look near-identical to not blurring.
-
-     So an ink spread stays opaque ink and takes the violet as a `background-image` layer, which is
-     what keeps it DARK-NEUTRAL FIRST: the ink ground is untouched and the wash sits on top at 5–7 %.
-     Staying ink is also what protects accessibility here — the technology brand dots (JS `#f7df1e`
-     and friends) keep the dark ground they were designed against instead of compositing onto a
-     near-white surface in light theme, where yellow and green effectively vanish. */
-  .spread-tint {
-    background-image: linear-gradient(var(--glass-tint), var(--glass-tint));
-  }
-
   /* INTERACTIVE ROW (025) — the repeated project/article index rows.
 
      The problem this solves is that the row previously announced itself only through the title
@@ -813,21 +796,14 @@ html:not([lang="ar"]) .nameplate {
       inset 0 -1px 0 var(--glass-edge);
   }
 
-  /* Reduced transparency drops the LIGHTING, not the design. The surfaces themselves stay — the
-     glass tokens have already turned opaque above — so the result is the flat, fully legible layout
-     rather than a broken one. The row keeps its `background-color`: a 5 % wash is a state cue, and
-     removing it would leave a hovered row indistinguishable from a resting one, which costs a
-     reduced-transparency user information for no benefit. `.spread-tint` DOES reset, because there
-     it is decoration on a section rather than a state. */
+  /* The row deliberately has NO reduced-transparency reset. Its `background-color` is a 5 % wash
+     carrying a STATE, not decoration: removing it would leave a hovered row indistinguishable from a
+     resting one, costing a reduced-transparency user information for no benefit. */
   @media (prefers-reduced-transparency: reduce) {
     .glass {
       -webkit-backdrop-filter: none;
       backdrop-filter: none;
       box-shadow: none;
-    }
-
-    .spread-tint {
-      background-image: none;
     }
   }
 

@@ -177,7 +177,7 @@ function select(value: string | undefined): void {
           class="shrink-0 rounded-control px-3 py-1.5 text-body-sm whitespace-nowrap ring ring-inset transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-75"
           :class="isPressed(chip.value)
             ? 'bg-primary text-white font-semibold ring-primary'
-            : 'bg-elevated text-muted ring-accented hover:text-highlighted hover:bg-[var(--glass-tint)]'"
+            : 'bg-elevated text-muted ring-accented hover:text-highlighted'"
           @click="select(chip.value)"
         >
           {{ chip.label }}
