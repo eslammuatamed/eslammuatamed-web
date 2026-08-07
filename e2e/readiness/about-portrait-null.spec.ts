@@ -216,7 +216,7 @@ for (const { label, path, locale, lang, dir, og } of CASES) {
       // exactly once, absolute, in BOTH locales.
       const image = page.locator('meta[property="og:image"]')
       await expect(image).toHaveCount(1)
-      await expect(image).toHaveAttribute('content', /^https?:\/\/.+\/social-card\.png$/)
+      await expect(image).toHaveAttribute('content', /^https?:\/\/.+\/social-card-[0-9a-f]{8}\.png$/)
     })
 
     test('unfiltered axe scan reports no violations', async ({ page }) => {

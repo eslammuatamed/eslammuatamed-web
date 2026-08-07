@@ -115,7 +115,7 @@ test.describe('Locale-owned head metadata (D22-7)', () => {
 
     const image = page.locator('meta[property="og:image"]')
     await expect(image).toHaveCount(1)
-    await expect(image).toHaveAttribute('content', /^https?:\/\/.+\/social-card\.png$/)
+    await expect(image).toHaveAttribute('content', /^https?:\/\/.+\/social-card-[0-9a-f]{8}\.png$/)
     await expect(page.locator('meta[property="og:image:width"]')).toHaveAttribute('content', '1200')
     await expect(page.locator('meta[property="og:image:height"]')).toHaveAttribute('content', '630')
   })
@@ -139,8 +139,11 @@ test.describe('Locale-owned head metadata (D22-7)', () => {
       expect(response.headers()['content-type']).toContain('image/png')
 
       const served = await response.body()
+      // Resolved FROM the advertised path rather than hardcoded: the filename is content-addressed, so
+      // naming it here would both go stale on every artwork change and let a superseded asset keep
+      // satisfying this assertion.
       const committed = readFileSync(
-        fileURLToPath(new URL('../public/social-card.png', import.meta.url)),
+        fileURLToPath(new URL(`../public${new URL(url!).pathname}`, import.meta.url)),
       )
       const sha = (buf: Buffer) => createHash('sha256').update(buf).digest('hex')
       expect(sha(served)).toBe(sha(committed))

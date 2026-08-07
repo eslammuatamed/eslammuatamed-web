@@ -139,7 +139,7 @@ test.describe('Head and structured data', () => {
 
     const image = page.locator('meta[property="og:image"]')
     await expect(image).toHaveCount(1)
-    await expect(image).toHaveAttribute('content', /^https?:\/\/.+\/social-card\.png$/)
+    await expect(image).toHaveAttribute('content', /^https?:\/\/.+\/social-card-[0-9a-f]{8}\.png$/)
   })
 
   // D22-8: ProfilePage belongs to /about. A second one here would be a duplicate identity.
