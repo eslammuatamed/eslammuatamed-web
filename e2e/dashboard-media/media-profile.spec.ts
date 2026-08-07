@@ -86,6 +86,16 @@ test.beforeEach(async ({ page }) => {
   await resetBackend(page)
 })
 
+/**
+ * The About portrait section, as a scope.
+ *
+ * Profile now hosts TWO media pickers — the portrait and the résumé PDF — so a bare
+ * `[data-picker-open]` matches both and fails Playwright's strict mode. Scoping by section is the
+ * right fix rather than `.first()`: `.first()` would keep passing if the sections were ever
+ * reordered, silently asserting against the wrong picker.
+ */
+const portraitSection = (page: Page) => page.locator('[data-portrait-section]')
+
 test.describe('the media library', () => {
   test('lists, paginates, searches and filters by kind through the URL', async ({ page }) => {
     await signIn(page)
@@ -274,9 +284,9 @@ test.describe('the About portrait section of /dashboard/profile', () => {
     await expect(page.locator('[data-portrait-library-default]')).toBeVisible()
 
     // Replace with a DIFFERENT asset, whose own library alt is empty.
-    await page.locator('[data-picker-open]').click()
+    await portraitSection(page).locator('[data-picker-open]').click()
     await page.locator('[role=dialog]').locator(`[data-media-id="${ASSET.desk}"]`).click()
-    await expect(page.locator('[data-picker-filename]')).toHaveText('desk-setup.jpg')
+    await expect(portraitSection(page).locator('[data-picker-filename]')).toHaveText('desk-setup.jpg')
 
     // The previous portrait's description must be GONE rather than re-labelled onto this one.
     await expect(page.locator('[data-portrait-library-default]')).toHaveCount(0)
@@ -310,14 +320,14 @@ test.describe('the About portrait section of /dashboard/profile', () => {
     await page.goto('/dashboard/profile')
     await settled(page)
 
-    await expect(page.locator('[data-picker-empty]')).toBeVisible()
+    await expect(portraitSection(page).locator('[data-picker-empty]')).toBeVisible()
 
-    await page.locator('[data-picker-open]').click()
+    await portraitSection(page).locator('[data-picker-open]').click()
     // The picker is locked to IMAGE, so the PDF fixture must not be selectable in it.
     await expect(page.locator('[role=dialog]').locator(`[data-media-id="${ASSET.resume}"]`)).toHaveCount(0)
     await page.locator('[role=dialog]').locator(`[data-media-id="${ASSET.portrait}"]`).click()
 
-    await expect(page.locator('[data-picker-filename]')).toHaveText('portrait-candidate.jpg')
+    await expect(portraitSection(page).locator('[data-picker-filename]')).toHaveText('portrait-candidate.jpg')
 
     await altInput(page, 'en').fill('Eslam in front of a bookshelf')
     await altInput(page, 'ar').fill('إسلام أمام رف الكتب')
@@ -326,7 +336,7 @@ test.describe('the About portrait section of /dashboard/profile', () => {
 
     await page.reload()
     await settled(page)
-    await expect(page.locator('[data-picker-filename]')).toHaveText('portrait-candidate.jpg')
+    await expect(portraitSection(page).locator('[data-picker-filename]')).toHaveText('portrait-candidate.jpg')
     await expect(altInput(page, 'en')).toHaveValue('Eslam in front of a bookshelf')
     await expect(altInput(page, 'ar')).toHaveValue('إسلام أمام رف الكتب')
   })
@@ -336,12 +346,12 @@ test.describe('the About portrait section of /dashboard/profile', () => {
     await page.goto('/dashboard/profile')
     await settled(page)
 
-    await page.locator('[data-picker-open]').click()
+    await portraitSection(page).locator('[data-picker-open]').click()
     await page.locator('[role=dialog]').locator('[data-media-upload]')
       .setInputFiles({ name: 'inline-upload.png', mimeType: 'image/png', buffer: PNG })
 
     // The dialog closes with the new asset selected — the "without leaving the editor" requirement.
-    await expect(page.locator('[data-picker-filename]')).toHaveText('inline-upload.png', { timeout: 15_000 })
+    await expect(portraitSection(page).locator('[data-picker-filename]')).toHaveText('inline-upload.png', { timeout: 15_000 })
     await expect(page).toHaveURL(/\/dashboard\/profile$/)
   })
 
@@ -387,7 +397,7 @@ test.describe('the About portrait section of /dashboard/profile', () => {
     await page.goto('/dashboard/profile')
     await settled(page)
 
-    await page.locator('[data-picker-open]').click()
+    await portraitSection(page).locator('[data-picker-open]').click()
     await page.locator('[role=dialog]').locator(`[data-media-id="${ASSET.portrait}"]`).click()
     await altInput(page, 'en').fill('Portrait alt')
     await altInput(page, 'ar').fill('نص الصورة')
@@ -422,7 +432,7 @@ test.describe('accessibility — unfiltered WCAG 2.2 AA', () => {
     await settled(page)
     await axe(page, '/dashboard/profile')
 
-    await page.locator('[data-picker-open]').click()
+    await portraitSection(page).locator('[data-picker-open]').click()
     await expect(page.locator('[role=dialog]')).toBeVisible()
     await settled(page)
     await axe(page, '/dashboard/profile picker open')

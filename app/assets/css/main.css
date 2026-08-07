@@ -239,12 +239,65 @@
      Re-pointing one inherited custom property under a public-shell attribute means the dashboard
      keeps resolving the identical neutral value it ships with today — not "probably unaffected". */
   --scroll-thumb: var(--ui-bg-accented);
+
+  /* Violet interaction tokens (025). TWO tokens, and they are deliberately the ONLY new colour
+     surface this treatment introduces — the row hover, the chip hover and the dark-section wash all
+     read from the same pair, so "the same violet" is true by construction rather than by three
+     values happening to match.
+
+     `--glass-tint` is the translucent wash; `--glass-edge` is the lit hairline.
+
+     WRITTEN AS STRAIGHT ALPHA HEX, NOT `color-mix`, and that is a MEASURED byte decision rather than
+     a style one. Lightning CSS polyfills every `color-mix()` in a custom property by emitting the
+     declaration TWICE — an opaque fallback plus its own nested
+     `@supports (color: color-mix(in lab, red, red))` block repeating the selector. Measured on this
+     stylesheet, the four tokens below cost ~700 raw bytes in that form against ~90 as alpha hex, on
+     a budget with roughly ten bytes of headroom.
+
+     The fallback was also WRONG, which is what settled it. `color-mix(… 5%, transparent)` falls back
+     to the FLAT primary — so on any engine without `color-mix` a hovered row rendered as a solid
+     violet slab, the exact "purple card" this work exists to remove. Straight alpha has no fallback
+     path and therefore no wrong state.
+
+     The values are the sRGB forms of the violet ramp this palette is drawn on (`violet-500`
+     `oklch(60.6% 0.25 292.717)` = `#8b5cf6`, `violet-400` `oklch(70.2% 0.183 293.541)` = `#a78bfa`).
+     `#8b5cf60d` is 5 % alpha, which is precisely what `color-mix(in srgb, violet-500 5%, transparent)`
+     resolved to — the tint is unchanged, only its spelling is. THE TRADE-OFF IS EXPLICIT: these no
+     longer track `--ui-color-primary-*` automatically, so a re-brand must update this block. That is
+     the one place raw values are permitted to live (D14-6), and the four lines are adjacent.
+
+     The EDGE did change meaning, deliberately: it was a mix into `--ui-border`, i.e. the page's
+     border colour baked in at `:root`. As alpha it composites over whatever ground the row actually
+     sits on, which is strictly more robust — a row on `lift` gets an edge correct for `lift` without
+     a second token. It also sidesteps this file's documented substitution trap, since there is no
+     longer a theme token captured at declaration time to be resolved in the wrong context.
+
+     A `light-dark()` pair was BUILT, MEASURED AND REVERTED (025). It works — verified in the browser,
+     because `light-dark()` resolves where the property is USED, not where it is declared (unlike
+     `var()`), and `color-scheme` is set on `body` and inherits down to the row: dark correctly
+     resolved `rgba(167,139,250,0.07)`. It was reverted on cost/benefit, not correctness: it saved
+     3 B gz while raising this rule's browser floor from `:has()` (Baseline 2023, already required
+     here) to `light-dark()` (Baseline 2024). Two plain declarations are worth more than 3 bytes. */
+  --glass-tint: #8b5cf60d;
+  --glass-edge: #8b5cf64d;
 }
 
 .dark {
-  --glass-surface: var(--ui-bg);
-  --glass-surface-elevated: var(--ui-bg-elevated);
+  /* `--glass-surface` / `--glass-surface-elevated` are NOT re-declared here, and their removal is an
+     equivalence rather than a change. `.dark` is set by color-mode on the ROOT element (classSuffix
+     '', D14-4), so `:root` and `.dark` match the SAME element — the `var(--ui-bg)` in the `:root`
+     declaration above therefore already resolves against that element's dark `--ui-bg`. The two
+     declarations that used to sit here computed an identical value. (The `@supports` block below
+     still needs its own `.dark` arm: those percentages genuinely differ per theme.) */
   --glass-saturate: 1.4;
+  /* Dark carries slightly MORE violet than light, and the asymmetry is measured rather than
+     stylistic: the same wash that is clearly violet over near-white paper is nearly invisible over
+     near-black. Both values stay low — the target is a surface whose FIRST read is dark neutral,
+     with violet arriving as depth rather than as fill. `#a78bfa` is `violet-400`, the lighter step
+     the dark theme already uses for link text (D03-2), so the dark accent surface and the dark
+     accent text are drawn from the same ramp position. */
+  --glass-tint: #a78bfa12;
+  --glass-edge: #a78bfa52;
   /* On a near-black page a white inner highlight reads as a smear, and drop shadows are invisible
      against the page while still costing a paint. Both drop to near-nothing (owner: restrained
      shadows, especially in dark). */
@@ -273,11 +326,13 @@
   }
 }
 
-/* Users who ask for less transparency get the opaque surface back, in both themes. */
+/* Users who ask for less transparency get the opaque surface back, in both themes.
+   `:root` ALONE covers all three cases (025): color-mode sets `.light`/`.dark` on the root element
+   itself (classSuffix '', D14-4), so all three selectors matched the same element and carried the
+   same specificity — the extra two only ever restated the first. `var(--ui-bg)` then resolves
+   per-theme on that element, which is what makes one selector correct for both. */
 @media (prefers-reduced-transparency: reduce) {
-  :root,
-  .light,
-  .dark {
+  :root {
     --glass-surface: var(--ui-bg);
     --glass-surface-elevated: var(--ui-bg-elevated);
   }
@@ -317,7 +372,9 @@
   /* Per-side section padding. Adjacent sections stack their padding, so this is ~half the intended
      inter-section rhythm (doc 03 §4: 96/128 between sections). Kept generous but not cavernous. */
   --space-section: clamp(3.5rem, 2.5rem + 4vw, 5rem); /* 56 → 80px per side → ~112–160px between */
-  --space-card: 1.5rem;
+  /* `--space-card` removed (025): it was declared here and referenced by nothing — no rule in this
+     file, no component, no page. Card padding is applied with Tailwind spacing utilities throughout,
+     so the token was emitted into `:root` on every public route to be read by no one. */
 
   /* Nuxt UI derives component radii from this base; 6px aligns controls to doc 03 §4. */
   --ui-radius: 0.375rem;
@@ -708,6 +765,46 @@ html:not([lang="ar"]) .nameplate {
     }
   }
 
+  /* INTERACTIVE ROW (025) — the repeated project/article index rows.
+
+     The problem this solves is that the row previously announced itself only through the title
+     colour and the arrow, so the clickable area was invisible until the pointer found the title. The
+     problem it must NOT re-introduce is the row reading as a violet CARD. Four choices separate the
+     two, and each is load-bearing:
+
+       - A TOP hairline only. Left/right edges are what make a fill read as a detached box; a
+         horizontal rule reads as list structure, and it lands on the existing `border-t` divider
+         rather than fighting it. The bottom inset this rule used to also paint was dropped (025)
+         after comparing both versions in the browser at desktop and mobile, light and dark: the
+         difference is barely perceptible, because the NEXT row's `border-t` already draws that
+         boundary. Top-only is the more honest list treatment and costs one shadow instead of two.
+       - No radius, no inline padding and no negative margin. The fill spans the row's own box and
+         aligns with the list, instead of floating out past the text column with a card's footprint.
+       - A 5–7 % wash rather than a fill: the row is TINTED, never coloured.
+       - `box-shadow` and `background-color`, never a real `border`. This is a correctness
+         requirement, not a preference — a border appearing on `:hover` changes the border box and
+         moves the row, and this site has a governed CLS gate. An inset shadow paints inside the
+         existing box, so "no layout shift" holds by construction rather than by being careful.
+
+     `:has(:focus-visible)`, NOT `:focus-within`. The distinction is the whole keyboard guarantee:
+     the row is one stretched link, so `:focus-within` also fires when the link is CLICKED, leaving
+     the row lit after a mouse user navigates back to the list. `:has(:focus-visible)` matches only
+     when the browser decides focus should be visible — i.e. keyboard traversal — so a keyboard user
+     reaches the identical affordance a pointer user gets and a mouse user sees no sticky highlight.
+
+     Deliberately not `.glass`: these rows repeat many times down a page, and an independent
+     `backdrop-filter` per row is the expensive compositing case. A tint plus an inset hairline reads
+     as the same material at a fraction of the cost, and it re-uses the section tokens so a row and
+     the surface it sits on are demonstrably the same violet. */
+  .row-glass:hover,
+  .row-glass:has(:focus-visible) {
+    background-color: var(--glass-tint);
+    box-shadow: inset 0 1px 0 var(--glass-edge);
+  }
+
+  /* The row deliberately has NO reduced-transparency reset. Its `background-color` is a 5 % wash
+     carrying a STATE, not decoration: removing it would leave a hovered row indistinguishable from a
+     resting one, costing a reduced-transparency user information for no benefit. */
   @media (prefers-reduced-transparency: reduce) {
     .glass {
       -webkit-backdrop-filter: none;

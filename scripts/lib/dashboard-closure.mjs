@@ -177,5 +177,18 @@ export const DASHBOARD_ROUTES = [
   // carries the heaviest new surface in the dashboard (grid, modal, upload), which is precisely the
   // kind of route D20-23 exists to keep honest.
   { route: '/dashboard/media', pageModule: 'app/pages/dashboard/media.vue' },
-  { route: '/dashboard/profile', pageModule: 'app/pages/dashboard/profile.vue' }
+  { route: '/dashboard/profile', pageModule: 'app/pages/dashboard/profile.vue' },
+  // The Projects module: a server-filtered list and the create/edit form, which is the heaviest
+  // authoring surface the dashboard has (both content locales, the media picker and the technology
+  // vocabulary on one page). All three are registered here rather than measuring the list alone —
+  // the comment above is the rule, and an unmeasured editor is exactly the route a budget is for.
+  { route: '/dashboard/projects', pageModule: 'app/pages/dashboard/projects/index.vue' },
+  { route: '/dashboard/projects/new', pageModule: 'app/pages/dashboard/projects/new.vue' },
+  // A CONCRETE id, because the gate fetches each route to read the CSS out of its rendered shell.
+  // `/dashboard/**` is `ssr: false`, so every id returns the same shell and the value is arbitrary;
+  // the nil UUID is used so nobody reads it as a reference to real content.
+  {
+    route: '/dashboard/projects/00000000-0000-0000-0000-000000000000',
+    pageModule: 'app/pages/dashboard/projects/[id].vue'
+  }
 ]
