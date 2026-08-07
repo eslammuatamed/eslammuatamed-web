@@ -266,7 +266,11 @@ describe('dashboard closure — governed routes must always be measurable', () =
   it('names exactly the routes D20-23 governs', () => {
     expect(DASHBOARD_ROUTES.map(r => r.route)).toEqual([
       '/dashboard/login', '/dashboard', '/dashboard/messages',
-      '/dashboard/media', '/dashboard/profile'
+      '/dashboard/media', '/dashboard/profile',
+      // The Projects module. The editor is registered under a concrete id because the gate fetches
+      // the route; `/dashboard/**` is `ssr: false`, so which id is used cannot change the shell.
+      '/dashboard/projects', '/dashboard/projects/new',
+      '/dashboard/projects/00000000-0000-0000-0000-000000000000'
     ])
   })
 

@@ -36,6 +36,18 @@ describe('UiSpread', () => {
     expect(wrapper.classes()).toContain('border-t')
   })
 
+  // `on-ink` is what keeps the technology brand dots (JS #f7df1e and friends) on a dark ground;
+  // without it they composite onto a near-white surface in light theme and effectively disappear.
+  // And NO `glass`: `.on-ink` is unlayered, so its opaque background beats any surface utility —
+  // pairing the two renders a fully opaque panel that still runs a live `backdrop-filter`, the
+  // "no visible glass, full compositing cost" defect D14-8 exists to prevent. This assertion is what
+  // stops a future violet/glass section tone reintroducing that pairing.
+  it('tone="ink" is the opaque dark spread and never pairs with glass', async () => {
+    const wrapper = await mountSuspended(Spread, { props: { tone: 'ink' }, global: { stubs } })
+    expect(wrapper.classes()).toContain('on-ink')
+    expect(wrapper.classes()).not.toContain('glass')
+  })
+
   it('renders the requested `as` element', async () => {
     const wrapper = await mountSuspended(Spread, { props: { as: 'header' }, global: { stubs } })
     expect(wrapper.element.tagName.toLowerCase()).toBe('header')

@@ -6,6 +6,9 @@
 //   tone="lift"  — one surface step up, hairline-fenced (depth from surface steps, not shadow — D03-3).
 //   tone="ink"   — a full-bleed dark feature spread; `.on-ink` re-points the semantic tokens so the
 //                  slot content stays theme-agnostic and mirrors correctly in both themes (see main.css).
+// A violet `ink-glass` tone was built and DROPPED under the 30 KB gz CSS budget (025) — it was the
+// designated dark-section refinement layer and cost 16 B gz that the budget did not have. The ink
+// spread is unchanged and still dark-neutral and readable; only the violet wash is absent.
 // Wraps <section> + <UContainer> (the doc 04 content measure). Vertical rhythm is one token so the
 // beat is consistent; the *composition* inside each spread is what varies. Logical padding only (RTL).
 interface Props {

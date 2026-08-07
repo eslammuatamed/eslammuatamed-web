@@ -27,6 +27,15 @@ const project = (overrides: Partial<ProjectListItem> = {}): ProjectListItem => (
 })
 
 describe('ContentWorkEntry', () => {
+  // `row-glass` is what makes the WHOLE row read as the affordance (025) — and critically, it is what
+  // gives KEYBOARD users the same affordance as pointer users, because the class carries
+  // `:has(:focus-visible)` alongside `:hover`. Losing it silently reverts the row to "only the title
+  // changes colour", a WCAG regression no other assertion in this file would notice.
+  it('carries the shared interactive-row treatment', async () => {
+    const wrapper = await mountSuspended(WorkEntry, { props: { project: project() }, global: { stubs } })
+    expect(wrapper.find('article').classes()).toContain('row-glass')
+  })
+
   it('renders the title linking to /projects/{slug}', async () => {
     const wrapper = await mountSuspended(WorkEntry, { props: { project: project() }, global: { stubs } })
     const link = wrapper.find('h3 a')
