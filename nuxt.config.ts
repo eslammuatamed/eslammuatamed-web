@@ -30,6 +30,63 @@ export default defineNuxtConfig({
 
   css: ['~/assets/css/main.css'],
 
+  hooks: {
+    /**
+     * Drop Nuxt UI's `--color-old-neutral-*` palette from the public stylesheet (025).
+     * Measured: **-103 B gz**, which is what brings the stylesheet back under the doc 20 §1
+     * 30 KB gz budget. The budget itself is untouched.
+     *
+     * WHAT THESE ARE. Nuxt UI rebinds Tailwind's `neutral` colour name to its own semantic slot,
+     * so it preserves Tailwind's original `neutral` ramp under the alias `old-neutral`. The block
+     * is emitted UNCONDITIONALLY as `@theme static`, and `static` is precisely the directive that
+     * tells Tailwind to emit every declaration whether or not anything uses it — so all 11 land in
+     * the stylesheet on every public route regardless of the app's palette.
+     *
+     * WHY REMOVING THEM IS BEHAVIOUR-EQUIVALENT, checked three ways rather than assumed:
+     *   1. The emitted CSS contains ZERO `var(--color-old-neutral-*)` references — nothing reads
+     *      them. Removing a custom property that nothing reads cannot change a computed style,
+     *      which is also why this carries no `/dashboard/**` exposure: there is no consumer to
+     *      affect, on any route.
+     *   2. The only occurrences of the string in the JS bundles are inside Nuxt UI's own runtime
+     *      colour GENERATOR (`generateShades`), i.e. the template that would produce a reference —
+     *      not a reference itself.
+     *   3. That generator only reaches the alias for a colour literally named `neutral`; this app
+     *      configures `primary: 'violet'` / `neutral: 'zinc'` (app.config.ts), so the branch is
+     *      never taken. And even if it were, the generator emits
+     *      `var(--color-old-neutral-N, <literal fallback>)` — the fallback is baked in, so the
+     *      alias going missing degrades to the same colour rather than to nothing.
+     *
+     * THROWS RATHER THAN NO-OPS. A regex that silently stops matching after a Nuxt UI upgrade is
+     * the failure mode that makes a hook like this a liability: the bytes would quietly return and
+     * the next release would drift over budget. Both the template and the exact 11-declaration
+     * shape are asserted, so an upgrade that changes either BREAKS THE BUILD and gets a decision.
+     */
+    'app:templates'(app) {
+      const template = app.templates.find(t => t.filename === 'ui.css')
+      if (!template?.getContents) {
+        throw new Error(
+          '[css-budget] Nuxt UI\'s `ui.css` template was not found. The `--color-old-neutral-*` '
+          + 'strip in nuxt.config.ts is stale — re-check @nuxt/ui and re-measure `npm run size`.'
+        )
+      }
+
+      const OLD_NEUTRAL_BLOCK = /@theme static \{\s*(?:--color-old-neutral-\d+:[^;]+;\s*){11}\}/
+
+      const getContents = template.getContents
+      template.getContents = async (data) => {
+        const contents = await getContents(data)
+        if (!OLD_NEUTRAL_BLOCK.test(contents)) {
+          throw new Error(
+            '[css-budget] the `--color-old-neutral-*` `@theme static` block no longer matches the '
+            + 'expected 11-declaration shape. Nuxt UI has changed it: re-verify the tokens are '
+            + 'still unreferenced, update the pattern, and re-measure `npm run size`.'
+          )
+        }
+        return contents.replace(OLD_NEUTRAL_BLOCK, '')
+      }
+    }
+  },
+
   // Opt-in bundle provenance for the doc 20 §1 JS budgets (`ANALYZE_BUNDLE=1` only, so ordinary
   // builds stay byte-identical — the plugin writes a sidecar file and transforms nothing; verified
   // by comparing all 27 built asset SHA256s with and without the flag). Emits Rollup's chunk→module
