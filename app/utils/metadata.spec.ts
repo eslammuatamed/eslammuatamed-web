@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto'
+import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { entitySocialImage } from './entity-social-image'
 import {
@@ -63,7 +65,7 @@ describe('absoluteSocialUrl', () => {
 
   it('builds an absolute URL from the committed relative asset', () => {
     expect(absoluteSocialUrl(SOCIAL_IMAGE_PATH, site)).toBe(
-      'https://eslammuatamed.com/social-card.png',
+      `https://eslammuatamed.com${SOCIAL_IMAGE_PATH}`,
     )
   })
 
@@ -154,9 +156,40 @@ describe('entitySocialImage — format gate', () => {
 
 describe('committed social asset contract', () => {
   it('is the branded card at the Open Graph standard size, not the favicon', () => {
-    expect(SOCIAL_IMAGE_PATH).toBe('/social-card.png')
+    // Asserted as a SHAPE plus a bytes check, never as a literal filename. A literal is what let the
+    // previous defect hide: the constant and the test agreed with each other while both pointed at an
+    // asset the owner had already replaced. Here the test cannot pass unless the name the metadata
+    // publishes is genuinely derived from the bytes that ship in `public/`.
+    expect(SOCIAL_IMAGE_PATH).toMatch(/^\/social-card-[0-9a-f]{8}\.png$/)
     expect(SOCIAL_IMAGE_PATH).not.toMatch(/favicon/)
     expect(SOCIAL_IMAGE_WIDTH).toBe(1200)
     expect(SOCIAL_IMAGE_HEIGHT).toBe(630)
+  })
+
+  it('publishes a filename derived from the bytes actually shipped in public/', () => {
+    const file = new URL(`../../public${SOCIAL_IMAGE_PATH}`, import.meta.url)
+    const bytes = readFileSync(file)
+    const sha8 = createHash('sha256').update(bytes).digest('hex').slice(0, 8)
+
+    // The whole point of content addressing, asserted rather than assumed: the eight hex characters in
+    // the published URL must be this file's own hash. Swap in a stale asset and this fails; rename the
+    // file without regenerating and this fails.
+    expect(SOCIAL_IMAGE_PATH).toBe(`/social-card-${sha8}.png`)
+
+    // PNG magic number, and the IHDR dimensions read out of the real file rather than compared against
+    // another constant — so `og:image:width`/`height` are checked against the image, not against
+    // themselves.
+    expect(bytes.subarray(0, 8)).toEqual(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))
+    expect(bytes.readUInt32BE(16)).toBe(SOCIAL_IMAGE_WIDTH)
+    expect(bytes.readUInt32BE(20)).toBe(SOCIAL_IMAGE_HEIGHT)
+  })
+
+  it('keeps the superseded fixed-name asset available but unreferenced', () => {
+    // The old URL is already in crawler caches, so it must keep resolving — byte-identical, so "the old
+    // URL still works" cannot drift into "the old URL serves something else". Nothing may POINT at it.
+    const legacy = readFileSync(new URL('../../public/social-card.png', import.meta.url))
+    const current = readFileSync(new URL(`../../public${SOCIAL_IMAGE_PATH}`, import.meta.url))
+    expect(legacy.equals(current)).toBe(true)
+    expect(SOCIAL_IMAGE_PATH).not.toBe('/social-card.png')
   })
 })

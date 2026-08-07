@@ -37,9 +37,26 @@ export function pickMeta(...candidates: readonly unknown[]): string | undefined 
 // when the Settings API and the media API are both down.
 //
 // NOT the favicon: the favicon is a 1:1 icon and is explicitly disqualified as a social preview.
-export const SOCIAL_IMAGE_PATH = '/social-card.png'
+//
+// CONTENT-ADDRESSED, and the fixed name it replaced was a real defect. `/social-card.png` published
+// mutable bytes under `max-age=14400`, so when the approved artwork was replaced, CDN and social
+// -crawler caches kept serving the old preview with no way to invalidate them — the owner still saw the
+// previous image after two releases that had shipped the new one correctly. The filename now derives
+// from the asset's own sha256, so replacing the artwork necessarily changes this URL.
+//
+// The value is ADOPTED from the Docs repo's generated `content/brand/assets/social-card.json`, the same
+// discipline as the OpenAPI contract: Web has no build-time, runtime or deployment dependency on Docs,
+// so the filename crosses the boundary as reviewed data in a commit, never as an import. When the card
+// changes, `brand:social` emits a new manifest and this constant is updated in the same commit that
+// brings the new bytes into `public/`.
+//
+// `public/social-card.png` is still shipped, byte-identical, purely so the URL already scraped by
+// crawlers keeps resolving. It is deliberately NOT referenced by any metadata.
+export const SOCIAL_IMAGE_PATH = '/social-card-da75c5a0.png'
 export const SOCIAL_IMAGE_WIDTH = 1200
 export const SOCIAL_IMAGE_HEIGHT = 630
+/** Declared so crawlers that prefer an explicit type do not have to sniff the bytes. */
+export const SOCIAL_IMAGE_TYPE = 'image/png'
 
 /**
  * Absolute URL for a social image. Open Graph and Twitter both require absolute URLs — a

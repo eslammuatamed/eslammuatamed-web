@@ -91,6 +91,10 @@ useSeoMeta({
   ogTitle: () => defaultTitle.value,
   ogDescription: () => defaultDescription.value,
   ogImage: () => socialImage.value,
+  // `secureUrl` is the same absolute https URL: the site is https-only, and some crawlers read only
+  // the secure variant. `type` saves a crawler from sniffing the bytes to learn it is a PNG.
+  ogImageSecureUrl: () => socialImage.value,
+  ogImageType: SOCIAL_IMAGE_TYPE,
   ogImageWidth: SOCIAL_IMAGE_WIDTH,
   ogImageHeight: SOCIAL_IMAGE_HEIGHT,
   ogImageAlt: () => t('seo.socialImageAlt'),
