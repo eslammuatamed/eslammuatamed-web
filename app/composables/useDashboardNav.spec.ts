@@ -1,6 +1,6 @@
 // @vitest-environment nuxt
 import { describe, expect, it } from 'vitest'
-import { isNavItemActive } from './useDashboardNav'
+import { isNavItemActive, useDashboardNav } from './useDashboardNav'
 import type { DashboardNavItem } from './useDashboardNav'
 
 const item = (over: Partial<DashboardNavItem> = {}): DashboardNavItem =>
@@ -41,3 +41,48 @@ describe('isNavItemActive', () => {
     }
   })
 })
+
+describe('the navigation model', () => {
+  const items = () => useDashboardNav().groups.value.flatMap(group => group.items)
+
+  it('offers Projects, in the Content group', () => {
+    const groups = useDashboardNav().groups.value
+    const content = groups.find(group => group.key === 'content')
+    expect(content?.items.map(item => item.key)).toEqual(['projects'])
+  })
+
+  it('points Projects at a route that EXISTS — no placeholder destinations', () => {
+    expect(items().find(item => item.key === 'projects')?.to).toBe('/dashboard/projects')
+  })
+
+  /**
+   * The model carries NO `roles` predicate, and that is the decision rather than an omission: the
+   * session exposes a role name and no permission grants, so a predicate here would be guessing.
+   * Authorization is answered by the API through each page's `forbidden` state (D11-2).
+   */
+  it('carries no authorization predicate on any item', () => {
+    for (const item of items()) {
+      expect(item, item.key).not.toHaveProperty('roles')
+    }
+  })
+
+  it('keeps exactly one item active on every Projects route, editors included', () => {
+    const all = items()
+    for (const path of [
+      '/dashboard',
+      '/dashboard/projects',
+      '/dashboard/projects/new',
+      '/dashboard/projects/0194f9a2-ef2a-7a31-8cb7-369c87f7933a'
+    ]) {
+      expect(all.filter(item => isNavItemActive(item, path)), path).toHaveLength(1)
+    }
+    // The editor routes are children of the section, so Projects stays current inside them rather
+    // than the sidebar going blank while an operator is editing.
+    expect(active(all, '/dashboard/projects/new')).toBe('projects')
+    expect(active(all, '/dashboard')).toBe('overview')
+  })
+})
+
+function active(items: readonly DashboardNavItem[], path: string): string | undefined {
+  return items.find(item => isNavItemActive(item, path))?.key
+}

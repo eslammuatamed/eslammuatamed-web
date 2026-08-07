@@ -6143,6 +6143,16 @@ export interface operations {
             query?: {
                 page?: number;
                 perPage?: number;
+                /** @description Free-text search over localized title, slug and summary, across ALL translations (case-insensitive substring). Blank or whitespace-only is ignored rather than treated as a filter. */
+                q?: string;
+                /** @description Filter by publication state. Omit to return both states. */
+                isPublished?: boolean;
+                /** @description Filter by featured state. Omit to return both states. */
+                featured?: boolean;
+                /** @description Allowlisted sort column. Omit for the default `featured desc, order asc`. */
+                sortBy?: "featured" | "order" | "year" | "createdAt" | "updatedAt";
+                /** @description Direction for `sortBy`. Ignored when `sortBy` is absent. */
+                sortOrder?: "asc" | "desc";
             };
             header?: never;
             path?: never;
@@ -6172,6 +6182,15 @@ export interface operations {
             };
             /** @description Missing the required permission. */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Malformed query parameters (D10-18): unknown sortBy/sortOrder, a non-boolean isPublished/featured, q over 120 chars, perPage over 50, or an unwhitelisted field. */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
