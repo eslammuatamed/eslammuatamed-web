@@ -485,7 +485,7 @@
     },
     "profile": {
       "title": "Profile",
-      "description": "The portrait shown on the About page.",
+      "description": "The portrait shown on the About page, and the résumé PDF offered for download on the Résumé page.",
       "loading": "Loading profile…",
       "retry": "Try again",
       "save": "Save",
@@ -514,7 +514,13 @@
         "libraryDefaultLabel": "Library description of this image",
         "libraryDefaultHint": "Shown for reference only. It is not used on the About page — write the text above yourself so it suits this context.",
         "publishNote": "The About page shows the portrait once both languages have alt text. Until then it keeps its current state."
-      }
+      },
+      "resume": {
+        "heading": "Résumé PDF",
+        "help": "A single PDF, offered as a download on the Résumé page. Select one already in the media library, or upload a new one here.",
+        "publishNote": "The Résumé page offers this download as soon as it is saved. With nothing selected the page says so plainly, and the written résumé on it stays readable and printable either way."
+      },
+      "saveFor": "Save {section}"
     }
   },
   "footer": {
