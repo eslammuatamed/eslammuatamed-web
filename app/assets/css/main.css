@@ -270,7 +270,14 @@
      border colour baked in at `:root`. As alpha it composites over whatever ground the row actually
      sits on, which is strictly more robust — a row on `lift` gets an edge correct for `lift` without
      a second token. It also sidesteps this file's documented substitution trap, since there is no
-     longer a theme token captured at declaration time to be resolved in the wrong context. */
+     longer a theme token captured at declaration time to be resolved in the wrong context.
+
+     A `light-dark()` pair was BUILT, MEASURED AND REVERTED (025). It works — verified in the browser,
+     because `light-dark()` resolves where the property is USED, not where it is declared (unlike
+     `var()`), and `color-scheme` is set on `body` and inherits down to the row: dark correctly
+     resolved `rgba(167,139,250,0.07)`. It was reverted on cost/benefit, not correctness: it saved
+     3 B gz while raising this rule's browser floor from `:has()` (Baseline 2023, already required
+     here) to `light-dark()` (Baseline 2024). Two plain declarations are worth more than 3 bytes. */
   --glass-tint: #8b5cf60d;
   --glass-edge: #8b5cf64d;
 }
@@ -286,11 +293,9 @@
   /* Dark carries slightly MORE violet than light, and the asymmetry is measured rather than
      stylistic: the same wash that is clearly violet over near-white paper is nearly invisible over
      near-black. Both values stay low — the target is a surface whose FIRST read is dark neutral,
-     with violet arriving as depth rather than as fill. The tint also moves the two themes in
-     opposite luminance directions (it LIGHTENS the dark surface and DARKENS the light one), so each
-     value is checked against the text with the least contrast headroom on its side (doc 03 §4).
-     `#a78bfa` is `violet-400`, the lighter step the dark theme already uses for link text (D03-2) —
-     so the dark accent surface and the dark accent text are drawn from the same ramp position. */
+     with violet arriving as depth rather than as fill. `#a78bfa` is `violet-400`, the lighter step
+     the dark theme already uses for link text (D03-2), so the dark accent surface and the dark
+     accent text are drawn from the same ramp position. */
   --glass-tint: #a78bfa12;
   --glass-edge: #a78bfa52;
   /* On a near-black page a white inner highlight reads as a smear, and drop shadows are invisible
@@ -767,9 +772,12 @@ html:not([lang="ar"]) .nameplate {
      problem it must NOT re-introduce is the row reading as a violet CARD. Four choices separate the
      two, and each is load-bearing:
 
-       - TOP AND BOTTOM hairlines only. Left/right edges are what make a fill read as a detached box;
-         horizontal rules read as list structure, and they land on the existing `border-t` dividers
-         rather than fighting them.
+       - A TOP hairline only. Left/right edges are what make a fill read as a detached box; a
+         horizontal rule reads as list structure, and it lands on the existing `border-t` divider
+         rather than fighting it. The bottom inset this rule used to also paint was dropped (025)
+         after comparing both versions in the browser at desktop and mobile, light and dark: the
+         difference is barely perceptible, because the NEXT row's `border-t` already draws that
+         boundary. Top-only is the more honest list treatment and costs one shadow instead of two.
        - No radius, no inline padding and no negative margin. The fill spans the row's own box and
          aligns with the list, instead of floating out past the text column with a card's footprint.
        - A 5–7 % wash rather than a fill: the row is TINTED, never coloured.
@@ -791,9 +799,7 @@ html:not([lang="ar"]) .nameplate {
   .row-glass:hover,
   .row-glass:has(:focus-visible) {
     background-color: var(--glass-tint);
-    box-shadow:
-      inset 0 1px 0 var(--glass-edge),
-      inset 0 -1px 0 var(--glass-edge);
+    box-shadow: inset 0 1px 0 var(--glass-edge);
   }
 
   /* The row deliberately has NO reduced-transparency reset. Its `background-color` is a 5 % wash
