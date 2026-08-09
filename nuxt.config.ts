@@ -132,8 +132,11 @@ export default defineNuxtConfig({
   // an origin from request headers or a stale env guess.
   site: { url: siteUrl },
 
-  // Two worlds (D06-1): the dashboard is a client-only SPA; public content is SSR + SWR at
-  // the Nitro layer (doc 20 §2). `/ar/**` mirrors the public rules (i18n prefixes Arabic).
+  // Two worlds (D06-1): the dashboard is a client-only SPA; public content is SSR, with Nitro SWR
+  // on stable discovery routes (doc 20 §2). Project DETAIL is the deliberate exception: Dashboard
+  // mutations must be visible on the very next request, so its two locale patterns disable Nitro's
+  // response cache while retaining SSR. Exact index rules remain SWR because they are more specific
+  // than the detail wildcards. `/ar/**` mirrors the public rules (i18n prefixes Arabic).
   routeRules: {
     '/dashboard/**': { ssr: false },
     // i18n `prefix_except_default` generates real `/ar/dashboard/**` routes; they must be client-only
@@ -142,11 +145,11 @@ export default defineNuxtConfig({
     '/': { swr: 60 },
     '/blog/**': { swr: 60 },
     '/projects': { swr: 60 },
-    '/projects/**': { swr: 60 },
+    '/projects/**': { cache: false },
     '/ar': { swr: 60 },
     '/ar/blog/**': { swr: 60 },
     '/ar/projects': { swr: 60 },
-    '/ar/projects/**': { swr: 60 },
+    '/ar/projects/**': { cache: false },
     // Draft-preview surface (D10-11): never index, never cache, never leak the token-bearing URL via
     // the Referer of any subresource. `robots` drives @nuxtjs/robots (noindex meta + X-Robots-Tag);
     // the explicit headers add no-store + no-referrer. Both locale paths need the header rule — Nitro
