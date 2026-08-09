@@ -72,6 +72,11 @@ const SETTINGS_COUNT_API_PORT = Number(process.env.CI_SETTINGS_COUNT_MOCK_PORT ?
 const MEDIA_PORT = Number(process.env.CI_MEDIA_PORT ?? 3700)
 const MEDIA_API_PORT = Number(process.env.CI_MEDIA_MOCK_PORT ?? 3701)
 
+// The public project-detail freshness lane. Its upstream changes from an empty gallery to a
+// populated gallery while the test is running, so it gets a dedicated serial process pair.
+const PROJECT_CACHE_PORT = Number(process.env.CI_PROJECT_CACHE_PORT ?? 3800)
+const PROJECT_CACHE_API_PORT = Number(process.env.CI_PROJECT_CACHE_MOCK_PORT ?? 3801)
+
 // Fail with an actionable message instead of a connection-refused timeout 90 s later. `ci-preview.mjs`
 // boots `.output/server/index.mjs` directly, so a missing build is a setup mistake, not a test failure.
 if (!existsSync('.output/server/index.mjs')) {
@@ -136,7 +141,8 @@ export default defineConfig({
       // ran a second time here against Prism, which serves a static example and holds no mutable
       // state, producing 19 failures that described the wrong backend rather than the product.
       testIgnore: [
-        'scenarios/**', 'readiness/**', 'resume-pdf/**', 'dashboard/**', 'dashboard-media/**', 'dedupe/**'
+        'scenarios/**', 'readiness/**', 'resume-pdf/**', 'dashboard/**', 'dashboard-media/**',
+        'dedupe/**', 'cache/**'
       ],
       use: { ...devices['Desktop Chrome'], baseURL: `http://127.0.0.1:${CONTRACT_PORT}` }
     },
@@ -193,6 +199,14 @@ export default defineConfig({
       // mid-assertion. A repeat sweep over this project must pass `--workers=1`.
       fullyParallel: false,
       use: { ...devices['Desktop Chrome'], baseURL: `http://127.0.0.1:${MEDIA_PORT}` }
+    },
+    {
+      name: 'project-detail-cache',
+      testMatch: 'cache/**/*.spec.ts',
+      // One spec file owns one mutable upstream. Keeping the lane serial prevents a reset in a
+      // future test from racing the publish transition that this regression measures.
+      fullyParallel: false,
+      use: { ...devices['Desktop Chrome'], baseURL: `http://127.0.0.1:${PROJECT_CACHE_PORT}` }
     }
   ],
 
@@ -209,6 +223,8 @@ export default defineConfig({
     previewServer('dashboard', DASHBOARD_PORT, DASHBOARD_API_PORT),
     // `/about` carries no SWR rule, so probing it leaves every route this lane measures cold.
     previewServer('settings-count', SETTINGS_COUNT_PORT, SETTINGS_COUNT_API_PORT, '/about'),
-    previewServer('media', MEDIA_PORT, MEDIA_API_PORT)
+    previewServer('media', MEDIA_PORT, MEDIA_API_PORT),
+    // `/about` proves the page shell is ready without priming either detail URL under test.
+    previewServer('project-cache', PROJECT_CACHE_PORT, PROJECT_CACHE_API_PORT, '/about')
   ]
 })

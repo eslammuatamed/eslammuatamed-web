@@ -154,6 +154,15 @@ const BACKENDS = {
     label: 'media backend (Media Library + Profile, mutable)',
     command: process.execPath,
     args: () => ['scripts/e2e/media-server.ts']
+  },
+  // Project-detail freshness. This backend starts with an empty gallery and exposes test-only
+  // controls that publish the authored gallery after both localized detail pages have been primed.
+  // Its own process is essential: the regression observes mutable upstream state while every other
+  // public SSR fixture remains deterministic and parallel-safe.
+  'project-cache': {
+    label: 'project-detail cache backend (mutable gallery)',
+    command: process.execPath,
+    args: () => ['scripts/e2e/project-cache-server.ts']
   }
 }
 
