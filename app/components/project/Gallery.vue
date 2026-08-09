@@ -129,6 +129,17 @@ function isUntranslated(item: ProjectGalleryItem): boolean {
       class="mt-8"
       :class="isNavigable ? 'mb-12' : undefined"
       :ui="{
+        // KEYBOARD FOCUS MUST STAY VISIBLE (WCAG 2.2 AA 2.4.7, release-blocking per doc 21).
+        // The carousel root is `tabindex=0` — it is the element that handles the arrow keys — and the
+        // component's own theme resets it with `focus:outline-none`. That utility lands in
+        // `@layer utilities`, while this site's global ring (`:where(a,button,[tabindex])
+        // :focus-visible`) is declared in `@layer base`, so the reset wins on layer order no matter
+        // how low its specificity is: the region would tab-focus with no indicator at all.
+        //
+        // The ring is a BOX-SHADOW, not an outline, and that is the point — `outline-style: none`
+        // cannot suppress a property it does not control, so this cannot lose the same race a
+        // competing `outline-*` utility would (same specificity, order decided by Tailwind's sort).
+        root: 'focus-visible:ring-2 focus-visible:ring-primary focus-visible:rounded-card',
         // The theme pushes the arrows to `sm:-start-12` / `sm:-end-12` — three rem OUTSIDE the
         // carousel. The gallery already spans the full container, whose gutter is smaller than that,
         // so the default would hang the buttons past the page edge and produce a horizontal

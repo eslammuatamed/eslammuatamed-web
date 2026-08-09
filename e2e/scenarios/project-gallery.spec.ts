@@ -163,6 +163,30 @@ test.describe('Project gallery carousel — English', () => {
     await expect.poll(() => activeSlide(page)).toBe(0)
   })
 
+  test('shows a visible focus indicator on the tab stop it adds', async ({ page }) => {
+    // WCAG 2.2 AA 2.4.7, release-blocking. This is a REGRESSION TEST for a real defect: the carousel
+    // root is a new tab stop, and the component theme resets it with `focus:outline-none` — which is
+    // in `@layer utilities` and therefore beats this site's `@layer base` global focus ring outright.
+    // Focused-but-invisible is the exact state axe does not reliably catch, so it is pinned here by
+    // reading the computed style rather than by trusting the class list.
+    await page.goto(EN_PATH)
+    await expect(dots(page)).toHaveCount(3)
+
+    const carousel = carouselRoot(page)
+    await carousel.focus()
+    await expect(carousel).toBeFocused()
+
+    const indicator = await carousel.evaluate((element) => {
+      const style = getComputedStyle(element)
+      return { outlineStyle: style.outlineStyle, boxShadow: style.boxShadow }
+    })
+
+    // The outline is expected to be suppressed — that is the theme's doing and is not the bug. The
+    // requirement is that SOMETHING renders, so the assertion is on the indicator that survives.
+    expect(indicator.boxShadow, 'focused carousel paints no visible ring').not.toBe('none')
+    expect(indicator.boxShadow).toMatch(/rgb/)
+  })
+
   test('keeps the API order and the localized captions', async ({ page }) => {
     await page.goto(EN_PATH)
 
