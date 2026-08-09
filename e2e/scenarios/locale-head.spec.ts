@@ -92,42 +92,48 @@ const CASES = [
     from: `/projects/${SLUG.bilingual.en}`,
     to: `/ar/projects/${SLUG.bilingual.ar}`,
     click: 'AR' as const,
-    heading: 'دراسة تمايز اللغتين'
+    heading: 'دراسة تمايز اللغتين',
+    documentNavigation: true
   },
   {
     name: 'Project detail AR → EN',
     from: `/ar/projects/${SLUG.bilingual.ar}`,
     to: `/projects/${SLUG.bilingual.en}`,
     click: 'EN' as const,
-    heading: 'Bilingual differentiation study'
+    heading: 'Bilingual differentiation study',
+    documentNavigation: true
   },
   {
     name: 'Blog detail EN → AR',
     from: `/blog/${ARTICLE_SLUG.bilingual.en}`,
     to: `/ar/blog/${ARTICLE_SLUG.bilingual.ar}`,
     click: 'AR' as const,
-    heading: 'دراسة تمايز المقالات بين اللغتين'
+    heading: 'دراسة تمايز المقالات بين اللغتين',
+    documentNavigation: false
   },
   {
     name: 'Blog detail AR → EN',
     from: `/ar/blog/${ARTICLE_SLUG.bilingual.ar}`,
     to: `/blog/${ARTICLE_SLUG.bilingual.en}`,
     click: 'EN' as const,
-    heading: 'Bilingual article differentiation study'
+    heading: 'Bilingual article differentiation study',
+    documentNavigation: false
   },
   {
     name: 'Projects index EN → AR',
     from: '/projects',
     to: '/ar/projects',
     click: 'AR' as const,
-    heading: 'أعمال مختارة'
+    heading: 'أعمال مختارة',
+    documentNavigation: false
   },
   {
     name: 'Projects index AR → EN',
     from: '/ar/projects',
     to: '/projects',
     click: 'EN' as const,
-    heading: 'Selected work'
+    heading: 'Selected work',
+    documentNavigation: false
   }
   // Experience (008) is deliberately NOT listed here. This spec asserts zero console errors, and the
   // scenario backend serves `/ar/experience` as an intentional 503 so the RTL error state can be
@@ -135,7 +141,7 @@ const CASES = [
   // `/experience` in `experience-states.spec.ts`, which tolerates that one expected failure.
 ]
 
-for (const { name, from, to, click, heading } of CASES) {
+for (const { name, from, to, click, heading, documentNavigation } of CASES) {
   test(`${name} — switched head state matches a direct load`, async ({ page }) => {
     // 1. Baseline: what a direct, server-rendered load of the DESTINATION produces.
     await page.goto(to)
@@ -149,7 +155,11 @@ for (const { name, from, to, click, heading } of CASES) {
     // 2. Now reach the same URL by switching locale in the browser.
     const consoleLog = recordConsole(page)
     await page.goto(from)
-    await watchChrome(page)
+    if (documentNavigation) {
+      await page.evaluate(() => { (window as unknown as { __beforeLocaleSwitch?: boolean }).__beforeLocaleSwitch = true })
+    } else {
+      await watchChrome(page)
+    }
     await switchLocale(page, click)
 
     await expect(page).toHaveURL(new RegExp(`${to.replace(/[/]/g, '\\/')}$`))
@@ -158,7 +168,12 @@ for (const { name, from, to, click, heading } of CASES) {
     // 3. The invariant.
     expect(await headState(page)).toEqual(expected)
 
-    await assertChromeNeverMixed(page)
+    if (documentNavigation) {
+      expect(await page.evaluate(() => (window as unknown as { __beforeLocaleSwitch?: boolean }).__beforeLocaleSwitch))
+        .toBeUndefined()
+    } else {
+      await assertChromeNeverMixed(page)
+    }
     expect(consoleLog.hydration, 'hydration warnings').toEqual([])
     expect(consoleLog.errors, 'fatal console errors').toEqual([])
   })

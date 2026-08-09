@@ -15,6 +15,11 @@
 // server-renders BEFORE the page does. Resolving here would emit a stale `href` — correct on click,
 // wrong for a crawler, a middle-click or a no-JS visitor. Same reasoning as LangToggle.
 const { t, locale, locales } = useI18n()
+const route = useRoute()
+
+// Keep this in lockstep with LangToggle: uncached project-detail locale switches use the localized
+// href as a fresh document request, avoiding a race with asynchronous counterpart-slug registration.
+const forceDocumentNavigation = computed(() => /^\/(?:ar\/)?projects\/[^/]+\/?$/.test(route.path))
 
 const other = computed(() => locales.value.find(item => item.code !== locale.value))
 const currentShort = computed(() => locale.value.toUpperCase())
@@ -24,6 +29,7 @@ const currentShort = computed(() => locale.value.toUpperCase())
   <SwitchLocalePathLink
     v-if="other"
     :locale="other.code"
+    :external="forceDocumentNavigation"
     :aria-label="`${currentShort}: ${t('a11y.switchToOtherLocale')}`"
     :title="t('a11y.switchToOtherLocale')"
     class="inline-flex size-9 items-center justify-center rounded-full border border-default bg-elevated text-caption font-semibold leading-none text-highlighted transition-colors hover:bg-accented"

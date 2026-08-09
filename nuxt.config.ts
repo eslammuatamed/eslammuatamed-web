@@ -145,11 +145,11 @@ export default defineNuxtConfig({
     '/': { swr: 60 },
     '/blog/**': { swr: 60 },
     '/projects': { swr: 60 },
-    '/projects/**': { cache: false },
+    '/projects/**': { headers: { 'cache-control': 'no-store' } },
     '/ar': { swr: 60 },
     '/ar/blog/**': { swr: 60 },
     '/ar/projects': { swr: 60 },
-    '/ar/projects/**': { cache: false },
+    '/ar/projects/**': { headers: { 'cache-control': 'no-store' } },
     // Draft-preview surface (D10-11): never index, never cache, never leak the token-bearing URL via
     // the Referer of any subresource. `robots` drives @nuxtjs/robots (noindex meta + X-Robots-Tag);
     // the explicit headers add no-store + no-referrer. Both locale paths need the header rule — Nitro
