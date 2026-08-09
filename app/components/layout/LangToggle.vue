@@ -16,6 +16,12 @@
 // `href` on `app:rendered`, once the whole page — `setI18nParams()` included — has run. Surfaced by the
 // D22-7 strict-SEO adoption; the ordering hazard predates it.
 const { t, locale, locales } = useI18n()
+const route = useRoute()
+
+// Project detail deliberately has no Nitro payload cache: a Dashboard edit must reach the next
+// request. Use the already-correct localized href as a document navigation on that one surface so a
+// second locale switch cannot race the destination page's asynchronous `setI18nParams()` call.
+const forceDocumentNavigation = computed(() => /^\/(?:ar\/)?projects\/[^/]+\/?$/.test(route.path))
 
 const options = computed(() =>
   locales.value.map(item => ({
@@ -37,6 +43,7 @@ const options = computed(() =>
       v-for="opt in options"
       :key="opt.code"
       :locale="opt.code"
+      :external="forceDocumentNavigation"
       :aria-current="opt.active ? 'true' : undefined"
       :title="opt.name"
       class="rounded-full px-3 py-2 text-caption font-semibold leading-none transition-colors"
