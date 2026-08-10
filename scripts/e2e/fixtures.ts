@@ -89,7 +89,14 @@ export const SLUG = {
   /** A valid project whose gallery is empty. */
   emptyGallery: { en: 'ssr-empty-gallery', ar: 'ssr-empty-gallery-ar' },
   /** Deliberately different EN and AR content, and a slug map that differs between them. */
-  bilingual: { en: 'ssr-bilingual', ar: 'ssr-bilingual-ar' }
+  bilingual: { en: 'ssr-bilingual', ar: 'ssr-bilingual-ar' },
+  /**
+   * A gallery of THREE images whose intrinsic shapes deliberately differ — wide, tall and square.
+   * Every other project fixture carries at most one image, and every one of them is 2400×1350, so
+   * none of them can tell a carousel from a stack, and none can show a portrait being constrained
+   * while a landscape is not. This slug exists for the gallery-carousel lane.
+   */
+  multiShapeGallery: { en: 'ssr-gallery-shapes', ar: 'ssr-gallery-shapes-ar' }
 } as const
 
 /**
@@ -336,6 +343,44 @@ function galleryItem(id: string, order: number, alt: string | null, caption: str
   return { mediaAssetId: id, mediaAsset: image(id, alt), order, caption }
 }
 
+/**
+ * A SQUARE descriptor — the third shape the gallery classifies, and the one with no other fixture.
+ * 1:1 exactly, so it sits in the middle of the near-square band rather than on either threshold:
+ * a fixture parked on a boundary would flip class with any future tweak to the cutoffs and read as
+ * a regression when it was only ever a coin toss.
+ */
+function squareImage(id: string, alt: string | null): MediaImage {
+  return {
+    id,
+    kind: 'IMAGE',
+    url: `${MEDIA_ORIGIN}/${id}/1200-webp.webp`,
+    width: 1200,
+    height: 1200,
+    blurhash: 'LEHV6nWB2yk8pyo0adR*.7kCMdnj',
+    alt,
+    variants: [
+      { format: 'WEBP', width: 640, height: 640, url: `${MEDIA_ORIGIN}/${id}/640-webp.webp` },
+      { format: 'WEBP', width: 1200, height: 1200, url: `${MEDIA_ORIGIN}/${id}/1200-webp.webp` }
+    ]
+  }
+}
+
+/** A gallery entry built from an ALREADY-CHOSEN descriptor, so a fixture can mix intrinsic shapes. */
+function galleryItemOf(asset: MediaImage, order: number, caption: string | null): GalleryItem {
+  return { mediaAssetId: asset.id, mediaAsset: asset, order, caption }
+}
+
+/**
+ * The three media ids of the mixed-shape gallery, in the order the API returns them. Wide first,
+ * tall second, square third: the ORDER is itself under test, and it is deliberately NOT the order
+ * the shapes would fall into if anything sorted them by size, ratio or id.
+ */
+const SHAPE_MEDIA = {
+  landscape: '019f89b5-3050-7161-af37-0000000000d1',
+  portrait: '019f89b5-3050-7161-af37-0000000000d2',
+  square: '019f89b5-3050-7161-af37-0000000000d3'
+} as const
+
 const TECHNOLOGIES_EN = [
   { id: '019f89b5-3050-7161-af37-0000000000a1', slug: 'nuxt', label: 'Nuxt' },
   { id: '019f89b5-3050-7161-af37-0000000000a2', slug: 'postgresql', label: 'PostgreSQL' }
@@ -466,17 +511,69 @@ const BILINGUAL_AR: ProjectDetail = {
   gallery: [galleryItem('019f89b5-3050-7161-af37-0000000000c3', 1, 'نص بديل بالعربية', 'تعليق المعرض بالعربية')]
 }
 
+/**
+ * THE MIXED-SHAPE GALLERY — the fixture the carousel is verified against.
+ *
+ * Three images, three intrinsic shapes, in an order chosen so that neither the shapes nor the ids
+ * are sorted: wide (2400×1350), tall (1086×1448), square (1200×1200). That combination is what makes
+ * three separate claims falsifiable at once — that the images do not stack, that a tall screenshot is
+ * narrower than a wide one on the same page, and that the API's order survives the rewrite.
+ *
+ * Captions are authored per locale and per slide, so "slide 2 in Arabic" is a distinguishable string
+ * rather than the same caption echoed three times.
+ */
+const GALLERY_SHAPES_EN: ProjectDetail = {
+  id: '019f89b5-3050-7161-af37-0000000000b4',
+  slug: SLUG.multiShapeGallery.en,
+  title: 'Project with mixed gallery shapes',
+  summary: 'A case study whose gallery mixes wide, tall and square screenshots.',
+  featured: false,
+  year: 2026,
+  technologies: TECHNOLOGIES_EN,
+  availableLocales: ['en', 'ar'],
+  slugs: { en: SLUG.multiShapeGallery.en, ar: SLUG.multiShapeGallery.ar },
+  liveUrl: 'https://example.com/gallery-shapes',
+  repoUrl: null,
+  ...sections('Gallery shapes'),
+  gallery: [
+    galleryItemOf(image(SHAPE_MEDIA.landscape, 'Wide dashboard screenshot'), 1, 'Wide caption'),
+    galleryItemOf(portraitImage(SHAPE_MEDIA.portrait, 'Tall mobile screenshot'), 2, 'Tall caption'),
+    galleryItemOf(squareImage(SHAPE_MEDIA.square, 'Square logo screenshot'), 3, 'Square caption')
+  ],
+  metaTitle: null,
+  metaDescription: null,
+  ogImageId: null,
+  ogImage: null,
+  canonicalUrl: null
+}
+
+const GALLERY_SHAPES_AR: ProjectDetail = {
+  ...GALLERY_SHAPES_EN,
+  slug: SLUG.multiShapeGallery.ar,
+  title: 'مشروع بأشكال معرض مختلطة',
+  summary: 'دراسة حالة يمزج معرضها بين لقطات عريضة وطويلة ومربعة.',
+  technologies: TECHNOLOGIES_AR,
+  ...sectionsAr('أشكال المعرض'),
+  gallery: [
+    galleryItemOf(image(SHAPE_MEDIA.landscape, 'لقطة شاشة عريضة'), 1, 'تعليق عريض'),
+    galleryItemOf(portraitImage(SHAPE_MEDIA.portrait, 'لقطة شاشة طويلة'), 2, 'تعليق طويل'),
+    galleryItemOf(squareImage(SHAPE_MEDIA.square, 'لقطة شاشة مربعة'), 3, 'تعليق مربع')
+  ]
+}
+
 /** Every project the scenario server can serve, keyed by the slug that selects it, per locale. */
 export const PROJECTS: Record<Locale, Record<string, ProjectDetail>> = {
   en: {
     [SLUG.canonical.en]: CANONICAL_EN,
     [SLUG.emptyGallery.en]: EMPTY_GALLERY_EN,
-    [SLUG.bilingual.en]: BILINGUAL_EN
+    [SLUG.bilingual.en]: BILINGUAL_EN,
+    [SLUG.multiShapeGallery.en]: GALLERY_SHAPES_EN
   },
   ar: {
     [SLUG.canonical.ar]: CANONICAL_AR,
     [SLUG.emptyGallery.ar]: EMPTY_GALLERY_AR,
-    [SLUG.bilingual.ar]: BILINGUAL_AR
+    [SLUG.bilingual.ar]: BILINGUAL_AR,
+    [SLUG.multiShapeGallery.ar]: GALLERY_SHAPES_AR
   }
 }
 
