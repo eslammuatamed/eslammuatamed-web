@@ -108,7 +108,9 @@ useSeoMeta({
 
       <article class="mt-10">
         <header>
-          <p class="kicker text-dimmed">{{ article.category.name }}</p>
+          <!-- Null when the category has no translation in this locale (D10-20) — the eyebrow is
+               then simply absent, exactly as the excerpt below is. -->
+          <p v-if="article.category" class="kicker text-dimmed">{{ article.category.name }}</p>
           <h1 class="mt-4 font-display text-h1 text-highlighted text-balance">
             {{ article.title }}
           </h1>

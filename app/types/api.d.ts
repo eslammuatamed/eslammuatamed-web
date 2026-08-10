@@ -1536,7 +1536,8 @@ export interface components {
             coverImageId: string | null;
             /** @description Resolved cover image (null when no cover is set). */
             coverImage: components["schemas"]["PublicMediaImageDescriptor"] | null;
-            category: components["schemas"]["ArticleTaxonomyRefEntity"];
+            /** @description Resolved category (null when it has no translation in the requested locale). */
+            category: components["schemas"]["ArticleTaxonomyRefEntity"] | null;
             tags: components["schemas"]["ArticleTaxonomyRefEntity"][];
             /**
              * @example [
@@ -1569,7 +1570,8 @@ export interface components {
             coverImageId: string | null;
             /** @description Resolved cover image (null when no cover is set). */
             coverImage: components["schemas"]["PublicMediaImageDescriptor"] | null;
-            category: components["schemas"]["ArticleTaxonomyRefEntity"];
+            /** @description Resolved category (null when it has no translation in the requested locale). */
+            category: components["schemas"]["ArticleTaxonomyRefEntity"] | null;
             tags: components["schemas"]["ArticleTaxonomyRefEntity"][];
             /**
              * @example [

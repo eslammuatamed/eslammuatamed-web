@@ -51,4 +51,52 @@ describe('ContentArticleRow', () => {
     expect(time.attributes('datetime')).toBe(art.publishAt)
     expect(time.text()).toBe(formatDate(art.publishAt!, 'en'))
   })
+
+  // D10-20: the API returns `category: null` when the category has no translation in the requested
+  // locale. Absence is rendered as absence — no chip, no placeholder, and the row still reads.
+  describe('with an untranslated category (D10-20)', () => {
+    const withoutCategory = () =>
+      mountSuspended(ArticleRow, { props: { article: article({ category: null }) }, global: { stubs } })
+
+    it('still renders the article', async () => {
+      const wrapper = await withoutCategory()
+      expect(wrapper.find('h3 a').text()).toBe('Designing a modular monolith')
+      expect(wrapper.text()).toContain('blog.minRead')
+    })
+
+    it('renders no category name and no placeholder in its place', async () => {
+      const wrapper = await withoutCategory()
+      expect(wrapper.text()).not.toContain('Engineering')
+      expect(wrapper.text()).not.toContain('Uncategorized')
+    })
+
+    it('drops the category separator so the meta line does not open on a stray dot', async () => {
+      // The meta line is whatever contains the <time> — found structurally, not by class, so a
+      // styling change cannot quietly turn this assertion into a no-op.
+      const metaLine = (w: Awaited<ReturnType<typeof withoutCategory>>) =>
+        w.find('time').element.parentElement!
+
+      const withCategory = await mountSuspended(ArticleRow, {
+        props: { article: article() },
+        global: { stubs }
+      })
+      // Normally the line opens on the category, then a separator, then the date.
+      expect(metaLine(withCategory).firstElementChild?.textContent).toBe('Engineering')
+      expect(metaLine(withCategory).querySelectorAll('span[aria-hidden="true"]')).toHaveLength(2)
+
+      // Without a category the line opens directly on the date, one separator lighter — the
+      // remaining one still divides date from reading time.
+      const wrapper = await withoutCategory()
+      expect(metaLine(wrapper).firstElementChild?.tagName.toLowerCase()).toBe('time')
+      expect(metaLine(wrapper).querySelectorAll('span[aria-hidden="true"]')).toHaveLength(1)
+      expect(metaLine(wrapper).textContent!.trimStart().startsWith('·')).toBe(false)
+    })
+
+    it('emits no category link at all, empty-query or otherwise', async () => {
+      const wrapper = await withoutCategory()
+      const hrefs = wrapper.findAll('a').map((a) => a.attributes('href') ?? '')
+      expect(hrefs).toEqual(['/blog/designing-a-modular-monolith'])
+      expect(hrefs.some((href) => href.includes('category='))).toBe(false)
+    })
+  })
 })
