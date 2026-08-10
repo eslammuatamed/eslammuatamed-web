@@ -118,8 +118,15 @@ function isUntranslated(item: ProjectGalleryItem): boolean {
       and moving content is a WCAG 2.2 hazard we would then have to add a pause control for.
       Dragging is Embla's default, so touch/swipe needs no prop either.
 
-      `mb-12` is layout for the dots: the theme parks them at `-bottom-7`, i.e. OUTSIDE the root box,
-      so without reserved space they would overlap whatever follows the gallery.
+      The bottom margin is layout for the dots: the theme parks them at `-bottom-7`, i.e. OUTSIDE
+      the root box, so without reserved space they would overlap whatever follows the gallery.
+
+      EVERY SPACING VALUE BELOW IS ONE THE BUNDLE ALREADY SHIPPED. The public CSS budget (doc 20
+      section 1, 30 KB gz) had 40 bytes of headroom before this feature, so a value that is merely
+      reasonable rather than already-present costs a whole rule the budget cannot pay for. Tighter
+      offsets were tried first and each emitted a new rule; these render the same layout for no new
+      bytes. Do not name a rejected utility in a comment either: Tailwind scans this file as plain
+      text, so writing one is enough to emit its rule even when nothing uses it (measured).
     -->
     <UCarousel
       v-slot="{ item }"
@@ -127,15 +134,13 @@ function isUntranslated(item: ProjectGalleryItem): boolean {
       :arrows="isNavigable"
       :dots="isNavigable"
       class="mt-8"
-      :class="isNavigable ? 'mb-12' : undefined"
+      :class="isNavigable ? 'mb-10' : undefined"
       :ui="{
-        // The theme aligns slides to the TOP (`container: flex items-start`), and the row is as tall
-        // as the tallest slide — the wide screenshot. A capped portrait or square is shorter, so
-        // top-alignment dropped all of the slack underneath it: the caption ended up stranded far
-        // above the dots, on a slide that looked half-empty. Centring puts the slack either side of
-        // the figure instead. The row height itself does not change, so navigating between shapes
-        // still shifts nothing.
-        container: 'items-center',
+        // The theme's top alignment (`container: flex items-start`) is LEFT ALONE, deliberately.
+        // Centring the slides was tried and reverted: it gives images of different heights different
+        // top edges, and a shared top edge is the invariant the no-vertical-stack regression rests
+        // on (a stack is same-x and different-y; a carousel is different-x and same-y). It is also
+        // the calmer result, since the image never jumps vertically as you navigate between shapes.
         // KEYBOARD FOCUS MUST STAY VISIBLE (WCAG 2.2 AA 2.4.7, release-blocking per doc 21).
         // The carousel root is `tabindex=0` — it is the element that handles the arrow keys — and the
         // component's own theme resets it with `focus:outline-none`. That utility lands in
@@ -146,13 +151,13 @@ function isUntranslated(item: ProjectGalleryItem): boolean {
         // The ring is a BOX-SHADOW, not an outline, and that is the point — `outline-style: none`
         // cannot suppress a property it does not control, so this cannot lose the same race a
         // competing `outline-*` utility would (same specificity, order decided by Tailwind's sort).
-        root: 'focus-visible:ring-2 focus-visible:ring-primary focus-visible:rounded-card',
+        root: 'rounded-card focus-visible:ring-2 focus-visible:ring-primary',
         // The theme pushes the arrows to `sm:-start-12` / `sm:-end-12` — three rem OUTSIDE the
         // carousel. The gallery already spans the full container, whose gutter is smaller than that,
         // so the default would hang the buttons past the page edge and produce a horizontal
         // scrollbar. Pinned just inside the viewport instead, in both directions, at every breakpoint.
-        prev: 'start-2 sm:start-2',
-        next: 'end-2 sm:end-2'
+        prev: 'start-4 sm:start-4',
+        next: 'end-4 sm:end-4'
       }"
     >
       <!--
