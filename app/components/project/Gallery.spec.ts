@@ -192,28 +192,53 @@ describe('ProjectGallery — carousel presentation', () => {
     expect(single.findAll('figure')).toHaveLength(1)
   })
 
+  // The cap lives on the FIGURE, not on the image: a caption has to be as wide as the figure it
+  // describes, or a 384px portrait ends up with its caption starting at the far edge of a full-width
+  // box. The image is `w-full` inside that capped box, so its RENDERED width is unchanged — which is
+  // what the e2e geometry assertions and the `sizes` attribute are both written against.
   it('lets a wide screenshot use the full gallery width', async () => {
-    const img = (await mount([landscape()])).find('img')
+    const wrapper = await mount([landscape()])
 
-    expect(img.attributes('data-gallery-shape')).toBe('landscape')
-    expect(img.classes()).toContain('w-full')
-    expect(img.classes().some(c => c.startsWith('max-w-'))).toBe(false)
+    expect(wrapper.find('img').attributes('data-gallery-shape')).toBe('landscape')
+    expect(wrapper.find('figure').classes()).toContain('w-full')
+    expect(wrapper.find('figure').classes().some(c => c.startsWith('max-w-'))).toBe(false)
   })
 
   it('constrains and centres a portrait screenshot instead of stretching it', async () => {
-    const img = (await mount([portrait()])).find('img')
+    const wrapper = await mount([portrait()])
 
-    expect(img.attributes('data-gallery-shape')).toBe('portrait')
-    expect(img.classes()).toContain('max-w-sm')
-    expect(img.classes()).toContain('mx-auto')
+    expect(wrapper.find('img').attributes('data-gallery-shape')).toBe('portrait')
+    expect(wrapper.find('figure').classes()).toContain('max-w-sm')
+    expect(wrapper.find('figure').classes()).toContain('mx-auto')
   })
 
   it('gives a near-square image a constrained width too', async () => {
-    const img = (await mount([square()])).find('img')
+    const wrapper = await mount([square()])
 
-    expect(img.attributes('data-gallery-shape')).toBe('square')
-    expect(img.classes()).toContain('max-w-md')
-    expect(img.classes()).toContain('mx-auto')
+    expect(wrapper.find('img').attributes('data-gallery-shape')).toBe('square')
+    expect(wrapper.find('figure').classes()).toContain('max-w-md')
+    expect(wrapper.find('figure').classes()).toContain('mx-auto')
+  })
+
+  it('keeps every caption exactly as wide as the figure it describes', async () => {
+    // The defect: cap the IMAGE and the figure stays full-width, so the caption of a constrained
+    // screenshot is stranded away from it. Falsifiable by construction — move the cap back onto the
+    // image and the figure loses `max-w-sm`/`max-w-md` here.
+    const captioned = [
+      { dims: { width: 1086, height: 1448 }, cap: 'max-w-sm' },
+      { dims: { width: 1000, height: 1000 }, cap: 'max-w-md' }
+    ]
+
+    for (const { dims, cap } of captioned) {
+      const wrapper = await mount([item(dims, { caption: 'A caption that must track its image' })])
+      const figure = wrapper.find('figure')
+
+      expect(figure.classes()).toContain(cap)
+      expect(figure.find('figcaption').exists()).toBe(true)
+      // The image fills that box rather than carrying a second, competing cap.
+      expect(figure.find('img').classes()).toContain('w-full')
+      expect(figure.find('img').classes().some(c => c.startsWith('max-w-'))).toBe(false)
+    }
   })
 
   it('keeps `sizes` honest about the width each shape actually renders at', async () => {

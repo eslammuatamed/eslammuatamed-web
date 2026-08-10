@@ -123,6 +123,39 @@ test.describe('Project gallery carousel — English', () => {
     expect(Math.abs(gaps.start - gaps.end)).toBeLessThanOrEqual(20)
   })
 
+  test('a caption is exactly as wide as the screenshot it describes', async ({ page }) => {
+    await page.goto(EN_PATH)
+
+    // The defect this catches is pure geometry, so jsdom cannot see it: cap the IMAGE and the
+    // <figure> keeps the full slide width, leaving a 384px portrait with its caption starting at the
+    // far edge of a ~1216px box — a label that appears to describe the whitespace beside the image.
+    const measured = await galleryImages(page).evaluateAll(imgs => imgs.map((img) => {
+      const figure = img.closest('figure')!
+      const caption = figure.querySelector('figcaption')
+      return {
+        shape: (img as HTMLElement).dataset.galleryShape,
+        imageLeft: img.getBoundingClientRect().left,
+        imageWidth: img.getBoundingClientRect().width,
+        captionLeft: caption ? caption.getBoundingClientRect().left : null,
+        captionWidth: caption ? caption.getBoundingClientRect().width : null
+      }
+    }))
+
+    expect(measured).toHaveLength(3)
+    for (const row of measured) {
+      expect(row.captionWidth, `${row.shape} has a caption`).not.toBeNull()
+      // Same box: same left edge and same width, at every shape.
+      expect(Math.abs(row.captionLeft! - row.imageLeft), `${row.shape} caption starts at the image`)
+        .toBeLessThanOrEqual(2)
+      expect(Math.abs(row.captionWidth! - row.imageWidth), `${row.shape} caption matches image width`)
+        .toBeLessThanOrEqual(2)
+    }
+
+    // …and the constrained shapes really are constrained, so this is not passing because everything
+    // happens to be full width.
+    expect(measured.find(row => row.shape === 'portrait')!.imageWidth).toBeLessThanOrEqual(PORTRAIT_CAP)
+  })
+
   test('the next/previous controls actually move the active slide', async ({ page }) => {
     await page.goto(EN_PATH)
 

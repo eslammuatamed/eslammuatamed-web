@@ -129,6 +129,13 @@ function isUntranslated(item: ProjectGalleryItem): boolean {
       class="mt-8"
       :class="isNavigable ? 'mb-12' : undefined"
       :ui="{
+        // The theme aligns slides to the TOP (`container: flex items-start`), and the row is as tall
+        // as the tallest slide — the wide screenshot. A capped portrait or square is shorter, so
+        // top-alignment dropped all of the slack underneath it: the caption ended up stranded far
+        // above the dots, on a slide that looked half-empty. Centring puts the slack either side of
+        // the figure instead. The row height itself does not change, so navigating between shapes
+        // still shifts nothing.
+        container: 'items-center',
         // KEYBOARD FOCUS MUST STAY VISIBLE (WCAG 2.2 AA 2.4.7, release-blocking per doc 21).
         // The carousel root is `tabindex=0` — it is the element that handles the arrow keys — and the
         // component's own theme resets it with `focus:outline-none`. That utility lands in
@@ -148,11 +155,24 @@ function isUntranslated(item: ProjectGalleryItem): boolean {
         next: 'end-2 sm:end-2'
       }"
     >
-      <figure>
+      <!--
+        THE SHAPE CAP BELONGS TO THE FIGURE, NOT THE IMAGE.
+
+        A `figcaption` describes its figure, so it has to be as wide as the thing it describes. When
+        the cap sat on the image alone, the figure stayed the full width of the slide: a 384px
+        portrait sat centred while its caption started at the far edge of a 1216px box, reading as a
+        label for the whitespace rather than for the screenshot. Capping the figure keeps the two the
+        same width, so the caption tracks the image at every shape and in both directions — in RTL it
+        follows the image to the other side for free, because `text-align: start` is resolved against
+        the figure's own box.
+
+        The image is then simply `w-full` inside that box: its RENDERED width is unchanged, which is
+        what the shape budget and the `sizes` attribute are both written against.
+      -->
+      <figure class="mx-auto" :class="presentationFor(item).class">
         <!-- width/height are always set: reserving the box is what actually keeps CLS at zero, and
              the blurhash average colour fills it until the image paints. Lazy by default — nothing
-             in a gallery below the fold competes with the page's LCP element.
-             `mx-auto` is what centres a constrained portrait in its full-width slide. -->
+             in a gallery below the fold competes with the page's LCP element. -->
         <NuxtImg
           :src="item.mediaAsset.url"
           :srcset="srcsetFor(item)"
@@ -163,8 +183,7 @@ function isUntranslated(item: ProjectGalleryItem): boolean {
           :aria-hidden="isUntranslated(item) ? 'true' : undefined"
           loading="lazy"
           decoding="async"
-          class="mx-auto h-auto rounded-card border border-default"
-          :class="presentationFor(item).class"
+          class="w-full h-auto rounded-card border border-default"
           :data-gallery-shape="shapeOf(item)"
           :style="{ backgroundColor: blurhashAverageColor(item.mediaAsset.blurhash) ?? undefined }"
         />
