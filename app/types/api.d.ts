@@ -1722,7 +1722,7 @@ export interface components {
              * @description Every grantable permission key. The reserved "*" wildcard grants all of them.
              * @example [
              *       "articles.read",
-             *       "articles.publish",
+             *       "articles.update",
              *       "settings.update"
              *     ]
              */
@@ -1745,7 +1745,7 @@ export interface components {
              * @example [
              *       "articles.read",
              *       "articles.create",
-             *       "articles.publish"
+             *       "articles.update"
              *     ]
              */
             permissions: string[];
@@ -1764,7 +1764,7 @@ export interface components {
              * @example [
              *       "articles.read",
              *       "articles.create",
-             *       "articles.publish"
+             *       "articles.update"
              *     ]
              */
             permissions: string[];
