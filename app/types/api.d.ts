@@ -766,6 +766,30 @@ export interface paths {
         patch: operations["MessagesAdminController_update_v1"];
         trace?: never;
     };
+    "/api/v1/admin/messages/{id}/replies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the reply attempts for one contact message, chronologically.
+         * @description Ordered by `createdAt` ascending, tie-broken by `id` — reply ids are time-ordered UUIDv7, so the tie-break is chronologically meaningful and two identical requests cannot disagree. Scoped strictly to `:id`: no other message's attempts appear. An empty array and a 404 are DIFFERENT facts and must not be conflated — a 404 means no such message, while `200 []` means the message exists and has no reply attempts. The latter includes a phone-only message that carries no email address and therefore can never be replied to at all: its history is readable and empty, even though POSTing to it answers 409.
+         */
+        get: operations["MessagesAdminController_listReplies_v1"];
+        put?: never;
+        /**
+         * Send a plain-text reply to a contact message. The recipient is the message sender and cannot be chosen.
+         * @description Idempotent per (message, Idempotency-Key): a repeated request with the same key returns the existing attempt with 200 instead of sending again. A deliberate second reply uses a new key. The response carries the outcome as `status` — a request that reaches the provider returns SENT, one the provider does not accept returns FAILED with 201/200 rather than an error, since the attempt was recorded either way. An attempt left PENDING has an unknown outcome and may be recovered by repeating the request with the SAME key within 24 hours; after that it is returned unchanged and never re-sent automatically.
+         */
+        post: operations["MessagesAdminController_createReply_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/articles/{id}/preview-token": {
         parameters: {
             query?: never;
@@ -2642,6 +2666,51 @@ export interface components {
              * @example false
              */
             isArchived?: boolean;
+        };
+        /**
+         * @description PENDING — the attempt exists but no terminal outcome has been recorded. It is ambiguous by design: it covers both "not sent" and "accepted by the provider, outcome not written". A PENDING attempt is never evidence that nothing was delivered (D09-23). SENT — the mail provider ACCEPTED the message and that acceptance was persisted. It does not mean inbox delivery, a passed spam filter, or a read message. FAILED — no provider acceptance was observed. Weaker than "no email was sent": delivery retries internally, so an accepted first attempt followed by a lost connection can still end here. This is why repeating a request with the same Idempotency-Key never re-sends — a deliberate retry uses a NEW key, which is a new attempt.
+         * @enum {string}
+         */
+        ContactMessageReplyStatus: "PENDING" | "SENT" | "FAILED";
+        ContactMessageReplyEntity: {
+            /** Format: uuid */
+            id: string;
+            /**
+             * Format: uuid
+             * @description The ContactMessage this reply answers.
+             */
+            contactMessageId: string;
+            /**
+             * @description The plain-text reply body as it was submitted.
+             * @example Thanks for reaching out — I can take a look at this next week.
+             */
+            body: string;
+            /** @description PENDING — the attempt exists but no terminal outcome has been recorded. It is ambiguous by design: it covers both "not sent" and "accepted by the provider, outcome not written". A PENDING attempt is never evidence that nothing was delivered (D09-23). SENT — the mail provider ACCEPTED the message and that acceptance was persisted. It does not mean inbox delivery, a passed spam filter, or a read message. FAILED — no provider acceptance was observed. Weaker than "no email was sent": delivery retries internally, so an accepted first attempt followed by a lost connection can still end here. This is why repeating a request with the same Idempotency-Key never re-sends — a deliberate retry uses a NEW key, which is a new attempt. */
+            status: components["schemas"]["ContactMessageReplyStatus"];
+            /**
+             * Format: uuid
+             * @description The authenticated operator who initiated this attempt. An opaque user id — the operator email is not published here, so reply history requires no user-directory access to read.
+             */
+            initiatedByUserId: string;
+            /** Format: date-time */
+            createdAt: string;
+            /**
+             * Format: date-time
+             * @description When acceptance was recorded, or null unless status is SENT.
+             */
+            sentAt: string | null;
+            /**
+             * Format: date-time
+             * @description When the failure was recorded, or null unless status is FAILED.
+             */
+            failedAt: string | null;
+        };
+        CreateMessageReplyDto: {
+            /**
+             * @description The plain-text reply body. Plain text only — no HTML representation exists (D02-13e).
+             * @example Thanks for reaching out — I can take a look at this next week.
+             */
+            body: string;
         };
         PreviewTokenEntity: {
             /**
@@ -6676,6 +6745,177 @@ export interface operations {
                 };
             };
             /** @description Validation error. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Admin rate limit exceeded (300 / min). */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    MessagesAdminController_listReplies_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["ContactMessageReplyEntity"][];
+                    };
+                };
+            };
+            /** @description The message id in the path is not a well-formed UUID. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Missing or invalid access token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Missing the required permission. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Message not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Admin rate limit exceeded (300 / min). */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    MessagesAdminController_createReply_v1: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description An opaque client-generated value, 8–200 printable ASCII characters without whitespace (a UUID is the obvious choice). Scoped to this message: the same key against a different message is a different logical attempt. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateMessageReplyDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["ContactMessageReplyEntity"];
+                    };
+                };
+            };
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["ContactMessageReplyEntity"];
+                    };
+                };
+            };
+            /** @description The message id in the path is not a well-formed UUID. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Missing or invalid access token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Missing the required permission. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Message not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description The message carries no email address and cannot be replied to. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Validation error — including a missing or malformed Idempotency-Key header. */
             422: {
                 headers: {
                     [name: string]: unknown;
