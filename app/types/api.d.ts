@@ -3236,6 +3236,15 @@ export interface operations {
                     };
                 };
             };
+            /** @description The media asset id in the path is not a well-formed UUID. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
             /** @description Missing or invalid access token. */
             401: {
                 headers: {
@@ -3291,6 +3300,15 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description The media asset id in the path is not a well-formed UUID. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
             };
             /** @description Missing or invalid access token. */
             401: {
@@ -3364,6 +3382,15 @@ export interface operations {
                     };
                 };
             };
+            /** @description The media asset id in the path is not a well-formed UUID. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
             /** @description Missing or invalid access token. */
             401: {
                 headers: {
@@ -3430,6 +3457,15 @@ export interface operations {
                     "application/json": {
                         data: components["schemas"]["MediaUsageEntity"][];
                     };
+                };
+            };
+            /** @description The media asset id in the path is not a well-formed UUID. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
                 };
             };
             /** @description Missing or invalid access token. */
@@ -3640,6 +3676,15 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description The category id in the path is not a well-formed UUID. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
             /** @description Missing or invalid access token. */
             401: {
                 headers: {
@@ -3710,6 +3755,15 @@ export interface operations {
                     "application/json": {
                         data: components["schemas"]["AdminCategoryEntity"];
                     };
+                };
+            };
+            /** @description The category id in the path is not a well-formed UUID. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
                 };
             };
             /** @description Missing or invalid access token. */
@@ -3929,6 +3983,15 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description The tag id in the path is not a well-formed UUID. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
             /** @description Missing or invalid access token. */
             401: {
                 headers: {
@@ -3990,6 +4053,15 @@ export interface operations {
                     "application/json": {
                         data: components["schemas"]["AdminTagEntity"];
                     };
+                };
+            };
+            /** @description The tag id in the path is not a well-formed UUID. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
                 };
             };
             /** @description Missing or invalid access token. */
@@ -4333,6 +4405,15 @@ export interface operations {
                     };
                 };
             };
+            /** @description The article id in the path is not a well-formed UUID. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
             /** @description Missing or invalid access token. */
             401: {
                 headers: {
@@ -4388,6 +4469,15 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description The article id in the path is not a well-formed UUID. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
             };
             /** @description Missing or invalid access token. */
             401: {
@@ -4450,6 +4540,15 @@ export interface operations {
                     "application/json": {
                         data: components["schemas"]["AdminArticleEntity"];
                     };
+                };
+            };
+            /** @description The article id in the path is not a well-formed UUID. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
                 };
             };
             /** @description Missing or invalid access token. */
@@ -4731,6 +4830,15 @@ export interface operations {
                     };
                 };
             };
+            /** @description The role id in the path is not a well-formed UUID. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
             /** @description Missing or invalid access token. */
             401: {
                 headers: {
@@ -4786,6 +4894,15 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description The role id in the path is not a well-formed UUID. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
             };
             /** @description Missing or invalid access token. */
             401: {
@@ -4857,6 +4974,15 @@ export interface operations {
                     "application/json": {
                         data: components["schemas"]["RoleEntity"];
                     };
+                };
+            };
+            /** @description The role id in the path is not a well-formed UUID. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
                 };
             };
             /** @description Missing or invalid access token. */
@@ -5038,6 +5164,15 @@ export interface operations {
                     "application/json": {
                         data: components["schemas"]["UserEntity"];
                     };
+                };
+            };
+            /** @description The user id in the path is not a well-formed UUID. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
                 };
             };
             /** @description Missing or invalid access token. */
@@ -5258,6 +5393,15 @@ export interface operations {
                     };
                 };
             };
+            /** @description The skill id in the path is not a well-formed UUID. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
             /** @description Missing or invalid access token. */
             401: {
                 headers: {
@@ -5313,6 +5457,15 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description The skill id in the path is not a well-formed UUID. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
             };
             /** @description Missing or invalid access token. */
             401: {
@@ -5384,6 +5537,15 @@ export interface operations {
                     "application/json": {
                         data: components["schemas"]["AdminSkillEntity"];
                     };
+                };
+            };
+            /** @description The skill id in the path is not a well-formed UUID. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
                 };
             };
             /** @description Missing or invalid access token. */
@@ -5604,6 +5766,15 @@ export interface operations {
                     };
                 };
             };
+            /** @description The experience id in the path is not a well-formed UUID. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
             /** @description Missing or invalid access token. */
             401: {
                 headers: {
@@ -5659,6 +5830,15 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description The experience id in the path is not a well-formed UUID. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
             };
             /** @description Missing or invalid access token. */
             401: {
@@ -5721,6 +5901,15 @@ export interface operations {
                     "application/json": {
                         data: components["schemas"]["AdminExperienceEntity"];
                     };
+                };
+            };
+            /** @description The experience id in the path is not a well-formed UUID. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
                 };
             };
             /** @description Missing or invalid access token. */
@@ -5942,6 +6131,15 @@ export interface operations {
                     };
                 };
             };
+            /** @description The testimonial id in the path is not a well-formed UUID. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
             /** @description Missing or invalid access token. */
             401: {
                 headers: {
@@ -5997,6 +6195,15 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description The testimonial id in the path is not a well-formed UUID. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
             };
             /** @description Missing or invalid access token. */
             401: {
@@ -6059,6 +6266,15 @@ export interface operations {
                     "application/json": {
                         data: components["schemas"]["AdminTestimonialEntity"];
                     };
+                };
+            };
+            /** @description The testimonial id in the path is not a well-formed UUID. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
                 };
             };
             /** @description Missing or invalid access token. */
@@ -6362,6 +6578,15 @@ export interface operations {
                     };
                 };
             };
+            /** @description The project id in the path is not a well-formed UUID. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
             /** @description Missing or invalid access token. */
             401: {
                 headers: {
@@ -6417,6 +6642,15 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description The project id in the path is not a well-formed UUID. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
             };
             /** @description Missing or invalid access token. */
             401: {
@@ -6479,6 +6713,15 @@ export interface operations {
                     "application/json": {
                         data: components["schemas"]["AdminProjectEntity"];
                     };
+                };
+            };
+            /** @description The project id in the path is not a well-formed UUID. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
                 };
             };
             /** @description Missing or invalid access token. */
@@ -6654,6 +6897,15 @@ export interface operations {
                     };
                 };
             };
+            /** @description The message id in the path is not a well-formed UUID. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
             /** @description Missing or invalid access token. */
             401: {
                 headers: {
@@ -6715,6 +6967,15 @@ export interface operations {
                     "application/json": {
                         data: components["schemas"]["ContactMessageEntity"];
                     };
+                };
+            };
+            /** @description The message id in the path is not a well-formed UUID. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
                 };
             };
             /** @description Missing or invalid access token. */
@@ -6957,6 +7218,15 @@ export interface operations {
                     };
                 };
             };
+            /** @description The resource id in the path is not a well-formed UUID. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
             /** @description Missing or invalid access token. */
             401: {
                 headers: {
@@ -7015,6 +7285,15 @@ export interface operations {
                     "application/json": {
                         data: components["schemas"]["PreviewTokenEntity"];
                     };
+                };
+            };
+            /** @description The resource id in the path is not a well-formed UUID. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
                 };
             };
             /** @description Missing or invalid access token. */
@@ -7082,7 +7361,11 @@ export interface operations {
                     };
                 };
             };
-            /** @description Unknown or disabled locale. */
+            /**
+             * @description The resource id in the path is not a well-formed UUID.
+             *
+             *     Unknown or disabled locale.
+             */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -7138,7 +7421,11 @@ export interface operations {
                     };
                 };
             };
-            /** @description Unknown or disabled locale. */
+            /**
+             * @description The resource id in the path is not a well-formed UUID.
+             *
+             *     Unknown or disabled locale.
+             */
             400: {
                 headers: {
                     [name: string]: unknown;
