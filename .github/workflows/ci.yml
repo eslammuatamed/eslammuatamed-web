@@ -146,37 +146,75 @@ jobs:
       - name: Assert logical properties (RTL)
         run: npm run check:logical
 
-      # Governed Lighthouse (D20-25). ONE canonical command owns the whole lifecycle: preview +
-      # contract mock, an ephemeral localhost certificate, the local HTTP/2 frontend, the
-      # BROWSER-FACING PROTOCOL ASSERTION, both profile matrices, the median assertions, and
-      # teardown of every process, port and key on success or failure alike.
-      # The browser must see HTTP/2 because production does; measuring Nitro directly over
-      # HTTP/1.1 overstated LCP on every route (/ar 4441 ms -> 3389 ms at Web 9876279).
-      # Nitro itself may stay HTTP/1.1 behind the frontend.
-      # home + article × EN/AR; `/projects` and `/contact` from doc 20 §5's four-page matrix are
-      # the accepted web-005 404s (spec.md:36) and are deferred with it, not silently dropped.
-      # ubuntu-latest ships Chrome preinstalled, so no browser download step is needed.
-      # COLLECT ONLY — 3 runs per URL per profile, into .lighthouseci/<profile>/. Thresholds are
-      # asserted in the next step, not here: D20-13's semantics (exactly three comparable runs,
-      # grouped by run configuration, where FEWER than three is infrastructure rather than a low
-      # score) cannot be expressed as an LHCI assertion list. Separate output directories keep the
-      # second profile from overwriting the first profile's evidence.
+  # Governed Lighthouse (D20-25), SHARDED BY PROFILE — one runner per governed run configuration.
+  #
+  # It used to be the last two steps of `verify`, where the two matrices ran end to end: 631 s
+  # mobile + 617 s desktop, and a 49 s rebuild before either, for 1,300 s — 86 % of a 1,503 s job
+  # and the single largest cost in either repo's CI (run 31646141906).
+  #
+  # NOTHING ABOUT THE MEASUREMENT CHANGED. Same 16 governed URLs, same 3 runs per URL per profile
+  # (96 audits in total, as before), same thresholds, same HTTP/2 frontend, same protocol proofs.
+  # The two matrices were already independent — separate `lhci` invocations writing to separate
+  # directories, a protocol proof each, and medians grouped by each report's own
+  # `configSettings.formFactor` — so profile is the one shard boundary that costs no semantics.
+  #
+  # Deliberately one runner PER PROFILE, never two matrices on one runner: Lighthouse performance
+  # figures are CPU-sensitive and contending matrices would corrupt every reading.
+  #
+  # The 49 s rebuild disappears structurally rather than by relaxing anything. In `verify`, step 9
+  # had already built with `ANALYZE_BUNDLE=1` (required by `size:routes`), whose build-environment
+  # fingerprint the provenance contract correctly refuses to accept as governed output — so the
+  # orchestrator quarantined it and rebuilt. A shard has no such build to reject: it builds once,
+  # through `governedBuildEnv()`, and provenance accepts it first time. The provenance contract is
+  # untouched.
+  #
+  # BOTH shard contexts are required on `main`. That is what enforces cross-profile coverage now
+  # that one process no longer collects both: `LH_PROFILES` selects the profile, `resolveProfile`
+  # throws rather than defaulting, and each shard asserts it collected all 16 governed URLs for the
+  # profile it was asked for (`assertGovernedUrlCoverage`, exit 2 = infrastructure).
+  lighthouse:
+    name: Lighthouse (${{ matrix.profile }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      # Both profiles always run to completion: a mobile regression must not hide the desktop
+      # result, and the ruleset requires both contexts.
+      fail-fast: false
+      matrix:
+        profile: [mobile, desktop]
+    env:
+      # Same build-time placeholders as `verify` — the fingerprint the provenance marker records.
+      NUXT_PUBLIC_SITE_URL: https://example.com
+      NUXT_PUBLIC_API_BASE: https://example.com/api/v1
+    steps:
+      - uses: actions/checkout@v4
 
-      # Median-of-3 thresholds (doc 20 §1, D20-13): Performance ≥ 95 desktop / ≥ 60 mobile;
-      # Accessibility, Best Practices and SEO 100; LCP, CLS and per-script fonts at their unchanged
-      # §1 limits. Every individual run is printed so a median cannot hide instability. Exit 1 =
-      # a real regression; exit 2 = the collection was incomplete or unreadable.
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # No build step: `lighthouse:ci` owns the build so the artifact it measures is the one its
+      # provenance marker describes (clean-tree gate → build → marker → re-verify at measurement
+      # time). Building here separately is what produced the rejected build it had to quarantine.
+      # ubuntu-latest ships Chrome preinstalled, so no browser download is needed.
       - name: Governed Lighthouse over HTTP/2 (doc 20 §5.1, D20-25)
+        env:
+          LH_PROFILES: ${{ matrix.profile }}
         run: npm run lighthouse:ci
 
       # Reports are preserved even when the assertions fail — that is when they are most useful.
-      # Both profile subdirectories are included, so all three runs behind every median remain
-      # inspectable after the fact.
+      # All three runs behind every median stay inspectable after the fact.
+      #
+      # The artifact name carries the PROFILE. `actions/upload-artifact@v4` errors on a duplicate
+      # name rather than merging, so two shards sharing one name would fail the second upload.
       #
       # `include-hidden-files: true` is REQUIRED, not cosmetic. `.lighthouseci/` is dot-prefixed, and
       # actions/upload-artifact@v4 defaults that input to false — so run 30221448099 uploaded ZERO
-      # files while the step itself reported success, and the only surviving evidence for the whole
-      # baseline was the assertion step's stdout. The raw LHR JSON for all 24 readings is
+      # files while the step itself reported success, and the raw LHR JSON for all 24 readings is
       # unrecoverable. `if-no-files-found: error` makes the next silent loss impossible: this step
       # runs on `always()` immediately after a gate that is expected to fail sometimes, so "no files"
       # always means the collection or the path is broken, never a legitimate empty result.
@@ -184,7 +222,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: lighthouse-reports-${{ github.sha }}
+          name: lighthouse-reports-${{ matrix.profile }}-${{ github.sha }}
           path: .lighthouseci/
           retention-days: 14
           include-hidden-files: true

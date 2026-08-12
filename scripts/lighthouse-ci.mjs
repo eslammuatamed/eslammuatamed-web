@@ -11,8 +11,11 @@
  * setup beyond `npm ci`:
  *   CLEAN-TREE GATE → PROVENANCE-VERIFIED BUILD → contract mock + Nitro preview → ephemeral
  *   localhost cert → HTTP/2 frontend → PREFLIGHT PROTOCOL ASSERTION → PROVENANCE RE-CHECK →
- *   mobile matrix → MEASURED-SESSION PROOF → desktop matrix → MEASURED-SESSION PROOF →
- *   PROVENANCE RE-CHECK → report provenance record → median assertions → teardown.
+ *   for EACH selected profile: matrix → MEASURED-SESSION PROOF → PROVENANCE RE-CHECK →
+ *   report provenance record → median assertions (coverage + thresholds) → teardown.
+ *
+ * `LH_PROFILES` selects which governed profiles this invocation collects; it defaults to BOTH, so
+ * an unqualified `npm run lighthouse:ci` is unchanged. CI sets it per shard — see SELECTED_PROFILES.
  *
  * Teardown runs on success, on failure, and on SIGINT/SIGTERM. Ports and certificates are released
  * either way — a half-cleaned run poisons the next one, and a leaked private key is worse than a
@@ -47,6 +50,40 @@ import { assertCleanSourceState, governedBuildEnv, headSha, validateProvenance, 
 import { assertCollectionUsedH2, formatProtocolSummary } from './lib/lh-protocol.mjs'
 import { browserProfileDir, trackProcessTree } from './lib/process-tree.mjs'
 import { createResourceGuard } from './lib/lifecycle-guard.mjs'
+import { PROFILES, resolveProfile } from './lib/lighthouse-governed-urls.cjs'
+import { assertGovernedUrlCoverage, describeCoverage } from './lib/lighthouse-coverage.mjs'
+
+/**
+ * Which governed profiles this invocation collects. BOTH by default — the unsharded behaviour, and
+ * what a local run, `deploy.yml`'s consumers and any direct `npm run lighthouse:ci` still get.
+ *
+ * CI shards it (`LH_PROFILES=mobile` / `LH_PROFILES=desktop`) so the two matrices run on separate
+ * runners instead of end to end on one. The matrices were already independent — separate `lhci`
+ * invocations, separate output directories, a protocol proof per profile, and medians grouped by
+ * each report's own `configSettings.formFactor` — so splitting them changes WHERE each runs, not
+ * WHAT is measured. They are deliberately NOT parallelised within one runner: Lighthouse
+ * performance figures are CPU-sensitive, and two matrices contending for the same two cores would
+ * corrupt every reading.
+ *
+ * Each name goes through `resolveProfile`, which throws rather than defaulting — a shard whose
+ * profile silently fell back to `mobile` would collect the wrong matrix and still exit 0.
+ */
+const SELECTED_PROFILES = (() => {
+  const raw = process.env.LH_PROFILES
+  // UNSET means "the default, both". SET-BUT-EMPTY is a malformed value, not an omission — the two
+  // are deliberately not collapsed, because a `${{ matrix.profile }}` that resolved to nothing
+  // would otherwise read as "collect everything" and quietly pass under the wrong context name.
+  if (raw === undefined) return [...PROFILES]
+  const names = raw.split(',').map(s => s.trim()).filter(Boolean)
+  if (names.length === 0) {
+    throw new Error(
+      `LH_PROFILES is set to ${JSON.stringify(raw)}, which names no profile. Unset it to collect `
+      + `the default (${PROFILES.join(' + ')}), or name the profiles to collect. An empty value is `
+      + 'not treated as "all": a shard whose profile expanded to nothing must stop, not widen.'
+    )
+  }
+  return names.map(resolveProfile)
+})()
 
 const WEB_PORT = Number(process.env.CI_PREVIEW_PORT ?? 3000)
 const API_PORT = Number(process.env.CI_MOCK_PORT ?? 3001)
@@ -373,11 +410,37 @@ function readProfileReports(dir) {
  * attributed to the profile that suffered it and the desktop matrix is not collected on top of a
  * mobile matrix that is already invalid.
  */
-function assertProfileProtocol(profile) {
-  const summary = assertCollectionUsedH2(readProfileReports(PROFILE_DIRS[profile]))
+function assertProfileProtocol(reports, profile) {
+  const summary = assertCollectionUsedH2(reports)
   console.log(`[lighthouse:ci] ${profile} browser-session protocol verified from Lighthouse artifacts:`)
   console.log(formatProtocolSummary(summary))
   return summary
+}
+
+/**
+ * Prove this profile collected EXACTLY the governed URL population — both directions.
+ *
+ * Placed here, beside the protocol proof, for the same reason that one is here: it reads the
+ * reports Lighthouse actually wrote, immediately after the profile that wrote them, so a truncated
+ * matrix is attributed to the profile that suffered it rather than discovered at the end.
+ *
+ * This is what replaces the coverage guarantee that one process collecting both profiles used to
+ * provide implicitly. The median gate downstream asserts thresholds on the run configurations it
+ * FINDS, which cannot distinguish "every governed configuration passed" from "the configurations
+ * that were collected passed" — identical on a green exit. Under sharding that gap is reachable:
+ * a shard whose profile silently fell back, or whose collection was truncated, would exit 0.
+ *
+ * Deliberately NOT added to `check-lighthouse-medians.mjs`: that gate is also the non-governed
+ * entry point (`npm run lhci:assert-nongoverned`) and is unit-tested against small synthetic
+ * fixtures, which are not the governed population and must not be required to be.
+ */
+function assertProfileCoverage(reports, profile) {
+  const covered = assertGovernedUrlCoverage(
+    reports.map(lhr => ({ formFactor: lhr?.configSettings?.formFactor, url: lhr?.requestedUrl })),
+    [profile]
+  )
+  console.log(`[lighthouse:ci] ${describeCoverage(covered)}`)
+  return covered
 }
 
 /**
@@ -441,7 +504,10 @@ async function main() {
 
   // Stale reports from an earlier run would be read back both by the protocol proof and by the
   // median gate, which expects exactly three comparable runs per configuration.
-  for (const dir of Object.values(PROFILE_DIRS)) {
+  // Only the directories THIS invocation collects into. Clearing a profile it is not going to
+  // re-fill would leave an empty directory that the median gate reads as an infrastructure failure.
+  for (const profile of SELECTED_PROFILES) {
+    const dir = PROFILE_DIRS[profile]
     rmSync(dir, { recursive: true, force: true })
     mkdirSync(dir, { recursive: true })
   }
@@ -497,15 +563,24 @@ async function main() {
   const chromeFlags = `--no-sandbox --headless=new --ignore-certificate-errors-spki-list=${owned.cert.spki}`
   const lhEnv = { LH_BASE_URL: origin, LH_CHROME_FLAGS: chromeFlags }
 
-  console.log('\n[lighthouse:ci] collecting MOBILE matrix over HTTP/2…')
-  await run('npx', ['lhci', 'autorun'], { ...lhEnv, LHCI_PROFILE: 'mobile' })
-  const mobileProtocol = assertProfileProtocol('mobile')
+  // `--collect.settings.preset=desktop` is what makes the desktop matrix desktop; mobile is lhci's
+  // default. The preset and LHCI_PROFILE must agree, so both come from this one table rather than
+  // from two places that could drift — and the median gate reads the profile back from each
+  // report's own `configSettings.formFactor`, so a disagreement here cannot survive unnoticed.
+  const PROFILE_ARGS = { mobile: [], desktop: ['--collect.settings.preset=desktop'] }
 
-  console.log('\n[lighthouse:ci] collecting DESKTOP matrix over HTTP/2…')
-  await run('npx', ['lhci', 'autorun', '--collect.settings.preset=desktop'], { ...lhEnv, LHCI_PROFILE: 'desktop' })
-  const desktopProtocol = assertProfileProtocol('desktop')
+  const protocol = {}
+  for (const profile of SELECTED_PROFILES) {
+    console.log(`\n[lighthouse:ci] collecting ${profile.toUpperCase()} matrix over HTTP/2…`)
+    await run('npx', ['lhci', 'autorun', ...PROFILE_ARGS[profile]], { ...lhEnv, LHCI_PROFILE: profile })
+    // Read once, asserted twice: the governed population was collected, and Chrome measured it
+    // over h2. Both are infrastructure facts about THIS profile's collection.
+    const reports = readProfileReports(PROFILE_DIRS[profile])
+    assertProfileCoverage(reports, profile)
+    protocol[profile] = assertProfileProtocol(reports, profile)
+  }
 
-  console.log('\n[lighthouse:ci] browser-session protocol PROVEN h2 for every governed report (D20-25)')
+  console.log(`\n[lighthouse:ci] browser-session protocol PROVEN h2 for every ${SELECTED_PROFILES.join(' + ')} report (D20-25)`)
 
   // Nothing may have shifted underneath the collection either.
   assertProvenanceAtMeasurementTime(marker)
@@ -515,12 +590,17 @@ async function main() {
   // checked out at the time".
   const record = writeReportProvenance({
     marker,
-    extra: { protocol: { mobile: mobileProtocol, desktop: desktopProtocol } }
+    extra: { protocol }
   })
   console.log(`[lighthouse:ci] ${record.reports.length} report files bound to HEAD ${record.identity.head} (tree ${record.identity.tree.slice(0, 12)}, output ${record.identity.outputHash.slice(0, 12)})`)
 
+  // Scoped to the directories this invocation actually filled, so a shard does not read a sibling
+  // profile's stale reports. Governed-population coverage was already proven per profile above.
+  // Thresholds unchanged.
   console.log('\n[lighthouse:ci] asserting medians (thresholds unchanged)…')
-  await run('node', ['scripts/check-lighthouse-medians.mjs'])
+  await run('node', ['scripts/check-lighthouse-medians.mjs'], {
+    LHCI_REPORT_DIRS: SELECTED_PROFILES.map(p => PROFILE_DIRS[p]).join(',')
+  })
 }
 
 main()
