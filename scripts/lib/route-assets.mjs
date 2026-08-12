@@ -280,10 +280,12 @@ export const BUDGET = {
  * There is deliberately NO `totalJsBytes` key any more: a single name for a two-tier policy is
  * exactly how a caller silently reads the wrong tier.
  *
- * `appRenderedBytes` and `cssBytes` are D20-12's and §1's numbers UNCHANGED — app-owned measures
- * project-owned growth, a concern identical on both sides of the login, and the dashboard shares
- * the one global stylesheet. Only the transfer ceiling differs, and only because it governs a
- * different product.
+ * `cssBytes` is §1's number UNCHANGED — the dashboard shares the one global stylesheet.
+ *
+ * THERE IS DELIBERATELY NO `appRenderedBytes` KEY HERE ANY MORE (D20-29). App-owned is now a
+ * FROZEN PER-ROUTE cap, and a single class-wide name is exactly how a caller silently charges one
+ * route against another route's ceiling — the same reasoning that removed `totalJsBytes` above.
+ * Use `dashboardAppCapFor(route)`.
  *
  * Like the public limits, these are doc 20 verbatim. Re-baselining requires an owner decision and a
  * decision-log entry there — never an edit here.
@@ -293,8 +295,113 @@ export const DASHBOARD_BUDGET = {
   totalJsQualityTargetBytes: 300 * KB,
   /** D20-24 hard release ceiling. Above this is release-blocking and never raised automatically. */
   totalJsCeilingBytes: 320 * KB,
-  appRenderedBytes: BUDGET.appRenderedBytes,
   cssBytes: BUDGET.cssBytes
+}
+
+/**
+ * App-owned baselines for the five routes D20-29 newly governs, measured at Web `origin/dev`
+ * `d53af111168ffff56eadaacc0c1d7fdd6c2c635c3` by the §1.2 closure. Recorded so each frozen cap
+ * below can be re-derived from its stated input rather than taken on trust — the caps are what the
+ * gate enforces, these are only their provenance.
+ *
+ * The three D20-23 routes are deliberately ABSENT: their cap is D20-12's constant and was not
+ * derived from a dashboard measurement, so inventing a baseline for them here would be a fiction.
+ */
+export const DASHBOARD_APP_OWNED_BASELINE_BYTES = {
+  '/dashboard/media': 96_084,
+  '/dashboard/profile': 106_990,
+  '/dashboard/projects': 95_029,
+  '/dashboard/projects/new': 152_208,
+  '/dashboard/projects/00000000-0000-0000-0000-000000000000': 152_393
+}
+
+/**
+ * The FROZEN absolute app-owned hard cap for every governed dashboard route (doc 20 §1.1, D20-29).
+ *
+ * These are doc 20 VERBATIM. This map is an ENFORCEMENT mechanism, never the authority: a new cap,
+ * or a change to one, requires an owner decision plus a decision-log entry in
+ * `eslammuatamed-docs/docs/20-performance.md` — never an edit here.
+ *
+ * ABSOLUTE CEILINGS, NOT REGRESSION BASELINES. Nothing here is recomputed from a build, and the
+ * gate may never raise one. A route that grows past its cap FAILS (exit 1) and is fixed by
+ * optimizing the implementation or by a further decision in doc 20 — exactly as D20-12 intended.
+ *
+ * TWO PROVENANCE CLASSES, and the difference is deliberate:
+ *
+ *   D20-23 routes  — keep D20-12's 101 KiB constant, UNCHANGED and NOT re-derived. Applying the
+ *                    D20-29 formula to `/dashboard/messages` (92,442 B) would yield 106,496 B,
+ *                    which is HIGHER than the 103,424 B it already carries; D20-29 never raises an
+ *                    existing governed cap. Do not "fix" these to match the formula.
+ *   D20-29 routes  — derived once from DASHBOARD_APP_OWNED_BASELINE_BYTES via
+ *                    `approvedAppLimitBytes`, i.e. D20-12's headroom, rounding and units verbatim.
+ */
+export const DASHBOARD_APP_OWNED_CAP_BYTES = {
+  // D20-23 / D20-12 — preserved unchanged.
+  '/dashboard/login': 101 * KB,
+  '/dashboard': 101 * KB,
+  '/dashboard/messages': 101 * KB,
+  // D20-29 — derived from the baselines above.
+  '/dashboard/media': 108 * KB,
+  '/dashboard/profile': 121 * KB,
+  '/dashboard/projects': 107 * KB,
+  '/dashboard/projects/new': 171 * KB,
+  '/dashboard/projects/00000000-0000-0000-0000-000000000000': 172 * KB
+}
+
+/**
+ * Governance coverage must hold in BOTH directions, and each direction is a different failure:
+ *
+ *   measured but ungoverned  — a dashboard route is measured against no cap anybody decided
+ *   governed but unmeasured  — a route carries a doc 20 cap while quietly not being measured
+ *
+ * Asserting only the first is how the second becomes invisible: delete a route from
+ * DASHBOARD_ROUTES and the gate still exits 0 while a governed budget silently stops applying.
+ * Pure and exported so both directions can be tested independently — an inverse invariant added
+ * without its own test is how a one-way check turns into a false positive.
+ *
+ * @param {string[]} measuredRoutes routes the gate will actually measure
+ * @param {Record<string, number>} [caps] governed cap map; defaults to the real one
+ * @throws {Error} if the two sets differ in either direction
+ */
+export function assertGovernedRouteCoverage(measuredRoutes, caps = DASHBOARD_APP_OWNED_CAP_BYTES) {
+  const measured = new Set(measuredRoutes)
+  const governed = new Set(Object.keys(caps))
+  const ungoverned = [...measured].filter(r => !governed.has(r))
+  const unmeasured = [...governed].filter(r => !measured.has(r))
+  if (!ungoverned.length && !unmeasured.length) return
+
+  const detail = [
+    ungoverned.length ? `measured but NOT governed (no frozen cap in doc 20): ${ungoverned.join(', ')}` : null,
+    unmeasured.length ? `governed but NOT measured (cap exists, route dropped from the gate): ${unmeasured.join(', ')}` : null
+  ].filter(Boolean).join('\n  ')
+  throw new Error(
+    'dashboard route governance and measurement have diverged (doc 20 §1.1, D20-29):\n  '
+    + detail
+    + '\n  DASHBOARD_ROUTES and DASHBOARD_APP_OWNED_CAP_BYTES must name exactly the same routes.'
+  )
+}
+
+/**
+ * The governed cap for one dashboard route.
+ *
+ * THROWS for an unknown route rather than defaulting. A default would let a dashboard route ship
+ * measured-but-ungoverned — charged against a number nobody decided — which is the precise defect
+ * D20-29 exists to correct. The caller turns this into an infrastructure failure (exit 2): the gate
+ * refuses to report a verdict it cannot justify, rather than inventing one.
+ *
+ * @param {string} route
+ * @returns {number} frozen cap in bytes
+ */
+export function dashboardAppCapFor(route) {
+  const cap = DASHBOARD_APP_OWNED_CAP_BYTES[route]
+  if (cap === undefined) {
+    throw new Error(
+      `governed dashboard route ${route} has no frozen app-owned cap in doc 20 §1.1 (D20-29). `
+      + 'Add the route to the governed inventory in eslammuatamed-docs/docs/20-performance.md and '
+      + 'mirror it in DASHBOARD_APP_OWNED_CAP_BYTES — the gate may not invent a budget.'
+    )
+  }
+  return cap
 }
 
 /**
