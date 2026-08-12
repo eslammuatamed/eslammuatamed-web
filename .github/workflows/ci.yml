@@ -161,12 +161,14 @@ jobs:
   # Deliberately one runner PER PROFILE, never two matrices on one runner: Lighthouse performance
   # figures are CPU-sensitive and contending matrices would corrupt every reading.
   #
-  # The 49 s rebuild disappears structurally rather than by relaxing anything. In `verify`, step 9
+  # The DUPLICATE build disappears structurally rather than by relaxing anything. In `verify`, step 9
   # had already built with `ANALYZE_BUNDLE=1` (required by `size:routes`), whose build-environment
   # fingerprint the provenance contract correctly refuses to accept as governed output — so the
-  # orchestrator quarantined it and rebuilt. A shard has no such build to reject: it builds once,
-  # through `governedBuildEnv()`, and provenance accepts it first time. The provenance contract is
-  # untouched.
+  # orchestrator quarantined that output and rebuilt it, 49 s of work discarded (run 31646141906).
+  # A shard has no such build to quarantine: `.output` is simply absent, so it builds exactly once.
+  # The provenance contract is UNTOUCHED and still rejects — only the reason changes, from
+  # "fingerprint changed since the build" to "no provenance marker". What is gone is the second,
+  # wasted build, not a check (run 31650938047 shows both rejection lines and one build per shard).
   #
   # BOTH shard contexts are required on `main`. That is what enforces cross-profile coverage now
   # that one process no longer collects both: `LH_PROFILES` selects the profile, `resolveProfile`
@@ -211,6 +213,16 @@ jobs:
       #
       # The artifact name carries the PROFILE. `actions/upload-artifact@v4` errors on a duplicate
       # name rather than merging, so two shards sharing one name would fail the second upload.
+      #
+      # MEASURED CONSEQUENCE, recorded rather than hidden: total Lighthouse artifact bytes rose
+      # 37.0 MB -> 49.1 MB (+32.7 %). lhci writes every report TWICE — once under `<profile>/`
+      # (the configured outputDir, which is what the gates read) and once at `.lighthouseci/` root
+      # as `lhr-<ts>.{json,html}`. Unsharded, the second `autorun` wiped the first's root copies, so
+      # only ONE duplicate set survived; one set per shard now survives. The duplication is lhci's,
+      # not this change's. It is NOT excluded here because `provenance.json` binds every walked file
+      # by hash, so dropping the root copies from the artifact would leave dangling references —
+      # that fix belongs with the provenance walk, not with an upload filter. Actions storage is
+      # free on public repositories, so this costs ~3 s of upload and no money.
       #
       # `include-hidden-files: true` is REQUIRED, not cosmetic. `.lighthouseci/` is dot-prefixed, and
       # actions/upload-artifact@v4 defaults that input to false — so run 30221448099 uploaded ZERO
