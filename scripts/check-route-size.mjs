@@ -58,6 +58,8 @@ import {
   BUDGET,
   DASHBOARD_ACCEPTED_BASELINE_BYTES,
   DASHBOARD_BUDGET,
+  assertGovernedRouteCoverage,
+  dashboardAppCapFor,
   dashboardTotalVerdict,
   attributeRenderedBytes,
   budgetVerdict,
@@ -179,7 +181,15 @@ async function loadChunkMeta() {
  * a bare SPA shell and every dashboard route would report the same shared entry. Same gate, same
  * exit-code contract, different METHOD — chosen by what can actually observe the route.
  */
-async function measureDashboardRoute(meta, pageModule, html) {
+async function measureDashboardRoute(meta, route, pageModule, html) {
+  // Resolved BEFORE any measurement: a route with no governed cap must not produce a number at all.
+  let appCap
+  try {
+    appCap = dashboardAppCapFor(route)
+  } catch (error) {
+    throw new InfraError(error.message)
+  }
+
   const { files, seed, missing } = resolveDashboardClosure(meta.rawChunks, pageModule)
   if (missing.length > 0) {
     throw new InfraError(
@@ -226,7 +236,8 @@ async function measureDashboardRoute(meta, pageModule, html) {
     css,
     seed,
     ...attribution,
-    appVerdict: budgetVerdict(attribution.totals.app, DASHBOARD_BUDGET.appRenderedBytes),
+    appCap,
+    appVerdict: budgetVerdict(attribution.totals.app, appCap),
     // Three-valued on purpose (D20-24): PASS / WARN / FAIL. WARN passes the gate but obliges the
     // attribution block below — see `reportDashboardWarning`.
     totalVerdict: dashboardTotalVerdict(js.gz),
@@ -295,7 +306,7 @@ function reportDashboardWarning(row, meta, publicAssetPaths) {
   }
 
   // 4 — app-owned attribution.
-  console.log(`\n  4. App-owned attribution:  ${row.totals.app} B (${kb(row.totals.app)}) / ${DASHBOARD_BUDGET.appRenderedBytes} B (${kb(DASHBOARD_BUDGET.appRenderedBytes)})  — ${row.appVerdict}`)
+  console.log(`\n  4. App-owned attribution:  ${row.totals.app} B (${kb(row.totals.app)}) / ${row.appCap} B (${kb(row.appCap)}) frozen for this route  — ${row.appVerdict}`)
   for (const mod of row.appModules.slice(0, 10)) {
     console.log(`     ${String(mod.bytes).padStart(7)} B  ${mod.id}`)
   }
@@ -488,6 +499,14 @@ function packageRanking(meta, routeAssets, limit = 12) {
 let breach = false
 
 async function main() {
+  // Before the preview boots, so a governance gap fails fast and is never mistaken for a
+  // measurement problem. Throws a plain Error; surfaced as exit 2 — the gate refuses to report a
+  // verdict it cannot justify rather than inventing one.
+  try {
+    assertGovernedRouteCoverage(DASHBOARD_ROUTES.map(r => r.route))
+  } catch (error) {
+    throw new InfraError(error.message)
+  }
   await requireBuild()
   const meta = await loadChunkMeta()
   await assertMetaMatchesBuild(meta)
@@ -531,7 +550,7 @@ async function main() {
     }
     if (!res.ok) throw new InfraError(`${route} returned HTTP ${res.status}; cannot measure`)
     const dashHtml = await res.text()
-    dashboardRows.push({ route, ...(await measureDashboardRoute(meta, pageModule, dashHtml)) })
+    dashboardRows.push({ route, ...(await measureDashboardRoute(meta, route, pageModule, dashHtml)) })
   }
 
   // Every asset any measured PUBLIC route fetches. Used only by the D20-24 warning block, to prove
@@ -568,9 +587,9 @@ async function main() {
     console.log(
       `Budget: total JS ≤ ${kb(DASHBOARD_BUDGET.totalJsQualityTargetBytes)} gz quality target`
       + ` · ≤ ${kb(DASHBOARD_BUDGET.totalJsCeilingBytes)} gz hard ceiling`
-      + `  ·  app-owned ≤ ${kb(DASHBOARD_BUDGET.appRenderedBytes)}  ·  CSS ≤ ${kb(DASHBOARD_BUDGET.cssBytes)} gz`
+      + `  ·  app-owned ≤ a FROZEN PER-ROUTE cap (D20-29; shown per row)  ·  CSS ≤ ${kb(DASHBOARD_BUDGET.cssBytes)} gz`
     )
-    const dashHeader = `${'route'.padEnd(44)}${'assets'.padStart(7)}${'raw'.padStart(11)}${'gz'.padStart(10)}${'300/320'.padStart(8)}${'app rendered'.padStart(14)}${'≤101KB'.padStart(8)}`
+    const dashHeader = `${'route'.padEnd(44)}${'assets'.padStart(7)}${'raw'.padStart(11)}${'gz'.padStart(10)}${'300/320'.padStart(8)}${'app rendered'.padStart(14)}${'app cap'.padStart(12)}${'ok'.padStart(4)}`
     console.log(dashHeader)
     console.log('─'.repeat(dashHeader.length))
     for (const row of dashboardRows) {
@@ -589,7 +608,8 @@ async function main() {
         + kb(row.js.gz).padStart(10)
         + totalMark.padStart(8)
         + `${row.totals.app} B`.padStart(14)
-        + (row.appVerdict === 'PASS' ? '✓' : '✗').padStart(8)
+        + `${row.appCap} B`.padStart(12)
+        + (row.appVerdict === 'PASS' ? '✓' : '✗').padStart(4)
       )
     }
 
@@ -711,10 +731,11 @@ async function main() {
         console.error(`  ${row.route}: CSS ${kb(row.css.gz)} gz exceeds ${kb(DASHBOARD_BUDGET.cssBytes)}`)
       }
       if (row.appVerdict === 'FAIL') {
-        const over = row.totals.app - DASHBOARD_BUDGET.appRenderedBytes
+        const over = row.totals.app - row.appCap
         console.error(
-          `  ${row.route}: app-owned rendered bytes ${row.totals.app} B exceeds the frozen ${DASHBOARD_BUDGET.appRenderedBytes} B limit by ${over} B (${kb(over)}).`
-          + '\n      Unchanged by D20-24 — only the total-JS ceiling moved.'
+          `  ${row.route}: app-owned rendered bytes ${row.totals.app} B exceeds this route's frozen ${row.appCap} B cap by ${over} B (${kb(over)}).`
+          + '\n      The cap is per-route and frozen (doc 20 §1.1, D20-29). It is NEVER raised automatically:'
+          + '\n      fix the implementation, or obtain a new decision-log entry in doc 20.'
         )
       }
       if (row.unclassifiedModules.length) {

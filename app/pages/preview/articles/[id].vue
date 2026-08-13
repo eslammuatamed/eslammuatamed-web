@@ -21,12 +21,14 @@ const publishedLabel = computed(() =>
     <article>
       <header class="mb-8">
         <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-caption text-muted">
-          <span class="font-medium text-default">{{ article.category.name }}</span>
+          <!-- Null when the category has no translation in this locale (D10-20). Separators here
+               precede their item, so each one is guarded on something actually preceding it. -->
+          <span v-if="article.category" class="font-medium text-default">{{ article.category.name }}</span>
           <template v-if="publishedLabel">
-            <span aria-hidden="true">·</span>
+            <span v-if="article.category" aria-hidden="true">·</span>
             <time :datetime="article.publishAt ?? undefined">{{ publishedLabel }}</time>
           </template>
-          <span aria-hidden="true">·</span>
+          <span v-if="article.category || publishedLabel" aria-hidden="true">·</span>
           <span>{{ t('blog.minRead', { count: article.readingTimeMin }) }}</span>
         </div>
         <h1 class="mt-4 text-h1 text-highlighted">{{ article.title }}</h1>
