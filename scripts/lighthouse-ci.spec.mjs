@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { writeProvenance } from './lib/build-provenance.mjs'
+import { GOVERNED_PATHS } from './lib/lighthouse-governed-urls.cjs'
 
 /**
  * Lifecycle trust gate for the governed Lighthouse orchestrator (doc 20 §5.1, D20-25).
@@ -87,7 +88,7 @@ beforeEach(async () => {
   // The REAL orchestrator and the REAL libraries it exercises.
   mkdirSync(join(sandbox, 'scripts', 'lib'), { recursive: true })
   copyFileSync(join(REAL_SCRIPTS, 'lighthouse-ci.mjs'), join(sandbox, 'scripts', 'lighthouse-ci.mjs'))
-  for (const lib of ['h2-proxy.mjs', 'build-provenance.mjs', 'home-prime.mjs', 'lh-protocol.mjs', 'lifecycle-guard.mjs', 'process-tree.mjs']) {
+  for (const lib of ['h2-proxy.mjs', 'build-provenance.mjs', 'home-prime.mjs', 'lh-protocol.mjs', 'lifecycle-guard.mjs', 'process-tree.mjs', 'lighthouse-coverage.mjs', 'lighthouse-governed-urls.cjs']) {
     copyFileSync(join(REAL_SCRIPTS, 'lib', lib), join(sandbox, 'scripts', 'lib', lib))
   }
 
@@ -234,13 +235,23 @@ if (mode === 'hang') {
   ], { stdio: 'ignore' })
   await new Promise(() => {})
 }
-const profile = process.env.LHCI_PROFILE ?? 'mobile'
+// The profile is read WITHOUT a default: the real lighthouserc resolver throws on an unrecognised
+// value, and a shim that quietly fell back to 'mobile' would hide exactly the wrong-matrix defect
+// that resolver exists to prevent.
+const profile = process.env.LHCI_PROFILE
+if (profile !== 'mobile' && profile !== 'desktop') {
+  console.error('fake lhci: LHCI_PROFILE is ' + JSON.stringify(profile) + ' — expected mobile or desktop')
+  process.exit(2)
+}
 const base = process.env.LH_BASE_URL
 const dir = join('.lighthouseci', profile)
 mkdirSync(dir, { recursive: true })
 const proto = mode === 'h1' ? 'http/1.1' : 'h2'
-for (const route of ['', '/ar']) {
-  const url = base + (route || '/')
+// The GOVERNED population, injected from the real module rather than restated here, so this
+// fixture cannot drift out of agreement with the list the orchestrator asserts coverage against.
+const paths = ${JSON.stringify(GOVERNED_PATHS)}
+paths.forEach((route, i) => {
+  const url = base + route
   const lhr = {
     requestedUrl: url, finalDisplayedUrl: url,
     configSettings: { formFactor: profile },
@@ -250,8 +261,8 @@ for (const route of ['', '/ar']) {
       { url: base + '/_nuxt/entry.css', protocol: 'h2', resourceType: 'Stylesheet', statusCode: 200 }
     ] } } }
   }
-  writeFileSync(join(dir, 'lhr-' + profile + (route ? '-ar' : '-home') + '.json'), JSON.stringify(lhr))
-}
+  writeFileSync(join(dir, 'lhr-' + profile + '-' + String(i).padStart(2, '0') + '.json'), JSON.stringify(lhr))
+})
 process.exit(0)
 `)
   const shim = join(sandbox, 'bin')
@@ -436,6 +447,60 @@ describe('governed orchestrator — failure paths all clean up', () => {
     expect(out).toMatch(/did NOT measure/)
     expect(out).toMatch(/main document served over "http\/1\.1"/)
   }, 60_000)
+})
+
+describe('governed orchestrator — profile sharding (Stage 2B)', () => {
+  // The default must stay BOTH: a local run, and any caller that does not set LH_PROFILES, has to
+  // keep collecting the full governed matrix. A shard-only default would silently halve coverage
+  // for every consumer that never opted in.
+  it('39 — collects BOTH profiles when LH_PROFILES is unset', async () => {
+    const { done } = runOrchestrator()
+    const { code, out } = await done
+
+    expect(code).toBe(0)
+    expect(out).toMatch(/collecting MOBILE matrix/)
+    expect(out).toMatch(/collecting DESKTOP matrix/)
+    expect(existsSync(join(sandbox, '.lighthouseci', 'mobile'))).toBe(true)
+    expect(existsSync(join(sandbox, '.lighthouseci', 'desktop'))).toBe(true)
+  })
+
+  // The shard itself. `desktop` must collect desktop and MUST NOT touch the mobile directory —
+  // the other shard owns it, on another runner, and clearing it here would destroy that evidence.
+  it.each(['mobile', 'desktop'])('40 — LH_PROFILES=%s collects that profile ALONE', async profile => {
+    const other = profile === 'mobile' ? 'desktop' : 'mobile'
+    const { done } = runOrchestrator({ LH_PROFILES: profile })
+    const { code, out } = await done
+
+    expect(code).toBe(0)
+    expect(out).toMatch(new RegExp(`collecting ${profile.toUpperCase()} matrix`))
+    expect(out).not.toMatch(new RegExp(`collecting ${other.toUpperCase()} matrix`))
+    expect(existsSync(join(sandbox, '.lighthouseci', profile))).toBe(true)
+    expect(existsSync(join(sandbox, '.lighthouseci', other))).toBe(false)
+  })
+
+  // Coverage is asserted per shard and STATES ITS COUNT. A gate that only prints "passed" cannot
+  // be distinguished from one that verified nothing.
+  it('41 — each shard proves it collected the whole governed URL population', async () => {
+    const { done } = runOrchestrator({ LH_PROFILES: 'desktop' })
+    const { code, out } = await done
+
+    expect(code).toBe(0)
+    expect(out).toMatch(/desktop: all 16\/16 governed URLs collected/)
+  })
+
+  // The failure mode sharding introduces: an unrecognised profile must STOP the run, not fall back.
+  it.each(['', 'Desktop', 'tablet'])('42 — REFUSES the unrecognised profile %o rather than defaulting', async value => {
+    const { done } = runOrchestrator({ LH_PROFILES: value })
+    const { code, out } = await done
+
+    expect(code).not.toBe(0)
+    // Nothing may be collected under a guessed profile.
+    expect(existsSync(join(sandbox, '.lighthouseci', 'mobile'))).toBe(false)
+    expect(existsSync(join(sandbox, '.lighthouseci', 'desktop'))).toBe(false)
+    expect(out).toMatch(value === ''
+      ? /names no profile/
+      : /expected exactly one of "mobile" or "desktop"/)
+  })
 })
 
 describe('governed orchestrator — interruption', () => {

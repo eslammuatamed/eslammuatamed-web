@@ -35,6 +35,10 @@ mockNuxtImport('useApi', () => {
     if (request.endsWith('/expired')) {
       throw createError({ statusCode: 404, statusMessage: 'Not Found' })
     }
+    // A draft whose category has no translation in the requested locale — `category: null` (D10-20).
+    if (request.endsWith('/no-category')) {
+      return { data: { ...DRAFT, category: null } }
+    }
     return { data: DRAFT }
   }
 })
@@ -60,6 +64,24 @@ describe('preview/articles/[id]', () => {
     try {
       expect(wrapper.find('[data-testid="preview-unavailable"]').exists()).toBe(true)
       expect(wrapper.text()).not.toContain('Unpublished Draft Title')
+    } finally {
+      wrapper.unmount()
+    }
+  })
+
+  // D10-20: the reviewer must still be able to read the draft when its category is untranslated.
+  it('renders the draft with no category label when category is null', async () => {
+    const wrapper = await mountSuspended(PreviewArticle, {
+      route: '/preview/articles/no-category?token=valid'
+    })
+    try {
+      // The draft is still fully previewable.
+      expect(wrapper.find('[data-testid="preview-unavailable"]').exists()).toBe(false)
+      expect(wrapper.find('h1').text()).toContain('Unpublished Draft Title')
+      // No label, no placeholder, and no separator left stranded at the head of the meta line.
+      expect(wrapper.text()).not.toContain('Engineering')
+      expect(wrapper.text()).not.toContain('Uncategorized')
+      expect(wrapper.find('header div').text().trimStart().startsWith('·')).toBe(false)
     } finally {
       wrapper.unmount()
     }
