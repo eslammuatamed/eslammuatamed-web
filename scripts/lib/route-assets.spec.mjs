@@ -3,6 +3,8 @@ import {
   APP_BASELINE_MAX_BYTES,
   BUDGET,
   DASHBOARD_ACCEPTED_BASELINE_BYTES,
+  DASHBOARD_APP_OWNED_BASELINE_BYTES,
+  DASHBOARD_APP_OWNED_CAP_BYTES,
   DASHBOARD_BUDGET,
   KB,
   approvedAppLimitBytes,
@@ -10,10 +12,13 @@ import {
   budgetVerdict,
   classifyModuleId,
   collectRouteAssets,
+  assertGovernedRouteCoverage,
+  dashboardAppCapFor,
   dashboardTotalVerdict,
   kb,
   vendorPackage
 } from './route-assets.mjs'
+import { DASHBOARD_ROUTES } from './dashboard-closure.mjs'
 
 /**
  * These guard the ways a size gate can silently measure the WRONG set — every one of which is
@@ -477,11 +482,18 @@ describe('dashboardTotalVerdict — doc 20 §1.1 two-tier ceiling (D20-24)', () 
     expect(dashboardTotalVerdict(CEILING)).not.toBe('FAIL')
   })
 
-  it('keeps the app-owned and CSS limits unchanged — only the total ceiling moved', () => {
-    expect(DASHBOARD_BUDGET.appRenderedBytes).toBe(BUDGET.appRenderedBytes)
-    expect(DASHBOARD_BUDGET.appRenderedBytes).toBe(101 * KB)
+  it('keeps the CSS limit unchanged — D20-24 moved only the total ceiling', () => {
     expect(DASHBOARD_BUDGET.cssBytes).toBe(BUDGET.cssBytes)
     expect(DASHBOARD_BUDGET.cssBytes).toBe(30 * KB)
+  })
+
+  it('no longer carries a class-wide app-owned budget — D20-29 made it per route', () => {
+    // Superseded assertion: this used to require DASHBOARD_BUDGET.appRenderedBytes === 101 KiB for
+    // the whole class. D20-29 replaced that single number with a frozen cap per governed route, so
+    // the key is deliberately absent and callers must go through dashboardAppCapFor(route).
+    // The PUBLIC app-owned budget is untouched and stays one frozen number for all public routes.
+    expect(DASHBOARD_BUDGET.appRenderedBytes).toBeUndefined()
+    expect(BUDGET.appRenderedBytes).toBe(101 * KB)
   })
 
   it('does not disturb the public total budget', () => {
@@ -523,5 +535,156 @@ describe('DASHBOARD_ACCEPTED_BASELINE_BYTES — reporting input, never a gate', 
     // The warning block must report "no accepted baseline" rather than invent one — an invented
     // baseline makes a real regression look like a first measurement.
     expect(DASHBOARD_ACCEPTED_BASELINE_BYTES['/dashboard/settings']).toBeUndefined()
+  })
+})
+
+/**
+ * D20-29 — per-route FROZEN app-owned caps for the dashboard.
+ *
+ * The point of these is not that the numbers are large enough; it is that they are FIXED, that
+ * every governed route has exactly one, and that the gate cannot invent, drift from, or silently
+ * drop one. Each of those failures is invisible in a green exit code.
+ */
+describe('dashboard app-owned caps — frozen, per route (D20-29)', () => {
+  const D20_23_ROUTES = ['/dashboard/login', '/dashboard', '/dashboard/messages']
+  const D20_29_ROUTES = [
+    '/dashboard/media',
+    '/dashboard/profile',
+    '/dashboard/projects',
+    '/dashboard/projects/new',
+    '/dashboard/projects/00000000-0000-0000-0000-000000000000'
+  ]
+
+  it('governs exactly the eight routes doc 20 §1.1 names — no more, no fewer', () => {
+    expect(Object.keys(DASHBOARD_APP_OWNED_CAP_BYTES).sort())
+      .toEqual([...D20_23_ROUTES, ...D20_29_ROUTES].sort())
+  })
+
+  it('pins every cap to the exact byte value doc 20 §1.1 publishes', () => {
+    // Written as literals on purpose: a cap computed here from the same helper the source uses
+    // would pass no matter what either side drifted to.
+    expect(DASHBOARD_APP_OWNED_CAP_BYTES).toEqual({
+      '/dashboard/login': 103_424,
+      '/dashboard': 103_424,
+      '/dashboard/messages': 103_424,
+      '/dashboard/media': 110_592,
+      '/dashboard/profile': 123_904,
+      '/dashboard/projects': 109_568,
+      '/dashboard/projects/new': 175_104,
+      '/dashboard/projects/00000000-0000-0000-0000-000000000000': 176_128
+    })
+  })
+
+  it('derives each D20-29 cap from its recorded baseline by D20-12 methodology', () => {
+    for (const route of D20_29_ROUTES) {
+      const baseline = DASHBOARD_APP_OWNED_BASELINE_BYTES[route]
+      expect(baseline, `${route} must record the baseline its cap was derived from`).toBeTypeOf('number')
+      expect(approvedAppLimitBytes(baseline), `${route} cap must equal ceil((baseline x 1.15)/KiB) x KiB`)
+        .toBe(DASHBOARD_APP_OWNED_CAP_BYTES[route])
+    }
+  })
+
+  it('does NOT re-derive the three D20-23 routes — D20-29 never raises an existing cap', () => {
+    for (const route of D20_23_ROUTES) {
+      expect(DASHBOARD_APP_OWNED_CAP_BYTES[route]).toBe(101 * KB)
+      expect(DASHBOARD_APP_OWNED_BASELINE_BYTES[route]).toBeUndefined()
+    }
+    // The specific trap: the formula would RAISE /dashboard/messages, so a future "consistency"
+    // fix that re-derives all eight would quietly loosen a governed budget.
+    expect(approvedAppLimitBytes(92_442)).toBe(106_496)
+    expect(DASHBOARD_APP_OWNED_CAP_BYTES['/dashboard/messages']).toBeLessThan(106_496)
+  })
+
+  it('exposes no single class-wide app-owned budget for a caller to read by mistake', () => {
+    expect(DASHBOARD_BUDGET.appRenderedBytes).toBeUndefined()
+  })
+
+  it('these are absolute caps, not accepted baselines — the two maps are unrelated', () => {
+    // DASHBOARD_ACCEPTED_BASELINE_BYTES is a D20-24 REPORTING input and must never be a threshold.
+    for (const route of Object.keys(DASHBOARD_ACCEPTED_BASELINE_BYTES)) {
+      expect(DASHBOARD_APP_OWNED_CAP_BYTES[route]).not.toBe(DASHBOARD_ACCEPTED_BASELINE_BYTES[route])
+    }
+  })
+
+  describe('dashboardAppCapFor', () => {
+    it('returns the frozen cap for each governed route', () => {
+      for (const [route, cap] of Object.entries(DASHBOARD_APP_OWNED_CAP_BYTES)) {
+        expect(dashboardAppCapFor(route)).toBe(cap)
+      }
+    })
+
+    it('THROWS for an ungoverned route rather than defaulting to a number nobody decided', () => {
+      expect(() => dashboardAppCapFor('/dashboard/analytics')).toThrow(/no frozen app-owned cap/)
+    })
+
+    it('does not fall back to the public budget for an unknown route', () => {
+      // The tempting default. It would let a new dashboard route ship measured-but-ungoverned.
+      expect(() => dashboardAppCapFor('/dashboard/unknown')).toThrow()
+    })
+  })
+
+  describe('budgetVerdict against a per-route cap', () => {
+    it('passes exactly AT the cap and fails one byte over it', () => {
+      const cap = DASHBOARD_APP_OWNED_CAP_BYTES['/dashboard/projects/new']
+      expect(budgetVerdict(cap, cap)).toBe('PASS')
+      expect(budgetVerdict(cap + 1, cap)).toBe('FAIL')
+    })
+
+    it("charges a route against ITS OWN cap, not the widest one", () => {
+      // /dashboard/profile at the projects/new size must FAIL; a shared ceiling would pass it.
+      const profileCap = DASHBOARD_APP_OWNED_CAP_BYTES['/dashboard/profile']
+      const projectsNew = DASHBOARD_APP_OWNED_CAP_BYTES['/dashboard/projects/new']
+      expect(projectsNew).toBeGreaterThan(profileCap)
+      expect(budgetVerdict(projectsNew, profileCap)).toBe('FAIL')
+    })
+  })
+})
+
+describe('assertGovernedRouteCoverage — both directions (D20-29)', () => {
+  const CAPS = { '/a': 1024, '/b': 2048 }
+
+  it('passes when the measured set and the governed set match exactly', () => {
+    expect(() => assertGovernedRouteCoverage(['/a', '/b'], CAPS)).not.toThrow()
+  })
+
+  it('is order-independent', () => {
+    expect(() => assertGovernedRouteCoverage(['/b', '/a'], CAPS)).not.toThrow()
+  })
+
+  it('FAILS when a measured route has no governed cap', () => {
+    expect(() => assertGovernedRouteCoverage(['/a', '/b', '/c'], CAPS))
+      .toThrow(/measured but NOT governed.*\/c/s)
+  })
+
+  it('FAILS when a governed route is silently dropped from measurement', () => {
+    // The direction a one-way check misses: the cap still exists, the route just stops being
+    // measured, and without this the gate exits 0 while the budget stops applying.
+    expect(() => assertGovernedRouteCoverage(['/a'], CAPS))
+      .toThrow(/governed but NOT measured.*\/b/s)
+  })
+
+  it('reports BOTH divergences at once rather than only the first', () => {
+    let message = ''
+    try {
+      assertGovernedRouteCoverage(['/a', '/c'], CAPS)
+    } catch (error) {
+      message = error.message
+    }
+    expect(message).toMatch(/measured but NOT governed/)
+    expect(message).toMatch(/governed but NOT measured/)
+  })
+
+  it('the REAL gate inventory matches the REAL governed caps, both ways', () => {
+    // The assertion that actually protects production: the routes the gate MEASURES
+    // (DASHBOARD_ROUTES) against the routes doc 20 GOVERNS. Comparing the cap map to itself would
+    // be trivially true and would protect nothing.
+    const measured = DASHBOARD_ROUTES.map(r => r.route)
+    expect(measured).toHaveLength(8)
+    expect(() => assertGovernedRouteCoverage(measured)).not.toThrow()
+  })
+
+  it('detects a route added to the gate without a doc 20 cap', () => {
+    const measured = [...DASHBOARD_ROUTES.map(r => r.route), '/dashboard/analytics']
+    expect(() => assertGovernedRouteCoverage(measured)).toThrow(/measured but NOT governed/)
   })
 })

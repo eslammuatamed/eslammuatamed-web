@@ -36,12 +36,7 @@
  *   No TBT threshold is asserted because doc 20 §1 does not state one — inventing budgets is
  *   forbidden.
  */
-// Each profile writes to its OWN directory. A shared directory would let the assertion step read
-// desktop and mobile reports as one pool — and while the medians are grouped by each report's own
-// `configSettings.formFactor` and could never actually be averaged together, a second `autorun`
-// into the same directory would overwrite the first profile's reports and silently halve the
-// evidence. Separate directories make that impossible rather than merely unlikely.
-const profile = process.env.LHCI_PROFILE === 'desktop' ? 'desktop' : 'mobile'
+const { GOVERNED_PATHS, resolveProfile } = require('./scripts/lib/lighthouse-governed-urls.cjs')
 
 // D20-25: governed collection happens through the local HTTP/2 frontend that
 // `scripts/lighthouse-ci.mjs` owns. `LH_BASE_URL` is set by that orchestrator; running `lhci`
@@ -55,40 +50,21 @@ if (!BASE) {
   )
 }
 
-const urls = [
-  `${BASE}/`,
-  `${BASE}/ar`,
-  `${BASE}/blog/staying-inside-performance-budget-nuxt`,
-  `${BASE}/ar/blog/albaqaa-dimn-mizaniyat-ada-nuxt`,
-  // web-005 Projects. Doc 20 §5's matrix is "four pages (home, article, project, contact) x both
-  // locales"; the project pages now exist, so D20-8's deferral is closed for them. Slugs are the
-  // Prism contract examples, which the mock serves for ANY slug — the gate must not depend on
-  // staging data.
-  `${BASE}/projects`,
-  `${BASE}/ar/projects`,
-  `${BASE}/projects/content-platform-api`,
-  `${BASE}/ar/projects/content-platform-api`,
-  // web-005 Profile, Experience slice (008). Adding URLs to the COLLECTION only — every threshold
-  // stays exactly as `npm run lhci:assert-nongoverned` defines it (D20-13). A new public route that is never
-  // measured is a budget that silently does not apply to it.
-  `${BASE}/experience`,
-  `${BASE}/ar/experience`,
-  // web-005 Profile, About slice (009). Added to the COLLECTION only — every threshold stays exactly
-  // as `npm run lhci:assert-nongoverned` defines it (D20-13). Governed by D20-19, recorded in doc 20 first.
-  `${BASE}/about`,
-  `${BASE}/ar/about`,
-  // web-005 Profile, Resume slice (010). Added to the COLLECTION only — every threshold stays
-  // exactly as `npm run lhci:assert-nongoverned` defines it (D20-13). Governed by D20-21, recorded in doc 20
-  // first.
-  `${BASE}/resume`,
-  `${BASE}/ar/resume`,
-  // web-005 Contact slice (011). Added to the COLLECTION only — every threshold stays exactly as
-  // `npm run lhci:assert-nongoverned` defines it (D20-13). Governed by D20-22, recorded in doc 20 first. With
-  // these two URLs, §5's four-page matrix (home, article, project, contact x both locales) is
-  // COMPLETE and D20-8's deferral is fully closed.
-  `${BASE}/contact`,
-  `${BASE}/ar/contact`
-]
+// The governed population lives in ONE place and is asserted back by the median gate; see
+// `scripts/lib/lighthouse-governed-urls.cjs`. Collection is the origin + each governed path.
+const urls = GOVERNED_PATHS.map(path => `${BASE}${path === '/' ? '/' : path}`)
+
+// Each profile writes to its OWN directory. A shared directory would let the assertion step read
+// desktop and mobile reports as one pool — and while the medians are grouped by each report's own
+// `configSettings.formFactor` and could never actually be averaged together, a second `autorun`
+// into the same directory would overwrite the first profile's reports and silently halve the
+// evidence. Separate directories make that impossible rather than merely unlikely.
+//
+// Selection THROWS on anything unrecognised — see `resolveProfile`. The superseded expression here
+// defaulted every unknown value to `mobile`, which under SHARDED collection would let a `desktop`
+// shard silently collect a second mobile matrix, write it to `.lighthouseci/desktop/`, and pass.
+// Resolved after the BASE check so a direct `lhci` invocation still gets the governed-path message.
+const profile = resolveProfile(process.env.LHCI_PROFILE)
 
 module.exports = {
   ci: {

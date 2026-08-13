@@ -26,8 +26,12 @@ const readingLabel = computed(() => t('blog.minRead', { count: props.article.rea
   >
     <div>
       <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-caption text-dimmed">
-        <span class="font-medium text-muted">{{ article.category.name }}</span>
-        <span aria-hidden="true">·</span>
+        <!-- The category is null when it has no translation in this locale (D10-20). Its separator
+             leaves with it, or the meta line would open on a stray dot. -->
+        <template v-if="article.category">
+          <span class="font-medium text-muted">{{ article.category.name }}</span>
+          <span aria-hidden="true">·</span>
+        </template>
         <time :datetime="article.publishAt ?? undefined">{{ publishedLabel }}</time>
         <span aria-hidden="true">·</span>
         <span>{{ readingLabel }}</span>
