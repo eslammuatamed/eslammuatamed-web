@@ -36,14 +36,14 @@ hosted is not a comparison). The authoritative baseline already existed: hosted 
 
 | ID | Task | Status |
 |---|---|---|
-| T1.1 | Read backend ledger §14 / §14j / §14k in full **before** proposing anything | TODO |
-| T1.2 | Measure the current Web pipeline on real hosted runs (per-job wall-clock, runner work, artifact bytes) | TODO |
-| T1.3 | For each §14k candidate, write the *"what unique guarantee does this provide?"* answer | TODO |
-| T1.4 | Remove the duplicate `npm run build` in `deploy.yml` (`:201` verify / `:256` deploy) without weakening the exact-SHA or provenance guarantees | TODO |
-| T1.5 | Lighthouse artifact duplication ≈12 MB/run — fix the `provenance.json` walk binding root duplicates | TODO |
+| T1.1 | Read backend ledger §14 / §14j / §14k in full **before** proposing anything | **DONE** — none of §14j's four rejected candidates re-proposed |
+| T1.2 | Measure the current Web pipeline on real hosted runs | **DONE** — run `31725112691`: 716 s total; step-level breakdown in ledger §10.3 |
+| T1.3 | For each §14k candidate, write the *"what unique guarantee does this provide?"* answer | **DONE** — ledger §10.2 |
+| T1.4 | Remove the duplicate `npm run build` in `deploy.yml` | **REJECTED — evidence.** Not duplication: `verify` bakes `example.com` (unshippable), `deploy` bakes the real origin. And `verify` is the **only** verification of the promoted SHA (`ci.yml` has no `push: main`; promotions are true merge commits). Removing it would ship an unverified SHA |
+| T1.5 | Lighthouse artifact duplication ≈12 MB/run | **REJECTED — cost/benefit.** Costs ~3 s and **$0** (Actions storage is free on public repos); the fix requires changing the governed `provenance.json` walk |
 | T1.6 | `e2e` 70 s duplication | **DEFERRED — measured.** Lighthouse mobile is the critical path at 713 of 716 s; `e2e` has 246 s of slack, so removing all 70 s changes wall-clock by **0 s**. **Reopen condition:** `e2e` becomes the critical path |
-| T1.7 | Negative-control the surviving guards: prove each still fails on a real injected defect | TODO |
-| T1.8 | Before/after measured on hosted runs; confirm 4 required checks still live; ledger checkpoint | TODO |
+| T1.7 | Negative-control the surviving guards | **N/A** — no guard modified or removed; Stage 2B's §14l negative control still describes the live workflows. The *no-change* claim itself was controlled both ways (ledger §10.6) |
+| T1.8 | Before/after; 4 required checks live; ledger checkpoint | **DONE** — no "after" exists (zero workflow bytes changed, proven by blob hash + negative control); 4 required checks untouched; ledger §10 |
 
 ---
 
@@ -157,8 +157,9 @@ hosted is not a comparison). The authoritative baseline already existed: hosted 
 
 | ID | Decision | Status |
 |---|---|---|
-| **OD-26-1** | Push tag `probe/nuxt-4.5.1-experiment` (`8fee07c`) to `origin`? Only preserved artifact of the failed upgrade, currently in one local `.git`. Pushing publishes it to a **public** repo | **OPEN** |
+| **OD-26-1** | Preserve `probe/nuxt-4.5.1-experiment` (`8fee07c`) | **RESOLVED 2026-08-15 — option 3.** Private verified git bundle, restoration-tested; tag **not** pushed to the public origin. Hashes + restore steps in ledger §9.5. Public publication needs a separate decision |
 | **OD-26-2** | *(anticipated, T2.2)* Change browser targets to stop `lightningcss` downleveling `:dir()`? Would dissolve 191 B at the root but changes supported-browser policy | not yet raised |
+| **OD-26-3** | Build once with production origins in `verify` and ship that exact artifact? Recovers ~73 s **and** makes `check:bundle`/`check:logical` scan the real artifact instead of the `example.com` placeholder build — but routes the production artifact through GitHub artifact storage instead of building it in the deploying job. Not required by any exit criterion | **OPEN — deferred** |
 
 ---
 
