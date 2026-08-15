@@ -137,9 +137,14 @@ safely, classify **EVIDENCE-DEFERRED** with the exact blocker and reopen conditi
 **Must be handled explicitly here, not silently:**
 - **F-2** — `extract-zip` #34 and `image-size` #32/#33 have **no patched version**. They will not
   clear. Each needs a stated disposition (reachability / replacement / accepted risk).
-- **#19 `postcss`** is coupled to the CSS budget through `cssnano` 8.0.5 (+62 B). It is takeable
-  only once Phase 2's headroom exists. ⚠ It **cannot be reverted piecemeal** — `cssnano` rides in
-  with `postcss`.
+- **#19 `postcss`** — coupling to the CSS budget is **assumed, not yet proven at the version that
+  matters**. Installed `postcss` is **8.5.19**; the alert clears at **8.5.23**; doc 24 attributes
+  the +62 B to `cssnano` 8.0.5 arriving via `postcss` **8.5.26**. **If 8.5.23 clears the advisory
+  without pulling `cssnano` 8.0.5, the 62 B leaves the required headroom entirely** and #19 becomes
+  takeable independently of Phase 2 — which changes both Phase 2's floor and Phase 4's sequencing.
+  This is a lockfile-resolution question, answerable **without applying anything**, and it is
+  resolved in **T2.1** alongside the 4.5.2 measurement. ⚠ If the coupling does hold, `cssnano`
+  **cannot be reverted piecemeal** — it rides in with `postcss`.
 
 **Exit:** fresh dependency inventory · `npm audit` · GitHub alerts readback · compatibility
 verification.
@@ -229,6 +234,23 @@ pre-check → regenerate → postcheck → negative control → exact restore �
 generation → byte-identical → record hashes). **Never hand-edit generated bundles.**
 
 **Docs remain PRIVATE / local-only** unless the owner explicitly authorizes publication.
+
+## 2b. Branch strategy
+
+**One branch per phase, each merged to `dev`.** Not one long-lived campaign branch.
+
+- Naming: `026-web-modernization` (this branch, carrying the SpecKit) then `026-p1-ci`,
+  `026-p2-cleanup`, `026-p3-nuxt`, `026-p4-deps`, `026-p5-frontend`.
+- Each branch is cut from current `dev`, opened as a PR, proven by hosted CI, and merged by the
+  D17-4 feature/fix method.
+- Rationale: it matches the clean-boundary checkpoint policy (a phase ends where a branch merges),
+  keeps each phase independently revertible, and keeps Phase 7's "prove the merge shape" honest —
+  an eight-phase mega-branch would make both the promotion diff and any rollback unreadable.
+
+⚠ **Phase 1 begins by pushing to a PUBLIC repository.** T1.2 requires real hosted runs, which
+requires a push and a PR. This is precedented (Web #62 and API #70 were published draft campaign
+probes) and is **not** raised as an owner gate — but it is stated up front rather than discovered
+mid-phase.
 
 ## 3. Session and checkpoint policy
 

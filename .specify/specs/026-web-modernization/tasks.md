@@ -19,15 +19,16 @@ Status vocabulary: **TODO** · **DOING** · **DONE** · **DEFERRED** (evidence +
 | T0.7 | Toolchain + latest-stable inventory for the coupled Nuxt set | **DONE** |
 | T0.8 | Measured baseline: build, lint, typecheck, unit, budgets, bundle guards | **DONE** — §Baseline |
 | T0.9 | Measured baseline: Playwright E2E (incl. a11y, EN/AR/RTL, SSR lanes) | **DONE** — §Baseline |
-| T0.10 | Measured baseline: Lighthouse (mobile + desktop, 16 governed URLs) | **DEFERRED** — see D-B1 |
+| T0.10 | Measured baseline: Lighthouse (mobile + desktop, 16 governed URLs) | **DONE** — recovered from hosted run `31725112691` on the exact baseline SHA |
 | T0.11 | Measured baseline: `npm audit` | **DONE** — §Baseline |
-| T0.12 | Commit ledger + SpecKit; return the Phase-0 checkpoint report | **DOING** |
+| T0.12 | Commit ledger + SpecKit; return the Phase-0 checkpoint report | **DONE** |
+| T0.13 | Hosted CI pipeline baseline (per-job wall-clock) | **DONE** — 716 s total; Lighthouse mobile is 713 s of it |
+| T0.14 | Build-nondeterminism check on the `size` gate | **DONE** — two independent builds both 29.99 kB gz |
 
-**D-B1 — Lighthouse baseline deferred.** `lighthouse:ci` owns its own clean-tree build and runs
-96 audits across two profiles; it is a long, CPU-sensitive measurement that must not contend with
-other work, and CPU contention corrupts every reading. **Reopen condition:** run it as the first
-task of the next session, on an otherwise idle machine, before any Phase-1 change. The hosted CI
-Lighthouse shards remain the authoritative figure either way.
+**D-B1 — CLOSED.** Initially deferred to a local run; that was the wrong instrument (laptop vs
+hosted is not a comparison). The authoritative baseline already existed: hosted run
+**`31725112691`** on exactly `ced84902`, all jobs green, artifacts unexpired. Recorded in ledger
+§7.1/§7.2. No Phase-0 item remains open.
 
 ---
 
@@ -40,7 +41,7 @@ Lighthouse shards remain the authoritative figure either way.
 | T1.3 | For each §14k candidate, write the *"what unique guarantee does this provide?"* answer | TODO |
 | T1.4 | Remove the duplicate `npm run build` in `deploy.yml` (`:201` verify / `:256` deploy) without weakening the exact-SHA or provenance guarantees | TODO |
 | T1.5 | Lighthouse artifact duplication ≈12 MB/run — fix the `provenance.json` walk binding root duplicates | TODO |
-| T1.6 | `e2e` 70 s duplication — evaluate **only if** `e2e` is on the critical path; otherwise DEFERRED with reason | TODO |
+| T1.6 | `e2e` 70 s duplication | **DEFERRED — measured.** Lighthouse mobile is the critical path at 713 of 716 s; `e2e` has 246 s of slack, so removing all 70 s changes wall-clock by **0 s**. **Reopen condition:** `e2e` becomes the critical path |
 | T1.7 | Negative-control the surviving guards: prove each still fails on a real injected defect | TODO |
 | T1.8 | Before/after measured on hosted runs; confirm 4 required checks still live; ledger checkpoint | TODO |
 
@@ -50,7 +51,7 @@ Lighthouse shards remain the authoritative figure either way.
 
 | ID | Task | Status |
 |---|---|---|
-| T2.1 | **Re-measure the byte cost of `nuxt` 4.5.2** (not 4.5.1) and re-derive the headroom floor | TODO |
+| T2.1 | **Re-measure the byte cost of `nuxt` 4.5.2** (not 4.5.1) and re-derive the headroom floor. Read the **exact** byte count, not size-limit's rounded `29.99 kB`. Also resolve whether `postcss` **8.5.23** (which clears #19) actually pulls `cssnano` 8.0.5 — if not, the 62 B leaves the required headroom | TODO |
 | T2.2 | Investigate whether a newer vite/lightningcss chain, or a defensible browser-targets change, stops `:dir()` downleveling. **Browser-targets change = owner decision, surface it** | TODO |
 | T2.3 | Framework-aware dead-surface inventory: components, composables, utilities, pages/routes, assets, styles, scripts, config, experiment files | TODO |
 | T2.4 | Dependency-level dead inventory: direct deps with no real importer | TODO |
