@@ -43,6 +43,7 @@ hosted is not a comparison). The authoritative baseline already existed: hosted 
 | T1.5 | Lighthouse artifact duplication ≈12 MB/run | **REJECTED — cost/benefit.** Costs ~3 s and **$0** (Actions storage is free on public repos); the fix requires changing the governed `provenance.json` walk |
 | T1.6 | `e2e` 70 s duplication | **DEFERRED — measured.** Lighthouse mobile is the critical path at 713 of 716 s; `e2e` has 246 s of slack, so removing all 70 s changes wall-clock by **0 s**. **Reopen condition:** `e2e` becomes the critical path |
 | T1.7 | Negative-control the surviving guards | **N/A** — no guard modified or removed; Stage 2B's §14l negative control still describes the live workflows. The *no-change* claim itself was controlled both ways (ledger §10.6) |
+| T1.9 | **F-6 — add `size` + `size:routes` to `deploy.yml`'s `verify`** (with `ANALYZE_BUNDLE=1`, safe: that build is not the shipped artifact). No CI run currently asserts the budgets on the promoted SHA. **Apply in Phase 3** (RB-1's CSS criterion depends on it); **exercise at the Phase 7 promotion** — `deploy.yml` runs only on `push: main`, so no PR can validate it | TODO |
 | T1.8 | Before/after; 4 required checks live; ledger checkpoint | **DONE** — no "after" exists (zero workflow bytes changed, proven by blob hash + negative control); 4 required checks untouched; ledger §10 |
 
 ---
@@ -72,7 +73,7 @@ hosted is not a comparison). The authoritative baseline already existed: hosted 
 | T3.3 | Fix TS family (a): `VueSchemaOrgDefinerInput` / `DeepResolvableProperties<…>` → `Input`. **Root cause, no suppression, no `any`** | TODO |
 | T3.4 | Fix TS family (b): auto-imported globals missing from component types (`CONTACT_LIMITS`, `formatFileSize`, `$router`) | TODO |
 | T3.5 | Establish CSS byte **provenance**: project / module / generated / duplicate imports / framework output / dead styles / theme config | TODO |
-| T3.6 | Bring CSS green at the **unchanged 30,000 B gz cap** | TODO |
+| T3.6 | Bring CSS green at the **unchanged 30,000 B gz cap**. ⚠ **F-6**: state explicitly *which run* proves it on the shipped SHA — apply T1.9 first, or the criterion is unprovable on the Production path | TODO |
 | T3.7 | **F-1 — disposition alert #25 (critical, `@nuxt/devtools`, patched ≥3.3.1)**: patch it, or waive it on **built-artifact** reachability evidence (the `__nuxt_island` standard) | TODO |
 | T3.8 | Verify the seven `nuxt` advisories cleared, or justify each by **runtime** evidence | TODO |
 | T3.9 | Full gate re-run + SSR/hydration/console/EN/AR/RTL/a11y verification | TODO |
