@@ -55,6 +55,42 @@ export default defineNuxtConfig({
   css: ['~/assets/css/main.css'],
 
   /**
+   * Generate semantic color utilities for only the four families this app actually uses
+   * (026 Phase 5, T5.C). Measured **-1,372 B gz** — the single largest CSS recovery in the phase.
+   *
+   * WHAT NUXT UI DOES BY DEFAULT. `resolveColors()` falls back to
+   * ["primary","secondary","success","info","warning","error"] when `theme.colors` is unset, and
+   * Tailwind then emits the full utility matrix for all six. This app maps only five palettes in
+   * `app/app.config.ts` (primary/neutral/success/warning/error) — **`secondary` and `info` are never
+   * mapped and never used**, so their utilities were shipping on every render-blocking public
+   * stylesheet purely as generation defaults.
+   *
+   * WHY THIS IS SAFE, checked rather than assumed:
+   *   1. `secondary` and `info` have ZERO usages in `app/`, `server/` and `content/`. The single
+   *      textual match is English prose in a comment ("read it as secondary"), not a class name.
+   *   2. `resolveColors` ALWAYS force-prepends "primary", and `getDefaultConfig` picks
+   *      `[...colors, "neutral"]`, so those two survive whatever is listed here. Only the two
+   *      genuinely unused families are dropped.
+   *   3. Nuxt UI derives its `color` prop types from this list, so a future `color="info"` becomes a
+   *      TYPECHECK ERROR rather than a silently unstyled component. The compiler is the guard — no
+   *      hand-rolled assertion hook is needed for this one.
+   *
+   * ⚠ NOT `app.config.ts`'s `ui.colors`. That is a different key in a different file: it MAPS a
+   * family to a Tailwind palette, it does not decide which families are GENERATED. Setting it there
+   * has no effect on emitted CSS size.
+   *
+   * ⚠ THE REMAINING HEADROOM IS NOT ACTIONABLE HERE. Dropping `success`/`warning` too would recover
+   * a further ~1,377 B, but every one of their usages lives under the client-only dashboard while
+   * this option is GLOBAL — narrowing further would break the dashboard to shrink a public sheet.
+   * Recorded as measured headroom, deliberately not taken (ledger 24.9).
+   */
+  ui: {
+    theme: {
+      colors: ['success', 'warning', 'error']
+    }
+  },
+
+  /**
    * Disable cssnano's `mergeRules` optimization (026 Phase 5, T5.C).
    *
    * WHY A MINIFIER OPTIMIZATION IS BEING TURNED OFF. `mergeRules` combines selectors that share a
