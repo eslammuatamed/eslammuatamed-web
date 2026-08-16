@@ -10,11 +10,17 @@
 The owner's phase order is **retained unchanged**. Phase-0 evidence *reinforces* it rather than
 challenging it, so **no reorder is proposed and no owner reorder-decision is raised.**
 
+> ⚠ **CHALLENGED BY PHASE-2 EVIDENCE (ledger §12.6/§12.9, 2026-08-16).** This paragraph states the
+> position as of Phase 0. Phase 2 then measured the premise underneath the Phase 2 → Phase 3
+> ordering and found it **false**: dead-code removal can supply **0 B**, against a **257 B**
+> requirement. A reorder *is* now on the table as **OD-26-4 option C** (Phase 5 before Phase 3).
+> **The order is not changed here** — that is the owner's decision, not this plan's.
+
 The order is not arbitrary sequencing; three real dependencies hold it together:
 
 ```
 Phase 1 (CI)  ──▶ every later phase generates many CI runs, so efficiency compounds first
-Phase 2 (CSS) ──▶ MUST free ≥253 B before Phase 3 can pass the unchanged 30,000 B cap
+Phase 2 (CSS) ──▶ MUST free ≥257 B before Phase 3 can pass the unchanged 30,000 B cap  [was 253 B]
 Phase 3 (Nuxt)──▶ pins vite/lightningcss/postcss, so Phase 4's batches resolve against it
 Phase 4 (deps)──▶ platform stable, so Phase 5 refactors against final APIs, not moving ones
 ```
@@ -22,6 +28,13 @@ Phase 4 (deps)──▶ platform stable, so Phase 5 refactors against final APIs
 **Phase 2 → Phase 3 is arithmetic, not preference.** CSS headroom is ~10 B; the probe needed
 253 B; 62 B of that is Nuxt-independent. Doing Phase 3 first would force the exact failure the
 probe already recorded.
+
+> ⚠ **CORRECTED BY MEASUREMENT (ledger §12.3).** The arithmetic holds; two of its three inputs do
+> not. Headroom is exactly **9 B**. The requirement is **257 B**, from a measured Nuxt 4.5.2 floor of
+> +266 B. And the "62 B is Nuxt-independent" clause is **false**: the cost is `cssnano`'s, it
+> measures **71 B**, it is **Nuxt-coupled** (a `@nuxt/vite-builder` dependency), and it is
+> **avoidable by pinning**. `postcss` alone costs **0 B**. The conclusion — do not do Phase 3 before
+> the headroom exists — is **unchanged and now stronger**.
 
 ## 2. Phase definitions and exit criteria
 
@@ -79,6 +92,15 @@ Narrow, evidence-only removal. **Not** deep refactoring.
 
 The 253 B floor is **provisional** — it comes from the 4.5.1 probe. Phase 2 opens by re-measuring
 the **4.5.2** byte cost (task T2.1) and re-derives the floor from that number.
+
+> ✅ **RE-DERIVED, AS THIS SECTION REQUIRED (T2.1 DONE, ledger §12.3.6):** the floor is **≥ 257 B**
+> (margin ≥ 300 B; ≥ 400 B to also absorb the ~81 B unattributed residual).
+>
+> ⛔ **AND NOT MET.** Phase 2 closed on the exit criterion's *other* branch — **precise blocker
+> identified** (§12.6). Available safe dead CSS measured **0 B**: 0 of 47 components unreferenced
+> (positive- and negative-controlled), and every CSS-bearing candidate was governed, asserted by a
+> test, or generated at runtime. **Zero deletions were made.** The cap was not raised and no budget
+> was moved. Resolution is **OD-26-4**.
 
 **Evidence standard.** Framework-aware only. A text search that finds no import is **not**
 evidence. Be conservative around: dynamic imports · Nuxt auto-imports · file-system routing ·
