@@ -3,7 +3,7 @@
   "type": "module",
   "private": true,
   "engines": {
-    "node": ">=24.0.0"
+    "node": ">=24.11.0"
   },
   "scripts": {
     "build": "nuxt build && node scripts/stamp-build.mjs",
@@ -69,11 +69,11 @@
     "@tiptap/suggestion": "^3.27.4",
     "@tiptap/vue-3": "^3.27.4",
     "markdown-it": "^14.3.0",
-    "nuxt": "^4.4.8",
+    "nuxt": "^4.5.2",
     "pinia": "^3.0.4",
     "tailwindcss": "^4.3.2",
-    "vue": "^3.5.39",
-    "vue-router": "^5.1.0",
+    "vue": "^3.5.41",
+    "vue-router": "^5.2.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {
