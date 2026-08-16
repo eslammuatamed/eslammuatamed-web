@@ -43,7 +43,7 @@ hosted is not a comparison). The authoritative baseline already existed: hosted 
 | T1.5 | Lighthouse artifact duplication ≈12 MB/run | **REJECTED — cost/benefit.** Costs ~3 s and **$0** (Actions storage is free on public repos); the fix requires changing the governed `provenance.json` walk |
 | T1.6 | `e2e` 70 s duplication | **DEFERRED — measured.** Lighthouse mobile is the critical path at 713 of 716 s; `e2e` has 246 s of slack, so removing all 70 s changes wall-clock by **0 s**. **Reopen condition:** `e2e` becomes the critical path |
 | T1.7 | Negative-control the surviving guards | **N/A** — no guard modified or removed; Stage 2B's §14l negative control still describes the live workflows. The *no-change* claim itself was controlled both ways (ledger §10.6) |
-| T1.9 | **F-6 — add `size` + `size:routes` to `deploy.yml`'s `verify`** (with `ANALYZE_BUNDLE=1`, safe: that build is not the shipped artifact). No CI run currently asserts the budgets on the promoted SHA. ⚠ **RECLASSIFIED 2026-08-16 (ledger §12.2): this is a Production-verification *correctness* gap owned by Phase 3 / RB-1, not a Phase-1 efficiency item.** Listed here only because it was discovered during Phase 1. **Apply in Phase 3** as a prerequisite of T3.6; **exercise at the Phase 7 promotion** — `deploy.yml` runs only on `push: main`, so no PR can validate it. Must add an **exact-SHA, Production-bound** assertion **without weakening any existing gate**, and **must not move the budgets** | TODO — Phase 3 |
+| T1.9 | **F-6 — add `size` + `size:routes` to `deploy.yml`'s `verify`** (with `ANALYZE_BUNDLE=1`, safe: that build is not the shipped artifact). No CI run currently asserts the budgets on the promoted SHA. ⚠ **RECLASSIFIED 2026-08-16 (ledger §12.2): this is a Production-verification *correctness* gap owned by Phase 3 / RB-1, not a Phase-1 efficiency item.** Listed here only because it was discovered during Phase 1. **Apply in Phase 3** as a prerequisite of the Phase 3 exit (T3.10) — T3.6's budget-green requirement moved to Phase 5 under OD-26-4, but F-6 itself did **not** move; **exercise at the Phase 7 promotion** — `deploy.yml` runs only on `push: main`, so no PR can validate it. Must add an **exact-SHA, Production-bound** assertion **without weakening any existing gate**, and **must not move the budgets** | TODO — Phase 3 |
 | T1.8 | Before/after; 4 required checks live; ledger checkpoint | **DONE** — no "after" exists (zero workflow bytes changed, proven by blob hash + negative control); 4 required checks untouched; ledger §10 |
 
 ---
@@ -75,7 +75,7 @@ hosted is not a comparison). The authoritative baseline already existed: hosted 
 | T3.3 | Fix TS family (a): `VueSchemaOrgDefinerInput` / `DeepResolvableProperties<…>` → `Input`. **Root cause, no suppression, no `any`** | TODO |
 | T3.4 | Fix TS family (b): auto-imported globals missing from component types (`CONTACT_LIMITS`, `formatFileSize`, `$router`) | TODO |
 | T3.5 | Establish CSS byte **provenance**: project / module / generated / duplicate imports / framework output / dead styles / theme config | TODO |
-| T3.6 | Bring CSS green at the **unchanged 30,000 B gz cap**. ⚠ **F-6**: state explicitly *which run* proves it on the shipped SHA — apply T1.9 first, or the criterion is unprovable on the Production path. 🚫 **HARD GATE (ledger §12.2): do not promote any RB-1/Nuxt result to Production while F-6 is unresolved.** Measured headroom is **9 B** — a criterion this tight cannot be asserted by a run against a different commit than the one that ships | TODO |
+| T3.6 | ⚠ **REVISED by OD-26-4.** Do **not** bring CSS green in Phase 3 and do **not** perform broad CSS cleanup to turn the gate green. Instead: measure exact CSS after each meaningful dependency group, record the regression as **KNOWN TEMPORARY CAMPAIGN REGRESSION** with exact byte provenance, and carry the accumulated delta to Phase 5. The **30,000 B cap is unchanged and NOT raised**; CI is not weakened; `size` may be red **only** on this isolated campaign branch during Phases 3–4. Bringing CSS green moves to the **Phase 5 hard exit gate** (T5.11). 🚫 **F-6 still binds**: no RB-1/Nuxt result reaches Production while F-6 is unresolved, and the Production-bound SHA must be `size` + `size:routes` verified before Phase 7 | TODO |
 | T3.7 | **F-1 — disposition alert #25 (critical, `@nuxt/devtools`, patched ≥3.3.1)**: patch it, or waive it on **built-artifact** reachability evidence (the `__nuxt_island` standard) | TODO |
 | T3.8 | Verify the seven `nuxt` advisories cleared, or justify each by **runtime** evidence | TODO |
 | T3.9 | Full gate re-run + SSR/hydration/console/EN/AR/RTL/a11y verification | TODO |
@@ -90,7 +90,7 @@ hosted is not a comparison). The authoritative baseline already existed: hosted 
 | T4.1 | Derive real compatibility batches from repository contents (not a generic taxonomy) | TODO |
 | T4.2 | Per-dependency table: current / latest stable / target / evidence / result / gates / exception | TODO |
 | T4.3 | Upgrade batch by batch, gates green between batches. **No single `npm update`** | TODO |
-| T4.4 | **#19 `postcss`** — takeable only on Phase 2 headroom. ⚠ `cssnano` 8.0.5 rides in with it and **cannot be reverted piecemeal** | TODO |
+| T4.4 | **#19 `postcss`** — ⚠ **premise corrected (T2.1, ledger §12.3):** `postcss@8.5.23` clears #19 at **+0 B**, byte-identical, so it is **not** gated on Phase 2 headroom. The direction was inverted: **`cssnano` drags `postcss`**, never the reverse — installing `postcss` alone never moves `cssnano`. `cssnano` 8.0.5 (+71 B) arrives with a Nuxt/`@nuxt/vite-builder` bump, and under OD-26-4 that cost is tolerated through Phase 4 and repaid in Phase 5 | TODO |
 | T4.5 | **F-2** — explicit disposition for `extract-zip` #34 and `image-size` #32/#33 (no patched version exists): reachability, replacement, or evidence-backed accepted risk | TODO |
 | T4.6 | Remove dependencies proven unused | TODO |
 | T4.7 | No `--legacy-peer-deps`, no arbitrary `overrides`. ⚠ **`overrides` are unscoped** — a bare entry rewrites every consumer; scope to the parent | TODO |
@@ -112,6 +112,9 @@ hosted is not a comparison). The authoritative baseline already existed: hosted 
 | T5.8 | Performance hotspots; bundle isolation; **`/dashboard/messages` 305.6 KB gz → below the 300.0 KB gz D20-24 target** (raising the target is not an option) | TODO |
 | T5.9 | Public/dashboard coupling | TODO |
 | T5.10 | Stale TODOs | TODO |
+| **T5.11** | *(new, OD-26-4)* **CSS consolidation to recover the unchanged 30,000 B cap** — retire the Phases 3–4 KNOWN TEMPORARY CAMPAIGN REGRESSION through legitimate, maintainable cleanup (duplication, obsolete framework workarounds, stale compatibility code). Not a byte-golf refactor of working code | TODO |
+| **T5.12** | *(new, OD-26-4)* **Phase 5 hard exit gate** — CSS ≤ 30,000 B · route budgets green · font budget green · JS/bundle gates green · no EN/AR/RTL regression · no a11y regression · all code/test gates green. If the modernized stack cannot fit through legitimate cleanup, **STOP for an owner decision — do not raise the budget** | TODO |
+| **T5.13** | *(new, OD-26-4)* Consume the Phase 2 exported-symbol inventory (ledger §12.4.3, ~30 prod-unreferenced symbols across 18 files) as a cleanup **input** | TODO |
 
 ---
 
@@ -163,11 +166,11 @@ hosted is not a comparison). The authoritative baseline already existed: hosted 
 | **OD-26-1** | Preserve `probe/nuxt-4.5.1-experiment` (`8fee07c`) | **RESOLVED 2026-08-15 — option 3.** Private verified git bundle, restoration-tested; tag **not** pushed to the public origin. Hashes + restore steps in ledger §9.5. Public publication needs a separate decision |
 | **OD-26-2** | *(anticipated, T2.2)* Change browser targets to stop `lightningcss` downleveling `:dir()`? Would dissolve 191 B at the root but changes supported-browser policy | not yet raised |
 | **OD-26-3** | Build once with production origins in `verify` and ship that exact artifact? Recovers **~73 s of compute and nothing else** (the "stronger guarantee" claim was withdrawn in ledger §11.3), but routes the Production artifact through GitHub artifact storage instead of building it in the deploying job. Not required by any exit criterion | **RESOLVED 2026-08-16 — DEFERRED BY DESIGN.** Closed; **not** carried as an open decision. Reopen only on new evidence: a governed reusable build-artifact model arriving anyway, or Production build latency demonstrated as a material bottleneck. Ledger §12.1 |
-| **OD-26-4** | *(raised by Phase 2's measurement, ledger §12.9)* Nuxt 4.5.2 needs **257 B** of CSS headroom that **no safe dead-code removal can supply** (0 B available; four candidate pools, all controlled). **A** pull Phase 5 CSS consolidation forward · **B** abandon the pin strategy and pay up to 698 B · **C** re-sequence Phase 5 before Phase 3. Raising the cap is not an option (RB-1 §3.4). | **OPEN** — recommendation **C**, with **A** as its content |
+| **OD-26-4** | *(raised by Phase 2's measurement, ledger §12.9)* Nuxt 4.5.2 needs **257 B** of CSS headroom that **no safe dead-code removal can supply** (0 B available; four candidate pools, all controlled). **A** pull Phase 5 CSS consolidation forward · **B** abandon the pin strategy and pay up to 698 B · **C** re-sequence Phase 5 before Phase 3. Raising the cap is not an option (RB-1 §3.4). | **RESOLVED 2026-08-16 — option D (owner-authored; not A, B or C).** No pre-Nuxt CSS phase; no Phase 5 pull-forward; the campaign **tolerates a clearly identified temporary CSS-budget regression on the isolated campaign branch** through Phases 3–4. Cap unchanged at **30,000 B** and **not raised**. Cleanup happens **once**, in Phase 5, against the modernized stack, under a **hard exit gate** restoring every original budget. No Production promotion until then. Plan §1/§1a, Phase 5 charter, ledger §13 |
 
-**One owner decision is open: OD-26-4**, raised by Phase 2's measurement at the Phase-2 close. It is
-a new decision from new evidence, **not** a reopening of OD-26-3 (closed) — and OD-26-2 remains
-*contingent*, raised only if T2.2 measures the 191 B as otherwise unavoidable. ⚠ T2.2's premise has
+**No owner decision is open.** OD-26-4 was **resolved 2026-08-16** (option D, above); OD-26-1 and
+OD-26-3 are closed. OD-26-2 remains *contingent*, raised only if T2.2 measures the 191 B as
+otherwise unavoidable. ⚠ T2.2's premise has
 since weakened: `lightningcss` stays **1.32.0** in every measured Nuxt 4.5.2 state, so the `:dir()`
 downleveling cost **does not currently occur**.
 

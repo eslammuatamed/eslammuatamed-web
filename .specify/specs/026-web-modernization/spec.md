@@ -25,6 +25,11 @@ are severe at runtime: server-side **RCE** via runtime template injection in ser
 
 **RB-1 blocks the next Web Production promotion.** It has been attempted once and failed.
 
+> ⚠ **OD-26-4 status language (2026-08-16).** Phase 3 may establish
+> **`NUXT SECURITY/COMPATIBILITY IMPLEMENTATION COMPLETE`**. **RB-1 is not called release-closed**
+> while the unchanged performance gates are red. Final RB-1 closure requires the modernized Nuxt
+> stack **and** the Phase 5 cleanup to satisfy all original release gates together.
+
 The campaign's target is not "upgrade Nuxt." It is to leave the Web repository **modern, secure,
 smaller, cleaner and fully verified** — with the security debt closed, every direct dependency on
 a justified version, the dead surface removed, and the whole state proven through authoritative CI
@@ -68,6 +73,23 @@ budget, and no choice of Nuxt version dissolves it.
 
 **Consequence:** Phase 2 stops being "tidy up" and becomes a **numeric precondition** for Phase 3.
 Its exit criterion is a measured byte target on the `size` gate, not a count of deleted files.
+
+> ⚠ **F-3 SUPERSEDED TWICE — read this before using any number above.**
+>
+> **(a) By measurement, 2026-08-16 (ledger §12.3).** Headroom is exactly **9 B** (29,991 B / 30,000 B).
+> The Nuxt 4.5.2 floor is **+266 B**, so the requirement is **257 B**, not 253 B. The
+> "62 B is Nuxt-independent" clause is **false**: the cost is `cssnano`'s, measures **71 B**, and is
+> **Nuxt-coupled** (a `@nuxt/vite-builder` dependency). `postcss@8.5.23` clears advisory **#19** at
+> **+0 B** — byte-identical output — so the security fix is **not** gated by the performance budget.
+> `cssnano` drags `postcss`, not the reverse.
+>
+> **(b) By owner decision OD-26-4, 2026-08-16 (ledger §13).** Phase 2 is **no longer a numeric
+> precondition for Phase 3**. Phase 2 closed as *precise blocker identified* — safe dead CSS
+> available measured **0 B** across four controlled candidate pools — and the owner resolved that the
+> campaign **tolerates a clearly identified temporary CSS-budget regression on the isolated campaign
+> branch** through Phases 3–4, with **one** cleanup pass in Phase 5 against the modernized stack
+> under a hard exit gate restoring every original budget. The **30,000 B cap is unchanged and is not
+> raised**. See plan §1/§1a.
 
 ## 4. Scope
 

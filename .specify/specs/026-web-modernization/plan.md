@@ -5,36 +5,50 @@
 
 ---
 
-## 1. Phase order — retained, and why
+## 1. Phase order — as resolved by the owner (OD-26-4)
 
-The owner's phase order is **retained unchanged**. Phase-0 evidence *reinforces* it rather than
-challenging it, so **no reorder is proposed and no owner reorder-decision is raised.**
+> ⚠ **SUPERSEDED 2026-08-16 by OD-26-4 (ledger §13).** Everything this section said about Phase 2
+> **blocking** Phase 3 is retired. The owner resolved OD-26-4 with an option the plan did not
+> offer — **neither A, B nor C**: keep the phase order, do **not** create a pre-Nuxt CSS
+> consolidation phase, do **not** pull Phase 5 forward, and **tolerate a clearly identified
+> temporary CSS-budget regression on the isolated campaign branch** while the dependency stack is
+> modernized. Cleanup happens **once**, in Phase 5, against the final stack. The historical
+> arithmetic below is preserved because Phase 5 still has to pay it — it is no longer a gate on
+> starting Phase 3.
 
-> ⚠ **CHALLENGED BY PHASE-2 EVIDENCE (ledger §12.6/§12.9, 2026-08-16).** This paragraph states the
-> position as of Phase 0. Phase 2 then measured the premise underneath the Phase 2 → Phase 3
-> ordering and found it **false**: dead-code removal can supply **0 B**, against a **257 B**
-> requirement. A reorder *is* now on the table as **OD-26-4 option C** (Phase 5 before Phase 3).
-> **The order is not changed here** — that is the owner's decision, not this plan's.
-
-The order is not arbitrary sequencing; three real dependencies hold it together:
+The resolved sequence:
 
 ```
-Phase 1 (CI)  ──▶ every later phase generates many CI runs, so efficiency compounds first
-Phase 2 (CSS) ──▶ MUST free ≥257 B before Phase 3 can pass the unchanged 30,000 B cap  [was 253 B]
-Phase 3 (Nuxt)──▶ pins vite/lightningcss/postcss, so Phase 4's batches resolve against it
-Phase 4 (deps)──▶ platform stable, so Phase 5 refactors against final APIs, not moving ones
+Phase 3 (Nuxt) ──▶ pins the vite/rolldown/postcss chain, so Phase 4 resolves against it
+Phase 4 (deps) ──▶ platform stable, so Phase 5 refactors against final APIs, not moving ones
+Phase 5 (clean)──▶ ONE cleanup pass; owns BOTH the deep modernization AND the CSS consolidation
+                   that must restore every unchanged budget. Hard exit gate.
+Phase 6 (verify) · Phase 7 (integration/promotion/Production) · Phase 8 (docs/Arabic closure)
 ```
 
-**Phase 2 → Phase 3 is arithmetic, not preference.** CSS headroom is ~10 B; the probe needed
-253 B; 62 B of that is Nuxt-independent. Doing Phase 3 first would force the exact failure the
-probe already recorded.
+**Why the reorder was refused.** Forcing cleanup before Nuxt would require pulling genuine
+modernization work forward, and doing that before the final dependency stack is stable risks
+refactoring code and styles that the framework and dependency upgrades subsequently change.
+Cleanup should happen once, against the modernized stack.
 
-> ⚠ **CORRECTED BY MEASUREMENT (ledger §12.3).** The arithmetic holds; two of its three inputs do
-> not. Headroom is exactly **9 B**. The requirement is **257 B**, from a measured Nuxt 4.5.2 floor of
-> +266 B. And the "62 B is Nuxt-independent" clause is **false**: the cost is `cssnano`'s, it
-> measures **71 B**, it is **Nuxt-coupled** (a `@nuxt/vite-builder` dependency), and it is
-> **avoidable by pinning**. `postcss` alone costs **0 B**. The conclusion — do not do Phase 3 before
-> the headroom exists — is **unchanged and now stronger**.
+**The arithmetic that Phase 5 inherits** (measured, ledger §12.3): committed CSS **29,991 B**
+against an unchanged **30,000 B** cap = **9 B** headroom; the best-achievable Nuxt 4.5.2 floor
+measured **+266 B** with the CSS chain pinned, and up to **+698 B** on a free re-resolve. The
+"62 B is Nuxt-independent" clause from Phase 0 is **false** — the cost is `cssnano`'s, measures
+**71 B**, and is Nuxt-coupled; `postcss` alone costs **0 B**.
+
+### 1a. Temporary CSS-budget treatment during Phases 3–4 (OD-26-4)
+
+The **30,000 B cap remains unchanged and authoritative. It is NOT raised.**
+
+If the Nuxt candidate exceeds it, the exact measured regression is recorded as a
+**KNOWN TEMPORARY CAMPAIGN REGRESSION** with exact byte provenance. A temporary `size` failure is
+acceptable **only** on the isolated campaign branch during Phases 3–4. It is **not** a
+release-ready state, **not** a reason to weaken CI, **not** a reason to change the budget, and
+**not** a closed RB-1 release gate.
+
+Exact CSS is measured after each meaningful dependency group so Phase 5 knows the true accumulated
+delta. **Phase 3 does not perform broad CSS cleanup solely to turn this gate green.**
 
 ## 2. Phase definitions and exit criteria
 
@@ -127,19 +141,29 @@ migration requirements, security fixes.
   **type-generation-method difference**, not flakiness.
 - **CSS regression**, with **provenance established per byte**: project CSS · module CSS ·
   generated CSS · duplicate imports · framework output changes · dead styles surviving Phase 2 ·
-  theme/config changes.
+  theme/config changes. ⚠ **Under OD-26-4 this is recorded, not resolved, in Phase 3** — see §1a.
+  The provenance requirement is *strengthened* by the tolerance, not relaxed: the byte accounting
+  is what Phase 5 will work from.
 
 **Forbidden resolutions:** raising the CSS budget · suppressing legitimate TypeScript errors ·
 deleting useful styles to cheat the budget · weakening accessibility or RTL · hiding hydration
-errors · silently dropping modules or features · `any`.
+errors · silently dropping modules or features · `any` · `--legacy-peer-deps` · arbitrary
+dependency `overrides` · TypeScript suppression · any gate weakening.
 
 **One open question to resolve early (T3.1):** does a newer Nuxt/vite chain, or a defensible
 browser-targets change, stop `lightningcss` downleveling `:dir()`? If so the 191 B dissolves at
 the root. **Changing browser support is an owner decision** — surface it as one, do not take it.
 
-**Exit (RB-1 closure):** seven `nuxt` advisories cleared or each justified by **runtime**
-evidence; `typecheck` 0 errors; CSS green at the **unchanged 30,000 B gz cap**; **and** alert #25
-(critical) dispositioned per **F-1**. Checkpoint report at closure.
+**Exit (REVISED by OD-26-4) — `NUXT SECURITY/COMPATIBILITY IMPLEMENTATION COMPLETE`:** seven
+`nuxt` advisories cleared or each justified by **runtime** evidence; `typecheck` **0 errors**;
+alert **#25** (critical) dispositioned per **F-1**; SSR/hydration/EN/AR/RTL/a11y verified with no
+regression attributable to the upgrade; every other gate green; and the CSS state recorded per §1a
+with exact byte provenance. **T1.9 (F-6) applied.**
+
+⚠ **RB-1 is NOT declared release-closed at this exit.** While the unchanged performance gates are
+red, the permitted language is exactly *`NUXT SECURITY/COMPATIBILITY IMPLEMENTATION COMPLETE`*.
+**Final RB-1 closure** occurs when the modernized Nuxt stack **and** the Phase 5 cleanup together
+satisfy all original release gates. Checkpoint report at closure.
 
 ### Phase 4 — Full dependency modernization
 
@@ -171,7 +195,13 @@ safely, classify **EVIDENCE-DEFERRED** with the exact blocker and reopen conditi
 **Exit:** fresh dependency inventory · `npm audit` · GitHub alerts readback · compatibility
 verification.
 
-### Phase 5 — Deep frontend cleanup & modernization
+### Phase 5 — Deep frontend cleanup & modernization (single comprehensive pass)
+
+> **OD-26-4 (ledger §13).** This phase now owns **both** (1) the deep modernization already planned
+> here, **and** (2) the **CSS consolidation needed to recover the unchanged performance budget**
+> that Phases 3–4 temporarily regressed. There is exactly one cleanup pass, and it runs against the
+> final stable stack. The Phase 2 exported-symbol inventory (ledger §12.4.3, ~30 prod-unreferenced
+> symbols across 18 files) is an **input** to it.
 
 Only after the platform is stable. Every meaningful refactor carries a concrete reason:
 duplication · complexity · correctness · maintainability · performance · type safety ·
@@ -190,6 +220,19 @@ working code.
 
 Known target: `/dashboard/messages` at **305.6 KB gz** sits above the 300.0 KB gz D20-24 quality
 target (hard ceiling 320.0). Improving it is in scope; raising the target is not.
+
+**Phase 5 hard exit gate (OD-26-4).** Phase 5 **cannot close** until the final modernized stack
+satisfies the **ORIGINAL** budgets again:
+
+- CSS **≤ 30,000 B** gz (`size`)
+- route budgets green (`size:routes`)
+- font budget green
+- JS/bundle gates green (`check:bundle`)
+- no EN/AR/RTL regression · no accessibility regression
+- all normal code/test gates green
+
+If the final modernized stack cannot fit the unchanged budget through **legitimate, maintainable**
+cleanup, **stop for an owner decision. The budget is not raised autonomously.**
 
 ### Phase 6 — Full verification, security & performance closure
 
@@ -268,6 +311,12 @@ generation → byte-identical → record hashes). **Never hand-edit generated bu
 - Rationale: it matches the clean-boundary checkpoint policy (a phase ends where a branch merges),
   keeps each phase independently revertible, and keeps Phase 7's "prove the merge shape" honest —
   an eight-phase mega-branch would make both the promotion diff and any rollback unreadable.
+
+⚠ **Integration rule (OD-26-4).** A knowingly budget-red final candidate is **never** integrated
+or promoted. Intermediate campaign-branch evidence may be red for the explicitly tracked CSS
+regression; **the final candidate must be fully green.** Before Phase 7, the exact Production-bound
+SHA must receive authoritative `size` **and** `size:routes` verification without weakening or
+moving the existing budgets (**F-6 / T1.9**).
 
 ⚠ **Phase 1 begins by pushing to a PUBLIC repository.** T1.2 requires real hosted runs, which
 requires a push and a PR. This is precedented (Web #62 and API #70 were published draft campaign
