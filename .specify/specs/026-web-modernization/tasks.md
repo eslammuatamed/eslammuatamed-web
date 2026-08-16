@@ -91,14 +91,15 @@ hosted is not a comparison). The authoritative baseline already existed: hosted 
 
 | ID | Task | Status |
 |---|---|---|
-| T4.1 | Derive real compatibility batches from repository contents (not a generic taxonomy) | TODO |
-| T4.2 | Per-dependency table: current / latest stable / target / evidence / result / gates / exception | TODO |
-| T4.3 | Upgrade batch by batch, gates green between batches. **No single `npm update`** | TODO |
+| T4.1 | Derive real compatibility batches from repository contents (not a generic taxonomy) | **DONE** — batches derived from the real graph, not a taxonomy (ledger §21). 58 direct deps (37+21). Grouping is by SHIPPED-BYTE RISK: zero-byte tooling / static assets / CSS generator / i18n / SSR-only / state / interlocked peers |
+| T4.2 | Per-dependency table: current / latest stable / target / evidence / result / gates / exception | **IN PROGRESS** — per-dependency table with current/latest/target/evidence/peers/result/gate/disposition maintained in ledger §21.2–§21.9. 15 adopted, 3 EVIDENCE-DEFERRED, 1 raised as OD-26-7 |
+| T4.3 | Upgrade batch by batch, gates green between batches. **No single `npm update`** | **IN PROGRESS** — G1 `7bf46c3` · G2 `d5766e1` · G3 `40b7a2f`. Gates green between every batch. **No single `npm update` at any point**; each batch measured alone in ONE directory |
 | T4.4 | **#19 `postcss`** — ⚠ **premise corrected (T2.1, ledger §12.3):** `postcss@8.5.23` clears #19 at **+0 B**, byte-identical, so it is **not** gated on Phase 2 headroom. The direction was inverted: **`cssnano` drags `postcss`**, never the reverse — installing `postcss` alone never moves `cssnano`. `cssnano` 8.0.5 (+71 B) arrives with a Nuxt/`@nuxt/vite-builder` bump, and under OD-26-4 that cost is tolerated through Phase 4 and repaid in Phase 5 | TODO |
-| T4.5 | **F-2** — explicit disposition for `extract-zip` #34 and `image-size` #32/#33 (no patched version exists): reachability, replacement, or evidence-backed accepted risk | TODO |
-| T4.6 | Remove dependencies proven unused | TODO |
-| T4.7 | No `--legacy-peer-deps`, no arbitrary `overrides`. ⚠ **`overrides` are unscoped** — a bare entry rewrites every consumer; scope to the parent | TODO |
-| T4.8 | Fresh dependency inventory · `npm audit` · GitHub alerts readback · compatibility verification | TODO |
+| T4.5 | **F-2** — explicit disposition for `extract-zip` #34 and `image-size` #32/#33 (no patched version exists): reachability, replacement, or evidence-backed accepted risk | **IN PROGRESS (F-2)** — `extract-zip` confirmed unfixable (latest 2.0.1 is inside the vulnerable range, package abandoned at that line). `image-size` is **not** in the current 17. Full chain classification in ledger §21.8; remediation not yet applied |
+| T4.6 | Remove dependencies proven unused | **BLOCKED BY EVIDENCE — and the premise was wrong.** All 17 `@tiptap/*` are **REQUIRED non-optional peers of `@nuxt/ui@4.10.0`**, so they cannot be removed as unused (ledger §21.9). No dependency has yet been proven removable |
+| T4.7 | No `--legacy-peer-deps`, no arbitrary `overrides`. ⚠ **`overrides` are unscoped** — a bare entry rewrites every consumer; scope to the parent | **HOLDING** — zero `--legacy-peer-deps`, zero `--force`, zero `overrides` used. Two genuine ERESOLVEs met (`@tiptap/*` interlock) were **re-sequenced, not bypassed**. Lockfile audited after every batch: 0 unexpected direct drift |
+| T4.8 | Fresh dependency inventory · `npm audit` · GitHub alerts readback · compatibility verification | **IN PROGRESS** — inventory + `npm audit` done and independently verified by a Codex lane, which **corrected** the blanket "no forward fix" claim (esbuild is a separate chain with a real fix). GitHub/Dependabot readback still outstanding (ledger §21.8) |
+| T4.9 | **OD-26-7 (NEW, OPEN)** — `@nuxtjs/i18n` 10.6.0 costs **+1.9 KB gz on every route** and widens the D20-24 hard-ceiling breach (`/dashboard/messages` 328.5 → 330.4 KB vs a 320.0 KB ceiling). No breaking changes, no security content. Attribution proven in BOTH directions (forward measure + revert control restores the exact prior figures). The `optimizeMessageBundling` hypothesis was **refuted** — opting out is byte-identical. **10.5.0 retained; owner decision required to adopt** | OPEN |
 
 ---
 
