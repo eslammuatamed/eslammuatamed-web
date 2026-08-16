@@ -28,13 +28,16 @@ const localePath = useLocalePath()
 // "/experience and /resume do not duplicate the full ProfilePage identity unless a later Web
 // specification identifies a standards-supported need." This slice identifies none, and a second
 // Person here would be the contradictory duplicate identity D22-8 forbids.
-useSchemaOrg(() => [
-  defineBreadcrumb({
+// One computed per NODE — see `useSiteSchema` for why neither a whole-list getter nor a whole-list
+// `computed()` is correct under the unhead-v3 vendor. The node stays reactive because `crumbs` is
+// locale-derived: on a locale switch the breadcrumb names must re-resolve.
+useSchemaOrg([
+  computed(() => defineBreadcrumb({
     itemListElement: crumbs.value.map(crumb => ({
       name: crumb.label,
       item: crumb.to ? `${siteConfig.url}${localePath(crumb.to)}` : undefined
     }))
-  })
+  }))
 ])
 
 // Title, description and OG title/description only. Canonical, hreflang/x-default, og:locale,

@@ -60,13 +60,16 @@ const crumbs = computed(() => [{ label: t('nav.home'), to: '/' }, { label: t('na
 
 const siteConfig = useSiteConfig()
 const localePath = useLocalePath()
-useSchemaOrg(() => [
-  defineBreadcrumb({
+// One computed per NODE — see `useSiteSchema` for why neither a whole-list getter nor a whole-list
+// `computed()` is correct under the unhead-v3 vendor. The node stays reactive because `crumbs` is
+// locale-derived: on a locale switch the breadcrumb names must re-resolve.
+useSchemaOrg([
+  computed(() => defineBreadcrumb({
     itemListElement: crumbs.value.map(crumb => ({
       name: crumb.label,
       item: crumb.to ? `${siteConfig.url}${localePath(crumb.to)}` : undefined
     }))
-  })
+  }))
 ])
 
 useSeoMeta({

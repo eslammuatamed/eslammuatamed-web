@@ -28,8 +28,11 @@ export function useProjectSchema(
 
   const absolute = (path: string) => `${siteConfig.url}${localePath(path)}`
 
-  useSchemaOrg(() => [
-    {
+  // One computed per NODE — see `useSiteSchema` for why neither a whole-list getter nor a whole-list
+  // `computed()` is correct. `CreativeWork` has no `define*` helper, so it stays a plain object
+  // inside its computed; the composable accepts raw nodes either way.
+  useSchemaOrg([
+    computed(() => ({
       '@type': 'CreativeWork',
       'name': project.value?.title,
       'headline': project.value?.title,
@@ -43,13 +46,13 @@ export function useProjectSchema(
       'copyrightYear': project.value?.year ?? undefined,
       'inLanguage': locale.value,
       'url': project.value ? absolute(`/projects/${project.value.slug}`) : undefined
-    },
-    defineBreadcrumb({
+    })),
+    computed(() => defineBreadcrumb({
       itemListElement: crumbs.value.map(crumb => ({
         name: crumb.label,
         // The current page has no `to`; schema-org omits `item` for the last entry, which is correct.
         item: crumb.to ? absolute(crumb.to) : undefined
       }))
-    })
+    }))
   ])
 }
