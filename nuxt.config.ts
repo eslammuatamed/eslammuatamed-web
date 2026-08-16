@@ -54,6 +54,30 @@ export default defineNuxtConfig({
 
   css: ['~/assets/css/main.css'],
 
+  /**
+   * Disable cssnano's `mergeRules` optimization (026 Phase 5, T5.C).
+   *
+   * WHY A MINIFIER OPTIMIZATION IS BEING TURNED OFF. `mergeRules` combines selectors that share a
+   * declaration block (`.a{color:red}.b{color:red}` -> `.a,.b{color:red}`). That is a genuine RAW
+   * byte win — measured -1,373 B raw here. But the doc 20 §1 budget is stated in **gzip** bytes, and
+   * merging is actively counterproductive under gzip: gzip already encodes the repeated block almost
+   * for free via back-references, while merging *destroys* the long repeated selector-prefix runs
+   * that compress best. Net effect measured on this tree at cssnano 8.0.6: **raw -1,373 B, gz +87 B**.
+   *
+   * So this is not "disabling an optimization" — it is declining a raw-size optimization that makes
+   * the metric we are actually governed by WORSE. The lesson generalizes only to gzip/brotli-served
+   * CSS budgets; for an uncompressed budget the default is correct.
+   *
+   * This is a first-class supported Nuxt config key (`postcss.plugins.cssnano`, resolved in
+   * @nuxt/schema; production default is `{}` = default preset). No vendor patching, no override, no
+   * custom machinery - deliberately the cheapest tier of the Phase 5 preference order.
+   */
+  postcss: {
+    plugins: {
+      cssnano: { preset: ['default', { mergeRules: false }] }
+    }
+  },
+
   hooks: {
     /**
      * Drop Nuxt UI's `--color-old-neutral-*` palette from the public stylesheet (025).
