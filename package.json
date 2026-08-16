@@ -50,7 +50,7 @@
     "@nuxtjs/i18n": "^10.6.0",
     "@nuxtjs/seo": "^5.3.12",
     "@pinia/nuxt": "^1.0.2",
-    "@shikijs/markdown-it": "^4.3.1",
+    "@shikijs/markdown-it": "^4.4.3",
     "@tiptap/core": "^3.27.4",
     "@tiptap/extension-bubble-menu": "^3.27.4",
     "@tiptap/extension-code": "^3.27.4",
