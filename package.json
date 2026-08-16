@@ -82,7 +82,7 @@
     "@lhci/cli": "^0.15.1",
     "@nuxt/eslint": "^1.16.0",
     "@nuxt/test-utils": "^4.0.3",
-    "@playwright/test": "^1.62.0",
+    "@playwright/test": "^1.62.1",
     "@size-limit/file": "^13.0.1",
     "@stoplight/prism-cli": "^5.15.11",
     "@types/markdown-it": "^14.1.2",
