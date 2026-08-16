@@ -13,7 +13,9 @@ import type { Crumb } from '~/components/ui/Breadcrumbs.vue'
  * the markup and the structured data cannot disagree — which is the failure mode search engines
  * penalise.
  *
- * Every field is a getter so the graph re-resolves as the async project data lands.
+ * Each NODE is a `computed`, so the graph re-resolves as the async project data lands. (It is not
+ * "every field is a getter" — that reading was already inaccurate, and the schema-org typing rejects
+ * a getter for the array-valued fields outright.)
  */
 export function useProjectSchema(
   project: Ref<ProjectDetail | null | undefined>,

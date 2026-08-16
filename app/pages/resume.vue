@@ -48,8 +48,14 @@ const siteConfig = useSiteConfig()
 // second ProfilePage (or a second Person) would be the contradictory duplicate identity D22-8
 // forbids. The site-wide `Person` is already emitted globally and is referenced by @id.
 // One computed per NODE — see `useSiteSchema` for why neither a whole-list getter nor a whole-list
-// `computed()` is correct under the unhead-v3 vendor. The node stays reactive because `crumbs` is
-// locale-derived: on a locale switch the breadcrumb names must re-resolve.
+// `computed()` is correct under the unhead-v3 vendor.
+//
+// The computed wrapper preserves the node's existing reactive behaviour EXACTLY; it does not add
+// any. Measured, because the obvious claim here would be wrong: a CLIENT-SIDE locale switch does
+// NOT re-resolve these breadcrumb names — the graph keeps the outgoing locale's labels. That is
+// PRE-EXISTING and predates the Nuxt upgrade (identical on nuxt 4.4.8 with the old whole-list
+// getter, on 4.5.2 with it, and on 4.5.2 with this form), so it is recorded as its own finding
+// rather than fixed here. A fresh SSR load of the localized route is correct in both locales.
 useSchemaOrg([
   computed(() => defineBreadcrumb({
     itemListElement: crumbs.value.map(crumb => ({
