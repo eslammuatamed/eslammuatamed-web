@@ -135,7 +135,7 @@ cannot fix the gate — **≥309 B must come from `entry.css` under every scenar
 |---|---|---|
 | **T5.A** | **Re-baseline attribution on the final Phase 4 tree** — CSS/route/vendor figures re-measured, not inherited; build success asserted before any reading | **DONE** — ledger §24.1 |
 | **T5.B** | Dead-code / unused-export / dependency-delivery cleanup; consume the §12.4.3 inventory (supersedes old T5.13) | TODO |
-| **T5.C** | **CSS recovery to the unchanged 30,000 B cap** (supersedes old T5.11) — legitimate cleanup only, never byte-golf of working code, never vendor patching. ⚠ Ordering dependency: hosted CI fails at step 10 (CSS) and then SKIPS steps 11–13, so hosted `size:routes` cannot report at all until CSS is green (§23.12) | TODO |
+| **T5.C** | **CSS recovery to the unchanged 30,000 B cap** (supersedes old T5.11) | ✅ **DONE — BUDGET GREEN.** 30,776 B → **29,081 B, 919 B UNDER** the unchanged cap. Three changes, all in the cheapest tiers: `cssnano mergeRules:false` (−154 B, supported config) · six dead `--brand-*` tokens (−66 B, deletion) · `ui.theme.colors` narrowed to the four families in use (−1,551 B, supported config). No cap raised, re-baselined or weakened. ~1,377 B further headroom MEASURED and REJECTED (dashboard-only usage, global option). Ledger §24.9 |
 | **T5.D** | **Public-route JS recovery** — 18/18 over D20-11. Vendor-dominated (~89% of `/`); separate application-owned from upstream-owned cost. Likely the owner-decision case | TODO |
 | **T5.E** | **`/dashboard/messages` recovery** — 338,309 B gz → ≤ 320.0 KB gz hard ceiling (−10,629 B). ⚠ **Corrects the stale "305.6 KB → 300.0 KB target" in the retired T5.8**: the figure moved to 330.4 KB and the binding constraint is the HARD CEILING, not the quality target. Three other dashboard routes are over target but inside the ceiling — optimization inputs, **not** new hard failures | TODO |
 | **T5.F** | Runtime / prefetch / client-delivery optimization — F-11 (§19), re-evaluated with **real touch/mobile** behaviour, not synthetic hover. Self-links (LangToggle active locale, pagination active page) are pure waste under any policy and are separable from the global-policy question. **Global prefetch is not to be disabled** | TODO |
@@ -164,6 +164,15 @@ Production-Grade and Deliberately Learnable" / decision `D00-8`** (`eslammuatame
 `docs/00-engineering-principles.md`, v1.3.0), and summarized in ledger **§24.4**. Doc 00 is the
 constitution every other document depends on, so Phase 5 inherits this from the top of the
 precedence order — it is not a phase preference that a later phase may drop.
+
+**⚠ THREE learning axes, not two — Testing is tracked separately** (owner, 2026-08-17; doc 00 P18):
+Frontend **Mid → Strong Mid** · Backend **Junior → Mid+** · **Testing Beginner → strong practical
+foundation**. Testing proficiency does **not** follow from the frontend level. **Backend is the
+designated entry point for learning testing** (Jest/Nest, without DOM/reactivity/hydration noise),
+and the Web study map must **not** restart generic unit-testing theory from zero. Progression to
+preserve: fundamentals → Backend Jest unit → service/error-path → real-database E2E → advanced
+correctness/concurrency → Frontend unit/component → Nuxt-specific → Playwright/a11y/hydration.
+Ledger §24.11.
 
 **The per-repo learning targets are normative and must not be averaged:** Backend is **junior →
 at least mid-level** with a deliberate progression from simpler modules into real advanced
