@@ -156,6 +156,69 @@ cannot fix the gate — **≥309 B must come from `entry.css` under every scenar
 - **Security must not knowingly worsen.** Phase 6 owns the final disposition; Phase 5 records any
   change in dependency reachability or advisory exposure.
 
+### Learnability & maintainability constraint (owner amendment, 2026-08-17) — BINDING
+
+This repository is deliberately **both** a Production application **and** the codebase the owner is
+using to grow from mid-level toward strong mid-level frontend. **Performance budgets must not be
+recovered by introducing disproportionate code complexity.** The goal is not "every number green at
+any architectural cost"; it is: remove unnecessary work, recover meaningful headroom, keep the
+implementation understandable, preserve natural framework patterns, and improve maintainability
+where optimization and structure naturally align.
+
+**Order of preference — simplest supported solution that produces meaningful measurable recovery:**
+deletion → narrower imports → supported Nuxt/Nuxt UI configuration → removal of unnecessary
+client/runtime work → natural lazy boundaries → *only then* anything custom.
+
+**Prohibited for a marginal win** (permitted only when the measured benefit clearly justifies the
+permanent cognitive cost): abstractions created merely to save bytes · splitting a file merely
+because it is large · new composables/components/helpers that do not own a coherent responsibility ·
+duplicated state · synchronization machinery · manual chunking · custom caching · conditional-import
+tricks · similarly non-obvious mechanisms.
+
+⚠ **A source-file split is NOT a performance improvement unless measurement proves a delivery or
+runtime change.** It may still be a valid maintainability improvement — but it must be reported as
+that, honestly, and never claimed as a performance win.
+
+**Preserve legitimate complexity when the underlying problem is genuinely complex.** Do not flatten
+real production behaviour to make it beginner-friendly. Learnability comes from clear boundaries and
+progression from simpler to advanced modules, **not** from reducing every advanced module to
+junior-level code.
+
+**Five questions to answer explicitly for every substantial optimization that changes structure:**
+
+1. What responsibilities does the current unit own?
+2. Are any responsibilities naturally separable?
+3. Would the extraction improve comprehension and change isolation **even without a bundle win**?
+4. Does the optimization make the runtime model harder to reason about?
+5. Is the measured performance benefit large enough to justify the added indirection?
+
+**Tie-break:** if two solutions satisfy correctness and performance, prefer the one with **lower
+long-term cognitive load**, even when the other benchmarks slightly better.
+
+**Named case — `app/pages/dashboard/messages.vue`** (26,320 B app-owned, the largest app module on
+the route that breaches its hard ceiling): a genuine hotspot worth evaluating, but **do not split it
+merely because it is large**. Determine whether page/query orchestration · message-detail interaction
+state · focus-restoration & accessibility behaviour · presentation-specific UI · mutation
+orchestration have **natural** boundaries that would improve maintainability and possibly create a
+genuine lazy boundary. **Counter-case:** do not refactor already well-separated flows such as the
+Projects editor merely because individual files are large, when their responsibility boundaries are
+already coherent.
+
+**Escalation.** If an unchanged hard budget can be recovered only by introducing materially worse
+architecture *after* reasonable simple/supported remedies are exhausted, **STOP at an OWNER
+DECISION** rather than contorting the code. Report: exact remaining delta · attribution and ownership ·
+simple remedies already exhausted · complex remedies still available · measured benefit of each ·
+permanent cognitive/maintenance cost · recommendation. The owner decides the compromise.
+
+⚠ **Scope boundary.** Phase 5 is **not** the final Web learnability campaign. It may perform
+structural refactoring only where it naturally overlaps a performance hotspot or carries strong
+independent maintainability value. The comprehensive Web learnability / study-map / maintainability
+review belongs **after Frontend v1**, when the remaining Dashboard and frontend architecture are done.
+
+**Documentation duty.** Phase 5 docs must *teach the concept*, not list changes: what problem existed ·
+why the chosen solution works · why simpler and more complex alternatives were rejected · what should
+and should **not** be generalized from it.
+
 ### Measurement standard
 
 Before/after evidence against the same final-stack baseline for every meaningful optimization.
