@@ -158,6 +158,26 @@ cannot fix the gate — **≥309 B must come from `entry.css` under every scenar
 
 ### Learnability & maintainability constraint (owner amendment, 2026-08-17) — BINDING
 
+⚠ **This constraint is now CONSTITUTIONAL, not campaign-local.** The owner extended it on
+2026-08-17 into a permanent project policy, recorded as **doc 00 Principle 18 "Dual Purpose:
+Production-Grade and Deliberately Learnable" / decision `D00-8`** (`eslammuatamed-docs`
+`docs/00-engineering-principles.md`, v1.3.0), and summarized in ledger **§24.4**. Doc 00 is the
+constitution every other document depends on, so Phase 5 inherits this from the top of the
+precedence order — it is not a phase preference that a later phase may drop.
+
+**The per-repo learning targets are normative and must not be averaged:** Backend is **junior →
+at least mid-level** with a deliberate progression from simpler modules into real advanced
+production concerns; Frontend is **mid-level → strong mid-level** and explicitly **not** a beginner
+Vue/Nuxt course. ⚠ **"Learning codebase" does not mean "simplified codebase."**
+
+Doc 00 P18 adds two rules Phase 5 must apply directly, beyond the amendment text below:
+- **File size alone is not a refactoring trigger** — six-question test before any split.
+- **Source-comment signal-to-noise**: keep non-obvious *why*, invariants, ordering requirements,
+  security/correctness constraints, failure modes and warnings against attractive-but-wrong
+  alternatives **in source**; move campaign history, incident chronology and `Dxx`/`Fxx`
+  archaeology to the ledger or module/study documentation.
+
+
 This repository is deliberately **both** a Production application **and** the codebase the owner is
 using to grow from mid-level toward strong mid-level frontend. **Performance budgets must not be
 recovered by introducing disproportionate code complexity.** The goal is not "every number green at
