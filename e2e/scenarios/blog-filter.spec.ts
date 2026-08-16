@@ -1,6 +1,7 @@
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test } from '@playwright/test'
 import { CATEGORY } from '../../scripts/e2e/fixtures.ts'
+import { hydrated } from '../hydration'
 
 /**
  * Blog index category filter (FR-PUB-040, WS E).
@@ -16,25 +17,9 @@ import { CATEGORY } from '../../scripts/e2e/fixtures.ts'
 const filter = (page: import('@playwright/test').Page) =>
   page.getByRole('group', { name: /Category|الموضوع/ })
 
-/**
- * Wait until Vue has actually hydrated before driving an interactive control.
- *
- * These pages are server-rendered, so a chip is present and clickable in the DOM well before its
- * `@click` handler exists. Playwright's actionability checks are satisfied by the SSR markup, so a
- * click can land on a button that is not yet wired and the test fails intermittently — which is
- * exactly how this file failed before the wait was added. The signal is real rather than a sleep:
- * Vue sets `__vue_app__` on the container element when `mount()` completes.
- *
- * This is a TEST-ONLY concern for the chips, deliberately. Chips are `<button aria-pressed>` toggles
- * (the approved control), and a toggle genuinely requires JavaScript. The one control here that merely
- * NAVIGATES — "Clear filter" — is a real link instead, so it works with no JavaScript at all.
- */
-async function hydrated(page: import('@playwright/test').Page): Promise<void> {
-  await page.waitForFunction(() => {
-    const root = document.getElementById('__nuxt') as (HTMLElement & { __vue_app__?: unknown }) | null
-    return Boolean(root?.__vue_app__)
-  })
-}
+// The chips are a TEST-ONLY hydration concern, deliberately: they are `<button aria-pressed>`
+// toggles (the approved control) and a toggle genuinely requires JavaScript, while the one control
+// here that merely NAVIGATES — "Clear filter" — is a real link that works with no JavaScript.
 
 test.describe('Blog category filter — English', () => {
   test('renders chips with "all" pressed, and the unfiltered empty state', async ({ page }) => {

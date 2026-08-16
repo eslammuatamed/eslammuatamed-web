@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { SCENARIO_API } from './backend'
+import { hydrated } from '../hydration'
 
 /**
  * Experience states Prism cannot express (008, D18-6).
@@ -89,6 +90,9 @@ test.describe('Error state (Arabic, upstream 503)', () => {
 
   test('offers a retry action that re-requests rather than reloading the document', async ({ page }) => {
     await page.goto(AR)
+    // The retry button's handler is what issues the re-fetch, so a pre-hydration click produces ZERO
+    // requests and the assertion below reads 0 — which is exactly how this test failed under load.
+    await hydrated(page)
 
     let apiCalls = 0
     page.on('request', (request) => {
