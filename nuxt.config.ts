@@ -17,6 +17,30 @@ const siteUrl = siteUrlFromEnv()
 
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
+  /**
+   * PAYLOAD EXTRACTION — `'client'`, not the `true` this app was effectively defaulting to (OD-26-6).
+   *
+   * A `swr`/`cache` route rule flips Nitro's `_PAYLOAD_EXTRACTION`, and under the default the route's
+   * OWN server-rendered HTML then carries `<link rel="preload" as="fetch" href="/_payload.json">`. The
+   * HTML PARSER fetches that before hydration, and because these routes are never statically
+   * prerendered, Nitro answers it with a SECOND FULL LIVE SSR RENDER — a second `/settings/site` read
+   * for one page view, which is what `e2e/dedupe/settings-dedupe.spec.ts` exists to forbid.
+   *
+   * `'client'` keeps payload extraction ON for client-side navigation (`_payload.json` is still built
+   * and served, and in-app navigation still consumes it) while inlining the initial payload, so no
+   * pre-hydration fetch is emitted. Measured: one live render instead of two.
+   *
+   * NOT `false`. That also gives one render, but it removes payload support from client-side
+   * navigation and deterministically breaks four AR -> EN locale-head-parity specs. `'client'` and
+   * `false` emit byte-identical SERVER renderers; they differ only in client behaviour, which is
+   * exactly the behaviour those specs assert.
+   *
+   * Cost, measured and deliberately NOT traded away by this decision: the initial document grows
+   * ~1.9-2.6 KB on cache-ruled routes because the payload is inlined. Total first-load transfer still
+   * falls (~200 B, one request fewer). The document growth is dispositioned separately; no budget is
+   * raised or re-baselined here, and `size` is byte-identical across all three modes.
+   */
+  experimental: { payloadExtraction: 'client' },
   devtools: { enabled: true },
 
   modules: [
