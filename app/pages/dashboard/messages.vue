@@ -471,7 +471,7 @@ onMounted(() => {
         variant="subtle"
         icon="i-lucide-triangle-alert"
         class="mb-4"
-        :ui="{ title: 'text-error-700 dark:text-error-300' }"
+        :ui="{ title: 'text-error-700 dark:text-error-300', description: 'text-error-700 dark:text-error-300' }"
         :title="t('dashboard.messages.updateErrorTitle')"
         :description="t('dashboard.messages.updateErrorBody')"
       />
@@ -502,13 +502,21 @@ onMounted(() => {
     <!-- The subtle error title defaults to the 500 red, which measures 3.15:1 on its own tinted
          background — under the 4.5:1 AA minimum. The 700 shade is 5.32:1; the dark-mode counterpart
          keeps the same relationship against the dark surface. Caught by axe during the visual
-         review, and applied to BOTH error alerts so they cannot drift apart. -->
+         review, and applied to BOTH error alerts so they cannot drift apart.
+
+         The DESCRIPTION slot needed the same treatment and did not get it the first time. It carries
+         @nuxt/ui's default `opacity-90` over the same tinted ground, which measured 2.96:1 — failing
+         AA at both the 4.5:1 normal and the 3.0:1 large-text thresholds. axe-core 4.12 did not report
+         it; 4.13 does, and the ratio was confirmed by direct WCAG computation, so this is a real
+         pre-existing defect rather than a checker artefact. The 700 shade clears it even under the
+         retained opacity. Applied to every error alert that carries a description, for the same
+         no-drift reason. -->
     <UAlert
       v-else-if="forbidden"
       color="error"
       variant="subtle"
       icon="i-lucide-lock"
-      :ui="{ title: 'text-error-700 dark:text-error-300' }"
+      :ui="{ title: 'text-error-700 dark:text-error-300', description: 'text-error-700 dark:text-error-300' }"
       :title="t('dashboard.messages.forbiddenTitle')"
       :description="t('dashboard.messages.forbiddenBody')"
     />

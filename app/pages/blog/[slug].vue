@@ -79,27 +79,27 @@ useSeoMeta({
 </script>
 
 <template>
-  <!-- ONE reading column, centred, at the governed measure — this page is a reading surface, not a
-       dashboard, so nothing sits beside the text (015).
-
-       WHAT WAS WRONG, MEASURED. The header and the body used to disagree about their width: the h1
-       and the meta line ran the FULL 1216px container while `.content-prose` capped itself at its
-       own `68ch`. The result at 1280px and above was a start-aligned body with dead space on the
-       end side — 468px in EN, 672px in AR — under a headline three times wider than its own text.
-       Both numbers were measured in a real browser, not estimated.
-
-       THE COLUMN OWNS THE MEASURE, NOT THE PROSE. `--measure-prose` is set here on the wrapper and
-       `.content-prose` is released with `max-w-none`, so header, lede and body are bounded by ONE
-       value that cannot drift. Releasing the prose is also what keeps this change local: the same
-       `.content-prose` rule is shared with /about, /projects/{slug} and the two preview routes, and
-       narrowing it there is a separate, coordinated decision.
-
-       `text-body-lg` IS THE MEASURE'S BASIS, NOT DECORATION. Doc 03 §3 assigns `body-lg` (18px) to
-       article prose; the page was inheriting the 16px UI size. It is set on the WRAPPER because
-       `--measure-prose` is in `em`: font-size and column width then resolve against the same
-       element, so the character count per line is correct by construction rather than by
-       coincidence. -->
   <UContainer v-if="article" class="py-[var(--space-section)]">
+    <!-- ONE reading column, centred, at the governed measure — this page is a reading surface, not a
+         dashboard, so nothing sits beside the text (015).
+
+         WHAT WAS WRONG, MEASURED. The header and the body used to disagree about their width: the h1
+         and the meta line ran the FULL 1216px container while `.content-prose` capped itself at its
+         own `68ch`. The result at 1280px and above was a start-aligned body with dead space on the
+         end side — 468px in EN, 672px in AR — under a headline three times wider than its own text.
+         Both numbers were measured in a real browser, not estimated.
+
+         THE COLUMN OWNS THE MEASURE, NOT THE PROSE. `--measure-prose` is set here on the wrapper and
+         `.content-prose` is released with `max-w-none`, so header, lede and body are bounded by ONE
+         value that cannot drift. Releasing the prose is also what keeps this change local: the same
+         `.content-prose` rule is shared with /about, /projects/{slug} and the two preview routes, and
+         narrowing it there is a separate, coordinated decision.
+
+         `text-body-lg` IS THE MEASURE'S BASIS, NOT DECORATION. Doc 03 §3 assigns `body-lg` (18px) to
+         article prose; the page was inheriting the 16px UI size. It is set on the WRAPPER because
+         `--measure-prose` is in `em`: font-size and column width then resolve against the same
+         element, so the character count per line is correct by construction rather than by
+         coincidence. -->
     <div class="mx-auto max-w-[var(--measure-prose)] text-body-lg">
       <AppLink to="/blog" class="inline-flex items-center gap-1 text-sm text-link">
         <UIcon name="i-lucide-arrow-left" class="size-4 rtl:-scale-x-100" aria-hidden="true" />

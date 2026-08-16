@@ -286,7 +286,7 @@ watch(parsed, value => void load(value), { immediate: true, deep: true })
         variant="subtle"
         icon="i-lucide-lock"
         data-projects-forbidden
-        :ui="{ title: 'text-error-700 dark:text-error-300' }"
+        :ui="{ title: 'text-error-700 dark:text-error-300', description: 'text-error-700 dark:text-error-300' }"
         :title="t('dashboard.projects.forbiddenTitle')"
         :description="t('dashboard.projects.forbiddenBody')"
       />

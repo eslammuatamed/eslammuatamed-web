@@ -242,7 +242,7 @@ async function saveResume(): Promise<void> {
       color="error"
       variant="subtle"
       icon="i-lucide-lock"
-      :ui="{ title: 'text-error-700 dark:text-error-300' }"
+      :ui="{ title: 'text-error-700 dark:text-error-300', description: 'text-error-700 dark:text-error-300' }"
       :title="t('dashboard.profile.forbiddenTitle')"
       :description="t('dashboard.profile.forbiddenBody')"
     />
@@ -350,7 +350,7 @@ async function saveResume(): Promise<void> {
             color="error"
             variant="subtle"
             icon="i-lucide-triangle-alert"
-            :ui="{ title: 'text-error-700 dark:text-error-300' }"
+            :ui="{ title: 'text-error-700 dark:text-error-300', description: 'text-error-700 dark:text-error-300' }"
             :title="t('dashboard.profile.saveErrorTitle')"
             :description="t('dashboard.profile.saveErrorBody')"
           />
@@ -413,7 +413,7 @@ async function saveResume(): Promise<void> {
             color="error"
             variant="subtle"
             icon="i-lucide-triangle-alert"
-            :ui="{ title: 'text-error-700 dark:text-error-300' }"
+            :ui="{ title: 'text-error-700 dark:text-error-300', description: 'text-error-700 dark:text-error-300' }"
             :title="t('dashboard.profile.saveErrorTitle')"
             :description="t('dashboard.profile.saveErrorBody')"
           />

@@ -39,11 +39,11 @@ useSeoMeta({
 </script>
 
 <template>
-  <!-- The home reads as one edition: a paper hero, an ink capability spread, the work index, the
-       experience timeline, the writing list, endorsements, and a closing ink invitation. The surface
-       alternates paper / ink / lift so hierarchy comes from ground changes and varied composition, not a
-       flat stack. Every section is authored in logical properties, so the whole page mirrors in RTL. -->
   <div v-if="settings">
+    <!-- The home reads as one edition: a paper hero, an ink capability spread, the work index, the
+         experience timeline, the writing list, endorsements, and a closing ink invitation. The surface
+         alternates paper / ink / lift so hierarchy comes from ground changes and varied composition, not a
+         flat stack. Every section is authored in logical properties, so the whole page mirrors in RTL. -->
     <HomeNameplate :settings="settings" />
 
     <HomeCapabilities
@@ -84,8 +84,8 @@ useSeoMeta({
     <HomeContact :settings="settings" />
   </div>
 
-  <!-- Designed API-unavailable state (D13-1): the shell renders sensibly without the API. -->
   <section v-else-if="settingsError" class="py-[var(--space-section)]">
+    <!-- Designed API-unavailable state (D13-1): the shell renders sensibly without the API. -->
     <UContainer>
       <p class="kicker text-dimmed">{{ t('brand.role') }}</p>
       <h1 class="mt-4 font-display text-display text-highlighted">{{ t('home.hero.unavailableTitle') }}</h1>
