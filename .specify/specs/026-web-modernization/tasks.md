@@ -108,25 +108,77 @@ hosted is not a comparison). The authoritative baseline already existed: hosted 
 
 ---
 
-## Phase 5 — Deep frontend cleanup & modernization
+## Phase 5 — Comprehensive cleanup & performance recovery
+
+**Phase 5 is the single cleanup/performance-recovery pass over the FINAL upgraded dependency stack**
+(Phase 4 CLOSED at Web `cf6910c`; SpecKit checkpoint `8c34c8d`). It is **not** another dependency
+modernization phase. Inputs are ledger §23.9 (13 items) as re-measured in §24.1.
+
+**Re-baselined on the final Phase 4 tree (§24.1), `8c34c8d`, clean build, `ANALYZE_BUNDLE=1`, CI env
+(`NUXT_PUBLIC_SITE_URL=https://example.com`).** These figures supersede any earlier number in this file.
+
+| Hard budget | Measured | Cap | Delta |
+|---|---|---|---|
+| CSS (glob, `npm run size`) | **30,776 B gz** | 30,000 B | **−776 B to recover** |
+| `/dashboard/messages` | **338,309 B gz (330.4 KB)** | 320.0 KB gz | **−10,629 B to recover** |
+| Public routes vs D20-11 | **18 of 18 over** | 250.0 KB gz | −1.5 KB (best) … −14.6 KB (worst) |
+| App-owned frozen caps | all PASS | per-route | ✓ no action required |
+
+⚠ **CSS is two files, not one pool** (§24.1): `entry.css` **30,309 B gz** + `resume.css` **463 B gz**.
+`entry.css` **alone already breaches** the 30,000 B cap by 309 B, so deleting `resume.css` outright
+cannot fix the gate — **≥309 B must come from `entry.css` under every scenario**. §23.9's single
+776 B pool framing is therefore refined, not replaced.
+
+### Task groups
 
 | ID | Task | Status |
 |---|---|---|
-| T5.1 | Evidence pass over the now-current codebase; every candidate gets a concrete reason | TODO |
-| T5.2 | Duplication: components, composables, state, helpers | TODO |
-| T5.3 | Data layer: repeated fetching, loading/error patterns, `useApi` consistency, type boundaries | TODO |
-| T5.4 | Stale compatibility wrappers and obsolete Nuxt workarounds superseded by the final stack | TODO |
-| T5.5 | Avoidable client-only execution; unnecessary watchers/effects | TODO |
-| T5.6 | CSS architecture duplication; physical-direction CSS where logical is required (`check:logical`) | TODO |
-| T5.7 | RTL consistency and accessibility issues | TODO |
-| T5.8 | Performance hotspots; bundle isolation; **`/dashboard/messages` 305.6 KB gz → below the 300.0 KB gz D20-24 target** (raising the target is not an option) | TODO |
-| T5.9 | Public/dashboard coupling | TODO |
-| T5.10 | Stale TODOs | TODO |
-| **T5.11** | *(new, OD-26-4)* **CSS consolidation to recover the unchanged 30,000 B cap** — retire the Phases 3–4 KNOWN TEMPORARY CAMPAIGN REGRESSION through legitimate, maintainable cleanup (duplication, obsolete framework workarounds, stale compatibility code). Not a byte-golf refactor of working code | TODO |
-| **T5.12** | *(new, OD-26-4)* **Phase 5 hard exit gate** — CSS ≤ 30,000 B · route budgets green · font budget green · JS/bundle gates green · no EN/AR/RTL regression · no a11y regression · all code/test gates green. If the modernized stack cannot fit through legitimate cleanup, **STOP for an owner decision — do not raise the budget** | TODO |
-| **T5.13** | *(new, OD-26-4)* Consume the Phase 2 exported-symbol inventory (ledger §12.4.3, ~30 prod-unreferenced symbols across 18 files) as a cleanup **input** | TODO |
+| **T5.A** | **Re-baseline attribution on the final Phase 4 tree** — CSS/route/vendor figures re-measured, not inherited; build success asserted before any reading | **DONE** — ledger §24.1 |
+| **T5.B** | Dead-code / unused-export / dependency-delivery cleanup; consume the §12.4.3 inventory (supersedes old T5.13) | TODO |
+| **T5.C** | **CSS recovery to the unchanged 30,000 B cap** (supersedes old T5.11) — legitimate cleanup only, never byte-golf of working code, never vendor patching. ⚠ Ordering dependency: hosted CI fails at step 10 (CSS) and then SKIPS steps 11–13, so hosted `size:routes` cannot report at all until CSS is green (§23.12) | TODO |
+| **T5.D** | **Public-route JS recovery** — 18/18 over D20-11. Vendor-dominated (~89% of `/`); separate application-owned from upstream-owned cost. Likely the owner-decision case | TODO |
+| **T5.E** | **`/dashboard/messages` recovery** — 338,309 B gz → ≤ 320.0 KB gz hard ceiling (−10,629 B). ⚠ **Corrects the stale "305.6 KB → 300.0 KB target" in the retired T5.8**: the figure moved to 330.4 KB and the binding constraint is the HARD CEILING, not the quality target. Three other dashboard routes are over target but inside the ceiling — optimization inputs, **not** new hard failures | TODO |
+| **T5.F** | Runtime / prefetch / client-delivery optimization — F-11 (§19), re-evaluated with **real touch/mobile** behaviour, not synthetic hover. Self-links (LangToggle active locale, pagination active page) are pure waste under any policy and are separable from the global-policy question. **Global prefetch is not to be disabled** | TODO |
+| **T5.G** | Deep cleanup & maintainability with measurable value — duplication (components/composables/state/helpers), data layer & `useApi` consistency, stale compatibility wrappers superseded by the final stack, avoidable client-only execution, public/dashboard coupling, stale TODOs, CSS architecture duplication, RTL/a11y consistency (absorbs old T5.2–T5.7, T5.9, T5.10) | TODO |
+| **T5.H** | **Phase 5 hard exit gate** (supersedes old T5.12) — CSS ≤ 30,000 B · all governed public-route hard budgets · `/dashboard/messages` ≤ 320 KB gz · app-owned frozen caps · font budget · JS/bundle gates · no EN/AR/RTL regression · no a11y regression · all code/test gates green · hosted CI + hosted E2E + BOTH Lighthouse profiles green on the exact final Phase 5 SHA. **If the modernized stack cannot fit through legitimate cleanup, STOP for an owner decision — do not raise, re-baseline or weaken any budget** | TODO |
 
----
+### Constraints carried into every task group
+
+- **No budget is raised, re-baselined, weakened, or converted from hard ceiling to quality target.**
+- **No unsupported dependency coercion**: no `overrides`, no forced dedupe, no lockfile patching, no
+  artificial direct dependencies, no coerced peers, no vendor/generated-code patching.
+- **Accessibility is not tradeable for bytes** — the Phase 4 WCAG AA alert-description contrast
+  correction is preserved.
+- **No CommonJS→ESM conversion** (deferred project-wide).
+- No removal of SSR, locale support, or RTL semantics; no casual visual-behaviour change.
+- Do not delete code merely because static scanning cannot see runtime use; do not remove support
+  packages merely because the app does not import them directly.
+- **Security must not knowingly worsen.** Phase 6 owns the final disposition; Phase 5 records any
+  change in dependency reachability or advisory exposure.
+
+### Measurement standard
+
+Before/after evidence against the same final-stack baseline for every meaningful optimization.
+Build both sides **in one directory** (cross-worktree comparison is invalid). Assert build success
+and `size > 0` before trusting any reading (`size-limit` reports `passed:true, size:0` on a missing
+build; `size:routes` exit 2 = stale `.bundle-analysis`, not a breach). Rebuild between any source fix
+and a Playwright run. Never report a raw-byte win without its gzip counterpart. For noisy metrics
+report medians/distributions across repeated runs, not a single cherry-picked run.
+
+### Upstream vs application ownership
+
+| Class | Disposition | Known members |
+|---|---|---|
+| Application-owned | remediate | app CSS/JS, route import graph, prefetch policy, dead code |
+| Configurable ecosystem | investigate supported configuration | cssnano/postcss options, Nuxt & Nuxt UI config |
+| **Upstream-owned, unavoidable** | **measure and document; do not hack around** | **Unhead v2+v3 ~50.5 KB** · `@nuxtjs/i18n` 10.6.0 +1.9 KB/route (not flag-gated) |
+
+⚠ **Unhead re-verified upstream in T5.A (§24.2), not taken from the Phase 4 record:** `@nuxt/ui@4.10.0`
+is still the latest release and hard-depends on `@unhead/vue: ^2.1.15` (a `dependencies` entry, not a
+peer), while `nuxt@4.5.2` — also still latest — depends on `unhead`/`@unhead/vue` `^3.3.1`. Installed:
+`unhead@3.3.2` + `@unhead/vue@3.3.2` (via nuxt) alongside `@unhead/vue@2.1.17` (via `@nuxt/ui`, with
+`@nuxtjs/seo`'s three sub-modules deduped onto that same v2 copy). **No supported convergence exists.**
+Confirmed upstream-owned; re-check only if a genuinely new compatible release appears.
 
 ## Phase 6 — Verification, security & performance closure
 
