@@ -33,5 +33,7 @@ deliberately env-driven, D23-8).
 ## Change discipline
 
 Doc-first: work contradicting an approved doc → revise the doc in
-`../eslammuatamed-docs` first. Conventional Commits on `main`. Contract adoption is one
-atomic commit: contract + generated types + adaptation (doc 16 §3).
+`../eslammuatamed-docs` first. Conventional Commits, on a branch → PR → `dev`; `main` is
+reached only by an authorized `dev → main` promotion, which auto-deploys Production
+(doc 17 / doc 23). Contract adoption is one atomic commit: contract + generated types +
+adaptation (doc 16 §3).

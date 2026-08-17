@@ -34,7 +34,13 @@ npm test                      # vitest
 npm run api:types             # إعادة توليد app/types/api.d.ts من العقد (لا يُحرَّر يدويًّا)
 npm run build && npm run check:bundle    # يمنع تسرّب Tiptap/Shiki إلى حزم العميل العامّة
 npm run check:logical                     # يمنع الأنماط الفيزيائية (خصائص منطقية فقط — RTL)
+ANALYZE_BUNDLE=1 npm run build            # مطلوب قبل size:routes
+npm run size                              # ميزانية CSS العامّة (سقف 30,000 B gz)
+npm run size:routes                       # ميزانيات JS لكل مسار (D20-31 / D20-32)
+npm run test:e2e                          # Playwright + axe (a11y، en/ar/RTL، SSR)
 ```
+
+المكدّس المُسلَّم: `nuxt` **4.5.2** · `@nuxt/ui` **4.10.0** · `vue` **3.5.41** · `@nuxtjs/i18n` **10.6.0** · `tailwindcss` **4.3.3**. التفاصيل في [`PROJECT_GUIDE.md`](PROJECT_GUIDE.md) §4.
 
 ## انضباط التغيير
 
