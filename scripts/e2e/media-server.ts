@@ -239,8 +239,7 @@ function settingsEntity() {
     careerStartMonth: null,
     googleSiteVerification: null,
     bingSiteVerification: null,
-    analyticsProvider: null,
-    analyticsMeasurementId: null,
+    gtmContainerId: null,
     analyticsEnabled: false,
     customMetas: [],
     translations: { en: translation('en'), ar: translation('ar') }

@@ -91,7 +91,7 @@ function trapSettings(enAlt: string | null = null, arAlt: string | null = null, 
     portrait: { id: 'asset-1', url: 'u', alt: 'ASSET DEFAULT', width: 1, height: 1, blurhash: null, variants: [] },
     professionalEmail: null, contactEmail: null, contactPhone: null, whatsappPhone: null,
     careerStartYear: null, careerStartMonth: null, googleSiteVerification: null,
-    bingSiteVerification: null, analyticsProvider: null, analyticsMeasurementId: null,
+    bingSiteVerification: null, gtmContainerId: null,
     analyticsEnabled: false, customMetas: [],
     translations: { en: translation(enAlt), ar: translation(arAlt) }
   }

@@ -35,7 +35,7 @@ function settings(overrides: Partial<SiteSettings> = {}): SiteSettings {
     careerStartMonth: 11,
     googleSiteVerification: null,
     bingSiteVerification: null,
-    analytics: null,
+    gtmContainerId: null,
     customMetas: [],
     resumeAsset: null,
     portraitAssetId: null,

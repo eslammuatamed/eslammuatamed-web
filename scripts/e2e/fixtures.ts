@@ -129,6 +129,7 @@ export const SITE_SETTINGS: Record<Locale, SiteSettings> = {
     careerStartMonth: 11,
     googleSiteVerification: null,
     bingSiteVerification: null,
+    gtmContainerId: null,
     customMetas: [],
     resumeAsset: null,
     // About content + portrait are POPULATED here on purpose: this is the only lane that can render
@@ -161,6 +162,7 @@ export const SITE_SETTINGS: Record<Locale, SiteSettings> = {
     careerStartMonth: 11,
     googleSiteVerification: null,
     bingSiteVerification: null,
+    gtmContainerId: null,
     customMetas: [],
     resumeAsset: null,
     // The Arabic alt is authored SEPARATELY rather than reusing the English string: that is what makes

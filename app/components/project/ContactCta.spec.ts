@@ -31,6 +31,7 @@ const full: SiteSettings = {
   careerStartMonth: null,
   googleSiteVerification: null,
   bingSiteVerification: null,
+  gtmContainerId: null,
   customMetas: [],
   resumeAsset: null,
   aboutBio: null,
