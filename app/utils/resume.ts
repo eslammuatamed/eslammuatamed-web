@@ -87,17 +87,3 @@ export function formatFileSize(
   }).format(value)
   return `${formatted} ${useMb ? units.mb : units.kb}`
 }
-
-/**
- * Splits the contract's Markdown bullet string into plain lines.
- *
- * Mirrors `ContentTimelineEntry` exactly rather than pulling the full prose renderer in for a
- * short list. Shared here so the résumé and the timeline can never disagree about what a
- * bullet is — the same impact string yields the same bullets on both pages.
- */
-export function impactBullets(impact: string | null | undefined): readonly string[] {
-  return (impact ?? '')
-    .split('\n')
-    .map(line => line.trim().replace(/^[-*]\s+/, ''))
-    .filter(Boolean)
-}

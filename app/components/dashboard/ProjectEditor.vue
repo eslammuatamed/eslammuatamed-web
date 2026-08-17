@@ -256,7 +256,7 @@ onMounted(() => {
       variant="subtle"
       icon="i-lucide-lock"
       data-project-forbidden
-      :ui="{ title: 'text-error-700 dark:text-error-300' }"
+      :ui="{ title: 'text-error-700 dark:text-error-300', description: 'text-error-700 dark:text-error-300' }"
       :title="t('dashboard.projects.forbiddenTitle')"
       :description="t('dashboard.projects.forbiddenBody')"
     />
@@ -489,7 +489,7 @@ onMounted(() => {
           variant="subtle"
           icon="i-lucide-triangle-alert"
           data-error-no-translation
-          :ui="{ title: 'text-error-700 dark:text-error-300' }"
+          :ui="{ title: 'text-error-700 dark:text-error-300', description: 'text-error-700 dark:text-error-300' }"
           :title="t('dashboard.projects.editor.errorNoTranslationTitle')"
           :description="t('dashboard.projects.editor.errorNoTranslationBody')"
         />
@@ -500,7 +500,7 @@ onMounted(() => {
           variant="subtle"
           icon="i-lucide-triangle-alert"
           data-error-partial
-          :ui="{ title: 'text-error-700 dark:text-error-300' }"
+          :ui="{ title: 'text-error-700 dark:text-error-300', description: 'text-error-700 dark:text-error-300' }"
           :title="t('dashboard.projects.editor.errorPartialTitle')"
         >
           <template #description>
@@ -542,7 +542,7 @@ onMounted(() => {
           variant="subtle"
           icon="i-lucide-triangle-alert"
           data-save-error
-          :ui="{ title: 'text-error-700 dark:text-error-300' }"
+          :ui="{ title: 'text-error-700 dark:text-error-300', description: 'text-error-700 dark:text-error-300' }"
           :title="t('dashboard.projects.editor.saveErrorTitle')"
         >
           <template #description>
@@ -573,7 +573,7 @@ onMounted(() => {
           variant="subtle"
           icon="i-lucide-triangle-alert"
           data-delete-error
-          :ui="{ title: 'text-error-700 dark:text-error-300' }"
+          :ui="{ title: 'text-error-700 dark:text-error-300', description: 'text-error-700 dark:text-error-300' }"
           :title="t('dashboard.projects.editor.deleteErrorTitle')"
           :description="t('dashboard.projects.editor.deleteErrorBody')"
         />

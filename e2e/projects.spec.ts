@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test } from '@playwright/test'
+import { hydrated } from './hydration'
 
 /**
  * Projects journey coverage (web-005 P1) against the COMMITTED contract served by Prism.
@@ -154,6 +155,8 @@ test.describe('Projects index', () => {
 
   test('pressing a technology chip writes its SLUG to the URL and presses that chip', async ({ page }) => {
     await page.goto('/projects')
+    // A chip is an `aria-pressed` toggle, so its handler must exist before the click lands.
+    await hydrated(page)
 
     const filter = page.getByRole('group', { name: 'Technology' })
     // The first non-"All" chip — Prism serves the contract's own skills list, so the label is the

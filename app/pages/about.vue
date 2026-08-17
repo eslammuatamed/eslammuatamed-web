@@ -31,8 +31,7 @@ const contentLocale = useRouteLocale()
 // Initial load (skeleton) vs a refetch with content already on screen (branded overlay):
 // `useAsyncData` keeps the previous `data` while refetching (doc 13 §9.1).
 const hasData = computed(() => !!data.value)
-const initialPending = computed(() => status.value === 'pending' && !hasData.value)
-const refreshing = computed(() => status.value === 'pending' && hasData.value)
+const { initialPending, refreshing } = useRequestState(() => status.value === 'pending', hasData)
 
 const readiness = computed(() => (data.value ? resolveAboutReadiness(data.value) : null))
 const isPublished = computed(() => readiness.value !== null && isAboutPublishable(readiness.value))

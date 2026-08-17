@@ -13,9 +13,16 @@ interface Props {
    * web-005).
    */
   external?: boolean
+  /**
+   * Forwarded to `<NuxtLink>`. Declared EXPLICITLY rather than left to attribute fallthrough,
+   * because this component has an external `<a>` branch where a stray `prefetch` would land as a
+   * meaningless DOM attribute. Callers use it to suppress the prefetch of a link that points at the
+   * page already being viewed — see the primary nav, where the active item is a self-link.
+   */
+  prefetch?: boolean
 }
 
-const props = withDefaults(defineProps<Props>(), { external: undefined })
+const props = withDefaults(defineProps<Props>(), { external: undefined, prefetch: undefined })
 const localePath = useLocalePath()
 
 /** Only http(s) navigates away to another site — the signal for opening a new tab. */
@@ -61,7 +68,7 @@ const opensNewTab = computed(() => isExternal.value && HTTP_URL.test(href.value)
       aria-hidden="true"
     />
   </a>
-  <NuxtLink v-else :to="localePath(to)">
+  <NuxtLink v-else :to="localePath(to)" :prefetch="prefetch">
     <slot />
   </NuxtLink>
 </template>

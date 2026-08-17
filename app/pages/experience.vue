@@ -12,8 +12,7 @@ const { data, status, error, refresh } = await useExperiences()
 // Initial load (skeleton) vs a refetch with content already on screen (branded overlay):
 // `useAsyncData` keeps the previous `data` while refetching (doc 13 §9.1).
 const hasData = computed(() => !!data.value)
-const initialPending = computed(() => status.value === 'pending' && !hasData.value)
-const refreshing = computed(() => status.value === 'pending' && hasData.value)
+const { initialPending, refreshing } = useRequestState(() => status.value === 'pending', hasData)
 // A dedicated page shows real empty copy; optional home sections omit themselves instead.
 const isEmpty = computed(() => !!data.value && data.value.length === 0)
 
@@ -28,13 +27,22 @@ const localePath = useLocalePath()
 // "/experience and /resume do not duplicate the full ProfilePage identity unless a later Web
 // specification identifies a standards-supported need." This slice identifies none, and a second
 // Person here would be the contradictory duplicate identity D22-8 forbids.
-useSchemaOrg(() => [
-  defineBreadcrumb({
+// One computed per NODE — see `useSiteSchema` for why neither a whole-list getter nor a whole-list
+// `computed()` is correct under the unhead-v3 vendor.
+//
+// The computed wrapper preserves the node's existing reactive behaviour EXACTLY; it does not add
+// any. Measured, because the obvious claim here would be wrong: a CLIENT-SIDE locale switch does
+// NOT re-resolve these breadcrumb names — the graph keeps the outgoing locale's labels. That is
+// PRE-EXISTING and predates the Nuxt upgrade (identical on nuxt 4.4.8 with the old whole-list
+// getter, on 4.5.2 with it, and on 4.5.2 with this form), so it is recorded as its own finding
+// rather than fixed here. A fresh SSR load of the localized route is correct in both locales.
+useSchemaOrg([
+  computed(() => defineBreadcrumb({
     itemListElement: crumbs.value.map(crumb => ({
       name: crumb.label,
       item: crumb.to ? `${siteConfig.url}${localePath(crumb.to)}` : undefined
     }))
-  })
+  }))
 ])
 
 // Title, description and OG title/description only. Canonical, hreflang/x-default, og:locale,

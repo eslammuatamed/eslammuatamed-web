@@ -17,6 +17,30 @@ const siteUrl = siteUrlFromEnv()
 
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
+  /**
+   * PAYLOAD EXTRACTION — `'client'`, not the `true` this app was effectively defaulting to (OD-26-6).
+   *
+   * A `swr`/`cache` route rule flips Nitro's `_PAYLOAD_EXTRACTION`, and under the default the route's
+   * OWN server-rendered HTML then carries `<link rel="preload" as="fetch" href="/_payload.json">`. The
+   * HTML PARSER fetches that before hydration, and because these routes are never statically
+   * prerendered, Nitro answers it with a SECOND FULL LIVE SSR RENDER — a second `/settings/site` read
+   * for one page view, which is what `e2e/dedupe/settings-dedupe.spec.ts` exists to forbid.
+   *
+   * `'client'` keeps payload extraction ON for client-side navigation (`_payload.json` is still built
+   * and served, and in-app navigation still consumes it) while inlining the initial payload, so no
+   * pre-hydration fetch is emitted. Measured: one live render instead of two.
+   *
+   * NOT `false`. That also gives one render, but it removes payload support from client-side
+   * navigation and deterministically breaks four AR -> EN locale-head-parity specs. `'client'` and
+   * `false` emit byte-identical SERVER renderers; they differ only in client behaviour, which is
+   * exactly the behaviour those specs assert.
+   *
+   * Cost, measured and deliberately NOT traded away by this decision: the initial document grows
+   * ~1.9-2.6 KB on cache-ruled routes because the payload is inlined. Total first-load transfer still
+   * falls (~200 B, one request fewer). The document growth is dispositioned separately; no budget is
+   * raised or re-baselined here, and `size` is byte-identical across all three modes.
+   */
+  experimental: { payloadExtraction: 'client' },
   devtools: { enabled: true },
 
   modules: [
@@ -29,6 +53,66 @@ export default defineNuxtConfig({
   ],
 
   css: ['~/assets/css/main.css'],
+
+  /**
+   * Generate semantic color utilities for only the four families this app actually uses
+   * (026 Phase 5, T5.C). Measured **-1,372 B gz** — the single largest CSS recovery in the phase.
+   *
+   * WHAT NUXT UI DOES BY DEFAULT. `resolveColors()` falls back to
+   * ["primary","secondary","success","info","warning","error"] when `theme.colors` is unset, and
+   * Tailwind then emits the full utility matrix for all six. This app maps only five palettes in
+   * `app/app.config.ts` (primary/neutral/success/warning/error) — **`secondary` and `info` are never
+   * mapped and never used**, so their utilities were shipping on every render-blocking public
+   * stylesheet purely as generation defaults.
+   *
+   * WHY THIS IS SAFE, checked rather than assumed:
+   *   1. `secondary` and `info` have ZERO usages in `app/`, `server/` and `content/`. The single
+   *      textual match is English prose in a comment ("read it as secondary"), not a class name.
+   *   2. `resolveColors` ALWAYS force-prepends "primary", and `getDefaultConfig` picks
+   *      `[...colors, "neutral"]`, so those two survive whatever is listed here. Only the two
+   *      genuinely unused families are dropped.
+   *   3. Nuxt UI derives its `color` prop types from this list, so a future `color="info"` becomes a
+   *      TYPECHECK ERROR rather than a silently unstyled component. The compiler is the guard — no
+   *      hand-rolled assertion hook is needed for this one.
+   *
+   * ⚠ NOT `app.config.ts`'s `ui.colors`. That is a different key in a different file: it MAPS a
+   * family to a Tailwind palette, it does not decide which families are GENERATED. Setting it there
+   * has no effect on emitted CSS size.
+   *
+   * ⚠ THE REMAINING HEADROOM IS NOT ACTIONABLE HERE. Dropping `success`/`warning` too would recover
+   * a further ~1,377 B, but every one of their usages lives under the client-only dashboard while
+   * this option is GLOBAL — narrowing further would break the dashboard to shrink a public sheet.
+   * Recorded as measured headroom, deliberately not taken (ledger 24.9).
+   */
+  ui: {
+    theme: {
+      colors: ['success', 'warning', 'error']
+    }
+  },
+
+  /**
+   * Disable cssnano's `mergeRules` optimization (026 Phase 5, T5.C).
+   *
+   * WHY A MINIFIER OPTIMIZATION IS BEING TURNED OFF. `mergeRules` combines selectors that share a
+   * declaration block (`.a{color:red}.b{color:red}` -> `.a,.b{color:red}`). That is a genuine RAW
+   * byte win — measured -1,373 B raw here. But the doc 20 §1 budget is stated in **gzip** bytes, and
+   * merging is actively counterproductive under gzip: gzip already encodes the repeated block almost
+   * for free via back-references, while merging *destroys* the long repeated selector-prefix runs
+   * that compress best. Net effect measured on this tree at cssnano 8.0.6: **raw -1,373 B, gz +87 B**.
+   *
+   * So this is not "disabling an optimization" — it is declining a raw-size optimization that makes
+   * the metric we are actually governed by WORSE. The lesson generalizes only to gzip/brotli-served
+   * CSS budgets; for an uncompressed budget the default is correct.
+   *
+   * This is a first-class supported Nuxt config key (`postcss.plugins.cssnano`, resolved in
+   * @nuxt/schema; production default is `{}` = default preset). No vendor patching, no override, no
+   * custom machinery - deliberately the cheapest tier of the Phase 5 preference order.
+   */
+  postcss: {
+    plugins: {
+      cssnano: { preset: ['default', { mergeRules: false }] }
+    }
+  },
 
   hooks: {
     /**

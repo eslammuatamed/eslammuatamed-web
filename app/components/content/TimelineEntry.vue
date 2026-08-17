@@ -45,12 +45,10 @@ const endIso = computed(() => (props.experience.endDate ? String(props.experienc
 const employmentLabel = computed(() =>
   t(`home.experience.employmentType.${props.experience.employmentType}`)
 )
-const bullets = computed(() =>
-  (props.experience.impact ?? '')
-    .split('\n')
-    .map(line => line.trim().replace(/^[-*]\s+/, ''))
-    .filter(Boolean)
-)
+// Shared with the résumé via `impactBullets` (utils/resume.ts) so the two pages can never disagree
+// about what a bullet is — `resume/Entry.vue` already stated that invariant, but this copy was still
+// parsing inline, so the two were only accidentally identical.
+const bullets = computed(() => impactBullets(props.experience.impact))
 
 // Rendered in the API's order — by `Skill.order`, resolved server-side (D02-9). No client sort: the
 // registry order is the owner's, and a skill untranslated in this locale is already dropped by the

@@ -338,16 +338,8 @@
   }
 }
 
-/* Non-color role tokens and technology identity colors (doc 14 §2/§4/§5). Technology
-   colors are consumed only by technology components (doc 03 usage rules). */
+/* Non-color role tokens (doc 14 §2/§4/§5). */
 :root {
-  --brand-js: #f7df1e;
-  --brand-ts: #3178c6;
-  --brand-vue: #42b883;
-  --brand-nuxt: #00dc82;
-  --brand-nest: #e0234e;
-  --brand-node: #5fa04e;
-
   --leading-prose: 1.7;
   --leading-prose-arabic: 1.9;
 
@@ -813,8 +805,15 @@ html:not([lang="ar"]) .nameplate {
     }
   }
 
+  /* The reading measure comes from the governed token, never from `ch`.
+     `ch` is the advance of "0" — 0.688em in Geist, far from the average character — and the Arabic
+     body face is imported as an Arabic-ONLY subset with no "0" glyph, so `ch` silently falls back to
+     the 0.5em default there. A single `68ch` therefore resolved to two unrelated columns, BOTH
+     outside doc 03 §3's governed 65–75 band. `--measure-prose` is `em`-based and rebound per script
+     (32em Latin / 28em Arabic), so the character count is correct by construction in both.
+     Consumers that own the measure on an ancestor release this with `max-w-none`. */
   .content-prose {
-    max-width: 68ch;
+    max-width: var(--measure-prose);
     line-height: var(--leading-prose);
     color: var(--ui-text);
   }

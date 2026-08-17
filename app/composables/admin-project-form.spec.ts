@@ -9,7 +9,6 @@ import {
   initialProjectForm,
   isProjectFormDirty,
   newGalleryItem,
-  translatedLocales,
   translationFillState,
   validateProjectForm,
   type ProjectFormState,
@@ -118,7 +117,6 @@ describe('translation completeness — the list column', () => {
     const onlyEnglish = project({ translations: { en: translation() } })
     expect(hasTranslation(onlyEnglish, 'en')).toBe(true)
     expect(hasTranslation(onlyEnglish, 'ar')).toBe(false)
-    expect(translatedLocales(onlyEnglish)).toEqual(['en'])
   })
 
   it('counts a map entry with a blank title or slug as missing, not as a translation', () => {
@@ -128,7 +126,8 @@ describe('translation completeness — the list column', () => {
   })
 
   it('counts both when both are written', () => {
-    expect(translatedLocales(project())).toEqual(['en', 'ar'])
+    expect(hasTranslation(project(), 'en')).toBe(true)
+    expect(hasTranslation(project(), 'ar')).toBe(true)
   })
 })
 

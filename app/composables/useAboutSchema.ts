@@ -48,26 +48,29 @@ export function useAboutSchema(
   // forbids, because it looks correct. The e2e graph assertion is what catches this.
   const identityId = computed(() => `${siteConfig.url.replace(/\/+$/, '')}/#identity`)
 
-  useSchemaOrg(() => [
-    definePerson({
+  // One computed per NODE — see `useSiteSchema` for why neither a whole-list getter nor a whole-list
+  // `computed()` is correct (the getter no longer typechecks under the unhead-v3 vendor; the
+  // whole-list ref is snapshotted by `toValue()` during SSR setup and silently drops async fields).
+  useSchemaOrg([
+    computed(() => definePerson({
       name: settings.value?.siteName ?? t('brand.name'),
       jobTitle: singleLineTitle(settings.value?.tagline ?? t('brand.role')),
       sameAs: (settings.value?.profileLinks ?? []).map(link => link.url),
       email: settings.value?.professionalEmail ?? undefined,
       image: settings.value?.portrait?.url ?? undefined
-    }),
-    defineWebPage({
+    })),
+    computed(() => defineWebPage({
       '@type': 'ProfilePage',
       'name': t('about.title'),
       'description': t('seo.about.description'),
       'mainEntity': { '@id': identityId.value }
-    }),
-    defineBreadcrumb({
+    })),
+    computed(() => defineBreadcrumb({
       itemListElement: crumbs.value.map(crumb => ({
         name: crumb.label,
         // The current page carries no `to`; schema-org omits `item` for the last entry, correctly.
         item: crumb.to ? absolute(crumb.to) : undefined
       }))
-    })
+    }))
   ])
 }

@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test } from '@playwright/test'
+import { hydrated } from '../hydration'
 
 /**
  * Unfiltered WCAG 2.2 AA sweep for `/contact` (011): locale × viewport × theme, plus the two states
@@ -70,6 +71,10 @@ for (const route of ROUTES) {
   // once validation has run.
   test(`validation state — ${route.label}`, async ({ page }) => {
     await page.goto(route.path)
+    // Without this the assertion is NON-DISCRIMINATING: a pre-hydration submit falls through to the
+    // browser's native POST, and the form is still visible afterwards — so the test would pass for
+    // the wrong reason. It must be Vue's validation keeping the form up, not an unwired button.
+    await hydrated(page)
     await submit(page)
     await expect(page.locator('form')).toBeVisible()
     expect(await violations(page)).toEqual([])
@@ -78,6 +83,14 @@ for (const route of ROUTES) {
   // The success state replaces the form entirely — a different DOM with its own focus target.
   test(`success state — ${route.label}`, async ({ page }) => {
     await page.goto(route.path)
+    // MEASURED failure this waited for (campaign 026 Phase 6). Two consecutive local full-suite runs
+    // each failed exactly one of this test's two locale instances — AR in one run, EN in the next —
+    // both at the 15 s timeout with `form` count 1. The captured DOM named the cause: `Name*` was
+    // EMPTY and `[invalid]` while Subject, Email and Message all held their values, i.e. only the
+    // FIRST fill after `goto` was lost, landing before Vue attached its reactive model. Validation
+    // then correctly blocked submit, so the form never gave way to the success state. The product
+    // was right; the harness was racing it.
+    await hydrated(page)
     await fillValid(page)
     await submit(page)
     await expect(page.locator('form')).toHaveCount(0, { timeout: 15000 })
@@ -109,6 +122,9 @@ test.describe('contact keyboard and zoom', () => {
 
   test('the form can be submitted entirely from the keyboard', async ({ page }) => {
     await page.goto('/contact')
+    // Same class as `success state` above — this drives the form and submits it, so the first typed
+    // field is the one at risk. Latent rather than observed, and guarded for the same reason.
+    await hydrated(page)
     await page.locator('#contact-name').focus()
     await page.keyboard.type('Alex Morgan')
     await page.locator('#contact-subject').focus()

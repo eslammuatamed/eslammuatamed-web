@@ -13,7 +13,9 @@ import type { Crumb } from '~/components/ui/Breadcrumbs.vue'
  * the markup and the structured data cannot disagree — which is the failure mode search engines
  * penalise.
  *
- * Every field is a getter so the graph re-resolves as the async project data lands.
+ * Each NODE is a `computed`, so the graph re-resolves as the async project data lands. (It is not
+ * "every field is a getter" — that reading was already inaccurate, and the schema-org typing rejects
+ * a getter for the array-valued fields outright.)
  */
 export function useProjectSchema(
   project: Ref<ProjectDetail | null | undefined>,
@@ -28,8 +30,11 @@ export function useProjectSchema(
 
   const absolute = (path: string) => `${siteConfig.url}${localePath(path)}`
 
-  useSchemaOrg(() => [
-    {
+  // One computed per NODE — see `useSiteSchema` for why neither a whole-list getter nor a whole-list
+  // `computed()` is correct. `CreativeWork` has no `define*` helper, so it stays a plain object
+  // inside its computed; the composable accepts raw nodes either way.
+  useSchemaOrg([
+    computed(() => ({
       '@type': 'CreativeWork',
       'name': project.value?.title,
       'headline': project.value?.title,
@@ -43,13 +48,13 @@ export function useProjectSchema(
       'copyrightYear': project.value?.year ?? undefined,
       'inLanguage': locale.value,
       'url': project.value ? absolute(`/projects/${project.value.slug}`) : undefined
-    },
-    defineBreadcrumb({
+    })),
+    computed(() => defineBreadcrumb({
       itemListElement: crumbs.value.map(crumb => ({
         name: crumb.label,
         // The current page has no `to`; schema-org omits `item` for the last entry, which is correct.
         item: crumb.to ? absolute(crumb.to) : undefined
       }))
-    })
+    }))
   ])
 }

@@ -27,8 +27,7 @@ const facets = computed(() => data.value?.meta.facets ?? [])
 // Split pending into initial-load (skeleton) vs a filter/page change with content already on screen
 // (branded overlay) — useAsyncData keeps the previous `data` while refetching (doc 13 §9.1).
 const hasData = computed(() => !!data.value)
-const initialPending = computed(() => status.value === 'pending' && !hasData.value)
-const refreshing = computed(() => status.value === 'pending' && hasData.value)
+const { initialPending, refreshing } = useRequestState(() => status.value === 'pending', hasData)
 // A list page shows real empty copy; optional home sections omit themselves instead (doc 13 §9.1).
 const isEmpty = computed(() => !!data.value && data.value.data.length === 0)
 // "No projects at all" and "no matches for this filter" are different situations and read differently.
@@ -50,7 +49,18 @@ function onTechnologyChange(value: string | undefined): void {
 }
 
 /** Pagination must carry the active filter, or paging silently widens the result set. */
+/**
+ * Pagination must carry the active filter, or paging silently widens the result set.
+ *
+ * RETURNS `undefined` FOR THE PAGE THE VISITOR IS ALREADY ON. Nuxt UI passes `:to` to every item
+ * unconditionally (`Pagination.vue`), so the current page renders as a link to itself: `<NuxtLink>`
+ * prefetches it, and on a cache-ruled route that prefetch costs a second server render of a page the
+ * visitor already has. It is also a redundant tab stop. With no `to`, Nuxt UI renders that one item
+ * as a plain button — which is the conventional accessible pagination shape anyway — and the active
+ * colour/variant still mark it. Fixed in OUR callback, so no Nuxt UI component is replaced or patched.
+ */
 function pageLink(target: number) {
+  if (target === page.value) return undefined
   return { query: buildPageQuery(technology.value, target) }
 }
 
@@ -60,13 +70,22 @@ const crumbs = computed(() => [{ label: t('nav.home'), to: '/' }, { label: t('na
 
 const siteConfig = useSiteConfig()
 const localePath = useLocalePath()
-useSchemaOrg(() => [
-  defineBreadcrumb({
+// One computed per NODE — see `useSiteSchema` for why neither a whole-list getter nor a whole-list
+// `computed()` is correct under the unhead-v3 vendor.
+//
+// The computed wrapper preserves the node's existing reactive behaviour EXACTLY; it does not add
+// any. Measured, because the obvious claim here would be wrong: a CLIENT-SIDE locale switch does
+// NOT re-resolve these breadcrumb names — the graph keeps the outgoing locale's labels. That is
+// PRE-EXISTING and predates the Nuxt upgrade (identical on nuxt 4.4.8 with the old whole-list
+// getter, on 4.5.2 with it, and on 4.5.2 with this form), so it is recorded as its own finding
+// rather than fixed here. A fresh SSR load of the localized route is correct in both locales.
+useSchemaOrg([
+  computed(() => defineBreadcrumb({
     itemListElement: crumbs.value.map(crumb => ({
       name: crumb.label,
       item: crumb.to ? `${siteConfig.url}${localePath(crumb.to)}` : undefined
     }))
-  })
+  }))
 ])
 
 useSeoMeta({

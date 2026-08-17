@@ -5,7 +5,6 @@ import {
   initialAltFor,
   initialPortraitForm,
   isPortraitFormDirty,
-  isPortraitFormValid,
   validatePortraitForm,
   type PortraitFormState
 } from './portrait-form'
@@ -140,7 +139,6 @@ describe('initialPortraitForm', () => {
 describe('validatePortraitForm — both locales required when a portrait is selected', () => {
   it('accepts a portrait with both alts', () => {
     expect(validatePortraitForm(form()).missingAlt).toEqual([])
-    expect(isPortraitFormValid(form())).toBe(true)
   })
 
   it.each([
@@ -149,7 +147,6 @@ describe('validatePortraitForm — both locales required when a portrait is sele
     ['both missing', { en: '', ar: '' }, ['en', 'ar']]
   ])('rejects when %s', (_name, alt, expected) => {
     expect(validatePortraitForm(form({ alt })).missingAlt).toEqual(expected)
-    expect(isPortraitFormValid(form({ alt }))).toBe(false)
   })
 
   it('rejects whitespace — it would pass the API and still fail public readiness', () => {
@@ -158,7 +155,6 @@ describe('validatePortraitForm — both locales required when a portrait is sele
 
   it('requires NOTHING when no portrait is selected, so the empty state stays saveable', () => {
     expect(validatePortraitForm({ assetId: null, alt: { en: '', ar: '' } }).missingAlt).toEqual([])
-    expect(isPortraitFormValid({ assetId: null, alt: { en: '', ar: '' } })).toBe(true)
   })
 })
 

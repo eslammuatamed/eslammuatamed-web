@@ -222,14 +222,71 @@ export function budgetVerdict(actualBytes, budgetBytes) {
 }
 
 /**
+ * MEASURED offset between a shared-floor reading taken locally and the same reading taken on the
+ * GitHub-hosted runner, for identical sources.
+ *
+ * ⚠ WHY THIS EXISTS. The floor report compares a live reading against a FROZEN calibration constant
+ * and then labels the difference. Before this constant existed it labelled the WHOLE difference
+ * "shared framework/ecosystem growth" — so hosted CI printed `+6 B ← shared framework/ecosystem
+ * growth` on every run forever, describing RUNNER VARIANCE as framework growth (ledger §33.4). That
+ * is a false drift signal of exactly the kind this repo keeps being bitten by
+ * (`reference-web-build-output-nondeterministic`).
+ *
+ * DERIVED FROM MEASUREMENT, campaign 026 Phase 6, at candidate `fd56aaa`:
+ *   - build nondeterminism contributes ZERO. Two builds of identical sources on one machine produced
+ *     DIFFERENT `.output` hashes (bbaf9df9… vs 4f9ae9a9…) yet byte-identical floors — public 254,593
+ *     and dashboard 259,911 both times. So floor movement is not build-to-build noise.
+ *   - the local↔hosted offset is +6 B on BOTH floors independently: public 254,593 local vs 254,599
+ *     hosted, dashboard 259,911 local vs 259,917 hosted (hosted run 32039342735, ledger §33.3).
+ *     Two independent floors agreeing on the same offset is what makes it an environment property
+ *     rather than a coincidence.
+ *
+ * ⚠ THIS IS A REPORTING TOLERANCE, NOT A BUDGET. It never enters a cap, never changes a verdict, and
+ * never suppresses a number — the measured floor and the signed delta are always printed in full. It
+ * governs only whether the line is allowed to assert a CAUSE. It is deliberately tight: the public
+ * floor's real +39 B of growth since its calibration SHA sits far outside it and still reports as
+ * growth, which is the discriminating property the spec pins.
+ */
+export const FLOOR_ENVIRONMENT_VARIANCE_BYTES = 6
+
+/**
+ * Classify a floor delta into a cause the report is entitled to claim.
+ *
+ * The delta a run prints is the SUM of two unrelated quantities: real movement since the calibration
+ * SHA, and the environment offset between the calibration machine and the measuring machine. Only
+ * the first is growth. Attributing the sum to growth is the §33.4 defect.
+ *
+ * @returns {{kind: 'growth'|'shrink'|'variance', note: string}}
+ */
+export function classifyFloorDelta(deltaBytes, calibrationSha) {
+  const at = calibrationSha ? ` (calibrated at \`${calibrationSha}\`)` : ''
+  if (deltaBytes > FLOOR_ENVIRONMENT_VARIANCE_BYTES) {
+    return {
+      kind: 'growth',
+      note: `  ← shared framework/ecosystem growth${at}; this is NOT owned by any page`
+    }
+  }
+  if (deltaBytes < -FLOOR_ENVIRONMENT_VARIANCE_BYTES) {
+    return {
+      kind: 'shrink',
+      note: `  ← floor shrank${at}; claim it through a recalibration decision, not silently`
+    }
+  }
+  return {
+    kind: 'variance',
+    note:
+      `  ← within the ±${FLOOR_ENVIRONMENT_VARIANCE_BYTES} B MEASURED local↔hosted environment`
+      + ` variance band${at}; NOT attributable to growth`
+  }
+}
+
+/**
  * doc 20 §1 budgets, 1024-based, INCLUSIVE ("≤", so exactly-at-budget passes).
  *
  * These are doc 20 §1 VERBATIM. Re-baselining any of them requires an owner decision plus a
  * decision-log entry in `eslammuatamed-docs/docs/20-performance.md` — never an edit here.
  */
 export const BUDGET = {
-  /** D20-11 re-baseline (was 90 KB — below this stack's measured bilingual floor). */
-  totalJsBytes: 250 * KB,
   /**
    * D20-12. App-owned Rollup `renderedLength`, FROZEN — derived once from the Web `138cef5`
    * baseline and never recomputed from a build:
@@ -248,6 +305,219 @@ export const BUDGET = {
   appRenderedBytes: 101 * KB,
   /** Unchanged; also enforced statically by `npm run size`. */
   cssBytes: 30 * KB
+}
+
+/**
+ * D20-31 — the PUBLIC per-route delivery model. **REPLACES D20-11's flat `totalJsBytes`.**
+ *
+ * WHY THE FLAT NUMBER WAS RETIRED. A single per-route total re-charges every byte of shared
+ * framework growth to every page. Campaign 026 measured the consequence exactly: the shared floor
+ * reached 254,554 B gz — 99.4 % of the old 256,000 B total — leaving 1,446 B for a whole page, which
+ * is less than the lightest page in this application actually needs (2,599 B). Six of nine route
+ * families could not reach the old budget **with their entire page deleted**. A budget no compliant
+ * page can satisfy does not govern anything; it only mis-names the owner of a regression.
+ *
+ * WHAT REPLACES IT — two independent readings instead of one conflated number:
+ *
+ *   1. `sharedFloorBytes`  caps the SHARED FLOOR itself, so framework/ecosystem growth trips ONE
+ *                          gate with the correct owner named, instead of nine gates naming nine
+ *                          innocent pages.
+ *   2. `incrementalBytes`  caps what each page adds ON TOP of the floor, by FUNCTIONAL TIER.
+ *
+ * `appRenderedBytes` (D20-12) is untouched and remains an INDEPENDENT guard: a route can fail
+ * either, and passing one never excuses the other.
+ *
+ * ⚠ THE GATED QUANTITY IS THE DELTA, NEVER THE TOTAL. Read `incrementalBytes` against
+ * `route_total − shared_floor`. Comparing a route TOTAL against these numbers reinstates exactly the
+ * defect D20-31 exists to remove.
+ *
+ * ⚠ TIERS ARE DEFINED BY WHAT THE PAGE DOES, NOT BY WHAT IT CURRENTLY MEASURES. The measurements
+ * corroborate the boundaries; they do not set them. Tiering because figures cluster would be a
+ * budget refitted to each build, which measures nothing — the same reasoning that freezes D20-12.
+ *
+ * ⚠ These are doc 20 VERBATIM (D20-31). Re-baselining any of them requires an owner decision plus a
+ * decision-log entry in `eslammuatamed-docs/docs/20-performance.md` — never an edit here.
+ */
+export const PUBLIC_DELIVERY_BUDGET = {
+  /**
+   * Hard cap on the shared public floor (D20-31).
+   *
+   * DERIVATION, recorded because "rounded to a nice number" is not a derivation. D20-12's
+   * `x115/100` idiom yields 292,864 B here — 38,310 B of headroom, i.e. 2.4x the ENTIRE allowance of
+   * the heaviest route. That is precisely the "a framework upgrade must not silently gain unlimited
+   * shared headroom" failure, so the percentage idiom was REJECTED for this cap: D20-12's 15 % was
+   * calibrated against an ~89 KB app-owned baseline and does not transfer to a 254 KB floor.
+   *
+   * Derived instead from a MEASURED framework movement — OD-26-7's `@nuxtjs/i18n` 10.6.0 adoption
+   * cost +1,946 B gz on every route:
+   *
+   *   254,554 + (4 x 1,946) = 262,338  ->  ceil to whole KiB  =  257 KiB  =  263,168 B
+   *
+   * i.e. roughly four routine ecosystem adoptions of headroom. A structural regression (another
+   * Unhead-scale duplication) trips it immediately.
+   */
+  sharedFloorBytes: 257 * KB,
+  /**
+   * Per-route INCREMENTAL delivery caps, by functional tier. Derived with D20-12's idiom
+   * (`ceil((measuredMax x 115 / 100) / 1024) x 1024`) from the campaign-026 calibration:
+   *
+   *   content                7 KiB   <- ceil((5,597  x 1.15)/1024)x1024
+   *   collection            12 KiB   <- ceil((10,073 x 1.15)/1024)x1024
+   *   interactive-subsystem 18 KiB   <- ceil((15,876 x 1.15)/1024)x1024
+   */
+  incrementalBytes: {
+    /** Single-purpose content page: renders prose/structured content and chrome only. */
+    content: 7 * KB,
+    /** Collection/composite page: presents multiple content collections or previews. */
+    collection: 12 * KB,
+    /** Page embedding a third-party interactive subsystem (carousel, form control set, editor). */
+    'interactive-subsystem': 18 * KB
+  },
+  /**
+   * The floor measured at D20-31 calibration (campaign 026, Web `8067ec8`). NOT a gate — the gate is
+   * `sharedFloorBytes`. This exists so the report can show the DIRECTION and SIZE of floor movement,
+   * which is the early warning that makes the cap safe. A drop below it is a real win, but it is
+   * claimed through recalibration rather than absorbed silently.
+   */
+  sharedFloorCalibrationBytes: 254_554,
+  /**
+   * The SHA the calibration above was measured at, so a reader can tell REAL movement since that
+   * tree from environment variance. ⚠ Load-bearing: at candidate `fd56aaa` this floor reads 254,593
+   * locally — **+39 B of genuine growth accrued between `8067ec8` and `fd56aaa`**, well outside the
+   * ±6 B environment band, so it correctly still reports as growth.
+   */
+  sharedFloorCalibrationSha: '8067ec8',
+  /**
+   * Attribution obligation threshold. At or above this fraction of its tier cap, a route must print
+   * full attribution. Carried from D20-24's lesson: a high ceiling is only safe because growth must
+   * be EXPLAINED long before it is allowed to BLOCK, and silence in the warning band is a gate
+   * defect rather than a pass.
+   */
+  attributionThreshold: 0.85
+}
+
+/**
+ * FUNCTIONAL TIER per governed public route (D20-31).
+ *
+ * ⚠ Assigning a route to a tier is a GOVERNANCE act, not a convenience: moving a route to a roomier
+ * tier is a budget change and needs an owner decision plus a doc-20 entry, exactly like re-baselining
+ * a number. Tier-shopping — filing a page under `interactive-subsystem` because it is over `content`
+ * — is the failure mode this table exists to make visible, which is why each entry carries the
+ * FUNCTIONAL reason rather than a byte figure.
+ *
+ * ⚠ There is deliberately NO per-route byte exception table. If the functional tiers are ever proven
+ * insufficient by evidence, that is a new owner decision, not a local edit here.
+ */
+export const PUBLIC_ROUTE_TIERS = {
+  // Composite landing page: hero plus previews of several content collections.
+  '/': 'collection',
+  '/ar': 'collection',
+  // Index pages over a content collection.
+  '/blog': 'collection',
+  '/ar/blog': 'collection',
+  '/projects': 'collection',
+  '/ar/projects': 'collection',
+  // Article pages: prose and chrome only.
+  '/blog/staying-inside-performance-budget-nuxt': 'content',
+  '/ar/blog/albaqaa-dimn-mizaniyat-ada-nuxt': 'content',
+  // Structured-content pages: no interactive subsystem, no collection rendering.
+  '/experience': 'content',
+  '/ar/experience': 'content',
+  '/about': 'content',
+  '/ar/about': 'content',
+  '/resume': 'content',
+  '/ar/resume': 'content',
+  // Embeds the Nuxt UI carousel (`UCarousel` -> `embla-carousel`) for the project gallery.
+  '/projects/content-platform-api': 'interactive-subsystem',
+  '/ar/projects/content-platform-api': 'interactive-subsystem',
+  // Embeds the Nuxt UI form control set (`UForm`/`UFormField`/`UInput`/`UTextarea`).
+  '/contact': 'interactive-subsystem',
+  '/ar/contact': 'interactive-subsystem'
+}
+
+/**
+ * FROZEN reference route set — the shared floor is the intersection over THESE routes only (D20-31).
+ *
+ * ⚠ THIS IS THE "FROZEN SHARED SET" MITIGATION, AND WHAT IT FREEZES MATTERS. It is deliberately NOT
+ * a frozen list of asset filenames: Nuxt asset names are content-hashed, so a filename list would be
+ * invalidated by the very next build and could never be enforced.
+ *
+ * ⚠ THE FAILURE MODE IT PREVENTS. Adding a governed public route can shrink the floor BY
+ * CONSTRUCTION: a new page that does not load a currently-shared asset ejects that asset from the
+ * intersection for EVERY route, so the floor drops, every route's delta rises by the same amount,
+ * and every delta gate can trip at once — because a page was added. Freezing the reference set makes
+ * that impossible rather than merely unlikely: a new route is MEASURED against the floor, but does
+ * not PARTICIPATE in defining it.
+ *
+ * ⚠ Changing this list is a deliberate recalibration and requires an owner decision plus a doc-20
+ * entry. It is the "when the frozen shared set genuinely changes" case, and it must never be edited
+ * to make a failing gate pass.
+ */
+export const FLOOR_REFERENCE_ROUTES = Object.freeze([
+  '/', '/ar',
+  '/blog', '/ar/blog',
+  '/blog/staying-inside-performance-budget-nuxt', '/ar/blog/albaqaa-dimn-mizaniyat-ada-nuxt',
+  '/projects', '/ar/projects',
+  '/projects/content-platform-api', '/ar/projects/content-platform-api',
+  '/experience', '/ar/experience',
+  '/about', '/ar/about',
+  '/resume', '/ar/resume',
+  '/contact', '/ar/contact'
+])
+
+/**
+ * The tier a governed public route is filed under. Throws rather than defaulting: an unfiled route
+ * would otherwise silently inherit whichever cap the caller happened to pick, which is the same
+ * class of defect as a route that is never measured.
+ */
+export function publicTierFor(route) {
+  const tier = PUBLIC_ROUTE_TIERS[route]
+  if (!tier) {
+    throw new Error(
+      `public route ${route} has no D20-31 functional tier. Add it to PUBLIC_ROUTE_TIERS with its ` +
+      'functional reason (an owner decision + doc 20 entry), rather than defaulting it to a cap.'
+    )
+  }
+  return tier
+}
+
+/**
+ * Governance coverage: every measured public route must be filed under a tier, and every filed route
+ * must still be measured. The second direction matters — a tier entry left behind for a deleted
+ * route reads as governance that is no longer enforced.
+ */
+export function assertPublicTierCoverage(measuredRoutes) {
+  const measured = new Set(measuredRoutes)
+  const unfiled = measuredRoutes.filter(r => !PUBLIC_ROUTE_TIERS[r])
+  const orphaned = Object.keys(PUBLIC_ROUTE_TIERS).filter(r => !measured.has(r))
+  if (unfiled.length > 0) {
+    throw new Error(`public routes measured but not filed under a D20-31 tier: ${unfiled.join(', ')}`)
+  }
+  if (orphaned.length > 0) {
+    throw new Error(`D20-31 tiers name routes that are not measured: ${orphaned.join(', ')}`)
+  }
+}
+
+/**
+ * The shared public floor: assets present on EVERY route of the FROZEN reference set.
+ *
+ * @param assetsByRoute Map<route, Set<assetPath>> — must contain every `FLOOR_REFERENCE_ROUTES` entry.
+ * @returns {{assets: Set<string>}}
+ */
+export function resolveSharedFloor(assetsByRoute) {
+  const missing = FLOOR_REFERENCE_ROUTES.filter(r => !assetsByRoute.has(r))
+  if (missing.length > 0) {
+    throw new Error(
+      `cannot derive the D20-31 shared floor: reference routes were not measured: ${missing.join(', ')}`
+    )
+  }
+  let shared = null
+  for (const route of FLOOR_REFERENCE_ROUTES) {
+    const assets = assetsByRoute.get(route)
+    if (shared === null) { shared = new Set(assets); continue }
+    for (const asset of [...shared]) if (!assets.has(asset)) shared.delete(asset)
+  }
+  return { assets: shared }
 }
 
 /**
@@ -291,11 +561,168 @@ export const BUDGET = {
  * decision-log entry there — never an edit here.
  */
 export const DASHBOARD_BUDGET = {
-  /** D20-24 quality target and warning boundary. At or below this is an ordinary green result. */
+  /**
+   * D20-24 quality target and warning boundary. At or below this is an ordinary green result.
+   *
+   * ⚠ THIS SURVIVES D20-32 UNCHANGED, AND IT IS NOW THE ONLY THING THE ROUTE TOTAL IS COMPARED
+   * AGAINST. D20-32 replaced the flat 320 KB gz HARD CEILING with the floor + incremental model in
+   * `DASHBOARD_DELIVERY_BUDGET`; it deliberately did NOT touch this number. The warning tier is what
+   * keeps growth EXPLAINED (the six-part attribution block) and it is what keeps D20-30's attributed
+   * acceptance of `/dashboard/messages` visible on every run instead of letting the route become an
+   * ordinary green line once the hard ceiling stopped applying to it.
+   */
   totalJsQualityTargetBytes: 300 * KB,
-  /** D20-24 hard release ceiling. Above this is release-blocking and never raised automatically. */
-  totalJsCeilingBytes: 320 * KB,
   cssBytes: BUDGET.cssBytes
+}
+
+/**
+ * INTERIM Dashboard delivery model — doc 20 §1.1 (**D20-32**), replacing D20-24's flat total-JS HARD
+ * CEILING. The 300 KB gz quality target above is UNCHANGED and still governs warnings.
+ *
+ * ⚠ WHY THE FLAT CEILING WAS REPLACED RATHER THAN RAISED. Measured across all eight governed routes,
+ * the shared dashboard floor is 259,911 B gz — **96.9 % of the old 320 KB ceiling** — leaving about
+ * 10 KB for any page's own delivery while the lightest real page already needs 449 B and the heaviest
+ * needs 77,549 B. A flat per-route TOTAL therefore charged every page for shared framework delivery it
+ * does not own, which is the identical structural unfitness D20-31 established for the public surface
+ * and cured the same way. No number was raised to fit: the quantity being gated changed.
+ *
+ * ⚠ THE GATED QUANTITY IS THE DELTA ABOVE THE SHARED FLOOR, NEVER THE ROUTE TOTAL. Comparing a
+ * dashboard route TOTAL against `incrementalBytes` reinstates exactly the defect D20-32 removes.
+ *
+ * ⚠ ONE GENERIC ALLOWANCE, DELIBERATELY — NO TIERS AND NO PER-ROUTE TABLE. A two-tier split
+ * (`operator-page` 60 KiB / `data-table` 84 KiB) was derived and **REJECTED**: the single cap already
+ * governs every route honestly, so the split bought 24,576 B of tightness on the six lighter routes
+ * and nothing on the route that actually motivated this decision. A second tier whose only member is
+ * `/dashboard/messages`, sized from that member's own current measurement, is arithmetically
+ * indistinguishable from a per-route allowance — i.e. the named waiver D20-30 forbids, reached by a
+ * different route. If a second page ever adopts the data-table subsystem, the tier question reopens
+ * with a real distribution behind it.
+ *
+ * ⚠ THESE ARE INTERIM LIMITS. They govern the CURRENT production Dashboard architecture until the
+ * post-campaign Dashboard UI/UX performance pass (D11-8), which is responsible for reviewing and, if
+ * appropriate, superseding both the model and this calibration. Interim is not provisional-forever:
+ * it means the review is owed, not that the numbers are soft.
+ *
+ * ⚠ These are doc 20 VERBATIM. Re-baselining any of them requires an owner decision plus a
+ * decision-log entry in `eslammuatamed-docs/docs/20-performance.md` — never an edit here.
+ */
+export const DASHBOARD_DELIVERY_BUDGET = {
+  /**
+   * Hard cap on the shared dashboard floor.
+   *
+   * DERIVATION — from a MEASURED framework movement, not a percentage. D20-31 already rejected
+   * D20-12's `x115/100` idiom for a floor-scale number (15 % was calibrated against an ~89 KB
+   * app-owned baseline and does not transfer), and reusing an unrelated budget's percentage here
+   * would be the same error. The unit is OD-26-7's measured `@nuxtjs/i18n` 10.6.0 adoption, which
+   * cost **+1,946 B gz on every route**:
+   *
+   *   259,911 + (4 x 1,946) = 267,695  ->  ceil to whole KiB  =  262 KiB  =  268,288 B
+   *
+   * i.e. roughly four routine ecosystem adoptions of headroom (8,377 B). ⚠ That leaves the floor at
+   * **96.9 % utilisation**, which is TIGHT and is stated rather than smoothed: the next framework
+   * bump of Unhead scale plausibly trips this gate. That is the intended behaviour — shared growth
+   * should surface here, once, instead of being charged to every page.
+   */
+  sharedFloorBytes: 262 * KB,
+  /**
+   * Per-route INCREMENTAL delivery cap above the shared floor — ONE allowance for every governed
+   * dashboard route.
+   *
+   * DERIVATION — the same measured unit as the floor cap, applied consistently:
+   *
+   *   77,549 + (4 x 1,946) = 85,333  ->  ceil to whole KiB  =  84 KiB  =  86,016 B
+   *
+   * where 77,549 B gz is the measured maximum route-specific delivery across the eight governed
+   * routes (`/dashboard/messages`). Headroom 8,467 B, i.e. **90.2 % utilisation for the heaviest
+   * route** — explicit and bounded, and deliberately NOT equal to the current maximum.
+   *
+   * ⚠ A candidate 16,416 B unit was REJECTED: it was obtained by subtracting one route's delta from
+   * another's, and D20-12/D20-31 establish that gzip is not decomposable per module that way, so it
+   * would have been a fabricated input to a governed cap. A 12,945 B candidate was also rejected as
+   * INFERRED rather than measured.
+   *
+   * ⚠ `/dashboard` sits at 0.6 % of this cap, and that is CORRECT rather than absurd: it is the
+   * dashboard overview and legitimately ships almost nothing of its own. Do not "fix" the apparent
+   * slack by inventing a tier for it — the app-owned cap and the floor still govern that route.
+   */
+  incrementalBytes: 84 * KB,
+  /**
+   * The dashboard floor measured at D20-32 calibration (campaign 026, Web `da83531`). NOT a gate —
+   * the gate is `sharedFloorBytes`. This exists so the report can show the DIRECTION and SIZE of
+   * floor movement, which is the early warning that makes the cap safe. A drop below it is a real
+   * win, but it is claimed through recalibration rather than absorbed silently.
+   */
+  sharedFloorCalibrationBytes: 259_911,
+  /**
+   * The SHA the calibration above was measured at.
+   *
+   * ⚠ This constant is NOT reporting-only — it is the stated MEASURED INPUT from which
+   * `sharedFloorBytes` is derived (`ceilKiB(259_911 + 4 × 1_946) = 262 KiB`), and the spec pins that
+   * derivation. Ledger §33.4 proposed re-stamping it to the hosted 259,917 to silence the `+6 B`
+   * label; Phase 6 REJECTED that on evidence, because it would repurpose a governed cap's measured
+   * input to fix a print label, and would merely mirror the false signal (local would then read
+   * −6 B). The reporting defect is fixed in the REPORT — see `classifyFloorDelta` — and this number
+   * stays frozen at what was actually measured.
+   */
+  sharedFloorCalibrationSha: 'da83531',
+  /**
+   * Attribution obligation threshold on the INCREMENTAL cap, carried from D20-24/D20-31: growth must
+   * be EXPLAINED long before it is allowed to BLOCK, and silence near a cap is a gate defect.
+   */
+  attributionThreshold: 0.85
+}
+
+/**
+ * FROZEN dashboard floor reference set — the shared dashboard floor is the intersection over THESE
+ * routes only (D20-32).
+ *
+ * ⚠ THIS IS DELIBERATELY A SEPARATE LIST FROM `DASHBOARD_ROUTES`, AND THAT SEPARATION IS THE WHOLE
+ * MITIGATION. If the floor were derived over "whatever is governed today", adding a governed
+ * dashboard route could shrink the floor BY CONSTRUCTION: a new page that does not load a currently
+ * shared asset ejects that asset from the intersection for EVERY route, the floor drops, and every
+ * route's delta rises by the same amount at once — every delta gate can then trip because a page was
+ * added. Freezing the reference set makes that impossible rather than merely unlikely: a newly
+ * governed route is MEASURED against the floor but does not PARTICIPATE in defining it.
+ *
+ * ⚠ As in D20-31, what is frozen is the ROUTE LIST, never asset filenames — Nuxt names are
+ * content-hashed, so a filename freeze would be invalidated by the very next build.
+ *
+ * ⚠ Changing this list is a deliberate recalibration requiring an owner decision plus a doc-20
+ * entry. It must never be edited to make a failing gate pass.
+ */
+export const DASHBOARD_FLOOR_REFERENCE_ROUTES = Object.freeze([
+  '/dashboard/login',
+  '/dashboard',
+  '/dashboard/messages',
+  '/dashboard/media',
+  '/dashboard/profile',
+  '/dashboard/projects',
+  '/dashboard/projects/new',
+  '/dashboard/projects/00000000-0000-0000-0000-000000000000'
+])
+
+/**
+ * The shared dashboard floor: assets present in the closure of EVERY route of the FROZEN dashboard
+ * reference set.
+ *
+ * @param assetsByRoute Map<route, Set<assetPath>> — must contain every
+ *   `DASHBOARD_FLOOR_REFERENCE_ROUTES` entry.
+ * @returns {{assets: Set<string>}}
+ */
+export function resolveDashboardSharedFloor(assetsByRoute) {
+  const missing = DASHBOARD_FLOOR_REFERENCE_ROUTES.filter(r => !assetsByRoute.has(r))
+  if (missing.length > 0) {
+    throw new Error(
+      `cannot derive the D20-32 shared dashboard floor: reference routes were not measured: ${missing.join(', ')}`
+    )
+  }
+  let shared = null
+  for (const route of DASHBOARD_FLOOR_REFERENCE_ROUTES) {
+    const assets = assetsByRoute.get(route)
+    if (shared === null) { shared = new Set(assets); continue }
+    for (const asset of [...shared]) if (!assets.has(asset)) shared.delete(asset)
+  }
+  return { assets: shared }
 }
 
 /**
@@ -427,16 +854,25 @@ export const DASHBOARD_ACCEPTED_BASELINE_BYTES = {
 }
 
 /**
- * The dashboard total-JS verdict — the only place the two D20-24 tiers are compared, so no caller
- * can invent a third reading. Inclusive at both bounds ("≤", exactly-at-budget passes).
+ * The dashboard total-JS verdict against the D20-24 QUALITY TARGET. Inclusive ("≤", exactly-at-target
+ * passes).
+ *
+ * ⚠ TWO-VALUED SINCE D20-32, AND THE MISSING THIRD VALUE IS THE POINT. There is deliberately NO
+ * `'FAIL'` return any more: D20-32 replaced the flat total-JS hard ceiling with the shared-floor +
+ * incremental model, so a route TOTAL can no longer fail anything. Hard failure now comes from
+ * `DASHBOARD_DELIVERY_BUDGET` (floor, incremental) and the frozen app-owned caps — three independent
+ * guards, none of them a route total.
+ *
+ * Leaving a reachable `'FAIL'` here would have been worse than dead code: it would have kept a second,
+ * contradictory ceiling alive in the one function that is supposed to be the single reading of this
+ * policy. `WARN` still PASSES the gate and still obliges the six-part attribution block, which is what
+ * keeps a route above the quality target from ever printing as an ordinary green result.
  *
  * @param {number} actualBytes gzip bytes for the route's closure
- * @returns {'PASS' | 'WARN' | 'FAIL'} WARN still passes the gate, but obliges the attribution block
+ * @returns {'PASS' | 'WARN'} WARN passes the gate, but obliges the attribution block
  */
 export function dashboardTotalVerdict(actualBytes) {
-  if (actualBytes <= DASHBOARD_BUDGET.totalJsQualityTargetBytes) return 'PASS'
-  if (actualBytes <= DASHBOARD_BUDGET.totalJsCeilingBytes) return 'WARN'
-  return 'FAIL'
+  return actualBytes <= DASHBOARD_BUDGET.totalJsQualityTargetBytes ? 'PASS' : 'WARN'
 }
 
 /**

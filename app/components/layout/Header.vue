@@ -22,8 +22,16 @@ const navItems = computed<NavLink[]>(() => [
   { label: t('nav.about'), to: '/about' }
 ])
 
-// Active when the resolved target is the current path or an ancestor of it (so /blog stays active on a
-// post). Compared on localized paths so it holds in both locales.
+/**
+ * Active when the resolved target is the current path or an ancestor of it (so /blog stays active on
+ * a post). Compared on localized paths so it holds in both locales.
+ *
+ * ALSO GATES PREFETCH. The active item points at the page being viewed, so `<NuxtLink>`'s
+ * default prefetch fetches that route's payload for nothing — measured on the built preview as one
+ * self-payload request per cache-ruled route, on every public page view. It remains a LINK with
+ * `aria-current="page"`, which is the conventional accessible pattern for a current nav item; only
+ * the wasted fetch is removed.
+ */
 function isActive(to: string): boolean {
   const target = localePath(to)
   return route.path === target || route.path.startsWith(`${target}/`)
@@ -96,6 +104,7 @@ watch(() => route.fullPath, () => {
           :to="item.to"
           class="relative py-1 text-body-sm transition-colors after:absolute after:inset-x-0 after:-bottom-0.5 after:h-px after:origin-center after:scale-x-0 after:bg-primary after:transition-transform hover:after:scale-x-100 focus-visible:after:scale-x-100"
           :class="isActive(item.to) ? 'text-highlighted after:scale-x-100' : 'text-muted hover:text-default'"
+          :prefetch="!isActive(item.to)"
           :aria-current="isActive(item.to) ? 'page' : undefined"
         >
           {{ item.label }}
@@ -156,6 +165,7 @@ watch(() => route.fullPath, () => {
             :to="item.to"
             class="border-b border-default py-4 font-display text-h3 transition-colors"
             :class="isActive(item.to) ? 'text-primary' : 'text-highlighted hover:text-primary'"
+            :prefetch="!isActive(item.to)"
             :aria-current="isActive(item.to) ? 'page' : undefined"
           >
             {{ item.label }}
