@@ -5,7 +5,7 @@ Status vocabulary: **TODO** · **DOING** · **DONE** · **DEFERRED** (evidence +
 **GATED** (blocked on an owner decision).
 
 > ## ✅ Campaign status — LIVE IN PRODUCTION (2026-08-17)
-> **Phases 0–7 CLOSED · Phase 8 IN PROGRESS (rescoped 2026-08-17).** Campaign 026 was promoted and deployed to Production on 2026-08-17.
+> **ALL PHASES CLOSED — CAMPAIGN 026 IS CLOSED (2026-08-17).** Campaign 026 was promoted and deployed to Production on 2026-08-17, and Phase 8 (rescoped to campaign documentation, handoff and truth reconciliation) is complete.
 >
 > | what | value |
 > |---|---|
@@ -16,9 +16,12 @@ Status vocabulary: **TODO** · **DOING** · **DONE** · **DEFERRED** (evidence +
 > | deploy run | `32050429649` — **15/15 cutover steps `success`, no rollback** |
 > | post-deploy `dev` sync | **DONE** (D17-4 fast-forward `f8ffd72..648aa46`; dev CI `32054971908` `success`) |
 >
-> ⚠ **This is not yet a campaign-closure banner.** Phase 8 — **rescoped 2026-08-17 to campaign
-> documentation, handoff and truth reconciliation ONLY** — is **IN PROGRESS**, and the non-blocking
-> follow-ups below are open. See **§Phase 8** and **§Remaining follow-ups** at the end of this document.
+> ⚠ **What closure does and does not mean.** It means every Campaign 026 engineering, release and
+> documentation obligation is discharged. It does **not** mean the Web roadmap is complete, and it
+> does **not** close the **deferred** work below — that work was **transferred**, with a named
+> receiving campaign and a trigger, and its existence does not hold this campaign open. Five
+> **operational follow-ups** and five **watchpoints** remain open by design; none is a blocker.
+> See **§Phase 8** and **§Remaining follow-ups**.
 
 ---
 
@@ -457,15 +460,15 @@ watchpoint into a task.
 
 | ID | Task | Status |
 |---|---|---|
-| T8.1 | **Documentation truth reconciliation.** Update the Campaign-026-relevant statements that Campaign 026 or its Production closeout made stale, across: PROJECT_GUIDE · repo READMEs · architecture · testing · CI/CD · security · performance · dependency strategy · roadmap · handoff · ledger / SpecKit | **DOING** |
-| T8.1a | **Final architecture truth** — the Nuxt 4.5.2-era stack; current Nuxt UI / Vue / Router / Pinia / i18n state; **D20-31** public performance model; **interim D20-32** Dashboard model; **D11-8** post-Campaign Dashboard UI/UX obligation; current payload-extraction policy; current prefetch / self-link behaviour where documented; current CI/deploy verification behaviour; exact Node/runtime requirements; remaining supported dependency exceptions; upstream-owned Unhead duplication if still relevant | **DOING** |
-| T8.1b | **Security truth** — preserve the Phase 6 disposition as **dated campaign evidence**, never as verified-current. No remembered Dependabot/banner count may be carried forward. Document the measurement-source problem clearly enough that future work does not trust the GitHub push banner as authoritative. **R-4 stands** | **DOING** |
-| T8.1c | **Production truth** — the handoff records Production SHA `648aa467cd8bc7157cbcad2fd7c0e8981ee1f16c`, release `20260817T175534Z-648aa46`, the successful watched deployment, completed `dev`/`main` reconciliation, current `dev` `8598df61413ce46d66a2f6dbc622c3e02074ad2c`, and `main` unchanged at `648aa467…`. **The docs-only `dev` commit after Production is expected and must not be described as Production drift** | **DOING** |
-| T8.5 | Preserve historical lessons (the failed Nuxt 4.5.1 upgrade, the CSS-budget investigation, the CI evidence) **as dated history, without teaching them as current architecture** | TODO |
-| T8.6 | Verify paths + anchors across the reconciled documents; **Arabic combining-mark-safe** anchor checking; **negative-control the validator** before trusting a zero-finding result. Scope: an existing documentation-integrity gate — **not** a new curriculum-validation system | TODO |
-| T8.7 | `docs/group` **source-driven** regeneration: blast radius → pre-check → regenerate → postcheck → negative control → exact restore → deterministic second generation → byte-identical → record hashes. **Never hand-edit bundles** | TODO |
-| T8.8 | Close doc 24 §2b **RB-1** and every other Campaign-026 obligation *actually satisfied*; synchronize **roadmap / ledger / handoff / SpecKit**; remove or supersede stale TODOs Campaign 026 genuinely completed. **Do not close deferred post-Frontend-v1 work as completed** | TODO |
-| T8.9 | Final report separating **COMPLETED · DEFERRED · OWNER-GATED · OUTSIDE CAMPAIGN · NEXT FRONTEND WORKSTREAM** | TODO |
+| T8.1 | **Documentation truth reconciliation.** Update the Campaign-026-relevant statements that Campaign 026 or its Production closeout made stale, across: PROJECT_GUIDE · repo READMEs · architecture · testing · CI/CD · security · performance · dependency strategy · roadmap · handoff · ledger / SpecKit | **DONE** |
+| T8.1a | **Final architecture truth** — the Nuxt 4.5.2-era stack; current Nuxt UI / Vue / Router / Pinia / i18n state; **D20-31** public performance model; **interim D20-32** Dashboard model; **D11-8** post-Campaign Dashboard UI/UX obligation; current payload-extraction policy; current prefetch / self-link behaviour where documented; current CI/deploy verification behaviour; exact Node/runtime requirements; remaining supported dependency exceptions; upstream-owned Unhead duplication if still relevant | **DONE** |
+| T8.1b | **Security truth** — preserve the Phase 6 disposition as **dated campaign evidence**, never as verified-current. No remembered Dependabot/banner count may be carried forward. Document the measurement-source problem clearly enough that future work does not trust the GitHub push banner as authoritative. **R-4 stands** | **DONE** |
+| T8.1c | **Production truth** — the handoff records Production SHA `648aa467cd8bc7157cbcad2fd7c0e8981ee1f16c`, release `20260817T175534Z-648aa46`, the successful watched deployment, completed `dev`/`main` reconciliation, current `dev` `8598df61413ce46d66a2f6dbc622c3e02074ad2c`, and `main` unchanged at `648aa467…`. **The docs-only `dev` commit after Production is expected and must not be described as Production drift** | **DONE** |
+| T8.5 | Preserve historical lessons (the failed Nuxt 4.5.1 upgrade, the CSS-budget investigation, the CI evidence) **as dated history, without teaching them as current architecture** | **DONE** — doc 24 §2b keeps the 4.5.1 probe findings under *"The starting condition RB-1 named"*; doc 20's 2026-07-26 framework floor is relabelled dated evidence pointing at the calibrated D20-31/D20-32 figures; the D20-12 frozen baseline was checked and deliberately left untouched |
+| T8.6 | Verify paths + anchors across the reconciled documents; **Arabic combining-mark-safe** anchor checking; **negative-control the validator** before trusting a zero-finding result. Scope: an existing documentation-integrity gate — **not** a new curriculum-validation system | **DONE** — `docs/research/tools/link-anchor-check.py`. Self-test **exit 0**: 10 slug fixtures + a control asserting the naive `isalnum()` slugger *disagrees* on Arabic + an end-to-end negative control. ⚠ **The validator was WRONG on its first real run and the run caught it** (trim-before-filter, leading-hyphen anchors). Web: **0** intra-repo findings, 29 cross-repo links re-rooted and all resolved. Docs: **exit 1**, all findings classified — see §Phase 8 exit |
+| T8.7 | `docs/group` **source-driven** regeneration: blast radius → pre-check → regenerate → postcheck → negative control → exact restore → deterministic second generation → byte-identical → record hashes. **Never hand-edit bundles** | **DONE** — blast radius predicted *then* confirmed (bundle **01 sha256 unchanged**); pre-check **1** → post-check **0**; second generation **byte-identical**; negative control drove the gate red and the restore was **sha256-verified against the pre-mutation value**. No bundle hand-edited |
+| T8.8 | Close doc 24 §2b **RB-1** and every other Campaign-026 obligation *actually satisfied*; synchronize **roadmap / ledger / handoff / SpecKit**; remove or supersede stale TODOs Campaign 026 genuinely completed. **Do not close deferred post-Frontend-v1 work as completed** | **DONE** — RB-1 **CLOSED** against an exit-condition evidence table; doc 24 §3.1 closed **line by line** with its two undelivered lines named as deferred; D16-11's **Web half** discharged (API half untouched). Agreement **verified mechanically, not asserted**: the Production SHA, release id, current `dev` SHA, serving tree and final CSS figure were diffed across all six artifacts — no conflicts, and the two SHAs match live `git` |
+| T8.9 | Final report separating **COMPLETED · DEFERRED · OWNER-GATED · OUTSIDE CAMPAIGN · NEXT FRONTEND WORKSTREAM** | **DONE** — ledger §45 |
 | T8.10 | **Record the deferral transfer explicitly**, so a future session reads it as *transferred*, never as *forgotten* | **DONE** — §Deferred below, plus ledger §44 |
 
 ### DEFERRED out of Campaign 026 — transferred, not forgotten
@@ -505,6 +508,18 @@ Campaign 026 may be declared **CLOSED** when, and only when:
 6. no Campaign 026 engineering or release blocker remains.
 
 **The existence of deferred post-v1 study maps does not block any of the six.**
+
+#### Exit verdict — SATISFIED 2026-08-17
+
+⚠ **Stated precisely, because "the gates pass" would otherwise read as "everything exited 0", and
+one of them did not.**
+
+| Gate | Result |
+|---|---|
+| `docs:group:check` | **exit 0** — bundles current, second generation byte-identical, bundle 01 unchanged |
+| link/anchor validator — **self-test** | **exit 0** — 10 slug fixtures, naive-slugger discrimination control, end-to-end negative control |
+| link/anchor validator — **Web repo** | **exit 0 intra-repo findings**; all 29 cross-repo links re-rooted against the Docs branch and resolved, anchors included |
+| link/anchor validator — **Docs repo** | ⚠ **exit 1.** Every finding classified: the overwhelming majority sit **inside the generated bundles** and are a **pre-existing generator characteristic** (`generate-doc-groups.mjs` does not rewrite relative links, so a link correct relative to `docs/` does not resolve from `docs/group/`); the remainder are **worktree-layout artifacts** whose sibling-repo targets exist in the canonical checkout. **Controlled against the pre-Phase-8 baseline `b1072b9`, which reports the same count: Phase 8 introduced ZERO new finding classes in the sources.** Reported, deliberately **not** fixed — changing the generator is outside this phase's authorized scope |
 
 ---
 

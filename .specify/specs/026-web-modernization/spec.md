@@ -12,15 +12,15 @@
 **Explicitly closed and not reopened:** all Backend campaigns. No Backend ESM, no PostgreSQL
 SCRAM, no M5, no unrelated roadmap work.
 
-> ## ✅ OUTCOME — LIVE IN PRODUCTION (2026-08-17)
+> ## ✅ OUTCOME — LIVE IN PRODUCTION · CAMPAIGN CLOSED (2026-08-17)
 >
-> **Phases 0–7 CLOSED · Phase 8 IN PROGRESS (rescoped 2026-08-17).** Promoted via PR #67 as a true 2-parent merge commit
+> **ALL PHASES CLOSED.** Promoted via PR #67 as a true 2-parent merge commit
 > **`648aa467cd8bc7157cbcad2fd7c0e8981ee1f16c`** and deployed as release **`20260817T175534Z-648aa46`**
 > (serving tree `7deef81c…`, 15/15 cutover steps `success`, **no rollback**). `origin/dev` was
 > fast-forwarded to `origin/main` afterwards per D17-4. Full Production smoke green; two smoke groups
 > remain **access-limited, not failing**.
 >
-> ⚠ **This banner records the OUTCOME, not campaign closure** — Phase 8 is in progress. ⚠ **Phase 8
+> ⚠ **Campaign 026 is CLOSED; the Web roadmap is not complete.** ⚠ **Phase 8
 > was RESCOPED by owner directive on 2026-08-17** to *campaign documentation, handoff and truth
 > reconciliation only*; the comprehensive Web learnability / study-map work was **transferred out** to
 > a separate `Web Learnability & Maintainability Pass` that runs **after Frontend v1**. Its deferral
