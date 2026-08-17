@@ -27,10 +27,11 @@ const { t } = useI18n()
 
 const items = computed(() => props.experiences ?? [])
 const hasData = computed(() => items.value.length > 0)
-// Split pending into initial-load (skeleton) vs revalidation with content on screen (overlay).
-const initialPending = computed(() => props.pending && !hasData.value)
-const refreshing = computed(() => props.pending && hasData.value)
-const show = computed(() => props.pending || props.error || hasData.value)
+const { initialPending, refreshing, show } = useRequestState(
+  () => props.pending,
+  hasData,
+  () => props.error
+)
 </script>
 
 <template>

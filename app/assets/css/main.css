@@ -338,15 +338,7 @@
   }
 }
 
-/* Non-color role tokens (doc 14 §2/§4/§5).
-
-   The six technology identity colors (`--brand-js/-ts/-vue/-nuxt/-nest/-node`) that used to head
-   this block were REMOVED in 026 Phase 5. Their only consumer, `UiTechBadge`, was deleted by
-   feature 007 (007-site-redesign T050), which left the tokens declared and referenced by nothing:
-   `git grep` found no `var(--brand-*)` anywhere in the app, and no occurrence in the built client
-   JS or the server bundle either — so no runtime consumer could reach them via inline styles.
-   Measured -66 B gz. Doc 14 §2 was revised in the same change; it had continued to assert the
-   tokens were "consumed only by UiTechBadge", which stopped being true at 007. */
+/* Non-color role tokens (doc 14 §2/§4/§5). */
 :root {
   --leading-prose: 1.7;
   --leading-prose-arabic: 1.9;

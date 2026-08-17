@@ -27,8 +27,7 @@ const facets = computed(() => data.value?.meta.facets ?? [])
 // Split pending into initial-load (skeleton) vs a filter/page change with content already on screen
 // (branded overlay) — useAsyncData keeps the previous `data` while refetching (doc 13 §9.1).
 const hasData = computed(() => !!data.value)
-const initialPending = computed(() => status.value === 'pending' && !hasData.value)
-const refreshing = computed(() => status.value === 'pending' && hasData.value)
+const { initialPending, refreshing } = useRequestState(() => status.value === 'pending', hasData)
 // A list page shows real empty copy; optional home sections omit themselves instead (doc 13 §9.1).
 const isEmpty = computed(() => !!data.value && data.value.data.length === 0)
 // "No projects at all" and "no matches for this filter" are different situations and read differently.

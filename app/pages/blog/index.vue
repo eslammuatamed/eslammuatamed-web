@@ -21,8 +21,7 @@ const { data: categories } = await useArticleCategories()
 // Split pending into initial-load (skeleton) vs a page change with content already on screen
 // (branded overlay, not a skeleton) — useAsyncData keeps the previous `data` while refetching.
 const hasData = computed(() => !!data.value)
-const initialPending = computed(() => status.value === 'pending' && !hasData.value)
-const refreshing = computed(() => status.value === 'pending' && hasData.value)
+const { initialPending, refreshing } = useRequestState(() => status.value === 'pending', hasData)
 // A list page shows a real empty state (unlike optional home sections, which omit — doc 13 §9.1).
 const isEmpty = computed(() => !!data.value && data.value.data.length === 0)
 // "No articles at all" and "no articles in this category" are different situations and read differently.

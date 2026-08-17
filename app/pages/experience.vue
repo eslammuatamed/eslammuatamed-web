@@ -12,8 +12,7 @@ const { data, status, error, refresh } = await useExperiences()
 // Initial load (skeleton) vs a refetch with content already on screen (branded overlay):
 // `useAsyncData` keeps the previous `data` while refetching (doc 13 §9.1).
 const hasData = computed(() => !!data.value)
-const initialPending = computed(() => status.value === 'pending' && !hasData.value)
-const refreshing = computed(() => status.value === 'pending' && hasData.value)
+const { initialPending, refreshing } = useRequestState(() => status.value === 'pending', hasData)
 // A dedicated page shows real empty copy; optional home sections omit themselves instead.
 const isEmpty = computed(() => !!data.value && data.value.length === 0)
 
