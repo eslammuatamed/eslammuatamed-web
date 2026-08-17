@@ -12,6 +12,23 @@
 **Explicitly closed and not reopened:** all Backend campaigns. No Backend ESM, no PostgreSQL
 SCRAM, no M5, no unrelated roadmap work.
 
+> ## ✅ OUTCOME — LIVE IN PRODUCTION (2026-08-17)
+>
+> **Phases 0–7 CLOSED · Phase 8 OUTSTANDING.** Promoted via PR #67 as a true 2-parent merge commit
+> **`648aa467cd8bc7157cbcad2fd7c0e8981ee1f16c`** and deployed as release **`20260817T175534Z-648aa46`**
+> (serving tree `7deef81c…`, 15/15 cutover steps `success`, **no rollback**). `origin/dev` was
+> fast-forwarded to `origin/main` afterwards per D17-4. Full Production smoke green; two smoke groups
+> remain **access-limited, not failing**.
+>
+> ⚠ **This banner records the OUTCOME, not campaign closure** — Phase 8 has not started, and it is
+> owner-scoped as a separate post-Frontend-v1 campaign. Open items: `tasks.md` §Remaining follow-ups.
+>
+> ⚠ **§1 below is the campaign's ORIGIN narrative** and is preserved as written. Its `nuxt` **4.4.8**,
+> its **31 open Dependabot alerts** and its *"RB-1 blocks the next Web Production promotion"* describe
+> the **starting condition of 2026-08-15**, which the campaign has since resolved — **RB-1 is closed
+> and the modernized stack is deployed**. ⚠ **Do not read any alert count in this document as current
+> security truth**; a fresh authoritative recount is required (`tasks.md` R-4).
+
 ---
 
 ## 1. Why this campaign exists
