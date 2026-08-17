@@ -334,7 +334,7 @@ const dateFormatter = computed(() => new Intl.DateTimeFormat(locale.value === 'a
               color="error"
               variant="subtle"
               icon="i-lucide-triangle-alert"
-              :ui="{ title: 'text-error-700 dark:text-error-300' }"
+              :ui="{ title: 'text-error-700 dark:text-error-300', description: 'text-error-700 dark:text-error-300' }"
               :title="t('dashboard.media.delete.errorTitle')"
               :description="t('dashboard.media.delete.errorBody')"
             />

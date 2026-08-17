@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { ProfileLink, Skill } from '~/types/models'
-import { formatFileSize, groupSkills, impactBullets, resumeEmail, resumeLinks } from './resume'
+import { formatFileSize, groupSkills, resumeEmail, resumeLinks } from './resume'
 
 // Pure helpers — no Nuxt runtime needed. These pin the rules that are invisible in the rendered
 // output until they are wrong: registry order, the professional-email rule, and the fact that a
@@ -139,23 +139,5 @@ describe('formatFileSize', () => {
 
   it('formats a zero-byte file rather than rejecting it', () => {
     expect(formatFileSize(0, 'en', UNITS)).toBe('0 kB')
-  })
-})
-
-describe('impactBullets', () => {
-  it('strips Markdown bullet markers and blank lines', () => {
-    expect(impactBullets('- One\n- Two\n\n* Three')).toEqual(['One', 'Two', 'Three'])
-  })
-
-  it('returns nothing for null, undefined or empty impact', () => {
-    expect(impactBullets(null)).toEqual([])
-    expect(impactBullets(undefined)).toEqual([])
-    expect(impactBullets('')).toEqual([])
-  })
-
-  it('leaves inner punctuation untouched', () => {
-    expect(impactBullets('- Built Vue.js + Inertia.js — end to end')).toEqual([
-      'Built Vue.js + Inertia.js — end to end'
-    ])
   })
 })

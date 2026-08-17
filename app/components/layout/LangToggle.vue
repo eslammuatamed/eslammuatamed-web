@@ -23,6 +23,12 @@ const route = useRoute()
 // second locale switch cannot race the destination page's asynchronous `setI18nParams()` call.
 const forceDocumentNavigation = computed(() => /^\/(?:ar\/)?projects\/[^/]+\/?$/.test(route.path))
 
+// THE ACTIVE SEGMENT IS NOT PREFETCHED. It resolves to the page the visitor is already on, so
+// `<NuxtLink>`'s default prefetch fetches that route's payload for nothing — and on a cache-ruled
+// route (D20-28) answering it costs a second live server render, the F-11 amplification. It stays a
+// LINK: the segmented control's shape, focus order and `aria-current` are a reviewed a11y contract
+// (007), and only the wasted fetch is removed. `SwitchLocalePathLink` merges attrs into its inner
+// `NuxtLink`, so `prefetch` reaches it through the module's own supported surface.
 const options = computed(() =>
   locales.value.map(item => ({
     code: item.code,
@@ -44,6 +50,7 @@ const options = computed(() =>
       :key="opt.code"
       :locale="opt.code"
       :external="forceDocumentNavigation"
+      :prefetch="!opt.active"
       :aria-current="opt.active ? 'true' : undefined"
       :title="opt.name"
       class="rounded-full px-3 py-2 text-caption font-semibold leading-none transition-colors"

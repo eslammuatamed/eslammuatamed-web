@@ -196,9 +196,6 @@ export function hasTranslation(project: AdminProject, locale: ProjectLocale): bo
   return !blank(translation.title) && !blank(translation.slug)
 }
 
-export function translatedLocales(project: AdminProject): ProjectLocale[] {
-  return PROJECT_LOCALES.filter(locale => hasTranslation(project, locale))
-}
 
 /** How much of one locale the operator has filled in. */
 export type TranslationFillState = 'empty' | 'partial' | 'complete'

@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { hydrated } from '../hydration'
 
 /**
  * Contact submission outcomes in a REAL browser (011).
@@ -42,6 +43,11 @@ test.describe('contact submission outcomes', () => {
   test('neutral 200 replaces the form with the success state', async ({ page }) => {
     await useScenario(page)
     await page.goto('/contact')
+    // EVERY test here drives the form, and submit is a real `<form>`: a pre-hydration click falls
+    // through to the browser's OWN native POST to this document's URL, so it never reaches the
+    // scenario backend and no outcome state renders. Gated per test rather than only where a run
+    // happened to fail — the failing subset is timing-dependent and moved between runs.
+    await hydrated(page)
     await fillForm(page)
     await submit(page)
 
@@ -56,6 +62,11 @@ test.describe('contact submission outcomes', () => {
   test('Send another message restores a fresh empty form', async ({ page }) => {
     await useScenario(page)
     await page.goto('/contact')
+    // EVERY test here drives the form, and submit is a real `<form>`: a pre-hydration click falls
+    // through to the browser's OWN native POST to this document's URL, so it never reaches the
+    // scenario backend and no outcome state renders. Gated per test rather than only where a run
+    // happened to fail — the failing subset is timing-dependent and moved between runs.
+    await hydrated(page)
     await fillForm(page)
     await submit(page)
     await expect(page.getByRole('heading', { name: 'Message received' })).toBeVisible({ timeout: 15000 })
@@ -69,6 +80,11 @@ test.describe('contact submission outcomes', () => {
   test('422 maps field errors onto their inputs and keeps the form', async ({ page }) => {
     await useScenario(page, 'validation')
     await page.goto('/contact')
+    // EVERY test here drives the form, and submit is a real `<form>`: a pre-hydration click falls
+    // through to the browser's OWN native POST to this document's URL, so it never reaches the
+    // scenario backend and no outcome state renders. Gated per test rather than only where a run
+    // happened to fail — the failing subset is timing-dependent and moved between runs.
+    await hydrated(page)
     await fillForm(page)
     await submit(page)
 
@@ -82,6 +98,11 @@ test.describe('contact submission outcomes', () => {
   test('429 with a readable Retry-After renders a localized duration', async ({ page }) => {
     await useScenario(page, 'throttled')
     await page.goto('/contact')
+    // EVERY test here drives the form, and submit is a real `<form>`: a pre-hydration click falls
+    // through to the browser's OWN native POST to this document's URL, so it never reaches the
+    // scenario backend and no outcome state renders. Gated per test rather than only where a run
+    // happened to fail — the failing subset is timing-dependent and moved between runs.
+    await hydrated(page)
     await fillForm(page)
     await submit(page)
 
@@ -93,6 +114,11 @@ test.describe('contact submission outcomes', () => {
   test('429 without Retry-After falls back to static copy', async ({ page }) => {
     await useScenario(page, 'throttled-no-retry-after')
     await page.goto('/contact')
+    // EVERY test here drives the form, and submit is a real `<form>`: a pre-hydration click falls
+    // through to the browser's OWN native POST to this document's URL, so it never reaches the
+    // scenario backend and no outcome state renders. Gated per test rather than only where a run
+    // happened to fail — the failing subset is timing-dependent and moved between runs.
+    await hydrated(page)
     await fillForm(page)
     await submit(page)
 
@@ -104,6 +130,11 @@ test.describe('contact submission outcomes', () => {
   test('429 with a malformed Retry-After degrades identically, never printing NaN', async ({ page }) => {
     await useScenario(page, 'throttled-bad-retry-after')
     await page.goto('/contact')
+    // EVERY test here drives the form, and submit is a real `<form>`: a pre-hydration click falls
+    // through to the browser's OWN native POST to this document's URL, so it never reaches the
+    // scenario backend and no outcome state renders. Gated per test rather than only where a run
+    // happened to fail — the failing subset is timing-dependent and moved between runs.
+    await hydrated(page)
     await fillForm(page)
     await submit(page)
 
@@ -115,6 +146,11 @@ test.describe('contact submission outcomes', () => {
   test('500 shows the non-blaming server state and preserves input', async ({ page }) => {
     await useScenario(page, 'server-error')
     await page.goto('/contact')
+    // EVERY test here drives the form, and submit is a real `<form>`: a pre-hydration click falls
+    // through to the browser's OWN native POST to this document's URL, so it never reaches the
+    // scenario backend and no outcome state renders. Gated per test rather than only where a run
+    // happened to fail — the failing subset is timing-dependent and moved between runs.
+    await hydrated(page)
     await fillForm(page)
     await submit(page)
 
@@ -126,6 +162,11 @@ test.describe('contact submission outcomes', () => {
   test('a transport failure reads as unreachable, not as a server error', async ({ page }) => {
     await useScenario(page, 'network-failure')
     await page.goto('/contact')
+    // EVERY test here drives the form, and submit is a real `<form>`: a pre-hydration click falls
+    // through to the browser's OWN native POST to this document's URL, so it never reaches the
+    // scenario backend and no outcome state renders. Gated per test rather than only where a run
+    // happened to fail — the failing subset is timing-dependent and moved between runs.
+    await hydrated(page)
     await fillForm(page)
     await submit(page)
 
@@ -137,6 +178,11 @@ test.describe('contact submission mechanics', () => {
   test('defers a sub-3-second submission and sends the real elapsed time', async ({ page }) => {
     await useScenario(page)
     await page.goto('/contact')
+    // EVERY test here drives the form, and submit is a real `<form>`: a pre-hydration click falls
+    // through to the browser's OWN native POST to this document's URL, so it never reaches the
+    // scenario backend and no outcome state renders. Gated per test rather than only where a run
+    // happened to fail — the failing subset is timing-dependent and moved between runs.
+    await hydrated(page)
 
     const request = page.waitForRequest(r => r.url().includes('/contact') && r.method() === 'POST')
     await fillForm(page)
@@ -157,6 +203,11 @@ test.describe('contact submission mechanics', () => {
   test('prevents a double submission across the anti-spam wait', async ({ page }) => {
     await useScenario(page)
     await page.goto('/contact')
+    // EVERY test here drives the form, and submit is a real `<form>`: a pre-hydration click falls
+    // through to the browser's OWN native POST to this document's URL, so it never reaches the
+    // scenario backend and no outcome state renders. Gated per test rather than only where a run
+    // happened to fail — the failing subset is timing-dependent and moved between runs.
+    await hydrated(page)
     await fillForm(page)
 
     let posts = 0
@@ -181,6 +232,11 @@ test.describe('contact submission mechanics', () => {
   test('submits email only, omitting phone from the payload', async ({ page }) => {
     await useScenario(page)
     await page.goto('/contact')
+    // EVERY test here drives the form, and submit is a real `<form>`: a pre-hydration click falls
+    // through to the browser's OWN native POST to this document's URL, so it never reaches the
+    // scenario backend and no outcome state renders. Gated per test rather than only where a run
+    // happened to fail — the failing subset is timing-dependent and moved between runs.
+    await hydrated(page)
     const request = page.waitForRequest(r => r.url().includes('/contact') && r.method() === 'POST')
     await fillForm(page)
     await submit(page)
@@ -193,6 +249,11 @@ test.describe('contact submission mechanics', () => {
   test('submits phone only, omitting email and normalizing to E.164', async ({ page }) => {
     await useScenario(page)
     await page.goto('/contact')
+    // EVERY test here drives the form, and submit is a real `<form>`: a pre-hydration click falls
+    // through to the browser's OWN native POST to this document's URL, so it never reaches the
+    // scenario backend and no outcome state renders. Gated per test rather than only where a run
+    // happened to fail — the failing subset is timing-dependent and moved between runs.
+    await hydrated(page)
     const request = page.waitForRequest(r => r.url().includes('/contact') && r.method() === 'POST')
     await fillForm(page, { email: '', phone: '0100 278 5408' })
     await submit(page)
@@ -205,6 +266,11 @@ test.describe('contact submission mechanics', () => {
   test('submits both methods when both are supplied', async ({ page }) => {
     await useScenario(page)
     await page.goto('/contact')
+    // EVERY test here drives the form, and submit is a real `<form>`: a pre-hydration click falls
+    // through to the browser's OWN native POST to this document's URL, so it never reaches the
+    // scenario backend and no outcome state renders. Gated per test rather than only where a run
+    // happened to fail — the failing subset is timing-dependent and moved between runs.
+    await hydrated(page)
     const request = page.waitForRequest(r => r.url().includes('/contact') && r.method() === 'POST')
     await fillForm(page, { phone: '01002785408' })
     await submit(page)
@@ -218,6 +284,11 @@ test.describe('contact submission mechanics', () => {
   test('F-6: a stale contact-method error clears when a phone is entered, and the resubmit works', async ({ page }) => {
     await useScenario(page)
     await page.goto('/contact')
+    // EVERY test here drives the form, and submit is a real `<form>`: a pre-hydration click falls
+    // through to the browser's OWN native POST to this document's URL, so it never reaches the
+    // scenario backend and no outcome state renders. Gated per test rather than only where a run
+    // happened to fail — the failing subset is timing-dependent and moved between runs.
+    await hydrated(page)
 
     await fillForm(page, { email: '' })
     await submit(page)
@@ -232,6 +303,11 @@ test.describe('contact submission mechanics', () => {
 
   test('the honeypot field is not named website in the DOM', async ({ page }) => {
     await page.goto('/contact')
+    // EVERY test here drives the form, and submit is a real `<form>`: a pre-hydration click falls
+    // through to the browser's OWN native POST to this document's URL, so it never reaches the
+    // scenario backend and no outcome state renders. Gated per test rather than only where a run
+    // happened to fail — the failing subset is timing-dependent and moved between runs.
+    await hydrated(page)
     await expect(page.locator('input[name="website"]')).toHaveCount(0)
     await expect(page.locator('input[name="company-url"]')).toHaveCount(1)
   })
@@ -244,6 +320,11 @@ test.describe('contact direct methods and locale', () => {
   // separately, so the page still has exactly two `wa.me` links and both are accounted for.
   test('renders email, phone and WhatsApp actions from settings', async ({ page }) => {
     await page.goto('/contact')
+    // EVERY test here drives the form, and submit is a real `<form>`: a pre-hydration click falls
+    // through to the browser's OWN native POST to this document's URL, so it never reaches the
+    // scenario backend and no outcome state renders. Gated per test rather than only where a run
+    // happened to fail — the failing subset is timing-dependent and moved between runs.
+    await hydrated(page)
     await expect(page.locator('main a[href^="mailto:"]')).toHaveCount(1)
     await expect(page.locator('main a[href^="tel:"]')).toHaveCount(1)
     await expect(page.locator('main a[href*="wa.me/"]')).toHaveCount(1)
@@ -264,6 +345,11 @@ test.describe('contact direct methods and locale', () => {
   test('switching locale clears entered values and the status', async ({ page }) => {
     await useScenario(page, 'server-error')
     await page.goto('/contact')
+    // EVERY test here drives the form, and submit is a real `<form>`: a pre-hydration click falls
+    // through to the browser's OWN native POST to this document's URL, so it never reaches the
+    // scenario backend and no outcome state renders. Gated per test rather than only where a run
+    // happened to fail — the failing subset is timing-dependent and moved between runs.
+    await hydrated(page)
     await fillForm(page)
     await submit(page)
     await expect(page.getByText("The message didn't go through")).toBeVisible({ timeout: 15000 })

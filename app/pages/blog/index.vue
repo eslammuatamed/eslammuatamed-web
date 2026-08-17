@@ -21,8 +21,7 @@ const { data: categories } = await useArticleCategories()
 // Split pending into initial-load (skeleton) vs a page change with content already on screen
 // (branded overlay, not a skeleton) — useAsyncData keeps the previous `data` while refetching.
 const hasData = computed(() => !!data.value)
-const initialPending = computed(() => status.value === 'pending' && !hasData.value)
-const refreshing = computed(() => status.value === 'pending' && hasData.value)
+const { initialPending, refreshing } = useRequestState(() => status.value === 'pending', hasData)
 // A list page shows a real empty state (unlike optional home sections, which omit — doc 13 §9.1).
 const isEmpty = computed(() => !!data.value && data.value.data.length === 0)
 // "No articles at all" and "no articles in this category" are different situations and read differently.
@@ -60,8 +59,18 @@ function onCategoryChange(value: string | undefined): void {
   router.push({ path: route.path, query: buildCategoryQuery(value) })
 }
 
-/** Pagination must carry the active filter, or paging silently widens the result set. */
+/**
+ * Pagination must carry the active filter, or paging silently widens the result set.
+ *
+ * RETURNS `undefined` FOR THE PAGE THE VISITOR IS ALREADY ON. Nuxt UI passes `:to` to every item
+ * unconditionally (`Pagination.vue`), so the current page renders as a link to itself: `<NuxtLink>`
+ * prefetches it, and on a cache-ruled route that prefetch costs a second server render of a page the
+ * visitor already has. It is also a redundant tab stop. With no `to`, Nuxt UI renders that one item
+ * as a plain button — which is the conventional accessible pagination shape anyway — and the active
+ * colour/variant still mark it. Fixed in OUR callback, so no Nuxt UI component is replaced or patched.
+ */
 function pageLink(target: number) {
+  if (target === page.value) return undefined
   return { query: buildBlogPageQuery(category.value, target) }
 }
 

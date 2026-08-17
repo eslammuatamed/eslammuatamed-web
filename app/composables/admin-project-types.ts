@@ -18,7 +18,6 @@ type Schemas = components['schemas']
 /** The full admin projection: BOTH publication states, the whole translation map, all relations. */
 export type AdminProject = Schemas['AdminProjectEntity']
 export type AdminProjectTranslation = Schemas['AdminProjectTranslationEntity']
-export type AdminProjectGalleryItem = Schemas['AdminProjectGalleryItemEntity']
 
 /** Write shapes. `POST` takes the whole entity; `PATCH` is partial (see `admin-project-form.ts`). */
 export type CreateProjectPayload = Schemas['CreateProjectDto']

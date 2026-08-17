@@ -1,6 +1,6 @@
 // @vitest-environment nuxt
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { computed, defineComponent, h, ref } from 'vue'
+import { computed, defineComponent, h, ref, toValue } from 'vue'
 import { mockNuxtImport, mountSuspended } from '@nuxt/test-utils/runtime'
 import type { SiteSettings, Skill } from '~/types/models'
 import { useAboutSchema } from './useAboutSchema'
@@ -24,9 +24,14 @@ mockNuxtImport('useI18n', () => () => ({
 }))
 mockNuxtImport('useSiteConfig', () => () => ({ url: 'https://example.com' }))
 mockNuxtImport('useLocalePath', () => () => (path: string) => path)
+// `toValue` per ELEMENT, because the composables pass an ARRAY OF REFS — one computed per node —
+// and that is the shape the real pipeline resolves: `useSchemaOrg` hands the array to `useHead`,
+// which resolves nested refs at head-render time. A mock that captured the elements verbatim would
+// record `ComputedRef`s and assert `@type === undefined` on every node, which is a defect in the
+// instrument rather than in the graph. Unwrapping here keeps this mock faithful to production.
 mockNuxtImport('useSchemaOrg', () => (input: unknown) => {
-  const nodes = typeof input === 'function' ? (input as () => unknown[])() : (input as unknown[])
-  captured.nodes.push(...(nodes as Record<string, unknown>[]))
+  const list = typeof input === 'function' ? (input as () => unknown[])() : (input as unknown[])
+  captured.nodes.push(...list.map(node => toValue(node) as Record<string, unknown>))
 })
 mockNuxtImport('definePerson', () => (input: unknown) => ({ '@type': 'Person', ...(input as object) }))
 mockNuxtImport('defineWebSite', () => (input: unknown) => ({ '@type': 'WebSite', ...(input as object) }))

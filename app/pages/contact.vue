@@ -284,14 +284,16 @@ const absolute = (path: string) => `${siteConfig.url}${localePath(path)}`
 
 // `WebPage` + `BreadcrumbList` only — doc 22 §4's governed table has no ContactPage entry, and the
 // site-wide `Person` identity node already exists (D22-8), so no second one is emitted.
-useSchemaOrg(() => [
-  defineWebPage({ name: t('contact.title'), description: t('seo.contact.description') }),
-  defineBreadcrumb({
+// One computed per NODE — see `useSiteSchema` for why neither a whole-list getter nor a whole-list
+// `computed()` is correct under the unhead-v3 vendor.
+useSchemaOrg([
+  computed(() => defineWebPage({ name: t('contact.title'), description: t('seo.contact.description') })),
+  computed(() => defineBreadcrumb({
     itemListElement: crumbs.value.map(crumb => ({
       name: crumb.label,
       item: crumb.to ? absolute(crumb.to) : undefined
     }))
-  })
+  }))
 ])
 
 // Title and description only. Canonical, hreflang/x-default, og:locale, og:url and <html lang/dir>

@@ -229,7 +229,7 @@ defineExpose({ reload })
         color="error"
         variant="subtle"
         icon="i-lucide-triangle-alert"
-        :ui="{ title: 'text-error-700 dark:text-error-300' }"
+        :ui="{ title: 'text-error-700 dark:text-error-300', description: 'text-error-700 dark:text-error-300' }"
         :title="t('dashboard.media.upload.failedTitle')"
         :description="uploadError"
         close
@@ -259,7 +259,7 @@ defineExpose({ reload })
       color="error"
       variant="subtle"
       icon="i-lucide-lock"
-      :ui="{ title: 'text-error-700 dark:text-error-300' }"
+      :ui="{ title: 'text-error-700 dark:text-error-300', description: 'text-error-700 dark:text-error-300' }"
       :title="t('dashboard.media.forbiddenTitle')"
       :description="t('dashboard.media.forbiddenBody')"
     />

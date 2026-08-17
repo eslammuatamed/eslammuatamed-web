@@ -1,5 +1,6 @@
 import type { ConsoleMessage, Page } from '@playwright/test'
 import { expect, test } from '@playwright/test'
+import { hydrated } from '../hydration'
 import { ARTICLE_SLUG, SLUG } from './backend.ts'
 
 /**
@@ -153,8 +154,16 @@ for (const { name, from, to, click, heading, documentNavigation } of CASES) {
     expect(expected.hreflang.length, `${to} must emit hreflang alternates`).toBeGreaterThan(0)
 
     // 2. Now reach the same URL by switching locale in the browser.
+    //
+    // The switch must be driven against a HYDRATED app, and this is the F-8 class rather than a
+    // convenience wait. `LangToggle` renders the destination as a real `<a href>` — correct, and
+    // deliberately functional without JavaScript — so a click that lands before hydration is served
+    // by the BROWSER as a native document navigation instead of by the client router. That replaces
+    // `window`, which discards both `__chrome` and `__beforeLocaleSwitch`, and the test then reports
+    // a torn or missing observer rather than the routing behaviour it exists to measure.
     const consoleLog = recordConsole(page)
     await page.goto(from)
+    await hydrated(page)
     if (documentNavigation) {
       await page.evaluate(() => { (window as unknown as { __beforeLocaleSwitch?: boolean }).__beforeLocaleSwitch = true })
     } else {

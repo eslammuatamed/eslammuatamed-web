@@ -89,9 +89,6 @@ export function validatePortraitForm(state: PortraitFormState): PortraitFormErro
   return { missingAlt: PORTRAIT_LOCALES.filter(locale => state.alt[locale].trim().length === 0) }
 }
 
-export function isPortraitFormValid(state: PortraitFormState): boolean {
-  return validatePortraitForm(state).missingAlt.length === 0
-}
 
 /**
  * The `PATCH /admin/settings` body.

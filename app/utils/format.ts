@@ -23,3 +23,21 @@ export function formatExperiencePeriod(
   const to = end ? formatMonthYear(end, locale) : presentLabel
   return `${from} – ${to}`
 }
+
+/**
+ * Splits the contract's Markdown `impact` string into plain bullet lines.
+ *
+ * Lives here, beside `formatExperiencePeriod`, because BOTH experience presentations consume it —
+ * `ContentTimelineEntry` (home + `/experience`) and `ResumeEntry` (`/resume`) — and they must never
+ * disagree about what a bullet is. It was previously in `utils/resume.ts`, which made the timeline
+ * pull the whole résumé helper module (skill grouping, résumé links, file sizes) into the home
+ * page's closure for this one function; `format.ts` is already in every one of those closures, so
+ * the shared definition costs nothing. A short list is split here rather than pulled through the
+ * full prose renderer.
+ */
+export function impactBullets(impact: string | null | undefined): readonly string[] {
+  return (impact ?? '')
+    .split('\n')
+    .map(line => line.trim().replace(/^[-*]\s+/, ''))
+    .filter(Boolean)
+}

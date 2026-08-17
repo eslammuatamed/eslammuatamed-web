@@ -202,8 +202,30 @@ jobs:
       - name: Test
         run: npm test
 
+      # F-6 (campaign 026, ledger §11.1/§12.2). Until this step existed, NO run asserted the
+      # performance budgets on the SHA that reaches Production: `ci.yml` has no `push: main`
+      # trigger, and a `dev`->`main` promotion is a true merge commit, so the merge SHA that
+      # deploys was never itself budget-verified — only its parent was, on a PR.
+      #
+      # `ANALYZE_BUNDLE=1` is REQUIRED by `size:routes`, which cannot measure the §1 app-owned
+      # renderedLength budget without the sidecar and exits 2 (infrastructure failure) rather than
+      # passing. It is byte-identical to a plain build (verified in ci.yml), and this build is
+      # verification-only — the `deploy` job builds the shipped artifact itself — so the flag
+      # cannot alter what ships.
       - name: Build
-        run: npm run build
+        run: ANALYZE_BUNDLE=1 npm run build
+
+      # Mirrors ci.yml verbatim. doc 20 §1 budgets, unchanged and not restated here: the gates read
+      # them from .size-limit.cjs and scripts/check-route-size.mjs, so this step cannot drift from
+      # the numbers a PR was measured against. No `continue-on-error` — a budget breach on the
+      # Production-bound SHA must block the `deploy` job, which `needs: verify`.
+      - name: Assert CSS size budget (doc 20 §1)
+        run: npm run size
+
+      # Exit codes stay distinct: 1 = genuine breach, 2 = the gate could not measure. Never
+      # conflated, and neither is tolerated here.
+      - name: Assert per-route size budgets (doc 20 §1)
+        run: npm run size:routes
 
       - name: Assert bundle isolation
         run: npm run check:bundle
