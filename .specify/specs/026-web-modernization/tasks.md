@@ -137,9 +137,10 @@ cannot fix the gate — **≥309 B must come from `entry.css` under every scenar
 | **T5.B** | Dead-code / unused-export / dependency-delivery cleanup; consume the §12.4.3 inventory (supersedes old T5.13) | TODO |
 | **T5.C** | **CSS recovery to the unchanged 30,000 B cap** (supersedes old T5.11) | ✅ **DONE — BUDGET GREEN.** 30,776 B → **29,081 B, 919 B UNDER** the unchanged cap. Three changes, all in the cheapest tiers: `cssnano mergeRules:false` (−154 B, supported config) · six dead `--brand-*` tokens (−66 B, deletion) · `ui.theme.colors` narrowed to the four families in use (−1,551 B, supported config). No cap raised, re-baselined or weakened. ~1,377 B further headroom MEASURED and REJECTED (dashboard-only usage, global option). Ledger §24.9 |
 | **T5.D** | **Public-route JS recovery** — 18/18 over D20-11. Vendor-dominated (~89% of `/`); separate application-owned from upstream-owned cost. Likely the owner-decision case | TODO |
-| **T5.E** | **`/dashboard/messages` recovery** — 338,309 B gz → ≤ 320.0 KB gz hard ceiling (−10,629 B). ⚠ **Corrects the stale "305.6 KB → 300.0 KB target" in the retired T5.8**: the figure moved to 330.4 KB and the binding constraint is the HARD CEILING, not the quality target. Three other dashboard routes are over target but inside the ceiling — optimization inputs, **not** new hard failures | TODO |
+| **T5.E** | **`/dashboard/messages` recovery** — 338,309 → **337,421 B gz** after T5.C; **−9,741 B** still needed against the 320.0 KB gz HARD CEILING. ⚠ **Governed by doc 11 §3.1 / D11-8** (Dashboard priorities: correctness/security → maintainability → Nuxt UI patterns → learnability → reasonable performance → **marginal bytes last**). `zod/mini` is **SETTLED AGAINST** — measurable for evidence, not adoptable as a one-route change (two validation dialects). Also ruled out: artificial code-splitting, duplicated state, synchronization machinery, custom validation plumbing, bespoke replacements for Nuxt UI. Remaining levers: **natural lazy boundaries · removal of genuinely unnecessary eager work · supported Nuxt/Nuxt UI configuration**. A residual breach justified by legitimate feature complexity **escalates to an owner decision**. Ledger §24.13/§24.15 | TODO |
 | **T5.F** | Runtime / prefetch / client-delivery optimization — F-11 (§19), re-evaluated with **real touch/mobile** behaviour, not synthetic hover. Self-links (LangToggle active locale, pagination active page) are pure waste under any policy and are separable from the global-policy question. **Global prefetch is not to be disabled** | TODO |
 | **T5.G** | Deep cleanup & maintainability with measurable value — duplication (components/composables/state/helpers), data layer & `useApi` consistency, stale compatibility wrappers superseded by the final stack, avoidable client-only execution, public/dashboard coupling, stale TODOs, CSS architecture duplication, RTL/a11y consistency (absorbs old T5.2–T5.7, T5.9, T5.10) | TODO |
+| **T5.P** | *(owner-authorized 2026-08-17)* **Prose reading-measure correction** — `.content-prose` resolved `68ch` instead of the governed `--measure-prose`, landing outside doc 03 §3's 65–75 band in BOTH locales in opposite directions | ✅ **DONE.** EN 672→512 px, AR 544→448 px (~92/~86 → ~70/~71 chars), measured in-browser. One declaration, governed token, no route-specific workaround, `/blog/{slug}` unaffected. New `e2e/prose-measure.spec.ts` instrument-proven both ways (4 failed pre-fix at exactly 672/544; 9/9 after). Visual + RTL verified at 1280/390 in both locales. **Zero incidental CSS cost.** Classified correctness/design, NOT performance. Ledger §24.14 |
 | **T5.H** | **Phase 5 hard exit gate** (supersedes old T5.12) — CSS ≤ 30,000 B · all governed public-route hard budgets · `/dashboard/messages` ≤ 320 KB gz · app-owned frozen caps · font budget · JS/bundle gates · no EN/AR/RTL regression · no a11y regression · all code/test gates green · hosted CI + hosted E2E + BOTH Lighthouse profiles green on the exact final Phase 5 SHA. **If the modernized stack cannot fit through legitimate cleanup, STOP for an owner decision — do not raise, re-baseline or weaken any budget** | TODO |
 
 ### Constraints carried into every task group
@@ -247,6 +248,29 @@ review belongs **after Frontend v1**, when the remaining Dashboard and frontend 
 **Documentation duty.** Phase 5 docs must *teach the concept*, not list changes: what problem existed ·
 why the chosen solution works · why simpler and more complex alternatives were rejected · what should
 and should **not** be generalized from it.
+
+### Dashboard engineering priorities (owner, 2026-08-17) — doc 11 §3.1 / D11-8, BINDING
+
+⚠ **Dashboard routes are NOT weighted like public routes.** The Dashboard is an authenticated,
+client-only, single-operator administration surface; its bytes do not reach visitors, SEO or
+first-load. Normative ordering for Dashboard code: **correctness and security → maintainability and
+simplicity → coherent Nuxt/Nuxt UI patterns → learnability and clear responsibility ownership →
+reasonable performance → marginal bundle-size savings LAST.**
+
+- **Prefer Nuxt UI** for forms and interaction patterns where it reduces app-owned code, duplicated
+  a11y work, validation plumbing or maintenance burden.
+- **Keep standard Zod.** ⚠ `zod/mini` is **not** adoptable to recover bytes on one route — two
+  validation dialects cost more than the bytes. Measure for evidence; do not adopt piecemeal.
+- **Prefer natural lazy boundaries** and removal of genuinely unnecessary eager work.
+- ⚠ **Do not create** artificial code-splitting boundaries, duplicated state, synchronization
+  machinery, custom validation plumbing, or bespoke replacements for Nuxt UI to hit a byte target.
+- **A residual breach justified by legitimate feature complexity escalates to an OWNER DECISION**
+  rather than degrading the architecture.
+
+⚠ **No budget is changed.** Doc 20 §1.1/§1.2 stay authoritative; this governs *remediation approach*.
+Scope includes future Dashboard features not yet given their final UI/UX pass — the Dashboard UI/UX
+architecture is revisited comprehensively after Campaign 026, so premature micro-optimization that
+would complicate that work is to be avoided.
 
 ### Measurement standard
 
