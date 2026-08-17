@@ -222,6 +222,65 @@ export function budgetVerdict(actualBytes, budgetBytes) {
 }
 
 /**
+ * MEASURED offset between a shared-floor reading taken locally and the same reading taken on the
+ * GitHub-hosted runner, for identical sources.
+ *
+ * ⚠ WHY THIS EXISTS. The floor report compares a live reading against a FROZEN calibration constant
+ * and then labels the difference. Before this constant existed it labelled the WHOLE difference
+ * "shared framework/ecosystem growth" — so hosted CI printed `+6 B ← shared framework/ecosystem
+ * growth` on every run forever, describing RUNNER VARIANCE as framework growth (ledger §33.4). That
+ * is a false drift signal of exactly the kind this repo keeps being bitten by
+ * (`reference-web-build-output-nondeterministic`).
+ *
+ * DERIVED FROM MEASUREMENT, campaign 026 Phase 6, at candidate `fd56aaa`:
+ *   - build nondeterminism contributes ZERO. Two builds of identical sources on one machine produced
+ *     DIFFERENT `.output` hashes (bbaf9df9… vs 4f9ae9a9…) yet byte-identical floors — public 254,593
+ *     and dashboard 259,911 both times. So floor movement is not build-to-build noise.
+ *   - the local↔hosted offset is +6 B on BOTH floors independently: public 254,593 local vs 254,599
+ *     hosted, dashboard 259,911 local vs 259,917 hosted (hosted run 32039342735, ledger §33.3).
+ *     Two independent floors agreeing on the same offset is what makes it an environment property
+ *     rather than a coincidence.
+ *
+ * ⚠ THIS IS A REPORTING TOLERANCE, NOT A BUDGET. It never enters a cap, never changes a verdict, and
+ * never suppresses a number — the measured floor and the signed delta are always printed in full. It
+ * governs only whether the line is allowed to assert a CAUSE. It is deliberately tight: the public
+ * floor's real +39 B of growth since its calibration SHA sits far outside it and still reports as
+ * growth, which is the discriminating property the spec pins.
+ */
+export const FLOOR_ENVIRONMENT_VARIANCE_BYTES = 6
+
+/**
+ * Classify a floor delta into a cause the report is entitled to claim.
+ *
+ * The delta a run prints is the SUM of two unrelated quantities: real movement since the calibration
+ * SHA, and the environment offset between the calibration machine and the measuring machine. Only
+ * the first is growth. Attributing the sum to growth is the §33.4 defect.
+ *
+ * @returns {{kind: 'growth'|'shrink'|'variance', note: string}}
+ */
+export function classifyFloorDelta(deltaBytes, calibrationSha) {
+  const at = calibrationSha ? ` (calibrated at \`${calibrationSha}\`)` : ''
+  if (deltaBytes > FLOOR_ENVIRONMENT_VARIANCE_BYTES) {
+    return {
+      kind: 'growth',
+      note: `  ← shared framework/ecosystem growth${at}; this is NOT owned by any page`
+    }
+  }
+  if (deltaBytes < -FLOOR_ENVIRONMENT_VARIANCE_BYTES) {
+    return {
+      kind: 'shrink',
+      note: `  ← floor shrank${at}; claim it through a recalibration decision, not silently`
+    }
+  }
+  return {
+    kind: 'variance',
+    note:
+      `  ← within the ±${FLOOR_ENVIRONMENT_VARIANCE_BYTES} B MEASURED local↔hosted environment`
+      + ` variance band${at}; NOT attributable to growth`
+  }
+}
+
+/**
  * doc 20 §1 budgets, 1024-based, INCLUSIVE ("≤", so exactly-at-budget passes).
  *
  * These are doc 20 §1 VERBATIM. Re-baselining any of them requires an owner decision plus a
@@ -321,6 +380,13 @@ export const PUBLIC_DELIVERY_BUDGET = {
    * claimed through recalibration rather than absorbed silently.
    */
   sharedFloorCalibrationBytes: 254_554,
+  /**
+   * The SHA the calibration above was measured at, so a reader can tell REAL movement since that
+   * tree from environment variance. ⚠ Load-bearing: at candidate `fd56aaa` this floor reads 254,593
+   * locally — **+39 B of genuine growth accrued between `8067ec8` and `fd56aaa`**, well outside the
+   * ±6 B environment band, so it correctly still reports as growth.
+   */
+  sharedFloorCalibrationSha: '8067ec8',
   /**
    * Attribution obligation threshold. At or above this fraction of its tier cap, a route must print
    * full attribution. Carried from D20-24's lesson: a high ceiling is only safe because growth must
@@ -587,6 +653,18 @@ export const DASHBOARD_DELIVERY_BUDGET = {
    * win, but it is claimed through recalibration rather than absorbed silently.
    */
   sharedFloorCalibrationBytes: 259_911,
+  /**
+   * The SHA the calibration above was measured at.
+   *
+   * ⚠ This constant is NOT reporting-only — it is the stated MEASURED INPUT from which
+   * `sharedFloorBytes` is derived (`ceilKiB(259_911 + 4 × 1_946) = 262 KiB`), and the spec pins that
+   * derivation. Ledger §33.4 proposed re-stamping it to the hosted 259,917 to silence the `+6 B`
+   * label; Phase 6 REJECTED that on evidence, because it would repurpose a governed cap's measured
+   * input to fix a print label, and would merely mirror the false signal (local would then read
+   * −6 B). The reporting defect is fixed in the REPORT — see `classifyFloorDelta` — and this number
+   * stays frozen at what was actually measured.
+   */
+  sharedFloorCalibrationSha: 'da83531',
   /**
    * Attribution obligation threshold on the INCREMENTAL cap, carried from D20-24/D20-31: growth must
    * be EXPLAINED long before it is allowed to BLOCK, and silence near a cap is a gate defect.

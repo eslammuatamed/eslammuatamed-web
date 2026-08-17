@@ -10,6 +10,8 @@ import {
   approvedAppLimitBytes,
   attributeRenderedBytes,
   budgetVerdict,
+  classifyFloorDelta,
+  FLOOR_ENVIRONMENT_VARIANCE_BYTES,
   classifyModuleId,
   collectRouteAssets,
   assertGovernedRouteCoverage,
@@ -880,6 +882,65 @@ describe('D20-32 — interim dashboard delivery budget', () => {
     const cap = DASHBOARD_DELIVERY_BUDGET.incrementalBytes
     expect(budgetVerdict(77_549, cap)).toBe('PASS')
     expect(77_549).toBeGreaterThanOrEqual(cap * DASHBOARD_DELIVERY_BUDGET.attributionThreshold)
+  })
+})
+
+/**
+ * The §33.4 reporting defect: the floor line labelled the WHOLE delta against a frozen calibration
+ * "shared framework/ecosystem growth", so hosted CI printed `+6 B ← shared framework/ecosystem
+ * growth` forever — runner variance reported as framework growth.
+ *
+ * ⚠ THE DISCRIMINATING PAIR is the point of this block. A fix that simply silenced small deltas
+ * would also silence real growth, and a fix that widened the band until CI went quiet would hide
+ * the thing the floor exists to catch. So both directions are pinned against MEASURED values:
+ * the +6 B environment offset must NOT read as growth, and the public floor's real +39 B must.
+ */
+describe('§33.4 — floor delta attribution separates environment variance from growth', () => {
+  it('does NOT call the measured local↔hosted offset growth', () => {
+    // Both floors independently measured +6 B hosted vs local at `fd56aaa` (run 32039342735).
+    const v = classifyFloorDelta(6, 'da83531')
+    expect(v.kind).toBe('variance')
+    // Match the AFFIRMATIVE claim, not the bare word: the correct note denies growth, so it
+    // legitimately contains "NOT attributable to growth". A `/growth/` assertion fails on the fix.
+    expect(v.note).not.toMatch(/← shared framework\/ecosystem growth/)
+    expect(v.note).toMatch(/variance band/)
+  })
+
+  it('STILL calls real accrued growth growth', () => {
+    // The public floor really did move +39 B between `8067ec8` and `fd56aaa`. If this ever stops
+    // reporting as growth, the band has been widened until the gate's early warning is deaf.
+    const v = classifyFloorDelta(39, '8067ec8')
+    expect(v.kind).toBe('growth')
+    expect(v.note).toMatch(/shared framework\/ecosystem growth/)
+  })
+
+  it('is symmetric — a shrink inside the band is variance, outside it is a claimable win', () => {
+    expect(classifyFloorDelta(-6, 'da83531').kind).toBe('variance')
+    expect(classifyFloorDelta(-39, 'da83531').kind).toBe('shrink')
+    expect(classifyFloorDelta(-39, 'da83531').note).toMatch(/recalibration decision/)
+  })
+
+  it('reports the exact band boundaries — inclusive inside, growth one byte out', () => {
+    const b = FLOOR_ENVIRONMENT_VARIANCE_BYTES
+    expect(b).toBe(6)
+    expect(classifyFloorDelta(b, 'x').kind).toBe('variance')
+    expect(classifyFloorDelta(b + 1, 'x').kind).toBe('growth')
+    expect(classifyFloorDelta(-b, 'x').kind).toBe('variance')
+    expect(classifyFloorDelta(-b - 1, 'x').kind).toBe('shrink')
+  })
+
+  it('names the calibration SHA, so a delta can be read against the tree it was measured on', () => {
+    expect(classifyFloorDelta(39, '8067ec8').note).toContain('8067ec8')
+    expect(PUBLIC_DELIVERY_BUDGET.sharedFloorCalibrationSha).toBe('8067ec8')
+    expect(DASHBOARD_DELIVERY_BUDGET.sharedFloorCalibrationSha).toBe('da83531')
+  })
+
+  it('leaves the GOVERNED derivation input untouched — the fix is reporting-only', () => {
+    // Ledger §33.4 proposed re-stamping the calibration to the hosted 259,917. That constant is the
+    // stated measured input for `sharedFloorBytes`, so moving it would edit a governed cap's
+    // derivation to fix a print label. This asserts the number stayed where it was measured.
+    expect(DASHBOARD_DELIVERY_BUDGET.sharedFloorCalibrationBytes).toBe(259_911)
+    expect(PUBLIC_DELIVERY_BUDGET.sharedFloorCalibrationBytes).toBe(254_554)
   })
 })
 

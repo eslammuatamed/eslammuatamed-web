@@ -66,6 +66,7 @@ import {
   dashboardTotalVerdict,
   attributeRenderedBytes,
   budgetVerdict,
+  classifyFloorDelta,
   PUBLIC_DELIVERY_BUDGET,
   publicTierFor,
   assertPublicTierCoverage,
@@ -703,8 +704,7 @@ async function main() {
   console.log(
     `  vs D20-31 calibration ${PUBLIC_DELIVERY_BUDGET.sharedFloorCalibrationBytes} B: `
     + `${floorDelta >= 0 ? '+' : ''}${floorDelta} B`
-    + (floorDelta > 0 ? '  ← shared framework/ecosystem growth; this is NOT owned by any page' : '')
-    + (floorDelta < 0 ? '  ← floor shrank; claim it through a recalibration decision, not silently' : '')
+    + classifyFloorDelta(floorDelta, PUBLIC_DELIVERY_BUDGET.sharedFloorCalibrationSha).note
   )
   console.log(`  derived as the intersection over ${FLOOR_REFERENCE_ROUTES.length} FROZEN reference routes\n`)
 
@@ -785,8 +785,7 @@ async function main() {
     console.log(
       `  vs D20-32 calibration ${DASHBOARD_DELIVERY_BUDGET.sharedFloorCalibrationBytes} B: `
       + `${dashFloorDelta >= 0 ? '+' : ''}${dashFloorDelta} B`
-      + (dashFloorDelta > 0 ? '  ← shared framework/ecosystem growth; this is NOT owned by any page' : '')
-      + (dashFloorDelta < 0 ? '  ← floor shrank; claim it through a recalibration decision, not silently' : '')
+      + classifyFloorDelta(dashFloorDelta, DASHBOARD_DELIVERY_BUDGET.sharedFloorCalibrationSha).note
     )
     console.log(`  derived as the intersection over ${DASHBOARD_FLOOR_REFERENCE_ROUTES.length} FROZEN dashboard reference routes\n`)
 
