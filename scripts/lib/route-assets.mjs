@@ -495,11 +495,156 @@ export function resolveSharedFloor(assetsByRoute) {
  * decision-log entry there — never an edit here.
  */
 export const DASHBOARD_BUDGET = {
-  /** D20-24 quality target and warning boundary. At or below this is an ordinary green result. */
+  /**
+   * D20-24 quality target and warning boundary. At or below this is an ordinary green result.
+   *
+   * ⚠ THIS SURVIVES D20-32 UNCHANGED, AND IT IS NOW THE ONLY THING THE ROUTE TOTAL IS COMPARED
+   * AGAINST. D20-32 replaced the flat 320 KB gz HARD CEILING with the floor + incremental model in
+   * `DASHBOARD_DELIVERY_BUDGET`; it deliberately did NOT touch this number. The warning tier is what
+   * keeps growth EXPLAINED (the six-part attribution block) and it is what keeps D20-30's attributed
+   * acceptance of `/dashboard/messages` visible on every run instead of letting the route become an
+   * ordinary green line once the hard ceiling stopped applying to it.
+   */
   totalJsQualityTargetBytes: 300 * KB,
-  /** D20-24 hard release ceiling. Above this is release-blocking and never raised automatically. */
-  totalJsCeilingBytes: 320 * KB,
   cssBytes: BUDGET.cssBytes
+}
+
+/**
+ * INTERIM Dashboard delivery model — doc 20 §1.1 (**D20-32**), replacing D20-24's flat total-JS HARD
+ * CEILING. The 300 KB gz quality target above is UNCHANGED and still governs warnings.
+ *
+ * ⚠ WHY THE FLAT CEILING WAS REPLACED RATHER THAN RAISED. Measured across all eight governed routes,
+ * the shared dashboard floor is 259,911 B gz — **96.9 % of the old 320 KB ceiling** — leaving about
+ * 10 KB for any page's own delivery while the lightest real page already needs 449 B and the heaviest
+ * needs 77,549 B. A flat per-route TOTAL therefore charged every page for shared framework delivery it
+ * does not own, which is the identical structural unfitness D20-31 established for the public surface
+ * and cured the same way. No number was raised to fit: the quantity being gated changed.
+ *
+ * ⚠ THE GATED QUANTITY IS THE DELTA ABOVE THE SHARED FLOOR, NEVER THE ROUTE TOTAL. Comparing a
+ * dashboard route TOTAL against `incrementalBytes` reinstates exactly the defect D20-32 removes.
+ *
+ * ⚠ ONE GENERIC ALLOWANCE, DELIBERATELY — NO TIERS AND NO PER-ROUTE TABLE. A two-tier split
+ * (`operator-page` 60 KiB / `data-table` 84 KiB) was derived and **REJECTED**: the single cap already
+ * governs every route honestly, so the split bought 24,576 B of tightness on the six lighter routes
+ * and nothing on the route that actually motivated this decision. A second tier whose only member is
+ * `/dashboard/messages`, sized from that member's own current measurement, is arithmetically
+ * indistinguishable from a per-route allowance — i.e. the named waiver D20-30 forbids, reached by a
+ * different route. If a second page ever adopts the data-table subsystem, the tier question reopens
+ * with a real distribution behind it.
+ *
+ * ⚠ THESE ARE INTERIM LIMITS. They govern the CURRENT production Dashboard architecture until the
+ * post-campaign Dashboard UI/UX performance pass (D11-8), which is responsible for reviewing and, if
+ * appropriate, superseding both the model and this calibration. Interim is not provisional-forever:
+ * it means the review is owed, not that the numbers are soft.
+ *
+ * ⚠ These are doc 20 VERBATIM. Re-baselining any of them requires an owner decision plus a
+ * decision-log entry in `eslammuatamed-docs/docs/20-performance.md` — never an edit here.
+ */
+export const DASHBOARD_DELIVERY_BUDGET = {
+  /**
+   * Hard cap on the shared dashboard floor.
+   *
+   * DERIVATION — from a MEASURED framework movement, not a percentage. D20-31 already rejected
+   * D20-12's `x115/100` idiom for a floor-scale number (15 % was calibrated against an ~89 KB
+   * app-owned baseline and does not transfer), and reusing an unrelated budget's percentage here
+   * would be the same error. The unit is OD-26-7's measured `@nuxtjs/i18n` 10.6.0 adoption, which
+   * cost **+1,946 B gz on every route**:
+   *
+   *   259,911 + (4 x 1,946) = 267,695  ->  ceil to whole KiB  =  262 KiB  =  268,288 B
+   *
+   * i.e. roughly four routine ecosystem adoptions of headroom (8,377 B). ⚠ That leaves the floor at
+   * **96.9 % utilisation**, which is TIGHT and is stated rather than smoothed: the next framework
+   * bump of Unhead scale plausibly trips this gate. That is the intended behaviour — shared growth
+   * should surface here, once, instead of being charged to every page.
+   */
+  sharedFloorBytes: 262 * KB,
+  /**
+   * Per-route INCREMENTAL delivery cap above the shared floor — ONE allowance for every governed
+   * dashboard route.
+   *
+   * DERIVATION — the same measured unit as the floor cap, applied consistently:
+   *
+   *   77,549 + (4 x 1,946) = 85,333  ->  ceil to whole KiB  =  84 KiB  =  86,016 B
+   *
+   * where 77,549 B gz is the measured maximum route-specific delivery across the eight governed
+   * routes (`/dashboard/messages`). Headroom 8,467 B, i.e. **90.2 % utilisation for the heaviest
+   * route** — explicit and bounded, and deliberately NOT equal to the current maximum.
+   *
+   * ⚠ A candidate 16,416 B unit was REJECTED: it was obtained by subtracting one route's delta from
+   * another's, and D20-12/D20-31 establish that gzip is not decomposable per module that way, so it
+   * would have been a fabricated input to a governed cap. A 12,945 B candidate was also rejected as
+   * INFERRED rather than measured.
+   *
+   * ⚠ `/dashboard` sits at 0.6 % of this cap, and that is CORRECT rather than absurd: it is the
+   * dashboard overview and legitimately ships almost nothing of its own. Do not "fix" the apparent
+   * slack by inventing a tier for it — the app-owned cap and the floor still govern that route.
+   */
+  incrementalBytes: 84 * KB,
+  /**
+   * The dashboard floor measured at D20-32 calibration (campaign 026, Web `da83531`). NOT a gate —
+   * the gate is `sharedFloorBytes`. This exists so the report can show the DIRECTION and SIZE of
+   * floor movement, which is the early warning that makes the cap safe. A drop below it is a real
+   * win, but it is claimed through recalibration rather than absorbed silently.
+   */
+  sharedFloorCalibrationBytes: 259_911,
+  /**
+   * Attribution obligation threshold on the INCREMENTAL cap, carried from D20-24/D20-31: growth must
+   * be EXPLAINED long before it is allowed to BLOCK, and silence near a cap is a gate defect.
+   */
+  attributionThreshold: 0.85
+}
+
+/**
+ * FROZEN dashboard floor reference set — the shared dashboard floor is the intersection over THESE
+ * routes only (D20-32).
+ *
+ * ⚠ THIS IS DELIBERATELY A SEPARATE LIST FROM `DASHBOARD_ROUTES`, AND THAT SEPARATION IS THE WHOLE
+ * MITIGATION. If the floor were derived over "whatever is governed today", adding a governed
+ * dashboard route could shrink the floor BY CONSTRUCTION: a new page that does not load a currently
+ * shared asset ejects that asset from the intersection for EVERY route, the floor drops, and every
+ * route's delta rises by the same amount at once — every delta gate can then trip because a page was
+ * added. Freezing the reference set makes that impossible rather than merely unlikely: a newly
+ * governed route is MEASURED against the floor but does not PARTICIPATE in defining it.
+ *
+ * ⚠ As in D20-31, what is frozen is the ROUTE LIST, never asset filenames — Nuxt names are
+ * content-hashed, so a filename freeze would be invalidated by the very next build.
+ *
+ * ⚠ Changing this list is a deliberate recalibration requiring an owner decision plus a doc-20
+ * entry. It must never be edited to make a failing gate pass.
+ */
+export const DASHBOARD_FLOOR_REFERENCE_ROUTES = Object.freeze([
+  '/dashboard/login',
+  '/dashboard',
+  '/dashboard/messages',
+  '/dashboard/media',
+  '/dashboard/profile',
+  '/dashboard/projects',
+  '/dashboard/projects/new',
+  '/dashboard/projects/00000000-0000-0000-0000-000000000000'
+])
+
+/**
+ * The shared dashboard floor: assets present in the closure of EVERY route of the FROZEN dashboard
+ * reference set.
+ *
+ * @param assetsByRoute Map<route, Set<assetPath>> — must contain every
+ *   `DASHBOARD_FLOOR_REFERENCE_ROUTES` entry.
+ * @returns {{assets: Set<string>}}
+ */
+export function resolveDashboardSharedFloor(assetsByRoute) {
+  const missing = DASHBOARD_FLOOR_REFERENCE_ROUTES.filter(r => !assetsByRoute.has(r))
+  if (missing.length > 0) {
+    throw new Error(
+      `cannot derive the D20-32 shared dashboard floor: reference routes were not measured: ${missing.join(', ')}`
+    )
+  }
+  let shared = null
+  for (const route of DASHBOARD_FLOOR_REFERENCE_ROUTES) {
+    const assets = assetsByRoute.get(route)
+    if (shared === null) { shared = new Set(assets); continue }
+    for (const asset of [...shared]) if (!assets.has(asset)) shared.delete(asset)
+  }
+  return { assets: shared }
 }
 
 /**
@@ -631,16 +776,25 @@ export const DASHBOARD_ACCEPTED_BASELINE_BYTES = {
 }
 
 /**
- * The dashboard total-JS verdict — the only place the two D20-24 tiers are compared, so no caller
- * can invent a third reading. Inclusive at both bounds ("≤", exactly-at-budget passes).
+ * The dashboard total-JS verdict against the D20-24 QUALITY TARGET. Inclusive ("≤", exactly-at-target
+ * passes).
+ *
+ * ⚠ TWO-VALUED SINCE D20-32, AND THE MISSING THIRD VALUE IS THE POINT. There is deliberately NO
+ * `'FAIL'` return any more: D20-32 replaced the flat total-JS hard ceiling with the shared-floor +
+ * incremental model, so a route TOTAL can no longer fail anything. Hard failure now comes from
+ * `DASHBOARD_DELIVERY_BUDGET` (floor, incremental) and the frozen app-owned caps — three independent
+ * guards, none of them a route total.
+ *
+ * Leaving a reachable `'FAIL'` here would have been worse than dead code: it would have kept a second,
+ * contradictory ceiling alive in the one function that is supposed to be the single reading of this
+ * policy. `WARN` still PASSES the gate and still obliges the six-part attribution block, which is what
+ * keeps a route above the quality target from ever printing as an ordinary green result.
  *
  * @param {number} actualBytes gzip bytes for the route's closure
- * @returns {'PASS' | 'WARN' | 'FAIL'} WARN still passes the gate, but obliges the attribution block
+ * @returns {'PASS' | 'WARN'} WARN passes the gate, but obliges the attribution block
  */
 export function dashboardTotalVerdict(actualBytes) {
-  if (actualBytes <= DASHBOARD_BUDGET.totalJsQualityTargetBytes) return 'PASS'
-  if (actualBytes <= DASHBOARD_BUDGET.totalJsCeilingBytes) return 'WARN'
-  return 'FAIL'
+  return actualBytes <= DASHBOARD_BUDGET.totalJsQualityTargetBytes ? 'PASS' : 'WARN'
 }
 
 /**

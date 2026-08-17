@@ -22,7 +22,10 @@ import {
   FLOOR_REFERENCE_ROUTES,
   publicTierFor,
   assertPublicTierCoverage,
-  resolveSharedFloor
+  resolveSharedFloor,
+  DASHBOARD_DELIVERY_BUDGET,
+  DASHBOARD_FLOOR_REFERENCE_ROUTES,
+  resolveDashboardSharedFloor
 } from './route-assets.mjs'
 import { DASHBOARD_ROUTES } from './dashboard-closure.mjs'
 
@@ -449,20 +452,18 @@ describe('app-owned budget boundaries — inclusive, exact bytes', () => {
 })
 
 /**
- * The D20-24 two-tier dashboard ceiling.
+ * The D20-24 dashboard QUALITY TARGET — now the only threshold a dashboard route TOTAL is compared
+ * against (D20-32 replaced the flat hard ceiling with the shared-floor + incremental model).
  *
- * These bands are the reason the ceiling could be raised at all, and the WARN band is the one that
- * will not execute on a normal green run — `/dashboard/messages` sits at 295.5 KB gz, below the
- * 300 KB target — so without these tests the warning path would ship unexercised and be reported as
- * green. Every boundary is asserted on the exact byte, because "≤" is the whole contract.
+ * The WARN band will not execute on a green run for most routes, so without these tests the warning
+ * path would ship unexercised and be reported as green. Every boundary is asserted on the exact byte,
+ * because "≤" is the whole contract.
  */
-describe('dashboardTotalVerdict — doc 20 §1.1 two-tier ceiling (D20-24)', () => {
+describe('dashboardTotalVerdict — doc 20 §1.1 quality target (D20-24, ceiling removed by D20-32)', () => {
   const TARGET = DASHBOARD_BUDGET.totalJsQualityTargetBytes
-  const CEILING = DASHBOARD_BUDGET.totalJsCeilingBytes
 
-  it('pins both documented tiers', () => {
+  it('pins the documented quality target', () => {
     expect(TARGET).toBe(300 * KB)
-    expect(CEILING).toBe(320 * KB)
   })
 
   it('no longer exposes a single-value total budget that a caller could read as the ceiling', () => {
@@ -470,24 +471,37 @@ describe('dashboardTotalVerdict — doc 20 §1.1 two-tier ceiling (D20-24)', () 
     expect(DASHBOARD_BUDGET.totalJsBytes).toBeUndefined()
   })
 
+  it('no longer exposes a flat total-JS hard ceiling at all (D20-32)', () => {
+    // The whole point of D20-32: a dashboard route TOTAL does not gate any more. Leaving this key in
+    // place — even unused — would keep a second, contradictory ceiling alive for the next reader.
+    expect(DASHBOARD_BUDGET.totalJsCeilingBytes).toBeUndefined()
+  })
+
   it.each([
     ['far below the quality target', 1, 'PASS'],
     ['one byte below the quality target', TARGET - 1, 'PASS'],
     ['exactly at the quality target', TARGET, 'PASS'],
     ['one byte above the quality target', TARGET + 1, 'WARN'],
-    ['mid-warning band', TARGET + (CEILING - TARGET) / 2, 'WARN'],
-    ['one byte below the hard ceiling', CEILING - 1, 'WARN'],
-    ['exactly at the hard ceiling', CEILING, 'WARN'],
-    ['one byte above the hard ceiling', CEILING + 1, 'FAIL'],
-    ['far above the hard ceiling', CEILING * 2, 'FAIL']
+    ['well above the old 320 KB ceiling', 320 * KB + 1, 'WARN'],
+    ['at the measured /dashboard/messages figure', 337_460, 'WARN'],
+    ['absurdly high', TARGET * 4, 'WARN']
   ])('%s → %s', (_label, bytes, expected) => {
     expect(dashboardTotalVerdict(bytes)).toBe(expected)
+  })
+
+  it('can NEVER return FAIL — the route total no longer gates (D20-32)', () => {
+    // Guards the exact regression that would silently restore the flat ceiling: a `FAIL` here would
+    // reach the breach path in check-route-size.mjs and re-block a route the new model passes.
+    for (const bytes of [1, TARGET, TARGET + 1, 320 * KB, 320 * KB + 1, 337_460, 10 * 1024 * KB]) {
+      expect(dashboardTotalVerdict(bytes)).not.toBe('FAIL')
+      expect(['PASS', 'WARN']).toContain(dashboardTotalVerdict(bytes))
+    }
   })
 
   it('treats the warning band as passing, not as a breach', () => {
     // The distinction the exit-code contract depends on: WARN must never reach the breach path.
     expect(dashboardTotalVerdict(TARGET + 1)).not.toBe('FAIL')
-    expect(dashboardTotalVerdict(CEILING)).not.toBe('FAIL')
+    expect(dashboardTotalVerdict(320 * KB)).not.toBe('FAIL')
   })
 
   it('keeps the CSS limit unchanged — D20-24 moved only the total ceiling', () => {
@@ -804,5 +818,161 @@ describe('D20-31 — resolveSharedFloor and the FROZEN reference set', () => {
   it('freezes the reference set against accidental mutation', () => {
     expect(Object.isFrozen(FLOOR_REFERENCE_ROUTES)).toBe(true)
     expect(FLOOR_REFERENCE_ROUTES).toHaveLength(18)
+  })
+})
+
+/**
+ * D20-32 — the INTERIM Dashboard delivery model.
+ *
+ * ⚠ WHY EVERY NUMBER IS RE-DERIVED HERE RATHER THAN COPIED. These caps were introduced to make an
+ * owner-accepted condition (D20-30) mechanically governable. A test that merely asserted
+ * `sharedFloorBytes === 262 * KB` would pass equally well against a cap someone had quietly raised to
+ * make a failing gate green — which is the exact move D20-32's own text forbids. So each cap is
+ * recomputed from its stated measured input, and the derivation is what is pinned.
+ */
+describe('D20-32 — interim dashboard delivery budget', () => {
+  /** OD-26-7's MEASURED `@nuxtjs/i18n` 10.6.0 adoption cost, the one unit both caps are built from. */
+  const ADOPTION_UNIT = 1946
+  const ADOPTIONS = 4
+  const ceilKiB = bytes => Math.ceil(bytes / KB) * KB
+
+  it('derives the shared-floor cap from the measured floor plus four measured adoptions', () => {
+    const measuredFloor = DASHBOARD_DELIVERY_BUDGET.sharedFloorCalibrationBytes
+    expect(measuredFloor).toBe(259_911)
+    expect(DASHBOARD_DELIVERY_BUDGET.sharedFloorBytes)
+      .toBe(ceilKiB(measuredFloor + ADOPTIONS * ADOPTION_UNIT))
+    expect(DASHBOARD_DELIVERY_BUDGET.sharedFloorBytes).toBe(262 * KB)
+  })
+
+  it('derives the incremental cap from the measured worst route plus the SAME unit', () => {
+    // 77,549 B gz — the measured maximum route-specific delivery (`/dashboard/messages`).
+    expect(DASHBOARD_DELIVERY_BUDGET.incrementalBytes)
+      .toBe(ceilKiB(77_549 + ADOPTIONS * ADOPTION_UNIT))
+    expect(DASHBOARD_DELIVERY_BUDGET.incrementalBytes).toBe(84 * KB)
+  })
+
+  it('leaves BOUNDED headroom — never a cap equal to the current maximum', () => {
+    // "Do not simply set a number equal to the current maximum" is the requirement; both directions
+    // are asserted, because a cap far ABOVE the maximum governs nothing either.
+    const floorHeadroom = DASHBOARD_DELIVERY_BUDGET.sharedFloorBytes - 259_911
+    const incrHeadroom = DASHBOARD_DELIVERY_BUDGET.incrementalBytes - 77_549
+    expect(floorHeadroom).toBe(8377)
+    expect(incrHeadroom).toBe(8467)
+    for (const h of [floorHeadroom, incrHeadroom]) expect(h).toBeGreaterThan(0)
+    // Bounded: neither cap grants more than one further "four adoptions" of slack.
+    expect(floorHeadroom).toBeLessThanOrEqual(2 * ADOPTIONS * ADOPTION_UNIT)
+    expect(incrHeadroom).toBeLessThanOrEqual(2 * ADOPTIONS * ADOPTION_UNIT)
+  })
+
+  it('is ONE generic allowance — no tier map and no per-route exception table', () => {
+    // The structural guarantee against a named waiver: there is nothing here keyed by route.
+    expect(typeof DASHBOARD_DELIVERY_BUDGET.incrementalBytes).toBe('number')
+    for (const key of Object.keys(DASHBOARD_DELIVERY_BUDGET)) {
+      expect(key).not.toMatch(/dashboard\//)
+    }
+    expect(JSON.stringify(DASHBOARD_DELIVERY_BUDGET)).not.toMatch(/\/dashboard/)
+  })
+
+  it('keeps the measured worst route INSIDE the cap but still ABOVE the attribution threshold', () => {
+    // This is the pair that preserves D20-30: `/dashboard/messages` is genuinely green on the model,
+    // and it still cannot print as an ordinary green line. If a future recalibration raised the cap
+    // enough to drop it under 85 %, the route's accepted-and-attributed status would go silent.
+    const cap = DASHBOARD_DELIVERY_BUDGET.incrementalBytes
+    expect(budgetVerdict(77_549, cap)).toBe('PASS')
+    expect(77_549).toBeGreaterThanOrEqual(cap * DASHBOARD_DELIVERY_BUDGET.attributionThreshold)
+  })
+})
+
+describe('D20-32 — resolveDashboardSharedFloor and its FROZEN reference set', () => {
+  const refMap = (extra = {}) => {
+    const m = new Map()
+    for (const r of DASHBOARD_FLOOR_REFERENCE_ROUTES) {
+      m.set(r, new Set(['/_nuxt/shell.js', '/_nuxt/vendor.js', '/_nuxt/layout.js', `/_nuxt/own-${r}.js`]))
+    }
+    for (const [k, v] of Object.entries(extra)) m.set(k, v)
+    return m
+  }
+
+  it('returns exactly the assets common to every frozen reference route', () => {
+    const { assets } = resolveDashboardSharedFloor(refMap())
+    expect([...assets].sort()).toEqual(['/_nuxt/layout.js', '/_nuxt/shell.js', '/_nuxt/vendor.js'])
+  })
+
+  it('CONTROL — a newly governed route does NOT redefine the frozen floor', () => {
+    // The shrink-on-add hazard, stated as a test: a new dashboard route that does not carry a
+    // currently-shared asset must not eject it from the floor for every other route. If the floor
+    // were derived over "whatever is governed today", `vendor.js` would drop out here and every
+    // route's delta would jump at once — because a page was added.
+    const withNewRoute = refMap({
+      '/dashboard/brand-new': new Set(['/_nuxt/shell.js', '/_nuxt/own-new.js'])
+    })
+    const { assets } = resolveDashboardSharedFloor(withNewRoute)
+    expect([...assets].sort()).toEqual(['/_nuxt/layout.js', '/_nuxt/shell.js', '/_nuxt/vendor.js'])
+    expect(assets.has('/_nuxt/vendor.js')).toBe(true)
+  })
+
+  it('refuses to derive a floor when a frozen reference route was not measured', () => {
+    const incomplete = refMap()
+    incomplete.delete(DASHBOARD_FLOOR_REFERENCE_ROUTES[2])
+    expect(() => resolveDashboardSharedFloor(incomplete)).toThrow(/reference routes were not measured/)
+  })
+
+  it('is a SEPARATE list from DASHBOARD_ROUTES, not an alias of it', () => {
+    // If these were the same array, the control above could not pass — the floor would be derived
+    // over the governed set and a new governed route would participate in defining it.
+    expect(DASHBOARD_FLOOR_REFERENCE_ROUTES).not.toBe(DASHBOARD_ROUTES)
+    expect(Object.isFrozen(DASHBOARD_FLOOR_REFERENCE_ROUTES)).toBe(true)
+    // Today they cover the same routes, which is intended at calibration time; the point is that they
+    // are independently editable, so adding to DASHBOARD_ROUTES alone cannot move the floor.
+    expect([...DASHBOARD_FLOOR_REFERENCE_ROUTES].sort())
+      .toEqual(DASHBOARD_ROUTES.map(r => r.route).sort())
+  })
+
+  it('freezes a ROUTE LIST, never content-hashed asset filenames', () => {
+    for (const route of DASHBOARD_FLOOR_REFERENCE_ROUTES) {
+      expect(route).toMatch(/^\/dashboard/)
+      expect(route).not.toMatch(/\.js$/)
+      expect(route).not.toMatch(/_nuxt/)
+    }
+  })
+})
+
+describe('D20-32 — the three guards fail INDEPENDENTLY', () => {
+  const FLOOR_CAP = DASHBOARD_DELIVERY_BUDGET.sharedFloorBytes
+  const INCR_CAP = DASHBOARD_DELIVERY_BUDGET.incrementalBytes
+
+  it('CONTROL — shared framework growth alone trips the FLOOR gate', () => {
+    // Route-specific delivery held at a comfortable value; only the shared floor moves.
+    expect(budgetVerdict(FLOOR_CAP, FLOOR_CAP)).toBe('PASS')
+    expect(budgetVerdict(FLOOR_CAP + 1, FLOOR_CAP)).toBe('FAIL')
+    expect(budgetVerdict(40_000, INCR_CAP)).toBe('PASS')
+  })
+
+  it('CONTROL — excessive route-specific delivery alone trips the ROUTE gate', () => {
+    // Floor held at exactly its cap (passing); only the route's own delta moves.
+    expect(budgetVerdict(FLOOR_CAP, FLOOR_CAP)).toBe('PASS')
+    expect(budgetVerdict(INCR_CAP, INCR_CAP)).toBe('PASS')
+    expect(budgetVerdict(INCR_CAP + 1, INCR_CAP)).toBe('FAIL')
+  })
+
+  it('CONTROL — app-owned remains a third, independent guard', () => {
+    // A route can be green on floor AND incremental and still fail on app-owned, which is the whole
+    // reason D20-29's frozen per-route caps are preserved rather than folded into the new model.
+    const cap = dashboardAppCapFor('/dashboard/messages')
+    expect(budgetVerdict(INCR_CAP - 1, INCR_CAP)).toBe('PASS')
+    expect(budgetVerdict(cap + 1, cap)).toBe('FAIL')
+    // And the caps really are per-route, so one route's breach cannot be hidden by another's slack.
+    expect(dashboardAppCapFor('/dashboard/projects/new')).not.toBe(cap)
+  })
+
+  it('gates the DELTA, not the route total — the defect D20-32 removes', () => {
+    // `/dashboard/messages` measured 337,460 B total and 77,549 B of its own delivery. Under the old
+    // flat model the total failed; under D20-32 the delta passes. Asserting both directions is what
+    // proves the quantity changed rather than a number having been raised.
+    expect(337_460).toBeGreaterThan(320 * KB) // would have FAILED the removed flat ceiling
+    expect(budgetVerdict(77_549, INCR_CAP)).toBe('PASS') // PASSES on what the page actually owns
+    // The route total is not even comparable to the incremental cap — a caller that confused them
+    // would get a wildly wrong verdict, which is why the two live under different names.
+    expect(budgetVerdict(337_460, INCR_CAP)).toBe('FAIL')
   })
 })
