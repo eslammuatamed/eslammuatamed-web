@@ -2,7 +2,7 @@
 
 |                  |                                                                              |
 | ---------------- | ---------------------------------------------------------------------------- |
-| **Status**       | PROPOSED — planning artifact for owner review. No implementation authorized.  |
+| **Status**       | **APPROVED as execution basis 2026-08-17.** Campaign authorized; FE-1 in progress.  |
 | **Created**      | 2026-08-17                                                                    |
 | **Author**       | Claude (autonomous planning transition after Campaign 026)                     |
 | **Base**         | Web `origin/dev` `54cea28737c558767ccb24a34e2b437b62f7f058`                    |
@@ -761,8 +761,8 @@ Only genuine product/UX/architecture decisions. Everything mechanical has a defa
 
 | # | Question | Recommendation | Alternatives | Product impact | Technical impact | Blocked if unanswered |
 | --- | --- | --- | --- | --- | --- | --- |
-| **OD-1** | **Is the full Dashboard (M3) in Frontend v1?** Doc 02 §7 says launch requires every `M`, which includes seven content modules, SEO, settings and RBAC. | **Yes — hold the `M` bar.** It is the documented gate, the API is complete for it, and a portfolio whose content cannot be edited is not finished. | (a) Trim v1 to Articles + SEO + settings, defer taxonomy/testimonials/RBAC; (b) defer the whole Dashboard and ship the public site as v1 | Determines whether the owner can run the site without a developer | Sets the size of the entire campaign | **Everything.** This is the scope question. |
-| **OD-2** | **Is FR-DSH-090 (dynamic RBAC UI) really v1** on a single-operator site? | **Defer to post-v1**, keep `M` for the API (already built). Recommend reclassifying the *UI* to `S` by explicit roadmap decision. | Build it in FE-4 as specified | Zero user-visible value today; real value as a portfolio demonstration of access-control design (D02-6's stated intent) | Removes the highest-complexity FE-4 item | FE-4 scope |
+| **OD-1** ✅ **APPROVED 2026-08-17** | **Is the full Dashboard (M3) in Frontend v1?** Doc 02 §7 says launch requires every `M`, which includes seven content modules, SEO, settings and RBAC. | **Yes — hold the `M` bar.** It is the documented gate, the API is complete for it, and a portfolio whose content cannot be edited is not finished. | (a) Trim v1 to Articles + SEO + settings, defer taxonomy/testimonials/RBAC; (b) defer the whole Dashboard and ship the public site as v1 | Determines whether the owner can run the site without a developer | Sets the size of the entire campaign | **Everything.** This is the scope question. |
+| **OD-2** ✅ **APPROVED 2026-08-17 — DEFERRED** | **Is FR-DSH-090 (dynamic RBAC UI) really v1** on a single-operator site? | **Defer to post-v1**, keep `M` for the API (already built). Recommend reclassifying the *UI* to `S` by explicit roadmap decision. | Build it in FE-4 as specified | Zero user-visible value today; real value as a portfolio demonstration of access-control design (D02-6's stated intent) | Removes the highest-complexity FE-4 item | FE-4 scope |
 | **OD-3** | **Confirm Tiptap** (FR-DSH-013 `M`) as the rich-text editor. Deps are declared but have never been imported. | **Yes, confirm.** It is an `M` requirement, deps are already declared, and `check:bundle` already guards public isolation. | A lighter Markdown editor; plain Markdown textarea | Authoring experience for the blog | Largest single technical risk in FE-2 | FE-2 |
 | **OD-4** | **Dashboard small-screen list pattern** — cards or horizontal scroll? | **Card fallback below `md`.** Horizontal scroll on a 380px admin table is the worse experience. | Horizontal scroll; hide columns | Admin usability on phone | Set once in FE-2, inherited by all modules | FE-2 pattern set |
 | **OD-5** | **RSS** — v1 or not? Not an `M` requirement and no route exists. | **Not v1.** Add post-launch if the blog gets a cadence. | Build in FE-4 (small: a Nitro route) | Discovery channel | Small | FE-4 scope only |
@@ -805,3 +805,258 @@ Maintainability Pass at any point during Frontend v1.
 
 **Before FE-1 opens**, only **OD-1** needs an answer — it sets whether this campaign is five phases
 or two. OD-2/3/4 are needed before FE-2, not before FE-1.
+
+
+---
+
+## 14. Dashboard UX requirements — owner input 2026-08-17 · APPROVED REQUIREMENTS
+
+Raised by the owner from real Dashboard screenshots. These are **product/UX requirements**, not
+future polish. Nothing here was implemented; this section assigns each item to a phase.
+
+### 14.1 Multilingual authoring pattern — the biggest single architecture item
+
+**Problem observed.** The Project editor renders the **complete English block followed by the
+complete Arabic block**, doubling the length of an already-complex page and making authoring
+awkward.
+
+**Required pattern for every translatable entity:**
+
+| Field class | Treatment |
+| --- | --- |
+| **Shared / language-independent** — publication state, year/order, technologies, gallery/media, structural relationships, non-translated metadata | visible **once**, outside the tabs |
+| **Translatable content** | **locale tabs** (`English | العربية`), one surface visually active at a time |
+
+**Behavioural contract the implementation must satisfy:**
+
+- the active tab **defaults coherently from the current Dashboard/application locale** — it must not
+  always force English;
+- switching tabs **preserves unsaved form state**;
+- validation failures in an **inactive** locale stay **discoverable** — a hidden tab must never
+  swallow an error;
+- tabs **visibly indicate** invalid/incomplete translations;
+- keyboard and screen-reader behaviour correct (tabs are a real ARIA tab pattern, not styled divs);
+- Arabic fields render **RTL**, English fields **LTR**, within the same form;
+- works at **380px**;
+- **form orchestration is not duplicated per module.**
+
+**Not routes.** Locale editing must **not** become separate routes unless evidence shows a genuine
+advantage.
+
+**Also required:** evaluate showing translation completeness **without opening each tab** — note this
+is already an `M` requirement (`FR-DSH-011`, per-entity translation-completeness indicators), so the
+indicator is in scope by requirement, and the open question is only its placement (tab badge vs list
+column vs both). **Recommendation: both** — a badge on the tab and a column in the list view.
+
+**Applies to:** Projects · Articles · Experiences · Profile/About content · SEO page content · every
+other multilingual `M` content module.
+
+### 14.2 Dashboard global header / shell
+
+**Problem observed.** The owner must **hand-edit the URL** to get from the Dashboard back to the
+public site. Explicitly called unacceptable as a final admin workflow.
+
+Required in the Dashboard shell:
+
+- **locale switcher adjacent to the appearance/theme control**;
+- a clear, persistent **`View site` / `Open portfolio`** action;
+- correct **external-link semantics** where applicable;
+- **operator identity / session actions**;
+- consistent **responsive behaviour**.
+
+**Contextual public-view actions.** When editing a **published** entity that has a real public
+destination, offer e.g. **`View project`**, resolving the correct public route **and locale**.
+**Do not** add public-view actions for entities with no public destination (categories, tags, media,
+messages, settings). For unpublished entities the action must be absent or clearly a *preview*,
+using the existing `preview-token` surfaces — never a link to a 404.
+
+### 14.3 Login page — full product-quality redesign
+
+`/dashboard/login` is functionally minimal and below v1 quality. Treated as **real v1 Dashboard
+work**, built on the established stack (Nuxt UI · Zod · existing auth API · existing design tokens),
+**clean and restrained, not decorative**.
+
+Scope to evaluate: branded/logo treatment · logo or explicit home action back to the public
+portfolio · coherent card/layout composition · email field · password field · **password visibility
+control** · inline Zod validation · server/authentication error presentation · loading/submitting
+state · disabled-state behaviour · keyboard submission · focus and **error-focus** behaviour ·
+accessibility · mobile layout · dark/light · Dashboard language switch · consistency with the
+product.
+
+**Constraints:** do **not** replace Nuxt UI controls with bespoke equivalents without a concrete
+recorded reason; do **not** introduce a second validation architecture.
+
+### 14.4 Long-form authoring ergonomics
+
+Beyond locale duplication, long authoring workflows need deliberate ergonomics:
+
+strong section hierarchy · translation tabs · shared fields outside the tabs · **sticky or otherwise
+persistently reachable Save/Publish** · clear **saved / saving / unsaved** feedback ·
+**scroll-to-first-error** or equivalent validation navigation · contextual **Preview / View on site**
+· deliberate **destructive-action placement** · mobile ergonomics · **avoiding accidental loss of
+edits** · clear publication-state presentation.
+
+**Starting hypothesis (owner-set):** `one coherent authoring page` + `clear sections` + `locale tabs`
++ `persistent primary actions`. **No multi-step wizard** unless the real workflow proves sequential
+steps are semantically required — and that would be an owner decision, not an implementation choice.
+
+**Note on §12 OD-8.** The owner's "avoiding accidental loss of edits" confirms the recommendation
+there: **keep the unsaved-changes guard in v1** even though autosave (`FR-DSH-014`) stays `S`.
+
+### 14.5 Phase assignment
+
+| Item | FE-1 | FE-2 (establish) | FE-3/FE-4 (replicate) | FE-5 (finalize) |
+| --- | :--: | :--: | :--: | :--: |
+| Multilingual tabbed authoring pattern | — | **build** | apply per module | cross-module consistency |
+| Shared-vs-translatable field split | — | **build** | apply | audit |
+| Translation completeness indicator (FR-DSH-011) | — | **build** | apply | consistency |
+| Long-form authoring ergonomics (sticky actions, scroll-to-error, unsaved guard) | — | **build** | apply | audit |
+| Contextual `View on site` / preview action | — | **build** (Articles) | apply where a public destination exists | consistency |
+| Dashboard shell: `View site`, locale switcher, theme, session menu | — | **minimum viable shell** | inherit | **full coherence pass** |
+| Login redesign | — | **minimum** if it blocks exercising FE-2 | — | **finalize** |
+| Header/global nav IA, action placement, terminology | — | conventions only | inherit | **finalize** |
+| D20-32 review | — | measure only | measure only | **review/recalibrate** |
+
+**Rationale for pulling the shell forward.** The owner authorized placing the minimum necessary
+shell work earlier *if it is a dependency for exercising FE-2 naturally*. It is: FE-2 must establish
+"contextual public-view actions" and "list ↔ editor navigation", and neither can be designed against
+a shell with no `View site` affordance and no locale switcher. **Recommendation: build the minimum
+viable shell at the start of FE-2** — `View site`, locale switcher beside the theme control, session
+menu — and leave IA refinement, terminology and visual coherence to FE-5.
+
+**Login** is a weaker dependency: FE-2 can be exercised through the existing login. **Recommendation:
+leave the full login redesign in FE-5**, unless FE-2 work shows the current page obstructs the
+authoring loop.
+
+### 14.6 Shared components / composables likely to emerge
+
+Named now so FE-2 builds them deliberately rather than discovering them five modules late — but
+**extracted only after the real Articles flow demonstrates the boundary**, per the owner's
+instruction not to build an abstract framework first.
+
+| Likely artifact | Responsibility |
+| --- | --- |
+| `useTranslatableForm` (composable) | per-locale state, dirty tracking, tab-scoped validity, completeness |
+| `TranslationTabs` (component) | ARIA tabs, per-locale `dir`, validity badges, 380px behaviour |
+| `EntityFormLayout` (component) | section hierarchy, sticky primary actions, destructive placement |
+| `useUnsavedChangesGuard` (composable) | navigation guard + browser `beforeunload` |
+| `useFirstErrorFocus` (composable) | scroll/focus to first invalid field, tab-aware across locales |
+| `usePublicEntityLink` (composable) | resolve public route + locale for a published entity; `null` when none |
+| `DashboardShell` header slice | `View site`, locale switcher, theme, session menu |
+| `useSaveFeedback` (composable) | saving / saved / failed presentation, a11y live region |
+
+**Boundary discipline:** pages own routing and orchestration · components own presentation ·
+composables own reusable behaviour · pure utilities own rules. No abstraction created before a second
+real consumer exists, except where the owner's contract above already names it as cross-module.
+
+### 14.7 Verification requirements added by this input
+
+- **Tab state preservation** — edit both locales, switch tabs, assert nothing is lost (a test that
+  would pass trivially if tabs were re-mounted must be written to fail in that case).
+- **Inactive-locale validation discoverability** — submit with an error only in the hidden locale;
+  assert the error is surfaced **and** the tab is marked invalid. This is the discriminating test for
+  §14.1; without it the whole pattern can ship broken and look fine.
+- **ARIA tabs** — roles, `aria-selected`, arrow-key navigation, focus management; axe on both states.
+- **Mixed direction** — Arabic field `dir="rtl"` and English field `dir="ltr"` **within one form**.
+- **380px** — the authoring page and the list view, both locales.
+- **Unsaved-changes guard** — in-app navigation and reload.
+- **`View on site`** — resolves the right route and locale for a published entity; **absent** for an
+  unpublished one and for entities with no public destination.
+- **Login** — keyboard submit, error focus, visibility toggle a11y, dark/light, 380px.
+
+### 14.8 Genuine owner decisions arising — OWNER DECISION
+
+Most of this input is already determined by existing product principles and needs no owner ruling.
+Two genuine questions remain:
+
+| # | Question | Recommendation | Why it is a real decision |
+| --- | --- | --- | --- |
+| **OD-9** | **Is the Dashboard UI language independent of the content locale being edited?** i.e. does switching the Dashboard to Arabic also switch which translation tab is active, or are they separate concepts? | **Separate but coupled at first paint**: the Dashboard UI locale drives the *initial* active tab (satisfying "default coherently from the current Dashboard locale"), after which tab selection is independent per entity. | Genuinely different product outcomes: coupling them permanently means an Arabic-reading operator cannot comfortably edit English copy, while full independence loses the sensible default the owner asked for. |
+| **OD-10** | **Does the Dashboard shell get a full localized UI (EN/AR) in v1**, or does it stay English-only with only *content* translated? | **Full EN/AR Dashboard UI** — the owner asked for a locale switcher in the header, which implies a localized shell; and an Arabic-first operator is the actual user. | Sets translation scope for every Dashboard string across all modules — a material cost that should not be discovered mid-FE-3. |
+
+**RESOLVED 2026-08-17 by the owner's execution-authorization message — neither is escalated.** That
+message settles both from the authoritative decision list:
+
+- **OD-9 → resolved as recommended.** "active locale derived coherently from Dashboard/app locale"
+  confirms the UI locale seeds the initial tab; tab selection is thereafter independent per entity.
+- **OD-10 → resolved as recommended.** "Dashboard shell needs: locale control" implies a localized
+  EN/AR Dashboard shell, so every Dashboard string is translatable and that cost is in FE-2's budget,
+  not a surprise in FE-3.
+
+Both are therefore **settled inputs to FE-2**, not open questions.
+
+---
+
+## 15. FE-1 execution record · VERIFIED CURRENT
+
+Branch `campaign/frontend-v1`, off `origin/dev` `54cea287`. **Nothing pushed; nothing deployed.**
+
+### 15.1 Contract adoption — DONE
+
+| Step | Evidence |
+| --- | --- |
+| Authoritative source confirmed | API `origin/main` `9af1aac` `openapi.json` vs **live** `https://api.eslammuatamed.com/docs-json`: `jq -S` normalized comparison → **STRUCTURALLY IDENTICAL**. The committed contract *is* what Production serves. |
+| Contract adopted | `openapi/openapi.json` 49 → **52 paths** |
+| Types regenerated | `npm run api:types` (`openapi-typescript` 7.13.0) — **not hand-authored** |
+| Fixed point | second generation **byte-identical**; CI's `api:types` idempotence gate will compare against the committed file |
+| Three SEO paths type-visible | `/api/v1/seo/pages/{pageKey}` (L197), `/api/v1/admin/seo/pages` (L217), `/api/v1/admin/seo/pages/{pageKey}` (L237) in `app/types/api.d.ts` |
+| New schemas | `PublicPageSeoEntity`, `AdminPageSeoEntity`, `PageSeoTranslationEntity`, `PageSeoTranslationDto`, `UpdatePageSeoDto` |
+| **No unrelated drift** | full normalized contract diff enumerated: additions are the 5 PageSeo schemas + 3 routes; **the only removals are the retired analytics fields** (`analyticsProvider`, `analyticsMeasurementId`, the `analytics` object) plus reworded descriptions |
+| Consumers typecheck | `npm run typecheck` → **exit 0, 0 errors** |
+
+### 15.2 `gtmContainerId` reconciliation — DONE
+
+`gtmContainerId` now appears 4× in generated types; `analyticsProvider` **0×**. Nine fixture files
+reconciled, in two groups:
+
+- **Typecheck-failing (4)** — `home/Contact.spec.ts`, `home/Nameplate.spec.ts`,
+  `layout/Footer.spec.ts`, `project/ContactCta.spec.ts`: typed `const … : SiteSettings` literals that
+  correctly failed on the missing field. Added `gtmContainerId: null`.
+- **Silently stale (5)** — `pages/about.spec.ts`, `utils/about-readiness.spec.ts`,
+  `pages/contact.spec.ts`, `utils/portrait-form.spec.ts`, `pages/dashboard/profile.spec.ts`: still
+  named the retired fields but did **not** fail. Renamed to `gtmContainerId`.
+
+Repo-wide sweep for `analyticsProvider|analyticsMeasurementId|analytics: null` outside generated
+types → **NONE**.
+
+### 15.3 A finding worth recording — POST-V1
+
+**Fixtures built with a `Partial<T>` spread are not contract-checked.** The five "silently stale"
+files above all end `} as SiteSettings` / `as unknown as AdminSiteSettings`, which suppresses **both**
+excess-property and missing-property errors — which is why a retired field survived there while the
+same drift failed loudly in the four annotated fixtures.
+
+**The cast is not sloppiness:** every one of those files spreads `...overrides` from a
+`Partial<SiteSettings>`, and TypeScript widens spread properties to `T | undefined`, so the cast is
+forced by the pattern. Removing it would produce TS-limitation noise, not real safety.
+
+**Therefore not fixed here** — that would be the broad refactoring FE-1 was told to avoid. Recorded
+for the post-v1 Learnability & Maintainability Pass: a `makeSettings()` factory that applies defaults
+through a `Required<T>` base before spreading would restore genuine contract checking across all
+fixtures. **Classification: DEFER TO POST-V1** — it does not block v1 implementation.
+
+### 15.4 Not done in FE-1 — and why
+
+The **Dashboard reply flow** (`POST /admin/messages/{id}/replies`) was investigated but **deliberately
+not implemented**: it is Dashboard **UI** work, and the owner's §14 input directly governs the form,
+validation, error-presentation and save-feedback patterns it would have to use. Building it before
+FE-2 establishes those patterns would create exactly the throwaway work the tracer-bullet sequencing
+exists to prevent.
+
+**Contract facts captured for when it is built:**
+
+- `POST /api/v1/admin/messages/{id}/replies` — **`Idempotency-Key` header required**, 8–200 printable
+  ASCII, no whitespace, **scoped to the message**; body carries **only** `body` (plain text, 1–5000
+  chars, no HTML — D02-13e).
+- Repeating a request with the **same** key returns the existing attempt with **200** and never
+  re-sends. A deliberate second reply needs a **new** key.
+- **`201`/`200` are both success-shaped even when the send FAILED** — the attempt was recorded either
+  way, and the outcome lives in `status`, not the HTTP code. **A UI that treats 2xx as "sent" will lie
+  to the operator.**
+- `status` ∈ `PENDING | SENT | FAILED`. `SENT` means the provider *accepted* it — not delivered, not
+  read. `FAILED` does **not** prove no mail was sent. `PENDING` is ambiguous **by design** and is
+  never evidence of non-delivery (D09-23).
+- **`409`** — the message has no email address (phone-only intake is valid per D10-16) and can never
+  be replied to. `GET` still returns `200 []` for it: **empty history and 404 are different facts.**
+- **`mailto:` is NOT removed.** `FR-DSH-060` states replying from the owner's own email client
+  "remains available and is unaffected". `replyMailto()` stays; the dashboard reply is an **addition**.
