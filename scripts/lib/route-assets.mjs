@@ -228,8 +228,6 @@ export function budgetVerdict(actualBytes, budgetBytes) {
  * decision-log entry in `eslammuatamed-docs/docs/20-performance.md` — never an edit here.
  */
 export const BUDGET = {
-  /** D20-11 re-baseline (was 90 KB — below this stack's measured bilingual floor). */
-  totalJsBytes: 250 * KB,
   /**
    * D20-12. App-owned Rollup `renderedLength`, FROZEN — derived once from the Web `138cef5`
    * baseline and never recomputed from a build:
@@ -248,6 +246,212 @@ export const BUDGET = {
   appRenderedBytes: 101 * KB,
   /** Unchanged; also enforced statically by `npm run size`. */
   cssBytes: 30 * KB
+}
+
+/**
+ * D20-31 — the PUBLIC per-route delivery model. **REPLACES D20-11's flat `totalJsBytes`.**
+ *
+ * WHY THE FLAT NUMBER WAS RETIRED. A single per-route total re-charges every byte of shared
+ * framework growth to every page. Campaign 026 measured the consequence exactly: the shared floor
+ * reached 254,554 B gz — 99.4 % of the old 256,000 B total — leaving 1,446 B for a whole page, which
+ * is less than the lightest page in this application actually needs (2,599 B). Six of nine route
+ * families could not reach the old budget **with their entire page deleted**. A budget no compliant
+ * page can satisfy does not govern anything; it only mis-names the owner of a regression.
+ *
+ * WHAT REPLACES IT — two independent readings instead of one conflated number:
+ *
+ *   1. `sharedFloorBytes`  caps the SHARED FLOOR itself, so framework/ecosystem growth trips ONE
+ *                          gate with the correct owner named, instead of nine gates naming nine
+ *                          innocent pages.
+ *   2. `incrementalBytes`  caps what each page adds ON TOP of the floor, by FUNCTIONAL TIER.
+ *
+ * `appRenderedBytes` (D20-12) is untouched and remains an INDEPENDENT guard: a route can fail
+ * either, and passing one never excuses the other.
+ *
+ * ⚠ THE GATED QUANTITY IS THE DELTA, NEVER THE TOTAL. Read `incrementalBytes` against
+ * `route_total − shared_floor`. Comparing a route TOTAL against these numbers reinstates exactly the
+ * defect D20-31 exists to remove.
+ *
+ * ⚠ TIERS ARE DEFINED BY WHAT THE PAGE DOES, NOT BY WHAT IT CURRENTLY MEASURES. The measurements
+ * corroborate the boundaries; they do not set them. Tiering because figures cluster would be a
+ * budget refitted to each build, which measures nothing — the same reasoning that freezes D20-12.
+ *
+ * ⚠ These are doc 20 VERBATIM (D20-31). Re-baselining any of them requires an owner decision plus a
+ * decision-log entry in `eslammuatamed-docs/docs/20-performance.md` — never an edit here.
+ */
+export const PUBLIC_DELIVERY_BUDGET = {
+  /**
+   * Hard cap on the shared public floor (D20-31).
+   *
+   * DERIVATION, recorded because "rounded to a nice number" is not a derivation. D20-12's
+   * `x115/100` idiom yields 292,864 B here — 38,310 B of headroom, i.e. 2.4x the ENTIRE allowance of
+   * the heaviest route. That is precisely the "a framework upgrade must not silently gain unlimited
+   * shared headroom" failure, so the percentage idiom was REJECTED for this cap: D20-12's 15 % was
+   * calibrated against an ~89 KB app-owned baseline and does not transfer to a 254 KB floor.
+   *
+   * Derived instead from a MEASURED framework movement — OD-26-7's `@nuxtjs/i18n` 10.6.0 adoption
+   * cost +1,946 B gz on every route:
+   *
+   *   254,554 + (4 x 1,946) = 262,338  ->  ceil to whole KiB  =  257 KiB  =  263,168 B
+   *
+   * i.e. roughly four routine ecosystem adoptions of headroom. A structural regression (another
+   * Unhead-scale duplication) trips it immediately.
+   */
+  sharedFloorBytes: 257 * KB,
+  /**
+   * Per-route INCREMENTAL delivery caps, by functional tier. Derived with D20-12's idiom
+   * (`ceil((measuredMax x 115 / 100) / 1024) x 1024`) from the campaign-026 calibration:
+   *
+   *   content                7 KiB   <- ceil((5,597  x 1.15)/1024)x1024
+   *   collection            12 KiB   <- ceil((10,073 x 1.15)/1024)x1024
+   *   interactive-subsystem 18 KiB   <- ceil((15,876 x 1.15)/1024)x1024
+   */
+  incrementalBytes: {
+    /** Single-purpose content page: renders prose/structured content and chrome only. */
+    content: 7 * KB,
+    /** Collection/composite page: presents multiple content collections or previews. */
+    collection: 12 * KB,
+    /** Page embedding a third-party interactive subsystem (carousel, form control set, editor). */
+    'interactive-subsystem': 18 * KB
+  },
+  /**
+   * The floor measured at D20-31 calibration (campaign 026, Web `8067ec8`). NOT a gate — the gate is
+   * `sharedFloorBytes`. This exists so the report can show the DIRECTION and SIZE of floor movement,
+   * which is the early warning that makes the cap safe. A drop below it is a real win, but it is
+   * claimed through recalibration rather than absorbed silently.
+   */
+  sharedFloorCalibrationBytes: 254_554,
+  /**
+   * Attribution obligation threshold. At or above this fraction of its tier cap, a route must print
+   * full attribution. Carried from D20-24's lesson: a high ceiling is only safe because growth must
+   * be EXPLAINED long before it is allowed to BLOCK, and silence in the warning band is a gate
+   * defect rather than a pass.
+   */
+  attributionThreshold: 0.85
+}
+
+/**
+ * FUNCTIONAL TIER per governed public route (D20-31).
+ *
+ * ⚠ Assigning a route to a tier is a GOVERNANCE act, not a convenience: moving a route to a roomier
+ * tier is a budget change and needs an owner decision plus a doc-20 entry, exactly like re-baselining
+ * a number. Tier-shopping — filing a page under `interactive-subsystem` because it is over `content`
+ * — is the failure mode this table exists to make visible, which is why each entry carries the
+ * FUNCTIONAL reason rather than a byte figure.
+ *
+ * ⚠ There is deliberately NO per-route byte exception table. If the functional tiers are ever proven
+ * insufficient by evidence, that is a new owner decision, not a local edit here.
+ */
+export const PUBLIC_ROUTE_TIERS = {
+  // Composite landing page: hero plus previews of several content collections.
+  '/': 'collection',
+  '/ar': 'collection',
+  // Index pages over a content collection.
+  '/blog': 'collection',
+  '/ar/blog': 'collection',
+  '/projects': 'collection',
+  '/ar/projects': 'collection',
+  // Article pages: prose and chrome only.
+  '/blog/staying-inside-performance-budget-nuxt': 'content',
+  '/ar/blog/albaqaa-dimn-mizaniyat-ada-nuxt': 'content',
+  // Structured-content pages: no interactive subsystem, no collection rendering.
+  '/experience': 'content',
+  '/ar/experience': 'content',
+  '/about': 'content',
+  '/ar/about': 'content',
+  '/resume': 'content',
+  '/ar/resume': 'content',
+  // Embeds the Nuxt UI carousel (`UCarousel` -> `embla-carousel`) for the project gallery.
+  '/projects/content-platform-api': 'interactive-subsystem',
+  '/ar/projects/content-platform-api': 'interactive-subsystem',
+  // Embeds the Nuxt UI form control set (`UForm`/`UFormField`/`UInput`/`UTextarea`).
+  '/contact': 'interactive-subsystem',
+  '/ar/contact': 'interactive-subsystem'
+}
+
+/**
+ * FROZEN reference route set — the shared floor is the intersection over THESE routes only (D20-31).
+ *
+ * ⚠ THIS IS THE "FROZEN SHARED SET" MITIGATION, AND WHAT IT FREEZES MATTERS. It is deliberately NOT
+ * a frozen list of asset filenames: Nuxt asset names are content-hashed, so a filename list would be
+ * invalidated by the very next build and could never be enforced.
+ *
+ * ⚠ THE FAILURE MODE IT PREVENTS. Adding a governed public route can shrink the floor BY
+ * CONSTRUCTION: a new page that does not load a currently-shared asset ejects that asset from the
+ * intersection for EVERY route, so the floor drops, every route's delta rises by the same amount,
+ * and every delta gate can trip at once — because a page was added. Freezing the reference set makes
+ * that impossible rather than merely unlikely: a new route is MEASURED against the floor, but does
+ * not PARTICIPATE in defining it.
+ *
+ * ⚠ Changing this list is a deliberate recalibration and requires an owner decision plus a doc-20
+ * entry. It is the "when the frozen shared set genuinely changes" case, and it must never be edited
+ * to make a failing gate pass.
+ */
+export const FLOOR_REFERENCE_ROUTES = Object.freeze([
+  '/', '/ar',
+  '/blog', '/ar/blog',
+  '/blog/staying-inside-performance-budget-nuxt', '/ar/blog/albaqaa-dimn-mizaniyat-ada-nuxt',
+  '/projects', '/ar/projects',
+  '/projects/content-platform-api', '/ar/projects/content-platform-api',
+  '/experience', '/ar/experience',
+  '/about', '/ar/about',
+  '/resume', '/ar/resume',
+  '/contact', '/ar/contact'
+])
+
+/**
+ * The tier a governed public route is filed under. Throws rather than defaulting: an unfiled route
+ * would otherwise silently inherit whichever cap the caller happened to pick, which is the same
+ * class of defect as a route that is never measured.
+ */
+export function publicTierFor(route) {
+  const tier = PUBLIC_ROUTE_TIERS[route]
+  if (!tier) {
+    throw new Error(
+      `public route ${route} has no D20-31 functional tier. Add it to PUBLIC_ROUTE_TIERS with its ` +
+      'functional reason (an owner decision + doc 20 entry), rather than defaulting it to a cap.'
+    )
+  }
+  return tier
+}
+
+/**
+ * Governance coverage: every measured public route must be filed under a tier, and every filed route
+ * must still be measured. The second direction matters — a tier entry left behind for a deleted
+ * route reads as governance that is no longer enforced.
+ */
+export function assertPublicTierCoverage(measuredRoutes) {
+  const measured = new Set(measuredRoutes)
+  const unfiled = measuredRoutes.filter(r => !PUBLIC_ROUTE_TIERS[r])
+  const orphaned = Object.keys(PUBLIC_ROUTE_TIERS).filter(r => !measured.has(r))
+  if (unfiled.length > 0) {
+    throw new Error(`public routes measured but not filed under a D20-31 tier: ${unfiled.join(', ')}`)
+  }
+  if (orphaned.length > 0) {
+    throw new Error(`D20-31 tiers name routes that are not measured: ${orphaned.join(', ')}`)
+  }
+}
+
+/**
+ * The shared public floor: assets present on EVERY route of the FROZEN reference set.
+ *
+ * @param assetsByRoute Map<route, Set<assetPath>> — must contain every `FLOOR_REFERENCE_ROUTES` entry.
+ * @returns {{assets: Set<string>}}
+ */
+export function resolveSharedFloor(assetsByRoute) {
+  const missing = FLOOR_REFERENCE_ROUTES.filter(r => !assetsByRoute.has(r))
+  if (missing.length > 0) {
+    throw new Error(
+      `cannot derive the D20-31 shared floor: reference routes were not measured: ${missing.join(', ')}`
+    )
+  }
+  let shared = null
+  for (const route of FLOOR_REFERENCE_ROUTES) {
+    const assets = assetsByRoute.get(route)
+    if (shared === null) { shared = new Set(assets); continue }
+    for (const asset of [...shared]) if (!assets.has(asset)) shared.delete(asset)
+  }
+  return { assets: shared }
 }
 
 /**

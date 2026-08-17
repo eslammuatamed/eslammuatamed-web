@@ -16,7 +16,13 @@ import {
   dashboardAppCapFor,
   dashboardTotalVerdict,
   kb,
-  vendorPackage
+  vendorPackage,
+  PUBLIC_DELIVERY_BUDGET,
+  PUBLIC_ROUTE_TIERS,
+  FLOOR_REFERENCE_ROUTES,
+  publicTierFor,
+  assertPublicTierCoverage,
+  resolveSharedFloor
 } from './route-assets.mjs'
 import { DASHBOARD_ROUTES } from './dashboard-closure.mjs'
 
@@ -417,8 +423,10 @@ describe('the frozen app-owned limit (D20-12)', () => {
     expect(approvedAppLimitBytes(89_201)).toBe(101 * KB) // 102581.15 B → 101 KiB
   })
 
-  it('leaves the other two budgets at their documented, unchanged values', () => {
-    expect(BUDGET.totalJsBytes).toBe(250 * KB)
+  it('leaves the other budgets at their documented, unchanged values', () => {
+    // `totalJsBytes` is deliberately GONE (D20-31): a per-route total re-charged shared framework
+    // growth to every page. Public total delivery is now floor + per-tier increment.
+    expect(BUDGET.totalJsBytes).toBeUndefined()
     expect(BUDGET.cssBytes).toBe(30 * KB)
   })
 })
@@ -496,10 +504,13 @@ describe('dashboardTotalVerdict — doc 20 §1.1 two-tier ceiling (D20-24)', () 
     expect(BUDGET.appRenderedBytes).toBe(101 * KB)
   })
 
-  it('does not disturb the public total budget', () => {
+  it('does not disturb the public delivery budget', () => {
     // D20-24 changes a dashboard number only. A public regression here is the failure that would
     // matter most and is the easiest to introduce by editing the shared module.
-    expect(BUDGET.totalJsBytes).toBe(250 * KB)
+    expect(PUBLIC_DELIVERY_BUDGET.sharedFloorBytes).toBe(257 * KB)
+    expect(PUBLIC_DELIVERY_BUDGET.incrementalBytes.content).toBe(7 * KB)
+    expect(PUBLIC_DELIVERY_BUDGET.incrementalBytes.collection).toBe(12 * KB)
+    expect(PUBLIC_DELIVERY_BUDGET.incrementalBytes['interactive-subsystem']).toBe(18 * KB)
   })
 
   it('classifies the measured routes under the CORRECTED closure', () => {
@@ -686,5 +697,112 @@ describe('assertGovernedRouteCoverage — both directions (D20-29)', () => {
   it('detects a route added to the gate without a doc 20 cap', () => {
     const measured = [...DASHBOARD_ROUTES.map(r => r.route), '/dashboard/analytics']
     expect(() => assertGovernedRouteCoverage(measured)).toThrow(/measured but NOT governed/)
+  })
+})
+
+describe('D20-31 — public delivery model (shared floor + functional tiers)', () => {
+  it('holds the OWNER-APPROVED numbers exactly', () => {
+    // These are doc 20 verbatim. If this test fails, either a budget was edited here instead of
+    // through a decision-log entry, or a decision changed and this test was not updated with it.
+    expect(PUBLIC_DELIVERY_BUDGET.sharedFloorBytes).toBe(263_168) // 257 KiB
+    expect(PUBLIC_DELIVERY_BUDGET.incrementalBytes.content).toBe(7_168) // 7 KiB
+    expect(PUBLIC_DELIVERY_BUDGET.incrementalBytes.collection).toBe(12_288) // 12 KiB
+    expect(PUBLIC_DELIVERY_BUDGET.incrementalBytes['interactive-subsystem']).toBe(18_432) // 18 KiB
+  })
+
+  it('reproduces the tier derivation from the calibration measurements', () => {
+    // D20-12's idiom: ceil((measuredMax x 115 / 100) / 1024) x 1024. Asserting the DERIVATION rather
+    // than only the result is what stops a future number being rounded to something convenient.
+    const derive = (measured) => Math.ceil((measured * 115 / 100) / 1024) * 1024
+    expect(derive(5_597)).toBe(PUBLIC_DELIVERY_BUDGET.incrementalBytes.content)
+    expect(derive(10_073)).toBe(PUBLIC_DELIVERY_BUDGET.incrementalBytes.collection)
+    expect(derive(15_876)).toBe(PUBLIC_DELIVERY_BUDGET.incrementalBytes['interactive-subsystem'])
+  })
+
+  it('does NOT derive the floor cap from the percentage idiom, on purpose', () => {
+    // The x1.15 idiom yields 292,864 B here — 38,310 B of headroom, 2.4x the heaviest route's whole
+    // allowance. It was rejected for this cap; this test pins that it stays rejected.
+    const percentageIdiom = Math.ceil((254_554 * 115 / 100) / 1024) * 1024
+    expect(percentageIdiom).toBe(292_864)
+    expect(PUBLIC_DELIVERY_BUDGET.sharedFloorBytes).toBeLessThan(percentageIdiom)
+    // Derived instead from 4 x the measured i18n 10.6.0 adoption (+1,946 B/route), ceil to KiB.
+    expect(PUBLIC_DELIVERY_BUDGET.sharedFloorBytes)
+      .toBe(Math.ceil((254_554 + 4 * 1_946) / 1024) * 1024)
+  })
+
+  it('files every governed public route under a known functional tier', () => {
+    const tiers = Object.keys(PUBLIC_DELIVERY_BUDGET.incrementalBytes)
+    expect(Object.keys(PUBLIC_ROUTE_TIERS)).toHaveLength(18)
+    for (const [route, tier] of Object.entries(PUBLIC_ROUTE_TIERS)) {
+      expect(tiers, `${route} is filed under an unknown tier '${tier}'`).toContain(tier)
+    }
+  })
+
+  it('gives a locale pair the same tier — a page does not change function by language', () => {
+    for (const route of Object.keys(PUBLIC_ROUTE_TIERS)) {
+      if (route.startsWith('/ar')) continue
+      const ar = route === '/' ? '/ar' : `/ar${route}`
+      // The AR blog slug is translated, so pair it explicitly rather than by string surgery.
+      const twin = route === '/blog/staying-inside-performance-budget-nuxt'
+        ? '/ar/blog/albaqaa-dimn-mizaniyat-ada-nuxt'
+        : ar
+      expect(PUBLIC_ROUTE_TIERS[twin], `${route} and ${twin} disagree`).toBe(PUBLIC_ROUTE_TIERS[route])
+    }
+  })
+
+  it('refuses to default an unfiled route to a cap', () => {
+    expect(() => publicTierFor('/not-governed')).toThrow(/no D20-31 functional tier/)
+  })
+
+  it('asserts tier coverage in BOTH directions', () => {
+    expect(() => assertPublicTierCoverage(Object.keys(PUBLIC_ROUTE_TIERS))).not.toThrow()
+    expect(() => assertPublicTierCoverage([...Object.keys(PUBLIC_ROUTE_TIERS), '/new']))
+      .toThrow(/measured but not filed/)
+    // A tier entry left behind for a deleted route reads as governance that is no longer enforced.
+    expect(() => assertPublicTierCoverage(Object.keys(PUBLIC_ROUTE_TIERS).slice(1)))
+      .toThrow(/not measured/)
+  })
+})
+
+describe('D20-31 — resolveSharedFloor and the FROZEN reference set', () => {
+  const refMap = (extra = {}) => {
+    const m = new Map()
+    for (const r of FLOOR_REFERENCE_ROUTES) m.set(r, new Set(['/a.js', '/b.js', '/c.js', `/own-${r}.js`]))
+    for (const [k, v] of Object.entries(extra)) m.set(k, new Set(v))
+    return m
+  }
+
+  it('returns exactly the assets common to every reference route', () => {
+    const { assets } = resolveSharedFloor(refMap())
+    expect([...assets].sort()).toEqual(['/a.js', '/b.js', '/c.js'])
+  })
+
+  it('⚠ a NEW governed route CANNOT redefine the shared baseline', () => {
+    // The failure this prevents: a new page that does not load a currently-shared asset would eject
+    // it from the intersection for EVERY route — the floor drops, every route's delta rises by the
+    // same amount, and every delta gate can trip at once because a page was added.
+    const withNewRoute = refMap({ '/brand-new': ['/a.js'] })
+    const { assets } = resolveSharedFloor(withNewRoute)
+    expect([...assets].sort()).toEqual(['/a.js', '/b.js', '/c.js'])
+  })
+
+  it('refuses to derive a floor when a reference route was not measured', () => {
+    const incomplete = refMap()
+    incomplete.delete(FLOOR_REFERENCE_ROUTES[3])
+    expect(() => resolveSharedFloor(incomplete)).toThrow(/reference routes were not measured/)
+  })
+
+  it('shrinks the floor when a reference route genuinely stops loading a shared asset', () => {
+    // The legitimate case: this is a real change in shared delivery, and it must be visible rather
+    // than absorbed — the gate reports the movement against the calibration figure.
+    const m = refMap()
+    m.set(FLOOR_REFERENCE_ROUTES[0], new Set(['/a.js', '/b.js']))
+    const { assets } = resolveSharedFloor(m)
+    expect([...assets].sort()).toEqual(['/a.js', '/b.js'])
+  })
+
+  it('freezes the reference set against accidental mutation', () => {
+    expect(Object.isFrozen(FLOOR_REFERENCE_ROUTES)).toBe(true)
+    expect(FLOOR_REFERENCE_ROUTES).toHaveLength(18)
   })
 })

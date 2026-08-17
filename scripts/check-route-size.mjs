@@ -63,6 +63,11 @@ import {
   dashboardTotalVerdict,
   attributeRenderedBytes,
   budgetVerdict,
+  PUBLIC_DELIVERY_BUDGET,
+  publicTierFor,
+  assertPublicTierCoverage,
+  resolveSharedFloor,
+  FLOOR_REFERENCE_ROUTES,
   collectRouteAssets,
   kb,
   vendorPackage
@@ -476,7 +481,11 @@ async function measureRoute(html, meta) {
     css,
     ...attribution,
     appVerdict: budgetVerdict(attribution.totals.app, BUDGET.appRenderedBytes),
-    totalVerdict: budgetVerdict(js.gz, BUDGET.totalJsBytes),
+    // NOTE: there is deliberately no total/delta verdict here. D20-31 gates `route_total - shared
+    // floor`, and the floor is an intersection over the frozen reference set — it cannot be known
+    // until every reference route has been measured. It is assigned in `main()` instead. Computing
+    // a per-route verdict here would have to use the route TOTAL, which is exactly the defect
+    // D20-31 removes.
     cssVerdict: budgetVerdict(css.gz, BUDGET.cssBytes)
   }
 }
@@ -504,6 +513,7 @@ async function main() {
   // verdict it cannot justify rather than inventing one.
   try {
     assertGovernedRouteCoverage(DASHBOARD_ROUTES.map(r => r.route))
+    assertPublicTierCoverage(ROUTES)
   } catch (error) {
     throw new InfraError(error.message)
   }
@@ -513,7 +523,15 @@ async function main() {
   await startPreview()
 
   console.log('\nPer-route size budgets — doc 20 §1, KB = 1024 B, from the production build')
-  console.log(`Budgets: total JS ≤ ${kb(BUDGET.totalJsBytes)} gz (D20-11)  ·  app-owned rendered ≤ ${kb(BUDGET.appRenderedBytes)} (D20-12, frozen)  ·  CSS ≤ ${kb(BUDGET.cssBytes)} gz  (inclusive)`)
+  console.log(
+    `Budgets (D20-31): shared floor ≤ ${kb(PUBLIC_DELIVERY_BUDGET.sharedFloorBytes)} gz`
+    + `  ·  per-route INCREMENTAL delivery ≤ ${kb(PUBLIC_DELIVERY_BUDGET.incrementalBytes.content)}`
+    + `/${kb(PUBLIC_DELIVERY_BUDGET.incrementalBytes.collection)}`
+    + `/${kb(PUBLIC_DELIVERY_BUDGET.incrementalBytes['interactive-subsystem'])} gz by tier`
+    + `  ·  app-owned rendered ≤ ${kb(BUDGET.appRenderedBytes)} (D20-12, frozen)  ·  CSS ≤ ${kb(BUDGET.cssBytes)} gz  (inclusive)`
+  )
+  console.log('The GATED quantity per route is the DELTA above the shared floor, never the route total:')
+  console.log('shared framework growth is charged ONCE to the floor cap, not to every page.')
   console.log('App-owned bytes are Rollup renderedLength — post-tree-shaking, PRE-minification source')
   console.log('bytes. Exact per module; NOT gzip transfer bytes and not final chunk bytes.\n')
 
@@ -528,6 +546,59 @@ async function main() {
     if (!res.ok) throw new InfraError(`${route} returned HTTP ${res.status}; cannot measure`)
     const html = await res.text()
     rows.push({ route, ...(await measureRoute(html, meta)) })
+  }
+
+  // ── D20-31: derive the shared floor, then charge each route only for what it adds on top ──
+  //
+  // The floor is the intersection over the FROZEN reference set (`FLOOR_REFERENCE_ROUTES`), not over
+  // whatever happens to be measured today. That is what stops a newly governed route from silently
+  // redefining the baseline for every existing route.
+  const assetsByRoute = new Map(rows.map(r => [r.route, new Set(r.js.assets.map(a => a.asset))]))
+  let floorAssets
+  try {
+    ;({ assets: floorAssets } = resolveSharedFloor(assetsByRoute))
+  } catch (error) {
+    throw new InfraError(error.message)
+  }
+  let sharedFloorGz = 0
+  for (const asset of floorAssets) {
+    const sizes = await assetSizes(asset)
+    if (!sizes) throw new InfraError(`shared-floor asset missing from the build: ${asset}`)
+    sharedFloorGz += sizes.gz
+  }
+  const floorVerdict = budgetVerdict(sharedFloorGz, PUBLIC_DELIVERY_BUDGET.sharedFloorBytes)
+
+  // MAXIMALITY SELF-CHECK — deliberately NOT the `delta === total - floor` identity, which was tried
+  // first and proved to be decoration: both sides of it are derived from the same `floorAssets`, so
+  // it holds even when the floor is wrong, and a control caught it passing against a corrupted
+  // intersection. What CAN break is the floor silently losing an asset that every reference route
+  // does carry — which understates the floor and overstates every route's delta at once. So verify
+  // maximality independently: anything common to all reference routes MUST be in the floor.
+  const firstRef = assetsByRoute.get(FLOOR_REFERENCE_ROUTES[0])
+  for (const asset of firstRef) {
+    if (floorAssets.has(asset)) continue
+    const onEveryRef = FLOOR_REFERENCE_ROUTES.every(r => assetsByRoute.get(r).has(asset))
+    if (onEveryRef) {
+      throw new InfraError(
+        `D20-31 floor is not maximal: ${asset} is present on all ${FLOOR_REFERENCE_ROUTES.length} reference `
+        + 'routes but was excluded from the shared floor. The floor understates shared delivery and every '
+        + 'route delta is overstated; refusing to report a verdict.'
+      )
+    }
+  }
+
+  for (const row of rows) {
+    // Charge the route for every asset it fetches that is NOT part of the shared floor. Written as a
+    // set difference rather than `total - floor` so it stays correct for a route that is measured
+    // but is not in the frozen reference set (it may not carry every floor asset).
+    row.tier = publicTierFor(row.route)
+    row.tierCap = PUBLIC_DELIVERY_BUDGET.incrementalBytes[row.tier]
+    row.deltaGz = row.js.assets
+      .filter(a => !floorAssets.has(a.asset))
+      .reduce((sum, a) => sum + a.gz, 0)
+    row.deltaVerdict = budgetVerdict(row.deltaGz, row.tierCap)
+    row.needsAttribution = row.deltaGz >= row.tierCap * PUBLIC_DELIVERY_BUDGET.attributionThreshold
+
   }
 
   // Authenticated dashboard routes — doc 20 §1.1/§1.2 (D20-23). JS comes from the client-build
@@ -558,12 +629,29 @@ async function main() {
   // list that would rot without anyone noticing.
   const publicAssetPaths = new Set(rows.flatMap(r => r.js.assets.map(a => a.asset)))
 
-  const header = `${'route'.padEnd(44)}${'assets'.padStart(7)}${'raw'.padStart(11)}${'gz'.padStart(10)}${'≤250KB'.padStart(8)}${'app rendered'.padStart(14)}${'≤101KB'.padStart(8)}`
+  // The floor is reported BEFORE the routes, because it is the number that explains them: every row
+  // below is measured on top of this one, and a movement here moves every row at once.
+  const floorDelta = sharedFloorGz - PUBLIC_DELIVERY_BUDGET.sharedFloorCalibrationBytes
+  console.log(
+    `\nShared public floor (D20-31): ${sharedFloorGz} B gz (${kb(sharedFloorGz)}) across ${floorAssets.size} assets`
+    + ` — ${floorVerdict === 'PASS' ? '✓' : '✗'} cap ${kb(PUBLIC_DELIVERY_BUDGET.sharedFloorBytes)}`
+  )
+  console.log(
+    `  vs D20-31 calibration ${PUBLIC_DELIVERY_BUDGET.sharedFloorCalibrationBytes} B: `
+    + `${floorDelta >= 0 ? '+' : ''}${floorDelta} B`
+    + (floorDelta > 0 ? '  ← shared framework/ecosystem growth; this is NOT owned by any page' : '')
+    + (floorDelta < 0 ? '  ← floor shrank; claim it through a recalibration decision, not silently' : '')
+  )
+  console.log(`  derived as the intersection over ${FLOOR_REFERENCE_ROUTES.length} FROZEN reference routes\n`)
+
+  const header = `${'route'.padEnd(44)}${'assets'.padStart(7)}${'gz total'.padStart(10)}${'Δ floor'.padStart(9)}${'tier'.padStart(23)}${'cap'.padStart(9)}${'ok'.padStart(4)}${'app rendered'.padStart(14)}${'≤101KB'.padStart(8)}`
   console.log(header)
   console.log('─'.repeat(header.length))
 
+  if (floorVerdict === 'FAIL') breach = true
+
   for (const row of rows) {
-    if (row.totalVerdict === 'FAIL') breach = true
+    if (row.deltaVerdict === 'FAIL') breach = true
     if (row.cssVerdict === 'FAIL') breach = true
     if (row.appVerdict === 'FAIL') breach = true
     // An unrecognised module shape with real bytes means the classification contract no longer
@@ -574,12 +662,42 @@ async function main() {
     console.log(
       row.route.padEnd(44)
       + String(row.js.assets.length).padStart(7)
-      + kb(row.js.raw).padStart(11)
       + kb(row.js.gz).padStart(10)
-      + (row.totalVerdict === 'PASS' ? '✓' : '✗').padStart(8)
+      + `${row.deltaGz}`.padStart(9)
+      + row.tier.padStart(23)
+      + `${row.tierCap}`.padStart(9)
+      + (row.deltaVerdict === 'PASS' ? (row.needsAttribution ? '!' : '✓') : '✗').padStart(4)
       + `${row.totals.app} B`.padStart(14)
       + (row.appVerdict === 'PASS' ? '✓' : '✗').padStart(8)
     )
+  }
+
+  // D20-24's lesson, applied to the public model: a high cap is only safe because growth must be
+  // EXPLAINED long before it BLOCKS. Silence here while a route sits near its cap is a gate defect.
+  const nearCap = rows.filter(r => r.needsAttribution && r.deltaVerdict === 'PASS')
+  if (nearCap.length > 0) {
+    console.log(
+      `\n! ${nearCap.length} route(s) at ≥ ${Math.round(PUBLIC_DELIVERY_BUDGET.attributionThreshold * 100)}%`
+      + ' of their D20-31 tier cap — attribution required (passing, not silent):'
+    )
+    for (const row of nearCap) {
+      const pct = (row.deltaGz / row.tierCap * 100).toFixed(1)
+      console.log(`  ${row.route}: Δ ${row.deltaGz} B of ${row.tierCap} B (${pct}%, tier '${row.tier}')`)
+      const exclusive = row.js.assets
+        .filter(a => !floorAssets.has(a.asset))
+        .sort((a, b) => b.gz - a.gz)
+        .slice(0, 4)
+      for (const a of exclusive) {
+        const info = meta.get(a.asset)
+        const top = info
+          ? [...info.modules.reduce((m, mod) => {
+              const pkg = vendorPackage(mod.id) ?? '(app + generated)'
+              return m.set(pkg, (m.get(pkg) ?? 0) + mod.renderedLength)
+            }, new Map())].sort((x, y) => y[1] - x[1])[0]
+          : null
+        console.log(`      ${String(a.gz).padStart(7)} B gz  ${a.asset}${top ? `  ← mostly ${top[0]}` : ''}`)
+      }
+    }
   }
 
   if (dashboardRows.length > 0) {
@@ -682,9 +800,26 @@ async function main() {
 
   if (breach) {
     console.error('\n✗ doc 20 §1 budget not satisfied.')
+    if (floorVerdict === 'FAIL') {
+      const over = sharedFloorGz - PUBLIC_DELIVERY_BUDGET.sharedFloorBytes
+      console.error(
+        `  SHARED FLOOR: ${sharedFloorGz} B gz exceeds the ${PUBLIC_DELIVERY_BUDGET.sharedFloorBytes} B cap by ${over} B (${kb(over)}).`
+        + '\n      This is shared framework/ecosystem delivery and is NOT owned by any single page —'
+        + '\n      do not attempt to repay it by cutting application code on a route (P18). Investigate what'
+        + '\n      entered the floor (a dependency upgrade, a new global plugin, a component promoted into'
+        + '\n      every layout), or take an owner decision in doc 20 to recalibrate D20-31.'
+      )
+    }
     for (const row of rows) {
-      if (row.totalVerdict === 'FAIL') {
-        console.error(`  ${row.route}: total JS ${kb(row.js.gz)} gz exceeds ${kb(BUDGET.totalJsBytes)} by ${kb(row.js.gz - BUDGET.totalJsBytes)}`)
+      if (row.deltaVerdict === 'FAIL') {
+        const over = row.deltaGz - row.tierCap
+        console.error(
+          `  ${row.route}: incremental delivery ${row.deltaGz} B gz exceeds its '${row.tier}' tier cap `
+          + `${row.tierCap} B by ${over} B (${kb(over)}).`
+          + '\n      This is what THIS PAGE adds on top of the shared floor, so it is the page\'s own cost.'
+          + '\n      Re-filing the route under a roomier tier is a budget change: it needs an owner decision'
+          + '\n      plus a doc 20 entry, and is never a local fix for a failing gate.'
+        )
       }
       if (row.cssVerdict === 'FAIL') {
         console.error(`  ${row.route}: CSS ${kb(row.css.gz)} gz exceeds ${kb(BUDGET.cssBytes)}`)
