@@ -912,10 +912,14 @@ there: **keep the unsaved-changes guard in v1** even though autosave (`FR-DSH-01
 | Translation completeness indicator (FR-DSH-011) | — | **build** | apply | consistency |
 | Long-form authoring ergonomics (sticky actions, scroll-to-error, unsaved guard) | — | **build** | apply | audit |
 | Contextual `View on site` / preview action | — | **build** (Articles) | apply where a public destination exists | consistency |
-| Dashboard shell: `View site`, locale switcher, theme, session menu | — | **minimum viable shell** | inherit | **full coherence pass** |
+| Dashboard shell: `View site`, locale switcher, theme, session menu | — | **minimum viable shell — ⚠ contingent on OD-11** | inherit | **full coherence pass** |
 | Login redesign | — | **minimum** if it blocks exercising FE-2 | — | **finalize** |
 | Header/global nav IA, action placement, terminology | — | conventions only | inherit | **finalize** |
 | D20-32 review | — | measure only | measure only | **review/recalibrate** |
+
+**⚠ Contingent on OD-11 (ledger §9).** What the header locale control switches — chrome language or
+content locale — is an open owner decision, and it also decides whether the shell and every new
+Dashboard layout use physical or logical properties. Build the shell only after it is answered.
 
 **Rationale for pulling the shell forward.** The owner authorized placing the minimum necessary
 shell work earlier *if it is a dependency for exercising FE-2 naturally*. It is: FE-2 must establish
@@ -977,11 +981,18 @@ Two genuine questions remain:
 **RESOLVED 2026-08-17 by the owner's execution-authorization message — neither is escalated.** That
 message settles both from the authoritative decision list:
 
-- **OD-9 → resolved as recommended.** "active locale derived coherently from Dashboard/app locale"
-  confirms the UI locale seeds the initial tab; tab selection is thereafter independent per entity.
-- **OD-10 → resolved as recommended.** "Dashboard shell needs: locale control" implies a localized
-  EN/AR Dashboard shell, so every Dashboard string is translatable and that cost is in FE-2's budget,
-  not a surprise in FE-3.
+- **OD-9 → resolved as recommended**, restated to avoid presuming a chrome locale: the **active
+  content locale** seeds the initial tab, and tab selection is thereafter independent per entity.
+  This holds under **both** OD-11 options.
+- ~~**OD-10 → resolved as recommended.**~~ ⚠ **WITHDRAWN — SUPERSEDED BY OD-11 (ledger §9).** I
+  inferred a fully localized EN/AR shell from "Dashboard shell needs: locale control" *before*
+  finding **doc 02 §9** ("the dashboard UI chrome ships in **English only in v1**") and **doc 04 §1**
+  ("Dashboard routes are English-only chrome … carry no locale prefix"). A localized shell is
+  **Option B of OD-11**, an open owner decision — **not settled authority**. Do not build on it.
+
+⚠ **Numbering collision, stated so a future session does not conflate them:** *my* `OD-10` above is
+unrelated to **doc 11's "owner decision 10"** cited in `app/layouts/dashboard.vue:86`, which is the
+governed English-only-LTR decision. Different schemes, same label.
 
 Both are therefore **settled inputs to FE-2**, not open questions.
 
