@@ -43,7 +43,6 @@ export const ADMIN_PROJECTS_PER_PAGE = 12
 
 /** The API's allowlisted sort columns (D10-18). Anything else is a 422, so it is never sent. */
 export const ADMIN_PROJECT_SORT_COLUMNS = ['featured', 'order', 'year', 'createdAt', 'updatedAt'] as const
-export type AdminProjectSortColumn = (typeof ADMIN_PROJECT_SORT_COLUMNS)[number]
 
 /** The tri-state the two boolean filters are spelled with in the URL. `all` is never sent. */
 export const ADMIN_PROJECT_TRISTATE = ['all', 'yes', 'no'] as const
