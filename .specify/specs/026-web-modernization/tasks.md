@@ -5,18 +5,23 @@ Status vocabulary: **TODO** · **DOING** · **DONE** · **DEFERRED** (evidence +
 **GATED** (blocked on an owner decision).
 
 > ## ✅ Campaign status — LIVE IN PRODUCTION (2026-08-17)
-> **Phases 0–7 CLOSED · Phase 8 OUTSTANDING.** Campaign 026 was promoted and deployed to Production on 2026-08-17.
+> **ALL PHASES CLOSED — CAMPAIGN 026 IS CLOSED (2026-08-17).** Campaign 026 was promoted and deployed to Production on 2026-08-17, and Phase 8 (rescoped to campaign documentation, handoff and truth reconciliation) is complete.
 >
 > | what | value |
 > |---|---|
 > | live release | **`20260817T175534Z-648aa46`** |
-> | `origin/main` = `origin/dev` | **`648aa467cd8bc7157cbcad2fd7c0e8981ee1f16c`** (true 2-parent merge, PR #67) |
+> | Production SHA — `origin/main` | **`648aa467cd8bc7157cbcad2fd7c0e8981ee1f16c`** (true 2-parent merge, PR #67) · **unchanged since the cutover** |
+> | current `origin/dev` | **`8598df61413ce46d66a2f6dbc622c3e02074ad2c`** — `648aa46` **plus documentation-only closeout commits**. ⚠ **This is expected and is NOT Production drift:** `dev` is the integration branch and legitimately carries docs ahead of `main`; no application code differs, and Phase 8 does **not** modify `main` or Production |
 > | serving tree | **`7deef81c1316ad07603eede5c54206f6df11bbac`** — unbroken `0677e10` → `f8ffd72` (squash) → `648aa46` (merge) |
 > | deploy run | `32050429649` — **15/15 cutover steps `success`, no rollback** |
 > | post-deploy `dev` sync | **DONE** (D17-4 fast-forward `f8ffd72..648aa46`; dev CI `32054971908` `success`) |
 >
-> ⚠ **This is not a campaign-closure banner.** Phase 8 (documentation & Arabic study closure) has not started, and the
-> non-blocking follow-ups below are open. See **§Remaining follow-ups** at the end of this document.
+> ⚠ **What closure does and does not mean.** It means every Campaign 026 engineering, release and
+> documentation obligation is discharged. It does **not** mean the Web roadmap is complete, and it
+> does **not** close the **deferred** work below — that work was **transferred**, with a named
+> receiving campaign and a trigger, and its existence does not hold this campaign open. Five
+> **operational follow-ups** and five **watchpoints** remain open by design; none is a blocker.
+> See **§Phase 8** and **§Remaining follow-ups**.
 
 ---
 
@@ -433,26 +438,88 @@ Confirmed upstream-owned; re-check only if a genuinely new compatible release ap
 
 ---
 
-## Phase 8 — Documentation & Arabic study closure
+## Phase 8 — Campaign closeout: documentation, handoff and truth reconciliation
 
-⚠ **STATUS: OUTSTANDING — the campaign's one remaining phase, and OUTSIDE the current authorization.**
-Phases 0–7 are closed and Campaign 026 is live in Production, but **Phase 8 has not started**: every task below is TODO.
-T8.2–T8.4 (the study maps) are the comprehensive Web learnability/maintainability pass, which the owner has scoped as a
-**separate post-Frontend-v1 campaign** — do not begin it under a Campaign 026 heading. **Campaign 026 must therefore not be
-described as "closed"**; the accurate statement is *Phases 0–7 closed, Production deployment complete and verified,
-Phase 8 outstanding*.
+⚠ **SCOPE CORRECTED 2026-08-17 by owner directive — this section SUPERSEDES the earlier Phase 8
+definition.** Phase 8 is **final campaign documentation, handoff and truth reconciliation ONLY**. It
+is **not** the comprehensive Web learnability / study-map pass. The owner had established that
+sequencing before Campaign 026 reached Production; the earlier definition, which folded the study
+maps into this campaign, was a mis-scope and is retired here.
+
+⚠ **The earlier instruction that "Campaign 026 must therefore not be described as closed" is
+SUPERSEDED.** It was written when the study maps were still believed to be in scope. Under the
+corrected scope, **the existence of deferred post-v1 study maps does NOT keep Campaign 026 open** —
+Campaign 026 closes when §Phase 8 exit below is satisfied.
+
+**Standing constraint for this phase:** change only what is *materially stale because of Campaign 026
+or its Production closeout*. Do **not** rewrite documents for style, do **not** turn intermediate
+campaign experiments into current-architecture documentation, and do **not** silently promote a
+watchpoint into a task.
+
+### In scope — the authorized closeout
 
 | ID | Task | Status |
 |---|---|---|
-| T8.1 | Update materially affected docs: PROJECT_GUIDE, READMEs, architecture, testing, CI/CD, security, performance, dependency strategy, roadmap, handoff, ledger | TODO |
-| T8.2 | **A. Web/Nuxt Application Study Map** from the final structure, with FOUNDATION/INTERMEDIATE/ADVANCED and `Follow one real feature` | TODO |
-| T8.3 | **B. Testing Study Map** from the **actual** final taxonomy, with `Learning order` and `Follow one real test journey`; separates test types from CI guards from perf/a11y gates from Production smokes | TODO |
-| T8.4 | **C. Additional maps only where justified** — no files created to raise the count | TODO |
-| T8.5 | Preserve historical lessons (failed Nuxt upgrade, CSS budget investigation, CI evidence) **without teaching them as current architecture** | TODO |
-| T8.6 | Verify paths + anchors; **Arabic combining-mark-safe** anchor checking; negative-control the validator | TODO |
-| T8.7 | `docs/group` source-driven regeneration: blast radius → pre-check → regenerate → postcheck → negative control → exact restore → deterministic second generation → byte-identical → record hashes. **Never hand-edit bundles** | TODO |
-| T8.8 | Close doc 24 §2b RB-1; synchronize roadmap / ledger / handoff | TODO |
-| T8.9 | Final report separating **COMPLETED / DEFERRED / OWNER-GATED / OUTSIDE CAMPAIGN / NEXT PROJECT PHASE** | TODO |
+| T8.1 | **Documentation truth reconciliation.** Update the Campaign-026-relevant statements that Campaign 026 or its Production closeout made stale, across: PROJECT_GUIDE · repo READMEs · architecture · testing · CI/CD · security · performance · dependency strategy · roadmap · handoff · ledger / SpecKit | **DONE** |
+| T8.1a | **Final architecture truth** — the Nuxt 4.5.2-era stack; current Nuxt UI / Vue / Router / Pinia / i18n state; **D20-31** public performance model; **interim D20-32** Dashboard model; **D11-8** post-Campaign Dashboard UI/UX obligation; current payload-extraction policy; current prefetch / self-link behaviour where documented; current CI/deploy verification behaviour; exact Node/runtime requirements; remaining supported dependency exceptions; upstream-owned Unhead duplication if still relevant | **DONE** |
+| T8.1b | **Security truth** — preserve the Phase 6 disposition as **dated campaign evidence**, never as verified-current. No remembered Dependabot/banner count may be carried forward. Document the measurement-source problem clearly enough that future work does not trust the GitHub push banner as authoritative. **R-4 stands** | **DONE** |
+| T8.1c | **Production truth** — the handoff records Production SHA `648aa467cd8bc7157cbcad2fd7c0e8981ee1f16c`, release `20260817T175534Z-648aa46`, the successful watched deployment, completed `dev`/`main` reconciliation, current `dev` `8598df61413ce46d66a2f6dbc622c3e02074ad2c`, and `main` unchanged at `648aa467…`. **The docs-only `dev` commit after Production is expected and must not be described as Production drift** | **DONE** |
+| T8.5 | Preserve historical lessons (the failed Nuxt 4.5.1 upgrade, the CSS-budget investigation, the CI evidence) **as dated history, without teaching them as current architecture** | **DONE** — doc 24 §2b keeps the 4.5.1 probe findings under *"The starting condition RB-1 named"*; doc 20's 2026-07-26 framework floor is relabelled dated evidence pointing at the calibrated D20-31/D20-32 figures; the D20-12 frozen baseline was checked and deliberately left untouched |
+| T8.6 | Verify paths + anchors across the reconciled documents; **Arabic combining-mark-safe** anchor checking; **negative-control the validator** before trusting a zero-finding result. Scope: an existing documentation-integrity gate — **not** a new curriculum-validation system | **DONE** — `docs/research/tools/link-anchor-check.py`. Self-test **exit 0**: 10 slug fixtures + a control asserting the naive `isalnum()` slugger *disagrees* on Arabic + an end-to-end negative control. ⚠ **The validator was WRONG on its first real run and the run caught it** (trim-before-filter, leading-hyphen anchors). Web: **0** intra-repo findings, 29 cross-repo links re-rooted and all resolved. Docs: **exit 1**, all findings classified — see §Phase 8 exit |
+| T8.7 | `docs/group` **source-driven** regeneration: blast radius → pre-check → regenerate → postcheck → negative control → exact restore → deterministic second generation → byte-identical → record hashes. **Never hand-edit bundles** | **DONE** — blast radius predicted *then* confirmed (bundle **01 sha256 unchanged**); pre-check **1** → post-check **0**; second generation **byte-identical**; negative control drove the gate red and the restore was **sha256-verified against the pre-mutation value**. No bundle hand-edited |
+| T8.8 | Close doc 24 §2b **RB-1** and every other Campaign-026 obligation *actually satisfied*; synchronize **roadmap / ledger / handoff / SpecKit**; remove or supersede stale TODOs Campaign 026 genuinely completed. **Do not close deferred post-Frontend-v1 work as completed** | **DONE** — RB-1 **CLOSED** against an exit-condition evidence table; doc 24 §3.1 closed **line by line** with its two undelivered lines named as deferred; D16-11's **Web half** discharged (API half untouched). Agreement **verified mechanically, not asserted**: the Production SHA, release id, current `dev` SHA, serving tree and final CSS figure were diffed across all six artifacts — no conflicts, and the two SHAs match live `git` |
+| T8.9 | Final report separating **COMPLETED · DEFERRED · OWNER-GATED · OUTSIDE CAMPAIGN · NEXT FRONTEND WORKSTREAM** | **DONE** — ledger §45 |
+| T8.10 | **Record the deferral transfer explicitly**, so a future session reads it as *transferred*, never as *forgotten* | **DONE** — §Deferred below, plus ledger §44 |
+
+### DEFERRED out of Campaign 026 — transferred, not forgotten
+
+⚠ **These are NOT abandoned and NOT incomplete Campaign 026 work.** They were removed from this
+campaign by owner directive on 2026-08-17 and transferred, whole, to a separate campaign.
+
+**Receiving campaign:** `Web Learnability & Maintainability Pass`
+**Reopen condition (single, for every row):** **Frontend v1 is complete.** Not before.
+
+| ID | Task | Status |
+|---|---|---|
+| T8.2 | **A. Web/Nuxt Application Study Map** from the final structure, with FOUNDATION / INTERMEDIATE / ADVANCED and `Follow one real feature` | **DEFERRED** → `Web Learnability & Maintainability Pass` |
+| T8.3 | **B. Testing Study Map** from the **actual** final taxonomy, with `Learning order` and `Follow one real test journey`; separating test types from CI guards from perf/a11y gates from Production smokes | **DEFERRED** → `Web Learnability & Maintainability Pass` |
+| T8.4 | **C. Additional maps only where justified** — no files created to raise the count | **DEFERRED** → `Web Learnability & Maintainability Pass` |
+
+Also transferred to that same campaign, and likewise **out of Campaign 026**:
+
+- broad source-comment cleanup unrelated to Campaign 026;
+- broad maintainability refactoring;
+- final Frontend curriculum design;
+- any comprehensive post-v1 learning architecture work.
+
+⚠ **Do not partially implement any of the above under a Campaign 026 heading** merely because an
+older Phase 8 task list named it. A partial study map is worse than none: it becomes a document that
+looks authoritative and is not.
+
+### Phase 8 exit
+
+Campaign 026 may be declared **CLOSED** when, and only when:
+
+1. all Campaign-026-specific documentation reflects current Production truth;
+2. stale modernization-era claims are reconciled;
+3. roadmap / handoff / ledger / SpecKit agree with each other;
+4. the documentation-integrity gates pass;
+5. the deferred learning work is **explicitly transferred** to the `Web Learnability & Maintainability Pass`;
+6. no Campaign 026 engineering or release blocker remains.
+
+**The existence of deferred post-v1 study maps does not block any of the six.**
+
+#### Exit verdict — SATISFIED 2026-08-17
+
+⚠ **Stated precisely, because "the gates pass" would otherwise read as "everything exited 0", and
+one of them did not.**
+
+| Gate | Result |
+|---|---|
+| `docs:group:check` | **exit 0** — bundles current, second generation byte-identical, bundle 01 unchanged |
+| link/anchor validator — **self-test** | **exit 0** — 10 slug fixtures, naive-slugger discrimination control, end-to-end negative control |
+| link/anchor validator — **Web repo** | **exit 0 intra-repo findings**; all 29 cross-repo links re-rooted against the Docs branch and resolved, anchors included |
+| link/anchor validator — **Docs repo** | ⚠ **exit 1.** Every finding classified: the overwhelming majority sit **inside the generated bundles** and are a **pre-existing generator characteristic** (`generate-doc-groups.mjs` does not rewrite relative links, so a link correct relative to `docs/` does not resolve from `docs/group/`); the remainder are **worktree-layout artifacts** whose sibling-repo targets exist in the canonical checkout. **Controlled against the pre-Phase-8 baseline `b1072b9`, which reports the same count: Phase 8 introduced ZERO new finding classes in the sources.** Reported, deliberately **not** fixed — changing the generator is outside this phase's authorized scope |
 
 ---
 
@@ -536,22 +603,41 @@ and the CI-matching env. This is why the standing rules forbid piping a gate wit
 
 ## Remaining follow-ups — the accurate open state after Production
 
-Recorded 2026-08-17, after the deployment and the D17-4 `dev` reconciliation. **None of these is a
+Recorded 2026-08-17 after the deployment and the D17-4 `dev` reconciliation; **re-classified
+2026-08-17 into the owner's closeout buckets** (Phase 8 scope correction). **None of these is a
 Production blocker**; all are carried deliberately, each with its reopen condition.
 
-### Outstanding work
+⚠ **Classification is load-bearing.** A *deferred* item is transferred work with a named receiving
+campaign. An *operational follow-up* is a real action someone still has to take. A *watchpoint* is an
+observation deliberately **not** acted on. **Do not silently promote a watchpoint into a task.**
+
+**R-1 — Phase 8** is no longer listed here as outstanding: under the corrected scope it *is* this
+closeout, tracked in **§Phase 8** above, and its study-map component has been transferred out (below).
+
+### DEFERRED / FUTURE CAMPAIGNS
+
+Transferred out of Campaign 026. **Their existence does not keep Campaign 026 open.**
+
+| # | Item | Receiving campaign · reopen condition |
+|---|---|---|
+| **D-1** | **Comprehensive Web Learnability & Maintainability Pass** — incl. the Web/Nuxt Application Study Map (T8.2), the frontend-specific Testing Study Map / testing curriculum (T8.3), additional learning maps (T8.4), broad source-comment cleanup, broad maintainability refactoring and the final Frontend curriculum design | `Web Learnability & Maintainability Pass` · **after Frontend v1 is complete**. Full record in **§Phase 8 → DEFERRED** |
+| **D-2** | **Dashboard UI/UX architecture pass (D11-8)** — *and the D20-32 final review / recalibration it owes.* D20-32 is explicitly **INTERIM**. The **5 of 8 Dashboard routes without accepted baselines** must be recorded ***as part of*** that recalibration and **never before it**. One route (`/dashboard/messages`) sits at **90.2 %** of its incremental cap and still prints its full six-part attribution — that visibility is the accepted condition working, not a defect *(was R-2)* | Dashboard UI/UX pass · **after Dashboard stabilization**, post-Campaign |
+
+### OPERATIONAL FOLLOW-UPS
+
+Real actions still owed. Each needs access, a decision, or a fresh measurement — none is a blocker.
 
 | # | Item | State |
 |---|---|---|
-| **R-1** | **Phase 8 — documentation & Arabic study closure** | **NOT STARTED.** The campaign's one remaining phase. T8.2–T8.4 are the comprehensive Web learnability/maintainability pass, owner-scoped as a **separate post-Frontend-v1 campaign** |
-| **R-2** | **D11-8 — post-Campaign Dashboard UI/UX performance review** | **DEFERRED, and it owes D20-32 a review.** D20-32 is explicitly **INTERIM**. The **5 of 8 Dashboard routes without accepted baselines** must be recorded ***as part of*** that recalibration and **never before it**. One route (`/dashboard/messages`) sits at **90.2 %** of its incremental cap and still prints its full six-part attribution — that visibility is the accepted condition working, not a defect |
 | **R-3** | **Verify the Production rollback POINTER** | **OPERATIONAL FOLLOW-UP — open.** ⚠ What is verified: the previous release **directory** `20260810T104718Z-d53af11` **remains present** on the server. ⚠ What is **NOT** verified: that the rollback **pointer/symlink is currently valid**. The latest post-deploy check did **not** prove it. **A retained directory is not a proven pointer**, and any earlier wording claiming auto-rollback is "genuinely armed" was a **pre-deploy** reading (ledger §36.7 / §39) that the post-cutover state has not re-established. ⚠ Related standing lesson: a liveness-only gate cannot verify a real cutover and **disarms any rollback hanging off it** |
 | **R-4** | **Fresh authoritative security recount** | **REQUIRED before any security assertion.** ⚠ **No vulnerability count from this campaign — 32, 9, or any push-banner figure — may be carried forward as verified-current truth.** The push banner has proven unreliable (33 vs an API-read 32). The last authoritative disposition is the **Phase 6** read of 2026-08-17 (T6.5, ledger §34.1/§35.7), which stands **as dated evidence only**. The next security/dependency review must recount from the paginated Dependabot API (`state=open`) **plus** `npm audit`, and report the delta between the two instruments |
 | **R-5** | **One Production test artifact needs owner cleanup** | A real contact message submitted by the smoke, subject `[TEST] Campaign 026 production smoke — safe to delete`, sent to the **owner's own address** so no third party received mail. Deleting it needs Dashboard access |
 | **R-6** | **Two smoke groups remain access-limited** | The **8 authenticated Dashboard routes**, admin visibility of the contact message, and the reply path (which would send **real external mail**) were **NOT verified** — they need owner credentials. ⚠ **Access-limited, not failing**; the gate itself was verified (login renders, unauthenticated Dashboard routes redirect) |
 | **R-7** | **Docs repository is still private** | The campaign ledger and all Campaign 026 research remain **unpublished**. Publication is a separate owner decision |
 
-### Watchpoints — recorded, deliberately not acted on
+### WATCHPOINTS — recorded, NOT active work
+
+⚠ **These are observations, not tasks.** None is to be converted into Campaign 026 work.
 
 | # | Item | Why it stays open |
 |---|---|---|
@@ -559,6 +645,7 @@ Production blocker**; all are carried deliberately, each with its reopen conditi
 | **W-2** | The **±6 B `size:routes` local↔hosted variance band** | Rests on limited hosted evidence. Re-read the calibration if the offset moves. Related cosmetic imperfection, recorded and deliberately not fixed: `sharedFloorCalibrationBytes` is a **local** reading, so hosted prints `+6 B ← shared framework/ecosystem growth` — environment variance mislabelled as growth. Fixing it would change a verified SHA |
 | **W-3** | `/projects/content-platform-api` and its `/ar` twin return **404** in Production | ⚠ **Pre-existing content gap, NOT a campaign regression** — identical to the pre-cutover baseline. `content:sync` has never been run |
 | **W-4** | Issue **#30** — the known-red `test:e2e:repeat` hydration defect | Explicitly **out of scope** for Campaign 026 (spec §4). Neither suppressed nor duplicated |
+| **W-5** | The **`push: main` deploy trigger and its merged-PR fallback share one dependency — GitHub's API.** On the Production cutover the fallback's dispatch failed with **HTTP 503 on all 5 attempts** while the primary trigger fired normally, so the deployment was unaffected and the dispatch would have no-opped at preflight anyway (same-SHA idempotency). ⚠ The redundancy therefore does **not** protect against a GitHub-wide outage — **the two paths fail together** | **Watchpoint, NOT a defect.** Recovery for that case is a manual `workflow_dispatch` with `target_sha` once the API recovers, which `preflight` validates like any other path. **No code change proposed.** Ledger §41.5 |
 
 ### Repository state carried forward
 

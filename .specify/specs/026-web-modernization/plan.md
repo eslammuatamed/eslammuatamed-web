@@ -23,7 +23,7 @@ Phase 3 (Nuxt) ──▶ pins the vite/rolldown/postcss chain, so Phase 4 resolv
 Phase 4 (deps) ──▶ platform stable, so Phase 5 refactors against final APIs, not moving ones
 Phase 5 (clean)──▶ ONE cleanup pass; owns BOTH the deep modernization AND the CSS consolidation
                    that must restore every unchanged budget. Hard exit gate.
-Phase 6 (verify) · Phase 7 (integration/promotion/Production) · Phase 8 (docs/Arabic closure)
+Phase 6 (verify) · Phase 7 (integration/promotion/Production) · Phase 8 (campaign closeout: documentation, handoff and truth reconciliation — rescoped 2026-08-17)
 ```
 
 **Why the reorder was refused.** Forcing cleanup before Nuxt would require pulling genuine
@@ -263,10 +263,25 @@ security headers · cache/SWR behaviour · asset delivery · performance-sensiti
 
 After a successful promotion, perform the required **D17-4 `dev` synchronization**.
 
-### Phase 8 — Final documentation & Arabic study closure
+### Phase 8 — Campaign closeout: documentation, handoff and truth reconciliation
+
+⚠ **RESCOPED 2026-08-17 by owner directive.** Phase 8 is **final campaign documentation, handoff and
+truth reconciliation ONLY**. The study-map subsection below is **NO LONGER PART OF CAMPAIGN 026** —
+it is preserved verbatim as the specification of the work, and **transferred whole** to the
+`Web Learnability & Maintainability Pass`, which runs **after Frontend v1 is complete**. Authoritative
+task list: `tasks.md` §Phase 8. **Do not partially implement the transferred maps under a Campaign 026
+heading.**
 
 Hard Definition-of-Done gate. Written against the **final shipped** code, using the ledger and
 SpecKit maintained throughout — not reconstructed from memory.
+
+**Still in Campaign 026:** reconciling documentation that Campaign 026 or its Production closeout
+made stale · recording final architecture, security, and Production truth · closing RB-1 and
+synchronizing roadmap / ledger / handoff / SpecKit · the docs-verification gate below.
+
+#### TRANSFERRED OUT — specification retained for the receiving campaign
+
+Everything from here to the *Quality gate* belongs to the `Web Learnability & Maintainability Pass`.
 
 Arabic documentation is **study material**, not a changelog, directory inventory, command dump or
 implementation diary. It must teach the final system. **Technical identifiers stay English;
@@ -287,6 +302,8 @@ Progression labelled **FOUNDATION / INTERMEDIATE / ADVANCED**.
 
 **Quality gate:** a map fails if it is only a directory tree, file inventory, list of links, or
 list of commands.
+
+#### Back in Campaign 026 scope
 
 **Historical lessons preserved** where pedagogically useful — the failed Nuxt upgrade, why blind
 upgrading failed, the CSS budget investigation, compatibility lessons, CI evidence, dependency

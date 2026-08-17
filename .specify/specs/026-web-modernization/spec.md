@@ -12,16 +12,19 @@
 **Explicitly closed and not reopened:** all Backend campaigns. No Backend ESM, no PostgreSQL
 SCRAM, no M5, no unrelated roadmap work.
 
-> ## ✅ OUTCOME — LIVE IN PRODUCTION (2026-08-17)
+> ## ✅ OUTCOME — LIVE IN PRODUCTION · CAMPAIGN CLOSED (2026-08-17)
 >
-> **Phases 0–7 CLOSED · Phase 8 OUTSTANDING.** Promoted via PR #67 as a true 2-parent merge commit
+> **ALL PHASES CLOSED.** Promoted via PR #67 as a true 2-parent merge commit
 > **`648aa467cd8bc7157cbcad2fd7c0e8981ee1f16c`** and deployed as release **`20260817T175534Z-648aa46`**
 > (serving tree `7deef81c…`, 15/15 cutover steps `success`, **no rollback**). `origin/dev` was
 > fast-forwarded to `origin/main` afterwards per D17-4. Full Production smoke green; two smoke groups
 > remain **access-limited, not failing**.
 >
-> ⚠ **This banner records the OUTCOME, not campaign closure** — Phase 8 has not started, and it is
-> owner-scoped as a separate post-Frontend-v1 campaign. Open items: `tasks.md` §Remaining follow-ups.
+> ⚠ **Campaign 026 is CLOSED; the Web roadmap is not complete.** ⚠ **Phase 8
+> was RESCOPED by owner directive on 2026-08-17** to *campaign documentation, handoff and truth
+> reconciliation only*; the comprehensive Web learnability / study-map work was **transferred out** to
+> a separate `Web Learnability & Maintainability Pass` that runs **after Frontend v1**. Its deferral
+> **does not keep Campaign 026 open**. Open items: `tasks.md` §Phase 8 and §Remaining follow-ups.
 >
 > ⚠ **§1 below is the campaign's ORIGIN narrative** and is preserved as written. Its `nuxt` **4.4.8**,
 > its **31 open Dependabot alerts** and its *"RB-1 blocks the next Web Production promotion"* describe
@@ -113,8 +116,14 @@ Its exit criterion is a measured byte target on the `size` gate, not a count of 
 **In:** CI efficiency (the sized §14k remainder) · proven dead code, files, styles, assets,
 scripts and dependencies · RB-1 / Nuxt security compatibility · a full direct-dependency review to
 latest stable compatible · deeper frontend cleanup and modernization once the platform is stable ·
-full verification closure · governed integration, promotion and Production verification · the
-final Arabic study documentation rebuilt as a guided curriculum.
+full verification closure · governed integration, promotion and Production verification · final
+campaign documentation, handoff and truth reconciliation (Phase 8, as rescoped 2026-08-17).
+
+⚠ **Removed from scope 2026-08-17 (owner directive), after Production:** *the final Arabic study
+documentation rebuilt as a guided curriculum*. It was in this campaign's original scope; it is now
+**transferred whole** to the `Web Learnability & Maintainability Pass`, to run **after Frontend v1**.
+This is a **transfer, not an abandonment, and not incomplete Campaign 026 work** — see `tasks.md`
+§Phase 8 → DEFERRED.
 
 **Out (explicitly):** any Backend work · product or visual redesign · new product features · API
 contract changes · landing PR #46 (`024-violet-glass`) · issue **#30** (the known-red
