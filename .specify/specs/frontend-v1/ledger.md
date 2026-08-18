@@ -35,6 +35,13 @@ Jul–Aug 6) — pre-existing owner content churn, no campaign commit touches th
 unrelated open PRs — **#69**/**#68** Dependabot, **#46** the BLOCKED violet-glass branch — none from
 this campaign.
 
+**Re-verified again 2026-08-18 at a later session start (same date, second resume).** Every row
+above and every `M1·U1` artifact claim in §5 was checked live and **matched — zero drift**; the two
+uncovered facts in the paragraph above still hold unchanged. No tip SHA is stamped here either, for
+the same reason the table gives. Also confirmed non-authoritative:
+`eslammuatamed-docs/docs/research/api-frontend-v1-completion-ledger.md` self-declares **“Governs —
+nothing”** and is a closed-campaign record, not a competing source of live state.
+
 **Verify with:**
 ```bash
 git -C /home/eslam-muatamed/worktrees/web-026-phase8 rev-parse HEAD --abbrev-ref HEAD
