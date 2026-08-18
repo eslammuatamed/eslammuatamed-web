@@ -330,7 +330,43 @@ unblock taxonomy and **re-run INV-2's architecture question against the correcte
 its inline-editing recommendation rests on the list carrying every editor field, which the broken
 schema makes unverifiable.
 
-#### INV-1 escalations — **NOT yet verified**, and one may already be answered
+#### INV-1 (Testimonials) — **REVIEWED AND ACCEPTED 2026-08-19. Both escalations CLOSED by evidence; neither needed the owner**
+
+Re-derived from `openapi/openapi.json` and, where the contract was silent, from the API **source**
+(read-only; the API repo was not modified). Every load-bearing claim held:
+
+| Claim | Verified |
+| --- | --- |
+| Detail `GET /admin/testimonials/{id}` exists | ✅ — so the collection-plus-editor pattern replicates with a real entity read |
+| Admin list is an **array**, `parameters: []`, no `meta` | ✅ unpaginated, unfiltered, no declared ordering |
+| `CreateTestimonialDto.required` | ✅ `['order','isVisible','translations']` |
+| `UpdateTestimonialDto` required | ✅ **none** — every property optional |
+| `TestimonialTranslationDto` | ✅ requires **all four** of `locale, quote, authorName, authorRole` |
+| `translations` has **no `minItems`** | ✅ so `[]` is contract-admissible — **the OD-14 situation exactly** |
+| `avatarId` is the **only** nullable on both DTOs | ✅ — structurally parallel to Skills' `brandColor` |
+
+**Escalation 1 — translation PATCH upsert vs replace: CLOSED, and it was a RE-RAISE of settled
+knowledge.** `testimonials.service.ts:94` runs `prisma.testimonialTranslation.upsert(...)` in a loop
+over the supplied translations and **never deletes**. So PATCH **upserts supplied locales and
+preserves omitted ones**, and emptying a server-held locale is BLOCKED — which is §10.3 rule 6
+verbatim, already established by this campaign. No owner decision was required; the reviewer's job
+here was to notice the question was answered, not to answer it.
+
+**Escalation 2 — does `avatarId: null` clear? CLOSED.** `testimonials.service.ts:85` assigns
+`avatarId: dto.avatarId` straight into a Prisma update: `undefined` (omitted) is ignored by Prisma and
+**PRESERVES**; explicit `null` **CLEARS**. That is the `null`-clears / omission-preserves inverse pair
+exactly, and it is the defect class `M2·U1`'s two inverse controls exist for. The existing
+`MediaPicker` already emits `null` on clear, so the shipped component is correct as-is.
+
+⚠ **Both escalations were resolvable from evidence the lane could have reached.** The lane was
+right to escalate rather than guess — but the standing note for future briefs is that "the contract
+is silent" is a reason to read the **implementation**, not automatically a reason to stop.
+
+**Verdict: INV-1 ACCEPTED. Testimonials is contract-sound and is the next write-lane candidate after
+Skills.** Its translation DTO carries four required fields against Skills' two, so it is a genuinely
+different replication case rather than a copy.
+
+#### INV-1 escalations — the original text, kept as raised
 
 INV-1 raises two contract-silence questions: (1) whether translation PATCH **upserts or replaces**, and
 (2) whether `avatarId: null` reliably **clears**. ⚠ **Question 1 looks already-settled by this
