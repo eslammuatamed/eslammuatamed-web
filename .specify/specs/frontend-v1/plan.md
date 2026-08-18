@@ -912,14 +912,17 @@ there: **keep the unsaved-changes guard in v1** even though autosave (`FR-DSH-01
 | Translation completeness indicator (FR-DSH-011) | — | **build** | apply | consistency |
 | Long-form authoring ergonomics (sticky actions, scroll-to-error, unsaved guard) | — | **build** | apply | audit |
 | Contextual `View on site` / preview action | — | **build** (Articles) | apply where a public destination exists | consistency |
-| Dashboard shell: `View site`, locale switcher, theme, session menu | — | **minimum viable shell — ⚠ contingent on OD-11** | inherit | **full coherence pass** |
-| Login redesign | — | **minimum** if it blocks exercising FE-2 | — | **finalize** |
+| Dashboard shell: `View site`, **application-language switcher**, theme, session menu | — | **build (FE-2a)** — OD-11 resolved, no longer contingent | inherit | **full coherence pass** |
+| **Dashboard localization architecture + RTL/LTR shell** | — | **build (FE-2a)** — one mechanism, established once | **reuse, never re-invent** | consistency audit |
+| Login redesign | — | **bilingual login in FE-2b** (OD-11 names login localization as an FE-2 contract) | — | **visual finalize** |
 | Header/global nav IA, action placement, terminology | — | conventions only | inherit | **finalize** |
 | D20-32 review | — | measure only | measure only | **review/recalibrate** |
 
-**⚠ Contingent on OD-11 (ledger §9).** What the header locale control switches — chrome language or
-content locale — is an open owner decision, and it also decides whether the shell and every new
-Dashboard layout use physical or logical properties. Build the shell only after it is answered.
+**✅ OD-11 RESOLVED 2026-08-18 — option B (ledger §9).** The header control switches the **chrome
+language**. The shell and every new Dashboard layout therefore use **logical properties**; physical
+`left`/`right` in dashboard chrome is now a defect class. Dashboard routes stay unprefixed — the
+application locale is persisted preference state, not a route segment (doc **D04-7**). Nothing here
+waits on an owner answer any more.
 
 **Rationale for pulling the shell forward.** The owner authorized placing the minimum necessary
 shell work earlier *if it is a dependency for exercising FE-2 naturally*. It is: FE-2 must establish
@@ -928,9 +931,12 @@ a shell with no `View site` affordance and no locale switcher. **Recommendation:
 viable shell at the start of FE-2** — `View site`, locale switcher beside the theme control, session
 menu — and leave IA refinement, terminology and visual coherence to FE-5.
 
-**Login** is a weaker dependency: FE-2 can be exercised through the existing login. **Recommendation:
-leave the full login redesign in FE-5**, unless FE-2 work shows the current page obstructs the
-authoring loop.
+**Login** — ⚠ **revised by OD-11.** The *visual* redesign remains an FE-5 finalize, but the owner's
+decision names login localization explicitly as an FE-2 contract ("authentication/login chrome"), and
+the login page is where the language control must already work: it is reachable before a session
+exists, so it cannot inherit anything from the authenticated shell. **FE-2b therefore ships the
+bilingual login** — language control, appearance control, branded route back to the portfolio,
+localized labels/errors/actions, correct RTL/LTR composition — and leaves composition polish to FE-5.
 
 ### 14.6 Shared components / composables likely to emerge
 
@@ -983,18 +989,26 @@ message settles both from the authoritative decision list:
 
 - **OD-9 → resolved as recommended**, restated to avoid presuming a chrome locale: the **active
   content locale** seeds the initial tab, and tab selection is thereafter independent per entity.
-  This holds under **both** OD-11 options.
-- ~~**OD-10 → resolved as recommended.**~~ ⚠ **WITHDRAWN — SUPERSEDED BY OD-11 (ledger §9).** I
-  inferred a fully localized EN/AR shell from "Dashboard shell needs: locale control" *before*
-  finding **doc 02 §9** ("the dashboard UI chrome ships in **English only in v1**") and **doc 04 §1**
-  ("Dashboard routes are English-only chrome … carry no locale prefix"). A localized shell is
-  **Option B of OD-11**, an open owner decision — **not settled authority**. Do not build on it.
+  ⚠ **Restated 2026-08-18:** OD-11 option B establishes a Dashboard **application** locale, and
+  *that* is the seed. The "active content locale" phrasing existed only because no chrome locale was
+  settled; it is now obsolete, not an alternative reading.
+- ~~**OD-10 → resolved as recommended.**~~ **Withdrawn as an inference; the same conclusion is now
+  owner authority as OD-11 option B (2026-08-18).** The withdrawal was correct at the time and is
+  kept: a fully localized shell was *inferred* from "Dashboard shell needs: locale control" before
+  **doc 02 §9** and **doc 04 §1** were found, and an inference that happens to match a later decision
+  was still not authority when it was made. **Cite OD-11 / D02-15, never this row.**
 
 ⚠ **Numbering collision, stated so a future session does not conflate them:** *my* `OD-10` above is
-unrelated to **doc 11's "owner decision 10"** cited in `app/layouts/dashboard.vue:86`, which is the
-governed English-only-LTR decision. Different schemes, same label.
+unrelated to the **"owner decision 10"** cited in `app/layouts/dashboard.vue:86`, which is the
+governed English-only-LTR decision. Different schemes, same label. **That citation is now stale in
+substance too** — the decision it names is superseded by **D02-15 / D11-8**, so the comment and the
+physical `left` it justifies are both removed in FE-2a.
 
-Both are therefore **settled inputs to FE-2**, not open questions.
+Both are therefore **settled inputs to FE-2**, not open questions — and since 2026-08-18 so is
+**OD-11**, which is what actually settles the Dashboard chrome language. **OD-9's restatement:** the
+seed is the **Dashboard application locale**. It was phrased as "the active *content* locale" only to
+avoid presuming a chrome locale existed; OD-11 establishes one, so the original phrasing is obsolete
+rather than an alternative reading.
 
 ---
 

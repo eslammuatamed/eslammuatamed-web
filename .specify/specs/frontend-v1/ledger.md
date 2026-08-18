@@ -33,7 +33,7 @@ git -C /home/eslam-muatamed/worktrees/web-026-phase8 fetch origin && git rev-par
 | Phase | State |
 | --- | --- |
 | **FE-1 — Contract & Integration Foundation** | **COMPLETE** — commit `19e3a05`. Contract adopted + gtm reconciliation; reply flow deliberately moved to FE-2 (see §4). Gates re-verified on the committed tree: typecheck 0, 1501/1501. |
-| FE-2 — Articles Tracer Bullet + Dashboard Architecture | **STARTED — shell survey done; blocked on OD-11 for chrome only.** Content-side work is unblocked. |
+| **FE-2 — Articles Tracer Bullet + Dashboard Architecture** | **IN PROGRESS — unblocked.** OD-11 resolved (§9, option B). Split into three sub-phases so each ends at a clean, committable boundary: **FE-2a** bilingual Dashboard architecture · **FE-2b** login localization + shell finish · **FE-2c** Articles tracer bullet (TranslationTabs, editor, scheduling). |
 | FE-3 — Content Module Replication | NOT STARTED |
 | FE-4 — System Modules | NOT STARTED |
 | FE-5 — Coherence, D20-32 Review, M4 Closure | NOT STARTED |
@@ -47,11 +47,12 @@ git -C /home/eslam-muatamed/worktrees/web-026-phase8 fetch origin && git rev-par
 | **OD-1** | Full Dashboard M3 **IS** in Frontend v1. Hold the `M` bar. |
 | **OD-2** | Dynamic **RBAC management UI is DEFERRED** from v1. Backend RBAC, enforcement, and role/permission-aware Frontend behaviour are all preserved. Record as POST-V1 product work, **not** an unfinished v1 requirement. |
 | **OD-3** | Backend/API is complete and Production-ready for v1 scope unless fresh evidence proves otherwise. |
-| **OD-9** | The **active content locale seeds the initial** translation tab; tab selection is thereafter independent per entity. (Stated without presuming a Dashboard *chrome* locale — holds under both OD-11 options.) |
-| ~~**OD-10**~~ | ~~Dashboard shell is fully localized EN/AR.~~ ⚠ **SUPERSEDED BY OD-11 — see §9.** This was inferred from the owner's "locale control in the header" before doc 02 §9 / doc 04 §1 were found. It is **Option B of OD-11**, i.e. an open decision, **not settled authority**. Do not build a localized shell on this row. |
+| **OD-9** | **The Dashboard application locale seeds the initial** translation tab; tab selection is thereafter independent per entity. ⚠ **Restated 2026-08-18 under OD-11.** It previously read "the active *content* locale seeds the tab" — deliberately phrased to avoid presuming a chrome locale, because none was settled. OD-11 settles it: there **is** a Dashboard application locale and it is the seed. The old phrasing is not a second valid reading; do not carry it forward. |
+| ~~**OD-10**~~ | ~~Dashboard shell is fully localized EN/AR.~~ **Withdrawn as an inference, then RE-ESTABLISHED as an owner decision.** It was originally inferred from "locale control in the header" before doc 02 §9 / doc 04 §1 were found, and withdrawn for that reason. The owner has since chosen exactly it, deliberately and with the cost visible, as **OD-11 option B**. **Cite OD-11, never this row** — the conclusion is the same but only one of them is authority. |
+| **OD-11** | **RESOLVED 2026-08-18 — option B. The Dashboard ships fully localized EN/AR.** The header control is a real **application-language** switcher. Dashboard routes stay **unprefixed**; the application locale is a persisted preference, independent of route structure. It drives chrome language, shell direction, and the default active translation tab. Changing it must **not** discard unsaved translation state. Governing record: docs **D02-15** (scope), **D04-7** (routing), **D11-8** (architecture), doc 18 §3 (coverage) — Docs commit `3b607af`, branch `docs/od-11-dashboard-localization`, **local-only** (R10). |
 | **UX** | Multilingual authoring: shared fields once + locale tabs; preserved unsaved state; validation visible across inactive tabs; correct RTL/LTR; 380px. |
-| **UX** | Dashboard shell needs a locale control, appearance control, obvious **View/Open Portfolio**, contextual **View-on-site** where a real public destination exists. ⚠ What the locale control *switches* — chrome language vs content locale — is **OD-11**, open. |
-| **UX** | `/dashboard/login` gets a full product-quality redesign — Nuxt UI + standard Zod, obvious way back to the public site. |
+| **UX** | Dashboard shell needs a locale control, appearance control, obvious **View/Open Portfolio**, contextual **View-on-site** where a real public destination exists. The locale control switches the **chrome language** (OD-11 option B) — settled, no longer contingent. |
+| **UX** | `/dashboard/login` gets a full product-quality redesign — Nuxt UI + standard Zod, obvious way back to the public site. **Bilingual under OD-11**: it carries the same language control and appearance control, localized labels/errors/actions, and correct RTL/LTR composition. |
 | **UX** | Long authoring flows: **one coherent page + clear sections + locale tabs + persistent primary actions**. No wizard without workflow evidence. |
 
 ---
@@ -120,58 +121,48 @@ None yet. No subagents or Codex lanes dispatched in this campaign.
 
 ---
 
-## 9. DECISIONS NEEDED — owner
+## 9. Owner decisions — resolved
 
-### OD-11 — Dashboard chrome language: English-only, or fully localized EN/AR?
+### OD-11 — Dashboard chrome language · **RESOLVED 2026-08-18 · OPTION B**
 
-**BLOCKING FE-2's form architecture and the Dashboard string budget for FE-3/FE-4.**
+**The owner chose option B: the Dashboard chrome ships fully localized EN/AR in v1.** This
+explicitly supersedes the previous v1 position that Dashboard chrome is English-only.
 
-**The exact decision.** The owner's UX input asks for a "locale switcher adjacent to the
-appearance/theme control" in the Dashboard header, and for the active translation tab to "default
-coherently from the current Dashboard/application locale". Both presuppose a **Dashboard application
-locale**. Two governing documents say there is none:
+The recommendation in this ledger was **option A** (English chrome; the header control switches the
+content locale). It was argued on cost, and the owner overrode it on **intent**: the header control
+is an *application* language switcher, and a control that changes nothing but a form's default tab
+misrepresents itself. Recorded, not quietly deleted — the recommendation was wrong about what the
+owner wanted, and the cost it priced is real and is now being paid deliberately.
 
-- **doc 02 §9 (Assumptions):** *"The dashboard UI chrome ships in **English only in v1**; all
-  content remains bilingual. **Confirm at doc 11 review.** Rationale: single operator, principle 2 —
-  localizing an interface only Eslam sees serves no persona; the i18n architecture does not preclude
-  it."*
-- **doc 04 §1:** *"Dashboard routes are English-only chrome (doc 02 §9) and carry no locale prefix."*
+**What the decision settles:**
 
-**Why existing principles do not settle it.** The assumption is explicitly provisional — it carries
-its own review trigger, *"Confirm at doc 11 review"* — so it was always meant to be revisited, and
-the owner's UX input is plausibly that revisit. But it is still a **governed** decision recorded in
-two documents and **encoded in shipped code**, and reversing it materially changes v1 scope. Under
-the owner's own escalation list ("materially change Dashboard information architecture", "a governed
-architecture decision must change"), that is an owner call, not an implementation choice.
+| | |
+| --- | --- |
+| Chrome language | **EN/AR, fully localized** — navigation, headings, buttons, actions, labels, helper text, application-owned validation presentation, empty/loading/error states, dialogs/drawers/menus, authentication chrome, system modules |
+| Routing | **UNCHANGED — dashboard routes stay unprefixed.** No `/ar/dashboard/**`, no duplicate localized route tree. The application locale is **persisted preference state**, independent of route structure |
+| Direction | Logical layout semantics throughout the Dashboard. Physical `left`/`right` in dashboard chrome becomes a defect class, as it already is in public chrome |
+| Translation tabs | The **Dashboard locale** seeds the initial active tab (restated OD-9). Changing the Dashboard locale must **not** discard unsaved translation state |
+| Field vs chrome direction | **Independent.** English fields stay LTR inside an Arabic dashboard; Arabic fields stay RTL inside an English one |
+| Login | `/dashboard/login` is bilingual too — same language control, appearance control, branded home link back to the portfolio, localized labels/errors/actions |
+| Where it is established | **FE-2**, as reusable contracts — not deferred to FE-5, and not re-invented per module. FE-3/FE-4 reuse; FE-5 stays the coherence pass |
 
-**Evidence it is encoded, not merely documented.** `app/layouts/dashboard.vue:86-87` deliberately
-uses a **physical `left`** for the mobile drawer, with the comment: *"Physical `left` rather than a
-logical property: the dashboard is English-only LTR by owner decision 10, and the RTL
-logical-properties gate governs the public chrome."*
+**Governing documentation, reconciled 2026-08-18** — Docs commit `3b607af` on branch
+`docs/od-11-dashboard-localization`, **local-only** (R10 still blocks Docs integration):
 
-**Note on ambiguity.** A narrower reading of the owner's request is possible and would **not**
-conflict: the header control switches the **content locale being edited** (and/or the locale the
-"View site" action opens), while the chrome stays English. That reading satisfies "default the
-active tab coherently" without reversing anything.
+| Doc | Record |
+| --- | --- |
+| doc 02 | **D02-15** — scope. §9 assumption + §8 non-goal struck through **in place**, with the reason. Not deleted: both were true when written and governed shipped code |
+| doc 04 | **D04-7** — routing. Dashboard pages excluded from localized route generation; `/ar/dashboard/**` stops existing |
+| doc 11 | **D11-8** — architecture. Dashboard locale is client state; `dir` on the shell root, never on `<html>` (D22-7 owns it) |
+| doc 18 | §3 — four discriminating tests, each chosen because its failure is silent |
 
-| Option | Product impact | Technical / maintenance impact |
-| --- | --- | --- |
-| **A — Keep English-only chrome; the header control switches the *content* locale** (recommended) | Owner gets the requested control and the coherent tab default; chrome stays English | **Small.** No new translation surface. Drawer `left` stays valid. FE-3 modules carry no extra string cost. Honours doc 02 §9 as written. |
-| **B — Fully localize the Dashboard EN/AR** | An Arabic-first operator gets an Arabic admin UI — a real benefit, and the owner is Arabic-speaking | **Large.** Every Dashboard string across ~12 modules becomes translatable; RTL admin layouts incl. tables; the logical-properties gate must extend to dashboard chrome; the drawer side and all physical properties must flip; doc 02 §9 and doc 04 §1 must be amended. Materially enlarges FE-2/FE-3/FE-4. |
-
-**Recommendation: Option A.** It satisfies every concrete behaviour the owner asked for — a locale
-control in the header, a coherent default for the active translation tab, and locale-correct
-`View site` — without reversing a governed decision or multiplying the FE-3 string budget. If the
-owner actually wants an Arabic admin UI, that is Option B and should be chosen deliberately, with
-its cost visible, rather than arrived at sideways through a header control.
-
-**What remains unblocked meanwhile:** everything content-related. Content is bilingual under **both**
-options, so the translation-tab pattern, the shared-vs-translatable field split, validation
-discoverability, RTL/LTR *field* rendering, and the whole Articles tracer bullet proceed unchanged.
-Only the **chrome** language and the drawer/physical-property question wait on this.
-
-**What specifically cannot proceed:** the final Dashboard shell header composition, the decision to
-extend the logical-properties gate to dashboard chrome, and the FE-3 per-module string budget.
+**One live defect this decision removes, discovered while reconciling:** `/ar/dashboard/**` already
+existed as a by-product of the public `prefix_except_default` strategy, and rendered **raw i18n key
+paths** (`dashboard.media.title`) because `ar.json` carries only 4 of 310 `dashboard.*` keys and
+there is no `fallbackLocale`. It was measured and deliberately left unasserted by the M4-A lane
+(`e2e/dashboard-media/media-profile.spec.ts`), which named the three candidate fixes and correctly
+called the choice a governed decision outside its scope. OD-11 is that decision, and it picks the
+third: exclude the tree.
 
 ---
 
@@ -184,20 +175,31 @@ extend the logical-properties gate to dashboard chrome, and the FE-3 per-module 
 | `3be8be7` | Frontend v1 plan (audit, product definition, phases) |
 | `19e3a05` | **atomic contract adoption** — contract + generated types + fixture adaptation |
 | `6fd38d3` | owner UX requirements, resolved decisions, FE-1 record |
+| `686785f` | FE-1 closed; OD-11 escalated |
 
-**Next, in order:**
+**FE-2 sub-phases.** OD-11 enlarged FE-2, so it is split rather than run as one long stretch.
+Each boundary is committable and leaves the tree green.
 
-1. **Answer OD-11 (§9)** — Dashboard chrome language. Blocks only the shell header composition and
-   the physical-vs-logical property question; **not** the content work.
-2. **Proceed with the Articles tracer bullet** — unblocked under either OD-11 option, because
-   content is bilingual either way. Build the real flow first; extract
-   `useTranslatableForm` / `TranslationTabs` / `EntityFormLayout` **only after it demonstrates the
-   boundary**, never as an up-front framework.
-3. **Write the discriminating test early** — a validation error in an **inactive** locale tab must be
-   surfaced and the tab marked invalid. Without it the tabbed pattern can ship broken and look fine.
-4. **Then** the Dashboard reply flow (`POST /admin/messages/{id}/replies`), reusing FE-2's form,
-   validation and save-feedback patterns. Contract facts are captured in `plan.md` §15.4 — note
-   especially that **2xx does not mean the mail was sent**; the outcome is in `status`.
+| Sub-phase | Deliverable | Exit |
+| --- | --- | --- |
+| **FE-2a** | **Bilingual Dashboard architecture.** Persisted application locale; one localization mechanism for all dashboard surfaces; `dir`/`lang` on the shell root; dashboard pages excluded from localized route generation (`/ar/dashboard/**` removed); shell header — language switcher, theme, **View site**, session menu; logical drawer side; **the gate that makes untranslated chrome a lint/test failure**; full Arabic chrome for the modules that already exist | Arabic dashboard renders Arabic chrome RTL on a **cold load**; no key paths; gate positive-controlled; CI green |
+| **FE-2b** | **Login + shell finish.** `/dashboard/login` bilingual with the same language and appearance controls and a branded route back to the portfolio; localized Zod error presentation | Login usable and correct in both languages at 380px; keyboard + error-focus behaviour asserted |
+| **FE-2c** | **Articles tracer bullet.** The real flow first — list, editor, Tiptap, slug, scheduling, preview wiring — then extract `TranslationTabs` / `useTranslatableForm` / `EntityFormLayout` **only once it demonstrates the boundary** | An article authored in the Dashboard is live on `/blog` in both locales; Tiptap round-trip green; no public bundle regression; axe clean in **both** dashboard languages |
+
+**Discriminating tests that must exist before the pattern is trusted** (doc 18 §3, plan §14.7):
+
+1. **Cold load** with the preference already Arabic — not a post-load toggle. A toggle-only test
+   passes even when the stored preference is ignored at boot.
+2. **No untranslated chrome** under an Arabic dashboard — positive-controlled against a
+   deliberately unconverted surface before it is trusted. This failure is otherwise **silent**.
+3. **Switching the dashboard language preserves unsaved edits in every locale tab, and performs no
+   navigation.** Different code path from the tab-switch test; neither substitutes for the other.
+4. **A validation error in an inactive locale tab is surfaced and the tab marked invalid.**
+5. **Mixed direction in one form**, asserted in **both** dashboard languages.
+
+**Then** the Dashboard reply flow (`POST /admin/messages/{id}/replies`), reusing FE-2's form,
+validation and save-feedback patterns. Contract facts are in `plan.md` §15.4 — note especially that
+**2xx does not mean the mail was sent**; the outcome is in `status`.
 
 **Push discipline:** nothing is pushed. `origin/dev` and `origin/main` are untouched. No merge to
 `main`, no deploy, no Docs publication.
