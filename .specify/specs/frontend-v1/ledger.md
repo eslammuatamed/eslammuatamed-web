@@ -274,6 +274,62 @@ create/edit on each collection page** (two routes total, not six), on the eviden
 already carries every editor field — *which is exactly the claim Escalation 1 puts in doubt, so the two
 must be resolved in order.*
 
+### OD-17 — the taxonomy list-schema defect is a BACKEND bug; Taxonomy blocks, FE-3 does not · **OWNER 2026-08-19**
+
+The owner ruled INV-2's Escalation 1 a **real API contract defect** and, critically, **not a product
+decision**: runtime semantics already establish the correct shape, so nobody chooses it.
+
+#### ⚠ It is FOUR endpoints, not two — found by sweeping the defect CLASS, not the symptom
+
+| Endpoint | Source | Declares | Handler returns |
+| --- | --- | --- | --- |
+| `GET /api/v1/admin/categories` | `taxonomy/categories.admin.controller.ts:48` | single `$ref` ❌ | `Promise<AdminCategoryEntity[]>` |
+| `GET /api/v1/admin/tags` | `taxonomy/tags.admin.controller.ts:46` | single `$ref` ❌ | `Promise<AdminTagEntity[]>` |
+| `GET /api/v1/admin/users` | `access-control/users.admin.controller.ts:41` | single `$ref` ❌ | `Promise<UserEntity[]>` |
+| `GET /api/v1/admin/roles` | `access-control/roles.admin.controller.ts:59` | single `$ref` ❌ | `Promise<RoleEntity[]>` |
+
+**`users` and `roles` are outside Taxonomy entirely and will hit the RBAC module the same way.**
+Fixing only the two reported endpoints would leave the trap armed for a later FE-3 module.
+
+**Root cause, one missing option four times:** `@ApiOkEnvelope(Entity)` defaults to the singular
+envelope; the correct form is `@ApiOkEnvelope(Entity, { isArray: true })`, which skills, testimonials
+and the **PUBLIC** categories/tags all use. The handler's return type and the decorator are two
+independent declarations of one fact and **only the decorator reaches OpenAPI** — so they disagree
+with `tsc` and every build green. The public/admin split within the same entity family is what makes
+"oversight" rather than "intent" the only reading.
+
+⚠ **My first sweep over-reported 7 and was corrected by the artifact.** A one-line lookahead missed
+`isArray: true` sitting on the third line of a multi-line options object, so `/api/v1/categories`,
+`/api/v1/tags` and `/api/v1/locales` were flagged and are in fact **correct**. Every claim above is
+verified against the emitted `openapi.json`, not against the source regex. **The artifact is the
+authority** — which is fitting, since the artifact is also what generated clients consume.
+
+#### The block, stated narrowly
+
+**Taxonomy's implementation lane is BLOCKED at the point the list response shape becomes
+load-bearing** — and nowhere else. **FE-3 is NOT blocked globally.** Skills `M2·U2`/`M2·U3`, the INV-1
+review, and other sound-contract modules continue in parallel; read-only taxonomy investigation may
+also continue provided it does **not** commit to the broken response shape.
+
+**Frontend will NOT:** add a workaround, hand-patch generated types, add another handwritten
+cast/generic to normalise the bad schema, modify the API repo from this campaign, or infer a permanent
+taxonomy architecture from the incorrect schema. ⚠ The existing handwritten array generic at
+`useAdminArticles.ts:215` **has been masking this** and is left untouched — it is not authority, and
+treating it as such is what let the defect survive.
+
+**Handoff written:** [`backend-handoff-list-envelope-schema.md`](backend-handoff-list-envelope-schema.md)
+— affected endpoints, exact wrong shape, the established correct shape with three independent lines of
+evidence, root cause, the requested fix (add the option; **regenerate the artifact**), and a regression
+test **with its required positive control** (strip `isArray` from a currently-correct endpoint and
+prove the test fails, since a test asserting a property four endpoints violate passes trivially once
+they are fixed).
+
+**After the fix:** reconcile Web's vendored `openapi.json` through the established generation workflow
+— preserving the byte-identity with API `origin/main` that is this campaign's contract guarantee — then
+unblock taxonomy and **re-run INV-2's architecture question against the corrected contract**, because
+its inline-editing recommendation rests on the list carrying every editor field, which the broken
+schema makes unverifiable.
+
 #### INV-1 escalations — **NOT yet verified**, and one may already be answered
 
 INV-1 raises two contract-silence questions: (1) whether translation PATCH **upserts or replaces**, and
