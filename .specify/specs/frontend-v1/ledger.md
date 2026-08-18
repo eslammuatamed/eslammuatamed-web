@@ -15,7 +15,9 @@ Verify every line against live state before acting on it. Report drift before do
 | **Worktree** | `/home/eslam-muatamed/worktrees/web-026-phase8` ⚠ directory name is historical (it was the 026 Phase 8 worktree); the branch it holds is the Frontend v1 campaign branch |
 | **Branch** | `campaign/frontend-v1` |
 | **Branched from** | `origin/dev` `54cea28737c558767ccb24a34e2b437b62f7f058`, via `plan/frontend-v1`. ⚠ The branch **tracks `origin/dev`**, so `git status` reports an ahead-of-upstream count — that is expected, **not drift**. |
-| **Remote state** | **NOT PUSHED.** `origin/dev` = `54cea287…`, `origin/main` = `648aa467…` — neither moved by this campaign |
+| **Branch tip** | `c6a5b21bd7e72003a596a7d2c4cbadd86e7534a5` — FE-2a complete, worktree clean (verified 2026-08-18) |
+| **Remote state** | **NOT PUSHED.** `origin/dev` = `54cea28737c558767ccb24a34e2b437b62f7f058`, `origin/main` = `648aa467cd8bc7157cbcad2fd7c0e8981ee1f16c` — neither moved by this campaign, re-verified after FE-2a |
+| **Docs repo** | branch `docs/od-11-dashboard-localization`, HEAD `3b607af9e6b0fe9662abe0058f5e50c88bcd545f`, **local-only** (R10). `origin/main` = `1896d8c7…`, untouched |
 | **Production** | Web release `20260817T175534Z-648aa46` — untouched |
 | **API** | `origin/main` = `origin/dev` = `9af1aace…`, live and complete for v1 scope |
 
@@ -307,6 +309,10 @@ third: exclude the tree.
 | `19e3a05` | **atomic contract adoption** — contract + generated types + fixture adaptation |
 | `6fd38d3` | owner UX requirements, resolved decisions, FE-1 record |
 | `686785f` | FE-1 closed; OD-11 escalated |
+| `84f53f6` | OD-11 resolved — option B recorded, supersession swept across plan + ledger |
+| `dfba453` | **FE-2a** — bilingual EN/AR dashboard chrome + the three gates that keep it bilingual |
+| `82494d0` | D20-32 floor regression isolated by measurement and removed (`UDropdownMenu`, 28.0 KB gz) |
+| `c6a5b21` | two review findings a green pipeline could not see; **FE-2a complete** |
 
 **FE-2 sub-phases.** OD-11 enlarged FE-2, so it is split rather than run as one long stretch.
 Each boundary is committable and leaves the tree green.
