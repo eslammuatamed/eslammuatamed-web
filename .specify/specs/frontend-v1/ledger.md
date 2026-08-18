@@ -168,14 +168,67 @@ encodes, rest on that file. Recorded as newly-obtained evidence, not as a re-con
   change" would be a weaker claim if the module's source had moved underneath it.
 
 **Status of the NEXT THREE ACTIONS, re-derived at this resume.** `M2·U1` landed after that block was
-written, so two of the three are discharged:
+written, so two of the three were already discharged, and **the third was discharged during this
+session** — all three are now closed:
 
 1. **R14 lane-count trigger — ✅ DISCHARGED.** Re-derived in §8 and re-counted live here: `lanes.ts`
    declares **11**, Skills lands the twelfth, so the trigger arrives at the **second** FE-3 module,
    not the third. `test:e2e:sharded` deliberately **not** promoted to the default gate.
-2. **Baseline-provenance attribution — ⏳ STILL OWED**, and the owner has directed it be closed **as
-   its own clean unit** this session, before `M2·U2`. Its constraints are restated in §9.7.
+2. **Baseline-provenance attribution — ✅ DISCHARGED this session**, commit `c3b632b`, as its own
+   clean unit per OD-15. **The finding's premise did not survive measurement**: the baselines DO
+   reproduce, exactly, at the tree each was measured on. Full record in §9.5. No byte value changed.
 3. **Module 2 routing — ✅ DISCHARGED** (OD-13, bounded Codex lane), and `M2·U1` has landed green.
+
+### OD-16 — CAMPAIGN ACCELERATION: up to three parallel Codex lanes · **OWNER 2026-08-19**
+
+The owner authorized **bounded parallel Codex execution** for the remainder of FE-3, superseding the
+one-lane-at-a-time shape OD-13 established. Claude remains architect, owner of shared abstractions,
+integrator, reviewer, and the authority for route budgets, R14/R15 and every final gate.
+
+**The parallelism rule, in one line: parallelize IMPLEMENTATION, serialize INTEGRATION and EVIDENCE.**
+
+| Lanes MAY own | Lanes MUST NOT edit — report the need instead |
+| --- | --- |
+| module-local pages, components, composables/utilities | the shared FE-3 abstractions |
+| module-local unit tests | `scripts/e2e/lanes.ts` |
+| module-local e2e specs/backends where isolated | global Dashboard nav/registry files |
+| | route-budget governance; global CI/test config |
+| | generated OpenAPI; the Backend/API repo; the private Docs repo |
+
+⚠ **The resource rule is not advisory, and R14/R15 are the reason it exists.** Codex may run focused
+local tests inside its own lane, but **Claude serializes every heavy authoritative measurement** —
+production builds, `size`, `size:routes`, full/sharded e2e, bundle analysis, CSS measurement, final
+a11y. R15 already recorded two full-suite runs failing differently each time and each passing in
+isolation; concurrency **manufactures** failures, so a parallel gate run would produce evidence that
+means nothing. **Parallel code production, serialized evidence.**
+
+**Standing owner boundary attached to OD-16:** do **not** stop merely because lanes are running or a
+lane completed. Return only for genuine product semantics, a meaningful architecture tradeoff, a
+governed route-cap decision, a hard unresolved blocker, a security waiver, or push/merge/deploy
+authorization. **Context and session boundaries are explicitly NOT owner-decision boundaries.**
+
+#### Lanes dispatched at this session (both READ-ONLY investigations)
+
+Dispatched while the provenance unit's serialized builds ran — read-only lanes cannot collide with a
+build, which is why these two went first rather than a write lane.
+
+| Lane | Module | Mode | Brief |
+| --- | --- | --- | --- |
+| INV-1 | **Testimonials** (FE-3 module 3) | read-only | `briefs/testimonials.txt` |
+| INV-2 | **Categories & Tags** (FE-3 module 4) | read-only | `briefs/categories-tags.txt` |
+
+Both briefs embed the same standing constraints: derive every contract claim from
+`openapi/openapi.json` (re-verified byte-identical to API `origin/main` this session), never fork a
+shared abstraction, report requested CENTRAL changes rather than planning to make them, and run no
+builds. Both return the owner's thirteen-section contract, including discriminating negative controls
+and an owned-file proposal split into creates / modifies / central-changes-requested.
+
+⚠ **INV-2 carries the one real architectural question in the queue.** `/admin/categories/{id}` and
+`/admin/tags/{id}` carry only `patch`/`delete` and have **no detail read**, unlike Skills and
+Testimonials which both carry `get`. The brief asks INV-2 to re-verify that against the contract and
+then answer whether the collection-plus-editor pattern can replicate onto an entity with no detail
+read — and to **escalate with evidence** if it cannot, rather than inventing a competing pattern.
+This is the reason categories/tags were deliberately NOT made the first delegated lane.
 
 ⚠ **One owed item closed silently, and is re-opened here.** §9.5 ended *"Attribution belongs to
 `M1·U5`"* — meaning the `DASHBOARD_APP_OWNED_BASELINE_BYTES` provenance drift (nine routes, deltas in
