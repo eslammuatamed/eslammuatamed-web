@@ -109,7 +109,7 @@ naming *what the branch points at* does not.
 ⚠ **`size:routes` is RED (exit 2) at this checkpoint, BY DESIGN.** It is a *measurement failure*,
 not a budget breach: the two editor routes are registered and deliberately UNGOVERNED pending
 **§9.5**, and every measured route is inside its cap. Do not "fix" it by stamping a cap — the gate may
-not invent a budget. **Next: `M1·U4`, the extraction verdicts — SIX candidates, not five.**
+not invent a budget. **`M1·U4` is also LANDED** (ledger-only; the verdicts are the deliverable §5.5 asked for). **Next: `M1·U4b` — PERFORM the three HELD extractions** (`useTranslatableForm`, `TranslationTabs`, and the partial `EntityFormLayout` chrome). ⚠ That unit refactors `ArticleEditor.vue`, a SHIPPED gate-covered surface, so it needs the Articles lane AND the Experiences lane re-run, a rebuild, and a re-measurement of every governed dashboard route — budget it as a full heavy unit, not as a tidy-up. Then `M1·U5`: gates, `axe` in BOTH dashboard languages, and the R13 CSS watch.
 
 ---
 
@@ -119,7 +119,7 @@ not invent a budget. **Next: `M1·U4`, the extraction verdicts — SIX candidate
 | --- | --- |
 | **FE-1 — Contract & Integration Foundation** | **COMPLETE** — commit `19e3a05`. Contract adopted + gtm reconciliation; reply flow deliberately moved to FE-2 (see §4). Gates re-verified on the committed tree: typecheck 0, 1501/1501. |
 | **FE-2 — Articles Tracer Bullet + Dashboard Architecture** | **COMPLETE.** OD-11, OD-3, D20-33 and its amendment all resolved. FE-2a/2b/2c done: F-1 **CLOSED** with browser evidence · collection · editor · §14.6 extraction pass · **all ten §14.9 criteria demonstrated** · every gate green including `size:routes`. The reusable architecture is recorded in **§10**. |
-| **FE-3 — Content Module Replication** | **OPEN — module 1 (`experiences`) through `M1·U3`: the collection AND the editor SHIP.** Delegation settled as **OD-12** (hybrid: module 1 in-house, modules 2–5 delegable once the pattern holds). `M1·U1` landed the instrument; **`M1·U2` landed the collection at `/dashboard/experiences`, its `lanes.ts` record, and a third public-isolation gate** — every gate green, the lane 10/10 booting 1 pair, and the route measured at 85,551 B against its own D20-34 cap of 99,328 B. The new route cost **zero CSS**. Four unpredicted findings are in §5/M1·U2, including a gate (`typecheck:e2e`) that had been RED since `M1·U1` because that unit's exit row never listed it. **`M1·U3` landed the editor** (`7e6d11a`): bilingual, Zod + `UForm`, 422→locale-tab mapping, the shared skill picker, `isCurrent`⇄`endDate` on a field-owned error path, and the calendar-date read that Articles' instant-shaped converter would have got wrong. Three rules were each proven able to fail; the `technologyIds` omission control failed **only** the clear-case test, which is the empirical reason both tests exist. Four more unpredicted findings are in §5/M1·U3, including a backend crash that reported itself as eight failing tests. Its route caps were **measured and escalated, never inherited** — the batched decision is **§9.5**, and until the owner rules, `size:routes` exits 2 as a MEASUREMENT FAILURE rather than a budget breach. **`M1·U4`, the extraction verdicts, is next** — and §5.2's five candidates are now **six**: `DashboardSkillPicker` was extracted by observation and owes a verdict row.<br>**Lane-strategy unit (R14):** A run now boots only the lanes it selected: measured 1 preview pair for `--project=dashboard-articles`, against 10 before, same command. The full suite still boots all ten by design, so R14 is **NARROWED, NOT CLOSED** — see §6 and §5/FE-3/U-1. ⚠ This row previously said the full suite "loses exactly one test per run"; the pre-change control run **did not reproduce that** (471 passed, exit 0) and the claim is corrected here rather than carried forward. |
+| **FE-3 — Content Module Replication** | **OPEN — module 1 (`experiences`) through `M1·U3`: the collection AND the editor SHIP.** Delegation settled as **OD-12** (hybrid: module 1 in-house, modules 2–5 delegable once the pattern holds). `M1·U1` landed the instrument; **`M1·U2` landed the collection at `/dashboard/experiences`, its `lanes.ts` record, and a third public-isolation gate** — every gate green, the lane 10/10 booting 1 pair, and the route measured at 85,551 B against its own D20-34 cap of 99,328 B. The new route cost **zero CSS**. Four unpredicted findings are in §5/M1·U2, including a gate (`typecheck:e2e`) that had been RED since `M1·U1` because that unit's exit row never listed it. **`M1·U3` landed the editor** (`7e6d11a`): bilingual, Zod + `UForm`, 422→locale-tab mapping, the shared skill picker, `isCurrent`⇄`endDate` on a field-owned error path, and the calendar-date read that Articles' instant-shaped converter would have got wrong. Three rules were each proven able to fail; the `technologyIds` omission control failed **only** the clear-case test, which is the empirical reason both tests exist. Four more unpredicted findings are in §5/M1·U3, including a backend crash that reported itself as eight failing tests. Its route caps were **measured and escalated, never inherited** — the batched decision is **§9.5**, and until the owner rules, `size:routes` exits 2 as a MEASUREMENT FAILURE rather than a budget breach. **`M1·U4` rendered the verdicts**: **five of five §5.2 predictions HELD**, plus a sixth candidate (`DashboardSkillPicker`) discovered and already extracted — measured on 56 byte-identical code lines, 34% of the Experiences editor. The three HELD extractions are **queued, not performed**: acting on them refactors the shipped `ArticleEditor` and needs both lanes re-run, so it is its own unit — **`M1·U4b`, the extraction pass, is next**, then `M1·U5` (gates + axe).<br>**Lane-strategy unit (R14):** A run now boots only the lanes it selected: measured 1 preview pair for `--project=dashboard-articles`, against 10 before, same command. The full suite still boots all ten by design, so R14 is **NARROWED, NOT CLOSED** — see §6 and §5/FE-3/U-1. ⚠ This row previously said the full suite "loses exactly one test per run"; the pre-change control run **did not reproduce that** (471 passed, exit 0) and the claim is corrected here rather than carried forward. |
 | FE-4 — System Modules | NOT STARTED |
 | FE-5 — Coherence, D20-32 Review, M4 Closure | NOT STARTED |
 
@@ -1119,6 +1119,64 @@ forgotten check.
 | `size:routes` | ⚠ **exit 2 — a MEASUREMENT FAILURE, not a budget verdict.** See the escalation in §9.5 |
 | axe | NOT RUN — it is `M1·U5`'s exit |
 | full `npm run test:e2e` | NOT RUN for this unit. Stated so silence is not read as coverage |
+
+---
+
+### FE-3 · Module 1 · **M1·U4** — the extraction verdicts, rendered against measurement
+
+§5.2 stamped five predictions before the editor existed, precisely so this unit could not rewrite the
+target after seeing the code. All five are rendered below, plus a **sixth** that `M1·U3` discovered.
+
+#### The evidence, measured rather than argued
+
+Non-trivial code lines (≥40 chars, comments and markup-only lines excluded) that are **byte-identical**
+between `ArticleEditor.vue` and `ExperienceEditor.vue`:
+
+| | |
+| --- | --- |
+| `ArticleEditor.vue` | 196 code lines |
+| `ExperienceEditor.vue` | 164 code lines |
+| **Identical in both** | **56 lines — 34% of the Experiences editor** |
+
+That 34% is not spread evenly. It clusters into exactly three regions, and the clustering is what
+decides the verdicts:
+
+1. **The 422 / error-summary / tab-activation machinery** — `serverFieldErrors`, `fieldErrorSummary`,
+   `localesWithErrors`, `applyFieldErrors`, `onValidationError`, `focusFirstError`, the summary
+   markup, and the `watch` that clears a stale server error. The largest and most exactly duplicated
+   block.
+2. **The locale-tab rendering** — the fill/invalid badges, the fill→colour mapping, the
+   per-panel `dir`, `:unmount-on-hide="false"`.
+3. **The surrounding form chrome** — the unreadable alert, the skeleton, the sticky action bar, the
+   save-state line, the two-step delete.
+
+#### The verdicts
+
+| Candidate | §5.2 predicted | Verdict | Evidence |
+| --- | --- | --- | --- |
+| `TranslationTabs` | EXTRACT | **HELD** | Region 2 is duplicated essentially verbatim — the badge logic, the colour mapping and the per-panel direction rule are identical, and only the FIELDS inside each panel differ. That is precisely a component with a per-locale slot. A real second shape, as predicted. |
+| `useTranslatableForm` | EXTRACT | **HELD, and it is the STRONGEST of the three** | Region 1 is the biggest identical block in the file and it is pure behaviour, not markup. Both modules independently arrived at the same six pieces of state and the same three functions. ⚠ The prediction's stated reason — "a second, *shorter, all-required* field list" — also HELD and is the discriminating part: `experienceMissingFields` / `experienceFillState` / `experienceTranslationInUse` differ from Articles' only in WHICH list they walk, so the abstraction is over the field list, not over the entity. |
+| `EntityFormLayout` | PARTIAL AT BEST | **HELD — and the prediction's REASON held too, which matters more than the label** | Region 3 duplicates, but the publish/schedule region duplicates NOWHERE: Experiences has no `status`, no `publishAt`, no preview and no publish shortcut, exactly as Projects has none. Two entities lacking that region is evidence it is Articles-specific. What IS shared is the generic chrome — unreadable alert, skeleton, sticky actions, save-state, two-step delete — so "partial" is the correct shape: extract the chrome, leave the publication region in Articles. |
+| `usePublicEntityLink` | NO SECOND CONSUMER | **HELD** | Settled at `M1·U2` and re-confirmed by construction: `ExperienceEditor` ships NO "View on site" action, because `/experience` is one public page for every role and no per-entity destination exists. §10.3 rule 10 stays unsatisfiable here. |
+| `admin-articles-query` | NO SECOND CONSUMER | **HELD** | Settled at `M1·U2`. No query composable was written because the endpoint declares zero parameters. |
+| **`DashboardSkillPicker`** *(sixth — discovered, not predicted)* | — | **EXTRACTED at `M1·U3`, by observation** | Same relation, same vocabulary, same replace-wholesale semantics, second real consumer — §14.6's bar met by evidence rather than anticipation. Recorded here so the pass reports six verdicts against a tree that made six changes, not five. |
+
+**Five of five predictions HELD.** That is worth stating plainly rather than glossing: the contract
+alone was sufficient to predict every verdict correctly before the code existed, which is evidence
+that the §5.2 method works — and it is exactly why a wrong prediction would have been worth as much.
+
+#### ⚠ What this unit does NOT do, and why
+
+**The three HELD extractions are NOT performed here.** Acting on them refactors `ArticleEditor.vue`
+— a **shipped, gate-covered surface** — and therefore requires re-running the Articles lane, the
+Experiences lane, the full unit suite, a rebuild and a re-measurement of every governed dashboard
+route. That is a heavy unit in its own right, and it is exactly how Articles did it: FE-2c's verdicts
+and its extraction pass were separate commits, with the extraction landing as `944443f`.
+
+Starting that refactor without the budget to finish it would leave a shipped editor mid-edit, which
+is the one state a checkpoint exists to prevent. **The verdicts are the deliverable §5.5 asked of
+`M1·U4`** ("Every prediction marked HELD or WRONG, with the evidence"); the extraction is queued as
+the next unit and is named in §8.
 
 ---
 
