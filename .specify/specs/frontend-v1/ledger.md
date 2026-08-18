@@ -230,6 +230,60 @@ then answer whether the collection-plus-editor pattern can replicate onto an ent
 read — and to **escalate with evidence** if it cannot, rather than inventing a competing pattern.
 This is the reason categories/tags were deliberately NOT made the first delegated lane.
 
+#### Both investigations RETURNED — **UNREVIEWED**, and the review contract is named here
+
+Both completed with `status: completed`, **`touchedFiles: []`** and **no read-only violation**: the
+sandbox held, and neither lane wrote anything. Artifacts copied **off `/tmp`** (which does not survive
+a reboot) to `scratchpad/fe3-investigations/`:
+
+| Lane | Thread id (for `--session`) | Artifacts |
+| --- | --- | --- |
+| INV-1 Testimonials | `01a0170a-c159-7c60-b125-ed7d2b3499e9` | `INV-1-testimonials-{report.md,result.json}` (27,130-char report) |
+| INV-2 Categories & Tags | `01a0170a-d133-7f02-a6e2-d9f1468ca064` | `INV-2-categories-tags-{report.md,result.json}` (31,115-char report) |
+
+⚠ **Neither report has been reviewed, and neither may be acted on until it is.** OD-13's rule stands:
+re-derive every load-bearing claim from `openapi/openapi.json` rather than believe the report — the
+same standard `M2·U1` was held to. Only the three claims below were spot-verified before this
+checkpoint; the remaining ~26 report sections are **unverified**.
+
+#### ⚠ INV-2 ESCALATION 1 — **VERIFIED BY ME, AND IT IS A REAL API CONTRACT DEFECT**
+
+Not a frontend question, and not something any lane here can fix. Re-derived from
+`openapi/openapi.json` rather than accepted:
+
+| Endpoint | Summary says | `200` schema `data` actually declares |
+| --- | --- | --- |
+| `GET /api/v1/admin/categories` | *"**List** categories with full translation maps."* | `$ref: AdminCategoryEntity` — **a single entity, no array** |
+| `GET /api/v1/admin/tags` | *"**List** tags with full translation maps."* | `$ref: AdminTagEntity` — **a single entity, no array** |
+| `GET /api/v1/admin/skills` | *"List skills with full translations."* | `{type: 'array', items: {$ref: AdminSkillEntity}}` ✅ |
+| `GET /api/v1/admin/testimonials` | *"List testimonials including hidden entries."* | `{type: 'array', items: {$ref: AdminTestimonialEntity}}` ✅ |
+
+The two taxonomy list endpoints **contradict their own summaries**, and the sibling endpoints prove
+the correct shape was expressible. The existing consumer's hand-written array generic
+(`useAdminArticles.ts:215`) has been **masking** the discrepancy. **A write lane must not implement the
+taxonomy collection until this is resolved**, and resolution is an API/owner act.
+
+#### ⚠ INV-2 ESCALATION 2 — the architectural question, **premise verified**
+
+Re-derived: `/api/v1/admin/categories/{id}` and `/admin/tags/{id}` carry **only `patch`/`delete`**,
+while `/admin/skills/{id}` and `/admin/testimonials/{id}` **do** carry `get`. So the established
+`index + new + [id]` shape cannot replicate literally — an `[id]` route has no honest single-entity
+read, and a reload or deep link cannot be served. INV-2 correctly **escalated rather than inventing a
+pattern**, which is the lane contract working. Its recommended minimum honest departure is **inline
+create/edit on each collection page** (two routes total, not six), on the evidence that the list entity
+already carries every editor field — *which is exactly the claim Escalation 1 puts in doubt, so the two
+must be resolved in order.*
+
+#### INV-1 escalations — **NOT yet verified**, and one may already be answered
+
+INV-1 raises two contract-silence questions: (1) whether translation PATCH **upserts or replaces**, and
+(2) whether `avatarId: null` reliably **clears**. ⚠ **Question 1 looks already-settled by this
+campaign** — §10.3 rule 6 records that the PATCH **upserts and never deletes**, which is why emptying a
+server-held locale is BLOCKED — so the reviewer's first job is to check whether INV-1 re-raised a
+resolved question rather than to answer it fresh. Question 2 is the `null`-clears-vs-omission-preserves
+distinction that `M2·U1`'s inverse-pair controls exist for; treat it as a **contract read**, not a
+design choice.
+
 ⚠ **One owed item closed silently, and is re-opened here.** §9.5 ended *"Attribution belongs to
 `M1·U5`"* — meaning the `DASHBOARD_APP_OWNED_BASELINE_BYTES` provenance drift (nine routes, deltas in
 **both** directions, the Experiences collection's `+1,853 B` recorded as *plausible, NOT measured to
@@ -1841,6 +1895,20 @@ build-to-build hash churn cannot manufacture a delta), reusing the gate's own `r
 | **Positive (redone)** | Probe referenced from the template so the build must retain it → delta localised to **exactly one module**, the right one. ⚠ Magnitude was **+32 B, not +4,000** — the literal was eliminated anyway (absent from every output chunk). So this control proves LOCALISATION, and does **not** prove magnitude fidelity |
 | **Reproduction (the control that actually settles it)** | Rebuilding `fd4e9df` reproduces `/dashboard/experiences` = **85,551 B, exact to the byte** — an independent reproduction of a measurement taken in another session. And rebuilding `7e6d11a` reproduces **all nine** of §9.5's "Measured" values **9-for-9**. Two historical measurements, reproduced exactly, by an instrument that had never seen them |
 
+⚠ **The reproduction claim is narrower than it reads, and the narrowing was itself measured.** Exactly
+**ONE of the eleven** baselines has been reproduced at its own provenance tree — `/dashboard/experiences`
+at `fd4e9df`. An attempt to extend it to the three **Articles** baselines **FAILED**: rebuilding
+`944443f`, FE-2c's last commit, measured **91,022 / 106,776 / 106,884** against the recorded
+**88,344 / 106,095 / 106,203**. So `944443f` is **RULED OUT** as their provenance tree, and because the
+recorded values are *lower* than it produces, the real measurement **predates** it. Their provenance is
+therefore recorded as **UNRESOLVED** rather than guessed, and resolving it needs an FE-2c bisect.
+
+**This does not weaken the finding — it sharpens it.** "The baselines do not reproduce **at HEAD**" is
+now explained and expected. "They reproduce at their own tree" is **proven once, refuted nowhere, and
+untested for nine.** Both statements are in the code comment in exactly those terms, because the
+failure to reproduce Articles at `944443f` is precisely the kind of evidence that a general claim would
+have buried.
+
 The last row is why the synthetic probe's weakness does not undermine the result: the instrument is
 validated against real recorded numbers, which is a stronger claim than any injected probe.
 
@@ -2234,7 +2302,44 @@ full-suite path meanwhile.** The arithmetic is corrected here so the next bounda
 true count; whether "passing 12" means *reaches* or *exceeds* is an owner call the moment it is load-
 bearing, and it is not load-bearing while the sharded path is opt-in.
 
-### THE NEXT THREE ACTIONS (set at the fourth zero-trust resume, 2026-08-19)
+### THE NEXT THREE ACTIONS (set at the FIFTH zero-trust resume, 2026-08-19)
+
+⚠ **These supersede the fourth-resume block below, all three of whose actions are now DISCHARGED.**
+That block is kept as the record of what was owed and how each closed.
+
+**1. REVIEW INV-1 (Testimonials), then INV-2 (Categories & Tags) — do not act on either first.**
+Both returned complete, both are **UNREVIEWED**, and OD-13's standard applies: re-derive every
+load-bearing claim from `openapi/openapi.json`, do not accept the report. Artifacts and thread ids are
+in §8; reply into a lane with `--session <threadId>` rather than re-dispatching, which would waste it.
+Start with the two verified escalations already recorded — **INV-2's Escalation 1 is a confirmed API
+contract defect** (the taxonomy list endpoints declare a single entity while their summaries say
+"List"), and it **gates** Escalation 2, because the inline-editing recommendation rests on the list
+carrying every editor field. **Check first whether INV-1's translation-PATCH question is already
+answered by §10.3 rule 6** before treating it as open.
+
+**2. Dispatch the `M2·U2` WRITE lane (Skills collection + the twelfth e2e lane) under OD-16** — in an
+**isolated worktree/branch**, module-local files only. The `useAdminSkills` absorption is **already
+approved** (OD-15) and is NOT an owner question: both shipped picker consumers must stay green
+**without being edited**, and a consumer needing modification is EVIDENCE the absorption broke the
+preserved surface, to be resolved centrally. Lane registration, nav entry and cap registration are
+**central changes Claude applies** — the lane reports the need, never edits `scripts/e2e/lanes.ts`.
+
+**3. Do NOT stop at the collection cap — continue into `M2·U3` and batch (OD-15 amendment).** Record
+`/dashboard/skills`'s measured baseline and a *proposed* D20-29-derived cap, leave the route
+intentionally ungoverned, build and measure the editor routes, then return **ONCE** with all three
+measured baselines and all three proposed caps. `size:routes` may stay **intentionally non-green**
+across that window solely because the new routes are registered but not yet governed. **No temporary
+cap may be invented to make it green.** ⚠ Serialize every heavy measurement (OD-16): parallel gate runs
+manufacture failures, which is what R15 recorded.
+
+⚠ **A prediction this session measured, so `M2·U3` does not misread it as a regression:** building the
+Skills EDITOR will RAISE the Skills COLLECTION's measured bytes, because both share one composable
+inside the collection's static closure. Experiences did exactly this — `useAdminExperiences.ts` +1,345 B
+charged to the collection route when the editor landed (§9.5). Expected, not a defect.
+
+---
+
+### THE NEXT THREE ACTIONS (set at the fourth zero-trust resume, 2026-08-19 — **ALL THREE DISCHARGED**)
 
 **1. Re-derive R14's lane-count trigger BEFORE module 2 starts — do not inherit it.** R14 states its
 trip condition two ways that do not agree: *"the lane count passing 12"* and *"the **third** FE-3

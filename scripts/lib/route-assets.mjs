@@ -728,10 +728,16 @@ export function resolveDashboardSharedFloor(assetsByRoute) {
 /**
  * App-owned baselines: the HISTORICAL DERIVATION INPUT each frozen cap below was computed from.
  *
- * ⚠ EACH VALUE IS PINNED TO THE TREE IT WAS MEASURED ON — see `DASHBOARD_APP_OWNED_BASELINE_PROVENANCE`
+ * ⚠ EACH VALUE BELONGS TO THE TREE IT WAS MEASURED ON — see `DASHBOARD_APP_OWNED_BASELINE_PROVENANCE`
  * for which tree that is, per route. They are NOT current-tree reproduction targets, and the gate
  * never compares a build against them. A baseline that does not equal today's measurement is
  * EXPECTED once the route's source has changed; that is the routes growing, not the record decaying.
+ *
+ * ⚠ SCOPE OF WHAT IS PROVEN, stated narrowly on purpose. Reproduction-by-rebuild has been performed
+ * for exactly ONE of the eleven: `/dashboard/experiences` at `fd4e9df`, measured 85,551 B, exact.
+ * The other ten are recorded from their decision provenance and have NOT been re-verified by
+ * rebuild. Do not read the sentence above as a measured claim about all eleven — it is the rule the
+ * record follows, evidenced once, and one attempt to extend it (Articles) FAILED to reproduce.
  *
  * An earlier revision of this comment said these were recorded "so each frozen cap below can be
  * re-derived from its stated input rather than taken on trust", with no tree named. That sentence is
@@ -807,12 +813,16 @@ export const DASHBOARD_APP_OWNED_BASELINE_PROVENANCE = {
   '/dashboard/projects': 'd53af111168ffff56eadaacc0c1d7fdd6c2c635c3',
   '/dashboard/projects/new': 'd53af111168ffff56eadaacc0c1d7fdd6c2c635c3',
   '/dashboard/projects/00000000-0000-0000-0000-000000000000': 'd53af111168ffff56eadaacc0c1d7fdd6c2c635c3',
-  // D20-33 — measured on the FE-2c shipped tree, at the revision that dropped the bespoke error
-  // block for `UiStateError`. Recorded as the sub-phase rather than a SHA because the decision's own
-  // record names the tree that way; it is NOT one of the campaign's unit commits.
-  '/dashboard/articles': 'FE-2c shipped tree',
-  '/dashboard/articles/new': 'FE-2c shipped tree',
-  '/dashboard/articles/00000000-0000-0000-0000-000000000000': 'FE-2c shipped tree',
+  // D20-33 — "the FE-2c shipped tree", which is how the decision's own record names it, and it is
+  // NOT one of the campaign's unit commits. ⚠ UNRESOLVED to a SHA, and deliberately left so rather
+  // than guessed: rebuilding `944443f` (FE-2c's last commit) measured 91,022 / 106,776 / 106,884
+  // against the recorded 88,344 / 106,095 / 106,203, so `944443f` is RULED OUT. The recorded values
+  // are LOWER than that tree produces, so the measurement predates it. Resolving these needs an
+  // FE-2c bisect; until someone does that, a string that admits it is unactionable beats a SHA that
+  // would reproduce nothing.
+  '/dashboard/articles': 'FE-2c shipped tree (UNRESOLVED; ruled out: 944443f)',
+  '/dashboard/articles/new': 'FE-2c shipped tree (UNRESOLVED; ruled out: 944443f)',
+  '/dashboard/articles/00000000-0000-0000-0000-000000000000': 'FE-2c shipped tree (UNRESOLVED; ruled out: 944443f)',
   // D20-34 — `M1·U2`. VERIFIED by rebuild 2026-08-19: this tree reproduces 85,551 B exactly.
   '/dashboard/experiences': 'fd4e9df',
   // D20-35 — `M1·U3`, the commit that created the two editor routes.
