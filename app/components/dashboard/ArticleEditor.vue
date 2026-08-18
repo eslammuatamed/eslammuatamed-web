@@ -308,6 +308,18 @@ const saveState = computed<'saving' | 'unsaved' | 'saved' | 'idle'>(() => {
 
 <template>
   <UContainer class="py-8" data-article-editor>
+    <!-- ⚠ THE HEADING LIVES ABOVE THE THREE STATES, NOT INSIDE THE READY ONE.
+         A page must carry a level-one heading in EVERY state it can be observed in. While the
+         entity resolves, the editor renders only a skeleton, and an `<h1>` nested in the ready
+         branch does not exist yet — axe reports `page-has-heading-one`, and a screen-reader user
+         landing mid-load has nothing telling them what page they are on. The title is knowable
+         before the entity arrives (it depends only on create-vs-edit), so there is no reason to
+         withhold it. Found by scanning the LOADING state, which is a state most a11y suites never
+         reach because it is gone by the time they run. -->
+    <h1 class="text-h1 text-highlighted">
+      {{ isCreate ? t('dashboard.articles.editor.createTitle') : t('dashboard.articles.editor.editTitle') }}
+    </h1>
+
     <!-- ── the entity could not be read: one answer per cause (D11-2) ───────────────────────── -->
     <UAlert
       v-if="unreadable"
@@ -331,13 +343,8 @@ const saveState = computed<'saving' | 'unsaved' | 'saved' | 'idle'>(() => {
     />
 
     <template v-else>
-      <div class="mb-6 flex flex-wrap items-start justify-between gap-4">
-        <div class="min-w-0">
-          <h1 class="text-h1 text-highlighted">
-            {{ isCreate ? t('dashboard.articles.editor.createTitle') : t('dashboard.articles.editor.editTitle') }}
-          </h1>
-          <p class="mt-2 text-muted">{{ t('dashboard.articles.editor.description') }}</p>
-        </div>
+      <div class="mt-2 mb-6 flex flex-wrap items-start justify-between gap-4">
+        <p class="min-w-0 text-muted">{{ t('dashboard.articles.editor.description') }}</p>
 
         <div class="flex flex-wrap items-center gap-2">
           <UButton

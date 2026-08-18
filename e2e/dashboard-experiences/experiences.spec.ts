@@ -1,4 +1,6 @@
+import AxeBuilder from '@axe-core/playwright'
 import { expect, test } from '@playwright/test'
+import { hydrated } from '../hydration'
 import {
   API_ORDER,
   EXP,
@@ -532,3 +534,88 @@ test.describe('the editor — bilingual, at the narrowest supported width', () =
     await expectNoKeyPaths(page)
   })
 })
+
+/* ══════════════════════════════════════════════════════════════════════════════════════════════
+   `M1·U5` — ACCESSIBILITY AND THE NARROWEST SUPPORTED WIDTH, IN BOTH DASHBOARD LANGUAGES
+
+   Run per locale rather than once, because the failures these catch are language-specific: an RTL
+   shell composes differently, Arabic strings are a different length, and a control that fits at
+   380px in English can overflow in Arabic. A single-language scan would report a clean bill for a
+   surface that is broken for half its operators.
+   ══════════════════════════════════════════════════════════════════════════════════════════════ */
+
+for (const locale of ['en', 'ar'] as const) {
+  test.describe(`a11y · ${locale}`, () => {
+    test(`${locale}: the collection reports no axe violations`, async ({ page, baseURL }) => {
+      await signIn(page, locale, baseURL as string)
+      await page.goto('/dashboard/experiences')
+      await hydrated(page)
+      await listSettled(page)
+
+      // Unfiltered: no rule disabled, no selector excluded. A filtered scan is a scan that agrees
+      // with whatever it was told to ignore.
+      const results = await new AxeBuilder({ page }).analyze()
+      expect(results.violations).toEqual([])
+    })
+
+    test(`${locale}: the collection's LOADING state is axe-clean too`, async ({ page, baseURL }) => {
+      // A skeleton is a live region most a11y suites never scan, because it is gone by the time the
+      // scan runs. Holding the response is what makes it scannable at all.
+      await signIn(page, locale, baseURL as string)
+      await setBackendState(page, { delayMs: 3000 })
+      await page.goto('/dashboard/experiences')
+      await hydrated(page)
+      await expect(page.locator('[aria-busy=true]').first()).toBeVisible()
+
+      const results = await new AxeBuilder({ page }).analyze()
+      expect(results.violations).toEqual([])
+
+      await setBackendState(page, { delayMs: 0 })
+    })
+
+    test(`${locale}: the EDITOR reports no axe violations`, async ({ page, baseURL }) => {
+      await signIn(page, locale, baseURL as string)
+      await page.goto(`/dashboard/experiences/${EXP.current}`)
+      await hydrated(page)
+      await editorSettled(page)
+
+      // The editor is the denser surface: tabs, a checkbox group, date inputs and a sticky action
+      // bar. Scanning only the collection would leave every one of those unchecked.
+      const results = await new AxeBuilder({ page }).analyze()
+      expect(results.violations).toEqual([])
+    })
+
+    test(`${locale}: the EDITOR's LOADING state is axe-clean`, async ({ page, baseURL }) => {
+      await signIn(page, locale, baseURL as string)
+      await setBackendState(page, { delayMs: 3000 })
+      await page.goto(`/dashboard/experiences/${EXP.current}`)
+      await hydrated(page)
+      await expect(page.locator('[data-editor-loading]')).toBeVisible()
+
+      const results = await new AxeBuilder({ page }).analyze()
+      expect(results.violations).toEqual([])
+
+      await setBackendState(page, { delayMs: 0 })
+    })
+
+    test(`${locale}: the EDITOR does not overflow at 380px`, async ({ page, baseURL }) => {
+      await page.setViewportSize(NARROW)
+      await signIn(page, locale, baseURL as string)
+      await page.goto(`/dashboard/experiences/${EXP.current}`)
+      await hydrated(page)
+      await editorSettled(page)
+
+      // Assert the viewport actually applied before measuring against it — otherwise this passes at
+      // whatever width the browser happened to use.
+      expect(await page.evaluate(() => window.innerWidth)).toBe(NARROW.width)
+      const overflow = await page.evaluate(() => ({
+        scrollWidth: document.documentElement.scrollWidth,
+        clientWidth: document.documentElement.clientWidth
+      }))
+      expect(
+        overflow.scrollWidth,
+        `the editor overflows at ${NARROW.width}px in ${locale}`
+      ).toBeLessThanOrEqual(overflow.clientWidth + 1)
+    })
+  })
+}
