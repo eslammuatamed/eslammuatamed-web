@@ -36,7 +36,7 @@ git -C /home/eslam-muatamed/worktrees/web-026-phase8 fetch origin && git rev-par
 | Phase | State |
 | --- | --- |
 | **FE-1 — Contract & Integration Foundation** | **COMPLETE** — commit `19e3a05`. Contract adopted + gtm reconciliation; reply flow deliberately moved to FE-2 (see §4). Gates re-verified on the committed tree: typecheck 0, 1501/1501. |
-| **FE-2 — Articles Tracer Bullet + Dashboard Architecture** | **IN PROGRESS.** OD-11, OD-3 and D20-33 resolved. **FE-2a/2b COMPLETE** · **FE-2c**: F-1 **CLOSED** with browser evidence; **collection COMPLETE** (U-2); **editor COMPLETE** (U-4) — create/edit, translation tabs, Zod validation, 422→locale-tab mapping, mutations, delete, preview/View-on-site, unsaved guard. **All ten §14.9 criteria are now demonstrated.** Remaining in FE-2c: the §14.6 extraction pass, and ONE open owner decision (§9.4) on the editor routes' app-owned cap. |
+| **FE-2 — Articles Tracer Bullet + Dashboard Architecture** | **COMPLETE.** OD-11, OD-3, D20-33 and its amendment all resolved. FE-2a/2b/2c done: F-1 **CLOSED** with browser evidence · collection · editor · §14.6 extraction pass · **all ten §14.9 criteria demonstrated** · every gate green including `size:routes`. The reusable architecture is recorded in **§10**. |
 | FE-3 — Content Module Replication | NOT STARTED |
 | FE-4 — System Modules | NOT STARTED |
 | FE-5 — Coherence, D20-32 Review, M4 Closure | NOT STARTED |
@@ -662,7 +662,27 @@ Two consequences worth carrying:
 taken one revision later after the page dropped its bespoke error block for `UiStateError`. Both
 derive the identical 102,400 B cap, so the difference is provenance only.)*
 
-### 9.4 OPEN — the EDITOR routes exceed the inherited cap · **OWNER DECISION NEEDED**
+### 9.4 D20-33 amendment — the editor routes' cap · **RESOLVED 2026-08-18**
+
+**The owner set the two editor routes to 122,880 B (120 KiB), derived from their own measured
+baselines by D20-29's formula; `/dashboard/articles` keeps 102,400 B.** Recorded as the D20-33
+amendment in doc 20 v1.25.1 (Docs `565abef`) and implemented in Web `a0d4dd0`. `size:routes` exits 0.
+
+Explicitly NOT: a waiver · a shared-floor increase · a generic incremental-allowance increase · a
+D20-32 recalibration · permission to weaken any other route gate. It corrects a per-route ceiling
+that was provisional because it predated the surface it governed.
+
+**No generic `authoring-route` class — withheld by the owner.** Two routes is not stabilised evidence
+to generalise from. **FE-5** keeps the final model review, after Articles, the Projects retrofit, the
+remaining content modules and the system modules have settled. D20-32 stays INTERIM until then.
+
+The provenance class the original entry introduced ("inherited, no baseline") is **retired with it**:
+all three Articles routes now derive from recorded baselines, so the spec that proved the absence of
+a baseline was rewritten rather than left describing a state that no longer holds.
+
+*(Superseded — kept because it records what was escalated and on what evidence.)*
+
+### 9.4-original — the escalation as it was raised
 
 `size:routes` **exits 1**. This is the case D20-33 anticipated, and the instruction was to attribute
 the cause and escalate rather than raise anything silently.
@@ -735,6 +755,8 @@ only the budget governance is deferred.
 | `5be7740` | **FE-2c · U-2** — the Articles collection on the §14.9 request-state contract; **F-1 closed** with browser evidence |
 | `e0128c2` | **D20-33** — govern the Articles routes; the frozen floor set stops tracking the route set |
 | `46e2f91` | **FE-2c · U-4** — the Articles editor: bilingual, Zod + `UForm`, 422→locale-tab mapping, mutations, preview |
+| `a0d4dd0` | **D20-33 amendment** — the editor routes derive their own 122,880 B cap; `size:routes` green |
+| `944443f` | **FE-2c · U-5** — the §14.6 extraction pass: two extractions earned, four declined, one split found by measurement |
 
 *This table lists commits that exist when it is written; the commit carrying this edit is
 deliberately absent rather than stamped as a SHA it cannot know. `git log --oneline c6a5b21..HEAD`
@@ -770,7 +792,48 @@ locale-reactive Zod schema — so the *contract* OD-11 asked for is established.
 page's product-quality composition: card/layout, password-visibility control, error-focus behaviour,
 380px, and the axe pass in both dashboard languages.
 
-### Where FE-2c picks up — the §14.6 EXTRACTION PASS
+## 10. The reusable Dashboard authoring architecture — what FE-3 inherits
+
+FE-2c's real deliverable. Every item below is something the Articles implementation EXERCISED; where
+it is a rule rather than a file, the rule is stated so FE-3 applies it rather than rediscovering it.
+
+### 10.1 Extracted, and why each earned it
+
+| Artifact | Justification |
+| --- | --- |
+| `dashboard-translation-errors.ts` — `translationFieldErrorName` / `translationFieldErrorLocale` | A CONTRACT property, not a module's: 16 admin write DTOs carry translations as an array and answer 422 with array-indexed paths. Entity-independent by signature. |
+| `useUnsavedChangesGuard` | Second consumer met by OBSERVATION — `ProjectEditor` had already written the same two hooks with the same bypass flag. |
+| `admin-article-fields.ts` split from `admin-article-form.ts` | Found by MEASUREMENT: the shared file cost the collection route 8,889 B of editor form model and Zod schema. Split recovered 6,211 B. **FE-3 must keep this split per module.** |
+
+### 10.2 Deliberately NOT extracted
+
+`TranslationTabs` (one consumer — `ProjectEditor` renders zero `UTabs`) · `EntityFormLayout` (one
+consumer; publish/schedule is not a Projects concept) · `useTranslatableForm` (article-shaped; needs
+a second real field list) · `usePublicEntityLink` (one consumer; its rule is entity-specific).
+
+**The first FE-3 module is the second consumer.** Extract then, against two real shapes, not now
+against one and a guess.
+
+### 10.3 The rules FE-3 replicates
+
+1. **Request-state contract.** `useRequestState` + `UiRequestState`. Gate `:error` on `failed && !hasData` — the component tests `error` BEFORE content, so a bare `failed` blanks a list on any background refresh. Handle 403 OUTSIDE it (D11-2).
+2. **Keep-or-clear on failure.** Compare the failed request's view identity to what is on screen: a failed REFRESH keeps the rows and reports staleness; a failed request for a DIFFERENT view clears them.
+3. **Never override a shared component's own copy.** Passing translated strings into `UiStateError`/`UiDataLoadingOverlay` makes F-1 unprovable AND correctness opt-in per call site.
+4. **Shared vs translated split from the CONTRACT's shape** — article-level fields outside the tabs, `translations[locale]` fields inside.
+5. **Validation is Zod + `UForm`, schema as a `computed`** so a language switch rebuilds its messages. `ProjectEditor`'s hand-rolled validator is the outlier, not the precedent.
+6. **Per-locale rules are CONDITIONAL** — a locale is unauthored OR complete, never half. And emptying a locale the server already holds is BLOCKED, because the PATCH upserts and never deletes.
+7. **Send EVERY in-use locale**, not just the edited tab.
+8. **Server field errors via `UFormField`'s `error` prop**, not `UForm.setErrors()` — measured not to survive a real browser here.
+9. **Ordering needs TWO tests.** A both-locales payload cannot discriminate a canonical-list bug; the SINGLE-locale payload is the discriminating shape.
+10. **A public action needs a real per-locale destination** — published alone is not enough.
+11. **Keep server-computed fields out of the form model** (`readingTimeMin`, `createdAt`, `updatedAt`) or a fresh save looks dirty.
+12. **Every export in `app/composables/` is prefixed** — the directory auto-imports wholesale and Nuxt drops a duplicate name silently.
+13. **A new dashboard route needs a governed cap** before it ships, and the cap is an owner decision (D20-33 is the worked example).
+14. **A mutable e2e lane is ONE spec file**, and it needs `delayMs` to make any loading state observable.
+
+---
+
+### Where FE-2c picked up — the §14.6 EXTRACTION PASS
 
 The collection and the editor are both landed and verified, and **all ten §14.9 criteria are
 demonstrated**. What remains is the part the plan deliberately sequenced LAST: deciding which of the
