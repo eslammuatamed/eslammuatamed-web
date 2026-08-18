@@ -97,7 +97,19 @@ this checkpoint wrote "`campaign/frontend-v1` = `fd4e9df`" and argued the stamp 
 SHA already existed — which missed the point: the commit carrying the checkpoint invalidated it
 immediately, and the table above forbids exactly this. Naming *which commit is the unit* stays true;
 naming *what the branch points at* does not. The same distinction applies to `95e9101`: it is the
-D20-34 commit, not a promise about that branch's tip. **Next: `M1·U3`, the editor.**
+D20-34 commit, not a promise about that branch's tip. 
+
+**Checkpoint 2026-08-18 — `M1·U3` LANDED.** The unit is commit **`7e6d11a`** on
+`campaign/frontend-v1` (Web only — there is NO Docs commit, because the doc 20 entry for §9.5 is OWED
+and cannot be written until the owner rules on the caps). Working tree clean, still unpushed, still no
+upstream, `origin/dev` / `origin/main` unmoved on both repos. Read the branch TIP with
+`git rev-parse HEAD`, never from this paragraph — naming *which commit is the unit* stays true,
+naming *what the branch points at* does not.
+
+⚠ **`size:routes` is RED (exit 2) at this checkpoint, BY DESIGN.** It is a *measurement failure*,
+not a budget breach: the two editor routes are registered and deliberately UNGOVERNED pending
+**§9.5**, and every measured route is inside its cap. Do not "fix" it by stamping a cap — the gate may
+not invent a budget. **Next: `M1·U4`, the extraction verdicts — SIX candidates, not five.**
 
 ---
 
@@ -107,7 +119,7 @@ D20-34 commit, not a promise about that branch's tip. **Next: `M1·U3`, the edit
 | --- | --- |
 | **FE-1 — Contract & Integration Foundation** | **COMPLETE** — commit `19e3a05`. Contract adopted + gtm reconciliation; reply flow deliberately moved to FE-2 (see §4). Gates re-verified on the committed tree: typecheck 0, 1501/1501. |
 | **FE-2 — Articles Tracer Bullet + Dashboard Architecture** | **COMPLETE.** OD-11, OD-3, D20-33 and its amendment all resolved. FE-2a/2b/2c done: F-1 **CLOSED** with browser evidence · collection · editor · §14.6 extraction pass · **all ten §14.9 criteria demonstrated** · every gate green including `size:routes`. The reusable architecture is recorded in **§10**. |
-| **FE-3 — Content Module Replication** | **OPEN — module 1 (`experiences`) through `M1·U2`: the collection SHIPS.** Delegation settled as **OD-12** (hybrid: module 1 in-house, modules 2–5 delegable once the pattern holds). `M1·U1` landed the instrument; **`M1·U2` landed the collection at `/dashboard/experiences`, its `lanes.ts` record, and a third public-isolation gate** — every gate green, the lane 10/10 booting 1 pair, and the route measured at 85,551 B against its own D20-34 cap of 99,328 B. The new route cost **zero CSS**. Four unpredicted findings are in §5/M1·U2, including a gate (`typecheck:e2e`) that had been RED since `M1·U1` because that unit's exit row never listed it. **The editor (`M1·U3`) is next**, and its route caps are measured-then-escalated, never inherited. §5.2 stamps the five extraction verdicts this module will be checked against.<br>**Lane-strategy unit (R14):** A run now boots only the lanes it selected: measured 1 preview pair for `--project=dashboard-articles`, against 10 before, same command. The full suite still boots all ten by design, so R14 is **NARROWED, NOT CLOSED** — see §6 and §5/FE-3/U-1. ⚠ This row previously said the full suite "loses exactly one test per run"; the pre-change control run **did not reproduce that** (471 passed, exit 0) and the claim is corrected here rather than carried forward. |
+| **FE-3 — Content Module Replication** | **OPEN — module 1 (`experiences`) through `M1·U3`: the collection AND the editor SHIP.** Delegation settled as **OD-12** (hybrid: module 1 in-house, modules 2–5 delegable once the pattern holds). `M1·U1` landed the instrument; **`M1·U2` landed the collection at `/dashboard/experiences`, its `lanes.ts` record, and a third public-isolation gate** — every gate green, the lane 10/10 booting 1 pair, and the route measured at 85,551 B against its own D20-34 cap of 99,328 B. The new route cost **zero CSS**. Four unpredicted findings are in §5/M1·U2, including a gate (`typecheck:e2e`) that had been RED since `M1·U1` because that unit's exit row never listed it. **`M1·U3` landed the editor** (`7e6d11a`): bilingual, Zod + `UForm`, 422→locale-tab mapping, the shared skill picker, `isCurrent`⇄`endDate` on a field-owned error path, and the calendar-date read that Articles' instant-shaped converter would have got wrong. Three rules were each proven able to fail; the `technologyIds` omission control failed **only** the clear-case test, which is the empirical reason both tests exist. Four more unpredicted findings are in §5/M1·U3, including a backend crash that reported itself as eight failing tests. Its route caps were **measured and escalated, never inherited** — the batched decision is **§9.5**, and until the owner rules, `size:routes` exits 2 as a MEASUREMENT FAILURE rather than a budget breach. **`M1·U4`, the extraction verdicts, is next** — and §5.2's five candidates are now **six**: `DashboardSkillPicker` was extracted by observation and owes a verdict row.<br>**Lane-strategy unit (R14):** A run now boots only the lanes it selected: measured 1 preview pair for `--project=dashboard-articles`, against 10 before, same command. The full suite still boots all ten by design, so R14 is **NARROWED, NOT CLOSED** — see §6 and §5/FE-3/U-1. ⚠ This row previously said the full suite "loses exactly one test per run"; the pre-change control run **did not reproduce that** (471 passed, exit 0) and the claim is corrected here rather than carried forward. |
 | FE-4 — System Modules | NOT STARTED |
 | FE-5 — Coherence, D20-32 Review, M4 Closure | NOT STARTED |
 
@@ -1022,6 +1034,94 @@ shipped defect; it is recorded because it is the kind of thing a reader would ot
 
 ---
 
+### FE-3 · Module 1 · **M1·U3** — the editor, and a relation that fails without saying so
+
+Commit **`7e6d11a`**. The second consumer of the Articles authoring architecture — which is what
+§10.2 exists to test. What was REUSED unchanged: the shared 422 mapping
+(`dashboard-translation-errors.ts`, now with its second module), the request-state contract, the
+unsaved-changes guard (third consumer), and the skill picker. What DIFFERS is contract-driven and is
+recorded at each site rather than left for a reader to infer.
+
+#### The three things this unit had to get right, and how each was proven able to fail
+
+| Rule | The defect it prevents | Negative control |
+| --- | --- | --- |
+| `technologyIds` is ALWAYS sent | Omission PRESERVES, so a builder that omitted the key survives a no-touch save while making "remove every skill" **inexpressible** — the operator deselects all five, gets a 200, and finds them still there | Injected the omission: **exactly ONE test failed — the CLEAR case — and the no-touch test stayed GREEN.** That is the empirical proof that a no-touch-only test would have shipped it |
+| A calendar date is read zone-free | `startDate` reads back as `date-time` and writes as `date`. Reading it through the LOCAL wall-clock — which is CORRECT in `admin-article-form.ts`, because `publishAt` really is an instant — returns the previous day at every negative UTC offset, and each round trip walks it one day further | Injected the local-zone reading: **5 date tests failed.** ⚠ The defect is INVISIBLE on this machine — `Africa/Cairo` is a POSITIVE offset — so the spec pins `TZ=America/New_York` **and asserts the pin took effect** before trusting anything it measures. An unasserted pin is not a pin |
+| The `isCurrent` ⇄ `endDate` issue carries `path: ['endDate']` | An object-level `.refine()` yields an issue whose path is `[]`; no `UFormField` renders it, so the save is blocked by a message the operator cannot see beside the control at fault. ⚠ This rule is **CLIENT-ONLY** — the DTOs carry no cross-field constraint and the service accepts the contradiction — so the schema is the only thing enforcing it | Replaced the path with `[]`: **2 tests failed**, including the one asserting the path is exactly `endDate`. The save stayed blocked throughout, which is why "rejects the input" is not the assertion |
+
+Each mutation was reverted **by file copy** and the restore verified by `sha256sum` against the
+PRE-mutation value — `git checkout --` would have discarded the uncommitted work these files were.
+
+#### Four findings, none of them predicted
+
+**F-1 — the e2e backend CRASHED the lane, and eight tests reported it as their own failure.**
+`http.createServer(async …)` hands Node a promise nobody awaits. A client that disconnects
+mid-request rejects it with `Error: aborted` (`ECONNRESET`) — an unhandled rejection, which Node v24
+turns into an uncaught exception and exits 1 on. The lane lost its backend and every remaining test
+failed with `ECONNREFUSED`, which reads as eight broken tests rather than one dead server. `M1·U3`
+exposed it because the editor's successful DELETE navigates away via `router.replace` while the
+shell's reads are still in flight; the collection never aborted a request, which is why ten green
+runs said nothing about it. The handler is now wrapped. ⚠ **`articles-server.ts` and the other
+backends have the SAME SHAPE and are deliberately NOT patched** — changing another lane's instrument
+without re-running that lane is an unverified edit. Carried as a finding, not fixed in silence.
+
+**F-2 — `typecheck:e2e` caught `EXP.absent` missing from the harness.** The gate that had been red
+since `M1·U1` and was repaired in `M1·U2` earned its keep on its first unit under supervision.
+
+**F-3 — the hidden Arabic input is MOUNTED but not VISIBLE, and that is the proof.** The first
+version of the 422 test filled `[data-editor-role="ar"]` directly and timed out against an element
+Playwright had *already resolved* — which is exactly what `:unmount-on-hide="false"` promises. The
+test now authors from the Arabic tab, returns to English, asserts the Arabic field is hidden, and
+then requires the server's 422 to bring the operator back to it. That ordering is what makes the
+assertion discriminating: an implementation that did not switch tabs would leave the error invisible.
+
+**F-4 — the unknown-skill 422 cannot be provoked through this UI.** The service rejects duplicate and
+unknown skill ids with a problem document carrying a MESSAGE and no `errors[]`, and an editor that
+only rendered `errors[]` would swallow it. The BRANCH is covered (via `failNextWrite`), but that
+specific trigger is not reachable: the picker offers only ids the vocabulary contains, de-duplicates
+its own selection, and no fixture is seeded with an unlinkable id. A coverage gap with a stated
+cause, recorded rather than papered over.
+
+#### A sixth extraction candidate, discovered rather than predicted
+
+`ProjectTechnologyPicker` → **`DashboardSkillPicker`**. §5.2 stamps five candidates; this is a
+sixth, and it must appear in `M1·U4`'s table or the extraction pass will report five verdicts against
+a tree that made six changes. It earned the extraction by OBSERVATION: the same relation, against the
+same vocabulary, with the same replace-wholesale semantics, now with a second real consumer — §14.6's
+bar, and OD-12's "extend the shared pattern, not fork it". Its copy is passed as explicit label props
+rather than an i18n key PREFIX, deliberately: a prefix invents a naming convention every future
+consumer must match and fails by rendering a raw key path at runtime, where explicit props fail at
+the type-checker. ⚠ **The Projects LANE was not re-run.** `ProjectEditor.spec.ts` is green (92 tests,
+including the `data-technology` assertions) and the data attributes are byte-identical, so the risk
+is low — but the honest statement is "unit green, lane not re-run", not "Projects verified".
+
+#### R14, re-checked because it was owed at this boundary
+
+**The editor adds NO lane and NO server pair.** A mutable lane owns exactly ONE spec file — asserted
+from the registry by `lane-isolation` — so the editor's tests belong in the existing
+`experiences.spec.ts` by architecture rather than by preference, and they ride the process pair
+`M1·U2` already booted. Measured live: **1 pair** (4100/4101) for the full 26-test lane run. Lane
+count stays **11** against a trigger of **12**, and no full-suite casualty has been reproduced, so
+**R14 is not tripped**. Recorded explicitly because a silent non-event is indistinguishable from a
+forgotten check.
+
+#### Gate results
+
+| Gate | Result |
+| --- | --- |
+| `typecheck` | exit 0 |
+| `typecheck:e2e` | exit 0 (after F-2) |
+| `lint` | exit 0 |
+| unit | **1800/1800**, exit 0 (1714 at `M1·U1`) |
+| `dashboard-experiences` lane | **26/26**, exit 0, **1 pair**, 0 backend crashes |
+| `size` | **29.19 KB gz / 30.00** — UNCHANGED. The editor cost **zero public CSS**, so R13's headroom is untouched. Build asserted exit 0 and size > 0 first, because a failed build leaves a stale `.output` and `size-limit` reports `passed: true, size: 0` against a missing one |
+| `size:routes` | ⚠ **exit 2 — a MEASUREMENT FAILURE, not a budget verdict.** See the escalation in §9.5 |
+| axe | NOT RUN — it is `M1·U5`'s exit |
+| full `npm run test:e2e` | NOT RUN for this unit. Stated so silence is not read as coverage |
+
+---
+
 ## 6. Known risks carried
 
 | # | Risk |
@@ -1034,7 +1134,7 @@ shipped defect; it is recorded because it is the kind of thing a reader would ot
 | R10 | `D19-11` id collision across Docs branches — blocks any Docs integration. **Live handle recorded 2026-08-18:** Docs **PR #54** (`docs/api-frontend-v1-completion` `2345a7a0…`, *"govern temporary scoped overrides for unfixed transitive advisories (D19-11)"*) is OPEN against this exact id. The risk is unchanged; it now names where it is being worked. |
 | R11 | Issue #30 hydration defect — `test:e2e:repeat` red by design, out of scope |
 | ~~**R12**~~ | ~~`/dashboard/articles` ships UNMEASURED.~~ **CLOSED by D20-33** (`e0128c2`, Docs `3f2626e`). Superseded by the open cap question in §9.4. |
-| **R14** | **NARROWED 2026-08-18 (FE-3/U-1), not closed.** The e2e suite's FIXED COST exceeds this machine — deterministic and re-measured: a full run peaks at load **17.4** on 12 cores, drives available memory to **5.9 GB** and adds **~1 GB of swap**, for ten Nitro servers at 140–290 MB RSS each plus ten backends. What is FIXED: a run now boots only the lanes it selects (**1 pair** for a one-lane run, against 10, same command — §5 FE-3/U-1), so per-module development runs and the `test:e2e:repeat` sweeps no longer pay for the whole farm. What is NOT: `npm run test:e2e` still selects nothing and therefore still boots all ten, so **FE-3's five modules still take it to 15 pairs on the default path**. `npm run test:e2e:sharded` bounds it to 4 concurrent pairs and is available but is NOT the default, because the intermittent casualty did not reproduce (see the amendment in §5 FE-2c/U-5) and a governed CI gate must not be re-pointed on unreproduced evidence. **Trigger to make it the default:** either a full-suite casualty reproduced on demand, or the lane count passing **12**. ⚠ **RE-CHECKED 2026-08-18 when `M1·U2` landed the eleventh lane: the trigger is NOT tripped.** 11 < 12, and no casualty has been reproduced — the last full-suite control run was 471 passed / exit 0. Recorded explicitly rather than passed over in silence, because the check was owed at this exact point and a silent non-event is indistinguishable from a forgotten one. The **third** FE-3 module reaches 12 and trips it on lane count alone. Also confirmed live: a one-lane run still boots exactly **1 pair** (4100/4101), so U-1's narrowing holds with a lane added. CI's behaviour stays UNVERIFIED — fewer cores, and nothing is pushed. |
+| **R14** | **NARROWED 2026-08-18 (FE-3/U-1), not closed.** The e2e suite's FIXED COST exceeds this machine — deterministic and re-measured: a full run peaks at load **17.4** on 12 cores, drives available memory to **5.9 GB** and adds **~1 GB of swap**, for ten Nitro servers at 140–290 MB RSS each plus ten backends. What is FIXED: a run now boots only the lanes it selects (**1 pair** for a one-lane run, against 10, same command — §5 FE-3/U-1), so per-module development runs and the `test:e2e:repeat` sweeps no longer pay for the whole farm. What is NOT: `npm run test:e2e` still selects nothing and therefore still boots all ten, so **FE-3's five modules still take it to 15 pairs on the default path**. `npm run test:e2e:sharded` bounds it to 4 concurrent pairs and is available but is NOT the default, because the intermittent casualty did not reproduce (see the amendment in §5 FE-2c/U-5) and a governed CI gate must not be re-pointed on unreproduced evidence. **Trigger to make it the default:** either a full-suite casualty reproduced on demand, or the lane count passing **12**. ⚠ **RE-CHECKED 2026-08-18 when `M1·U2` landed the eleventh lane: the trigger is NOT tripped.** 11 < 12, and no casualty has been reproduced — the last full-suite control run was 471 passed / exit 0. Recorded explicitly rather than passed over in silence, because the check was owed at this exact point and a silent non-event is indistinguishable from a forgotten one. The **third** FE-3 module reaches 12 and trips it on lane count alone. Also confirmed live: a one-lane run still boots exactly **1 pair** (4100/4101), so U-1's narrowing holds with a lane added. ⚠ **RE-CHECKED AGAIN at `M1·U3`, because the check was owed at that boundary too: still NOT tripped.** The editor added **no lane and no server pair** — a mutable lane owns exactly one spec file, so its tests joined the existing one and rode the pair `M1·U2` had already booted. Measured live at **1 pair** across a 26-test run; lane count **11 < 12**; no casualty reproduced. CI's behaviour stays UNVERIFIED — fewer cores, and nothing is pushed. |
 | **R13** | **CSS budget R2 tightened.** 29.19 / 30.00 KB gz — **~0.81 KB headroom**, down from ~0.91 KB. Two more modules of this size would exhaust it. Watch on every FE-3 module. |
 | — | **About portrait** is an owner content dependency for M4 closure; do not fabricate or substitute owner content |
 
@@ -1212,6 +1312,82 @@ pins in `scripts/lib/route-assets.spec.mjs` and `scripts/lib/dashboard-closure.s
 **The editor adds two more routes** (`/dashboard/articles/new`, `/dashboard/articles/{id}`) with the
 same debt, so one decision can govern all three. Nothing blocks FE-2c's implementation meanwhile —
 only the budget governance is deferred.
+
+---
+
+### 9.5 D20-35 — the Experiences editor routes' caps · **OPEN — ONE BATCHED OWNER DECISION**
+
+Raised by `M1·U3` (`7e6d11a`). D20-34 attached a standing instruction: **do NOT inherit
+`/dashboard/experiences`'s 99,328 B for the editor routes — measure the real editor surfaces first
+and return with one batched decision.** The owner ratified measuring first. This is that return.
+
+**Nothing is stamped.** `DASHBOARD_APP_OWNED_CAP_BYTES` says in its own header that a new cap
+requires an owner decision plus a doc 20 entry and is never an edit there, so the two routes are
+registered in `DASHBOARD_ROUTES` and left UNGOVERNED — which is why `size:routes` exits 2.
+
+⚠ **`size:routes` exit 2 is a MEASUREMENT FAILURE, not a budget breach.** The tool says so itself:
+*"dashboard route governance and measurement have diverged."* Every measured route is INSIDE its cap.
+The alternative — not registering the routes — ships them UNMEASURED, which is exactly the R12 that
+D20-33 closed, and `dashboard-closure.mjs` states the rule directly: routes join *"in the commit that
+creates them"*.
+
+#### The decision, in three rows
+
+Derived by D20-29's formula verbatim — `ceil(baseline × 1.15 ÷ 1024) × 1024`, i.e. D20-12's headroom,
+rounding and units. **Positively controlled before use:** the same formula reproduces
+`85,551 → 99,328` (D20-34) and `106,095 → 122,880` (the D20-33 amendment) exactly, so it is the
+documented model rather than a plausible reconstruction of it.
+
+| Route | Measured baseline | Formula cap | Status |
+| --- | --- | --- | --- |
+| `/dashboard/experiences/new` | **105,051 B** | **120,832 B** | **DECISION NEEDED** — ungoverned |
+| `/dashboard/experiences/…/{id}` | **105,159 B** | **121,856 B** | **DECISION NEEDED** — ungoverned |
+| `/dashboard/experiences` (collection) | **87,404 B** (was 85,551 B) | 101,376 B | **PASSES** its governed 99,328 B with 11,924 B spare. **No change requested** |
+
+For scale: the Articles editor routes carry 122,880 B and the Projects editor 176,128 B, so these two
+sit BELOW both existing authoring caps. The gap over the collection is attributable — an editor
+carries a form model, a Zod schema, the tab machinery and the skill picker that a list does not.
+
+**No generic authoring-route class is proposed.** D20-33's amendment held that back for FE-5, and
+four routes is still not the repeated evidence it asked for.
+
+#### ⚠ A finding this measurement uncovered: the recorded baselines no longer reproduce
+
+`DASHBOARD_APP_OWNED_BASELINE_BYTES` exists, in its own words, *"so each frozen cap below can be
+re-derived from its stated input rather than taken on trust."* It no longer does. Measured on this
+tree against what is recorded:
+
+| Route | Recorded | Measured | Δ |
+| --- | --- | --- | --- |
+| `/dashboard/media` | 96,084 | 94,934 | **−1,150** |
+| `/dashboard/profile` | 106,990 | 105,782 | **−1,208** |
+| `/dashboard/projects` | 95,029 | 92,282 | **−2,747** |
+| `/dashboard/projects/new` | 152,208 | 146,401 | **−5,807** |
+| `/dashboard/projects/…/{id}` | 152,393 | 146,579 | **−5,814** |
+| `/dashboard/articles` | 88,344 | 91,631 | **+3,287** |
+| `/dashboard/articles/new` | 106,095 | 107,383 | **+1,288** |
+| `/dashboard/articles/…/{id}` | 106,203 | 107,491 | **+1,288** |
+| `/dashboard/experiences` | 85,551 | 87,404 | **+1,853** |
+
+**Every one of them still PASSES its cap.** This is provenance drift, not a breach.
+
+⚠ **The causes are MIXED, and a single explanation would be wrong.** The first working hypothesis —
+"the shared i18n catalogue grew, so every dashboard route grew" — is REFUTED by this table: the
+deltas run in **both directions**. What the provenance actually says:
+
+- **Media, Profile and the three Projects routes** carry baselines measured at `origin/dev`
+  `d53af11…`, so their deltas are CUMULATIVE CAMPAIGN drift across FE-1…FE-3 and are **not**
+  attributable to `M1·U3`.
+- **The Articles routes** were measured *"on the SHIPPED tree"* (FE-2c, this branch), so their
+  `+1,288`/`+3,287` is post-FE-2c drift spanning `M1·U2` and `M1·U3`.
+- **The Experiences collection** was measured at `M1·U2` on this branch, so its **+1,853 B IS
+  attributable to `M1·U3`** — most plausibly the ~50 new i18n keys × 2 locales, which would also
+  explain the Articles editors' `+1,288`. **Plausible, NOT measured to attribution.**
+
+⚠ **Do NOT re-stamp `DASHBOARD_APP_OWNED_BASELINE_BYTES` to make the numbers reproduce.** Those
+constants are the DERIVATION INPUT for frozen caps: re-stamping the Experiences collection's 85,551
+to 87,404 would re-derive its cap from 99,328 to 101,376 — a budget change performed to fix a report
+label. The report is what is wrong, and this table is the correction. Attribution belongs to `M1·U5`.
 
 ---
 
