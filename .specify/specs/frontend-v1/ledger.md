@@ -14,8 +14,9 @@ Verify every line against live state before acting on it. Report drift before do
 | **Repo** | `eslammuatamed-web` |
 | **Worktree** | `/home/eslam-muatamed/worktrees/web-026-phase8` ⚠ directory name is historical (it was the 026 Phase 8 worktree); the branch it holds is the Frontend v1 campaign branch |
 | **Branch** | `campaign/frontend-v1` |
-| **Branched from** | `origin/dev` `54cea28737c558767ccb24a34e2b437b62f7f058`, via `plan/frontend-v1`. ⚠ The branch **tracks `origin/dev`**, so `git status` reports an ahead-of-upstream count — that is expected, **not drift**. |
-| **Branch tip** | `c6a5b21bd7e72003a596a7d2c4cbadd86e7534a5` — FE-2a complete, worktree clean (verified 2026-08-18) |
+| **Branched from** | `origin/dev` `54cea28737c558767ccb24a34e2b437b62f7f058`, via `plan/frontend-v1`. ⚠ The branch has **no upstream configured** — `git status` reports no ahead-of-upstream count at all, and `@{upstream}` exits 128. Compare against `origin/dev` **by name**. *(A previous revision of this row claimed the branch tracks `origin/dev`; it never did.)* |
+| **Branch tip** | **Do not read a SHA for this from this table — run `git rev-parse HEAD`.** A checkpoint commit that stamps its own SHA here is false the instant it lands, and this ledger has done it once already. |
+| **Last source-touching commit** | `c6a5b21bd7e72003a596a7d2c4cbadd86e7534a5` — FE-2a complete. Every commit after it touches `.specify/specs/frontend-v1/` only, so gate results measured at `c6a5b21` stay valid until one does not. Verify with `git diff --name-only c6a5b21 HEAD`. |
 | **Remote state** | **NOT PUSHED.** `origin/dev` = `54cea28737c558767ccb24a34e2b437b62f7f058`, `origin/main` = `648aa467cd8bc7157cbcad2fd7c0e8981ee1f16c` — neither moved by this campaign, re-verified after FE-2a |
 | **Docs repo** | branch `docs/od-11-dashboard-localization`, HEAD `3b607af9e6b0fe9662abe0058f5e50c88bcd545f`, **local-only** (R10). `origin/main` = `1896d8c7…`, untouched |
 | **Production** | Web release `20260817T175534Z-648aa46` — untouched |
