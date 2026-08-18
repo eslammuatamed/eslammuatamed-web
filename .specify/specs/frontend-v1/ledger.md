@@ -18,7 +18,7 @@ Verify every line against live state before acting on it. Report drift before do
 | **Branch tip** | **Do not read a SHA for this from this table — run `git rev-parse HEAD`.** A checkpoint commit that stamps its own SHA here is false the instant it lands, and this ledger has done it once already. |
 | **Last source-touching commit** | **Do not read a SHA from this table — run `git log -1 --name-only`.** The repository rule is **ONE COMMIT PER LOGICAL UNIT**, so a phase may land as several coherent commits; the FE-2b commit bundled source + tests + ledger because that phase *was* one unit, not because bundling is required. What this row exists to prevent is narrower: **never stamp a SHA here that a later commit invalidates.** |
 | **Remote state** | **NOT PUSHED.** `origin/dev` = `54cea28737c558767ccb24a34e2b437b62f7f058`, `origin/main` = `648aa467cd8bc7157cbcad2fd7c0e8981ee1f16c` — neither moved by this campaign, re-verified after FE-2a |
-| **Docs repo** | ⚠ **TWO branches, and they DIVERGE — neither is an ancestor of the other.** (a) `docs/od-11-dashboard-localization` `3b607af9…` holds OD-11 (D02-15, D04-7, D11-8, doc 18). (b) `docs/web-modernization-campaign` `95e9101` (was `565abef8…`) holds doc 20's whole D20-2x/3x sequence and the governed inventory table — **D20-33 is NOT on the od-11 branch**, and **D20-34 landed on (b)** for that reason: writing it against a doc 20 lacking D20-33 would manufacture a conflict in the same table. Both **local-only** (R10); `origin/main` = `1896d8c7…`, untouched |
+| **Docs repo** | ⚠ **TWO branches, and they DIVERGE — neither is an ancestor of the other.** (a) `docs/od-11-dashboard-localization` `3b607af9…` holds OD-11 (D02-15, D04-7, D11-8, doc 18). (b) `docs/web-modernization-campaign` `97efd02` (was `95e9101`, was `565abef8…`) holds doc 20's whole D20-2x/3x sequence and the governed inventory table — **D20-33 is NOT on the od-11 branch**, and **D20-34 landed on (b)** for that reason: writing it against a doc 20 lacking D20-33 would manufacture a conflict in the same table. Both **local-only** (R10); `origin/main` = `1896d8c7…`, untouched |
 | **Production** | Web release `20260817T175534Z-648aa46` — untouched |
 | **API** | `origin/main` = `origin/dev` = `9af1aace…`, live and complete for v1 scope |
 
@@ -77,6 +77,54 @@ still hold unchanged (Docs owner-content churn; Web PRs #69/#68/#46, re-verified
   (D19-11)"* — the same `D19-11` id whose collision across Docs branches R10 records as blocking
   Docs integration. R10 has therefore had an open PR attached to it that §1 never mentioned. Nothing
   about it blocks `M1·U3` (this campaign pushes nothing), but the pointer belongs with the risk.
+
+**Re-verified 2026-08-19, FOURTH zero-trust resume (new session, `/resume-ledger frontend v1`).**
+Every row of the table above was checked live. **No live state has moved: zero drift on everything
+this campaign depends on.** Verified: worktree present, branch `campaign/frontend-v1`, working tree
+**clean**, no upstream (`@{upstream}` exit 128), `merge-base HEAD origin/dev` = `54cea287…` (the
+recorded base), `campaign/frontend-v1` absent from `ls-remote --heads origin` (**still unpushed**),
+Web `origin/dev` = `54cea287…`, `origin/main` = `648aa467…`; Docs `docs/od-11-dashboard-localization`
+= `3b607af9…` and `docs/web-modernization-campaign` = `97efd02…`, **`merge-base --is-ancestor` false
+in BOTH directions** (the divergence still holds) and neither in `ls-remote --heads origin` (**both
+local-only**), Docs `origin/main` = `1896d8c7…`; API `origin/main` = `origin/dev` = `9af1aace…`. All
+seven Module 1 unit commits resolve on this branch (`fd4e9df`, `7e6d11a`, `cbd72f9`, `6b59261`,
+`fd11c7b`, `328bf9c`, `cf7c515`). **Production re-verified live over ssh** — `readlink -f
+/srv/eslammuatamed-web/current` = `/srv/…/releases/20260817T175534Z-648aa46` and
+`/srv/eslammuatamed-api/current` = `/srv/…/releases/20260817T183604Z-9af1aac`, both untouched by this
+campaign. No tip SHA is stamped here, for the reason the table gives.
+
+**Four stale values in this ledger were corrected by that pass. Each is stale TEXT, not moved state**
+— the distinction matters, because the two demand opposite responses:
+
+1. **Docs campaign-branch SHA** — the table said `95e9101`; live is `97efd02` (the D20-35 entry).
+   The `M1·U5` checkpoint already named `97efd02`; only the table row lagged. **Corrected above.**
+2. **API PR #86** — recorded as `a00913a`; live head is `ad5a5a7` (`campaign/backend-learnability`,
+   `UNSTABLE`, OPEN). That row is an informational pointer to a **separate** workstream; the
+   campaign's actual API dependency (`origin/main` = `origin/dev` = `9af1aace…`) verified **exact**.
+3. **API PR #83** — `chore(deps): bump @aws-sdk/client-s3 3.1109.0 → 3.1110.0`, OPEN, `CLEAN`,
+   Dependabot. It did not exist at the third resume. Named here so a later session does not discover
+   it and read it as movement. Web PRs **#69**/**#68** (Dependabot, `UNSTABLE`) and **#46**
+   (violet-glass, `DIRTY`) re-verified OPEN and unchanged; Docs **PR #54** `2345a7a0…` OPEN, `CLEAN`.
+4. **§9.5 was still headed `OPEN`** after the owner resolved it. Verified against code, not prose:
+   `scripts/lib/route-assets.mjs` carries `118 * KB` = 120,832 B and `119 * KB` = 121,856 B for the
+   two editor routes, matching D20-35 exactly. **Header corrected in §9.5**; its standing
+   do-not-re-stamp warning is deliberately preserved there.
+
+⚠ **One owed item closed silently, and is re-opened here.** §9.5 ended *"Attribution belongs to
+`M1·U5`"* — meaning the `DASHBOARD_APP_OWNED_BASELINE_BYTES` provenance drift (nine routes, deltas in
+**both** directions, the Experiences collection's `+1,853 B` recorded as *plausible, NOT measured to
+attribution*). `M1·U5` (`328bf9c`) does **not** discharge it: grepping its whole §5 section for
+`baseline` / `provenance` / `85,551` / `87,404` / `re-stamp` returns **0 matches**. Its "Attribution"
+heading is about the **flaky-test** attribution — a different question with the same word. The
+baseline-provenance attribution is therefore **still owed**, and is listed in §8 as a named next
+action rather than left to be rediscovered.
+
+⚠ **Gates were NOT re-run this session.** Every gate result in §5/`M1·U5` remains as *claimed green
+at `cf7c515`*, not as re-verified. This resume checked SHAs, branches, worktrees, PRs, remote
+absence, stamped caps and the Production pointers — it did not rebuild. Do not let "zero drift" be
+read as "gates re-verified". (If a later session does rebuild: `size-limit` reports
+`passed:true, size:0` against a MISSING `.output`, and a failed Web build leaves the previous
+`.output` in place — assert build success and `size > 0` before trusting any number.)
 
 **Verify with:**
 ```bash
@@ -1549,7 +1597,16 @@ only the budget governance is deferred.
 
 ---
 
-### 9.5 D20-35 — the Experiences editor routes' caps · **OPEN — ONE BATCHED OWNER DECISION**
+### 9.5 D20-35 — the Experiences editor routes' caps · **RESOLVED 2026-08-18 — CAPS STAMPED**
+
+⚠ **This subsection was left headed `OPEN` after the owner ruled; the header was corrected at the
+fourth zero-trust resume (2026-08-19).** The decision below was taken, and it is applied in code:
+`scripts/lib/route-assets.mjs` carries `'/dashboard/experiences/new': 118 * KB` (**120,832 B**) and
+`'/dashboard/experiences/…/{id}': 119 * KB` (**121,856 B**) — the two formula caps this section
+asked for, verified live rather than taken from prose. Web `6b59261`, Docs `97efd02`
+(`docs/web-modernization-campaign`, local-only). `size:routes` is green again on fourteen governed
+routes. **The text below is preserved as the record of the decision as it was raised** — in
+particular its closing do-not-re-stamp warning, which is STILL LIVE and still binding.
 
 Raised by `M1·U3` (`7e6d11a`). D20-34 attached a standing instruction: **do NOT inherit
 `/dashboard/experiences`'s 99,328 B for the editor routes — measure the real editor surfaces first
@@ -1626,6 +1683,46 @@ label. The report is what is wrong, and this table is the correction. Attributio
 ---
 
 ## 8. Exact next action
+
+⚠ **Everything below the NEXT THREE ACTIONS block is HISTORICAL RECORD, not instruction.** This
+section was written during FE-1/FE-2 and its sub-phase table still marks **FE-2c "in progress"**
+while §2 records FE-2 **COMPLETE**. That table is kept as the FE-2 record and must not be read as a
+work queue. The live next action is here, and in §1's `M1·U5` checkpoint — nowhere else.
+
+### THE NEXT THREE ACTIONS (set at the fourth zero-trust resume, 2026-08-19)
+
+**1. Re-derive R14's lane-count trigger BEFORE module 2 starts — do not inherit it.** R14 states its
+trip condition two ways that do not agree: *"the lane count passing 12"* and *"the **third** FE-3
+module reaches 12"*. But R14 also records that `M1·U2` landed the **eleventh** lane and `M1·U3` added
+**none** — so if module 2 lands one lane, the count reaches **12 at the SECOND FE-3 module**, one
+module earlier than the prose predicts. Count the lanes live (`--list`/`lanes.ts`), decide whether
+`test:e2e:sharded` becomes the default gate, and record the answer. R14's own standard applies: a
+silent non-event is indistinguishable from a forgotten one.
+
+**2. Discharge the baseline-provenance attribution §9.5 owed to `M1·U5` and never received.** Nine
+routes' `DASHBOARD_APP_OWNED_BASELINE_BYTES` no longer reproduce; the deltas run in **both**
+directions, so no single cause explains them; the Experiences collection's `+1,853 B` is recorded as
+*plausible, NOT measured to attribution*. Measure the attribution (the ~50 new i18n keys × 2 locales
+hypothesis is the candidate, unproven). ⚠ **Do NOT re-stamp the constants to make the report
+reproduce** — they are the DERIVATION INPUT for frozen caps, so re-stamping `85,551 → 87,404` would
+silently re-derive that cap `99,328 → 101,376`, i.e. a budget change performed to fix a report label.
+The report is what is wrong.
+
+**3. FE-3 module 2, under OD-12 — and its first gate is an OWNER CALL, not a build step.** OD-12
+authorizes Codex delegation for modules 2–5 *"only after Articles + Experiences have established the
+pattern"*, and the `M1·U5` checkpoint records that the pattern now holds across two modules. So the
+routing decision (in-house vs bounded delegated lane) is live and belongs to the owner. Once routed,
+module 2 replays the M1 unit sequence: instrument → collection + lane → editor → extraction verdicts
+→ gates + axe.
+
+⚠ **Binding on module 2 however it is routed — a lane must NOT invent a competing shared
+abstraction.** The shared set is now exactly: `useTranslatableForm`, `DashboardTranslationTabs`,
+`DashboardEntityFormActions`, `DashboardEntityEditorSkeleton`, `DashboardSkillPicker`, and
+`dashboard-translation-errors`. **Extend it or escalate — never fork it** (plan §6; OD-12 makes this
+the lane contract, not advice). Also binding, from §10.1: **keep the `*-fields.ts` / `*-form.ts` split
+per module** — it was found by measurement and recovered 6,211 B on the Articles collection route.
+
+---
 
 **FE-1 is closed.** Commits on `campaign/frontend-v1`:
 
