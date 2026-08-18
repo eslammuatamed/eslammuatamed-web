@@ -77,6 +77,16 @@ const MEDIA_API_PORT = Number(process.env.CI_MEDIA_MOCK_PORT ?? 3701)
 const PROJECT_CACHE_PORT = Number(process.env.CI_PROJECT_CACHE_PORT ?? 3800)
 const PROJECT_CACHE_API_PORT = Number(process.env.CI_PROJECT_CACHE_MOCK_PORT ?? 3801)
 
+// The Dashboard sign-in lane. It shares the `dashboard` BACKEND SCRIPT but not its process: the
+// `dashboard` lane's backend holds mutable Inbox state that its specs reset, and a lane backed by
+// mutable state is only serial for as long as it is a single spec file (see the `dashboard` project
+// and `scripts/e2e/lane-isolation.spec.mjs`). Putting the login specs in that directory made it two
+// files, which is a second worker resetting the Inbox lane's fixtures mid-assertion. A dedicated
+// process pair is what the existing lanes do in this situation, so login gets one rather than an
+// exemption.
+const DASHBOARD_LOGIN_PORT = Number(process.env.CI_DASHBOARD_LOGIN_PORT ?? 3900)
+const DASHBOARD_LOGIN_API_PORT = Number(process.env.CI_DASHBOARD_LOGIN_MOCK_PORT ?? 3901)
+
 // Fail with an actionable message instead of a connection-refused timeout 90 s later. `ci-preview.mjs`
 // boots `.output/server/index.mjs` directly, so a missing build is a setup mistake, not a test failure.
 if (!existsSync('.output/server/index.mjs')) {
@@ -142,7 +152,7 @@ export default defineConfig({
       // state, producing 19 failures that described the wrong backend rather than the product.
       testIgnore: [
         'scenarios/**', 'readiness/**', 'resume-pdf/**', 'dashboard/**', 'dashboard-media/**',
-        'dedupe/**', 'cache/**'
+        'dashboard-login/**', 'dedupe/**', 'cache/**'
       ],
       use: { ...devices['Desktop Chrome'], baseURL: `http://127.0.0.1:${CONTRACT_PORT}` }
     },
@@ -201,6 +211,14 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'], baseURL: `http://127.0.0.1:${MEDIA_PORT}` }
     },
     {
+      name: 'dashboard-login',
+      testMatch: 'dashboard-login/**/*.spec.ts',
+      // NOT marked `fullyParallel: false`. These specs neither seed nor reset backend state — they
+      // drive the real sign-in form and one deliberate 401 — so they are safe to parallelise, and
+      // claiming otherwise would misdescribe why the neighbouring lanes are serial.
+      use: { ...devices['Desktop Chrome'], baseURL: `http://127.0.0.1:${DASHBOARD_LOGIN_PORT}` }
+    },
+    {
       name: 'project-detail-cache',
       testMatch: 'cache/**/*.spec.ts',
       // One spec file owns one mutable upstream. Keeping the lane serial prevents a reset in a
@@ -225,6 +243,7 @@ export default defineConfig({
     previewServer('settings-count', SETTINGS_COUNT_PORT, SETTINGS_COUNT_API_PORT, '/about'),
     previewServer('media', MEDIA_PORT, MEDIA_API_PORT),
     // `/about` proves the page shell is ready without priming either detail URL under test.
-    previewServer('project-cache', PROJECT_CACHE_PORT, PROJECT_CACHE_API_PORT, '/about')
+    previewServer('project-cache', PROJECT_CACHE_PORT, PROJECT_CACHE_API_PORT, '/about'),
+    previewServer('dashboard', DASHBOARD_LOGIN_PORT, DASHBOARD_LOGIN_API_PORT)
   ]
 })
