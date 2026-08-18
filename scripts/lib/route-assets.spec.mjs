@@ -606,9 +606,54 @@ describe('dashboard app-owned caps — frozen, per route (D20-29)', () => {
    */
   const D20_34_ROUTES = ['/dashboard/experiences']
 
-  it('governs exactly the twelve routes doc 20 §1.1 names — no more, no fewer', () => {
+  /**
+   * D20-35 (2026-08-18) — the Experiences EDITOR routes, measured then escalated as one batched
+   * decision, exactly as D20-34's standing instruction required.
+   */
+  const D20_35_ROUTES = [
+    '/dashboard/experiences/new',
+    '/dashboard/experiences/00000000-0000-0000-0000-000000000000'
+  ]
+
+  it('governs exactly the fourteen routes doc 20 §1.1 names — no more, no fewer', () => {
     expect(Object.keys(DASHBOARD_APP_OWNED_CAP_BYTES).sort())
-      .toEqual([...D20_23_ROUTES, ...D20_29_ROUTES, ...D20_33_ROUTES, ...D20_34_ROUTES].sort())
+      .toEqual([...D20_23_ROUTES, ...D20_29_ROUTES, ...D20_33_ROUTES, ...D20_34_ROUTES, ...D20_35_ROUTES].sort())
+  })
+
+  it('derives every D20-35 cap from its OWN recorded baseline, not from a sibling', () => {
+    for (const route of D20_35_ROUTES) {
+      const baseline = DASHBOARD_APP_OWNED_BASELINE_BYTES[route]
+      expect(baseline, `${route} must record the baseline its cap was derived from`).toBeTypeOf('number')
+      expect(approvedAppLimitBytes(baseline), `${route} cap must equal ceil((baseline x 1.15)/KiB) x KiB`)
+        .toBe(DASHBOARD_APP_OWNED_CAP_BYTES[route])
+    }
+    // The owner's exact numbers, pinned so a later "tidy" cannot drift them silently.
+    expect(DASHBOARD_APP_OWNED_CAP_BYTES['/dashboard/experiences/new']).toBe(120_832)
+    expect(DASHBOARD_APP_OWNED_CAP_BYTES['/dashboard/experiences/00000000-0000-0000-0000-000000000000'])
+      .toBe(121_856)
+  })
+
+  it('keeps the Experiences editors on their OWN caps, not rounded up to the Articles editor', () => {
+    // The discriminating half of the decision: the owner declined consistency-rounding, so an edit
+    // that "tidied" these to 122,880 B would be a budget change made without a decision.
+    for (const route of D20_35_ROUTES) {
+      expect(DASHBOARD_APP_OWNED_CAP_BYTES[route])
+        .not.toBe(DASHBOARD_APP_OWNED_CAP_BYTES['/dashboard/articles/new'])
+      expect(DASHBOARD_APP_OWNED_CAP_BYTES[route])
+        .toBeLessThan(DASHBOARD_APP_OWNED_CAP_BYTES['/dashboard/articles/new'])
+    }
+    // And above the collection they were forbidden to inherit — an editor is a heavier surface.
+    for (const route of D20_35_ROUTES) {
+      expect(DASHBOARD_APP_OWNED_CAP_BYTES[route])
+        .toBeGreaterThan(DASHBOARD_APP_OWNED_CAP_BYTES['/dashboard/experiences'])
+    }
+  })
+
+  it('leaves the D20-34 collection baseline UNCHANGED despite it no longer reproducing', () => {
+    // The owner ruled historical derivation inputs are not re-stamped when they stop reproducing.
+    // `M1·U3` re-measured this route at 87,404 B; re-stamping would move the cap 99,328 -> 101,376.
+    expect(DASHBOARD_APP_OWNED_BASELINE_BYTES['/dashboard/experiences']).toBe(85_551)
+    expect(DASHBOARD_APP_OWNED_CAP_BYTES['/dashboard/experiences']).toBe(99_328)
   })
 
   it('derives the D20-34 cap from its own recorded baseline, not from the Articles collection', () => {
@@ -652,6 +697,8 @@ describe('dashboard app-owned caps — frozen, per route (D20-29)', () => {
       '/dashboard/articles/new': 122_880,
       '/dashboard/articles/00000000-0000-0000-0000-000000000000': 122_880,
       '/dashboard/experiences': 99_328,
+      '/dashboard/experiences/new': 120_832,
+      '/dashboard/experiences/00000000-0000-0000-0000-000000000000': 121_856,
       '/dashboard/media': 110_592,
       '/dashboard/profile': 123_904,
       '/dashboard/projects': 109_568,
@@ -764,7 +811,8 @@ describe('assertGovernedRouteCoverage — both directions (D20-29)', () => {
     // (DASHBOARD_ROUTES) against the routes doc 20 GOVERNS. Comparing the cap map to itself would
     // be trivially true and would protect nothing.
     const measured = DASHBOARD_ROUTES.map(r => r.route)
-    expect(measured).toHaveLength(12)
+    // 12 -> 14: D20-35 registers the two Experiences editor routes (`M1·U3`).
+    expect(measured).toHaveLength(14)
     expect(() => assertGovernedRouteCoverage(measured)).not.toThrow()
   })
 
@@ -1068,7 +1116,10 @@ describe('D20-32 — resolveDashboardSharedFloor and its FROZEN reference set', 
       // D20-34 joins the governed set and stays OUT of the frozen floor set, which is the same
       // shrink-on-add protection working a second time: FE-3 adds five more modules, so this is the
       // list that must keep growing while the eight calibration routes stay put.
-      '/dashboard/experiences'
+      '/dashboard/experiences',
+      // D20-35 — the two editor routes, joining for the same reason and with the same protection.
+      '/dashboard/experiences/00000000-0000-0000-0000-000000000000',
+      '/dashboard/experiences/new'
     ])
   })
 

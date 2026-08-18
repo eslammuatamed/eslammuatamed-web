@@ -745,7 +745,20 @@ export const DASHBOARD_APP_OWNED_BASELINE_BYTES = {
   '/dashboard/articles/new': 106_095,
   '/dashboard/articles/00000000-0000-0000-0000-000000000000': 106_203,
   // D20-34 — FE-3 module 1's collection, measured on the tree that ships it.
+  //
+  // ⚠ THIS VALUE NO LONGER REPRODUCES ON THE CURRENT TREE, AND IS DELIBERATELY LEFT ALONE. `M1·U3`
+  // re-measured the same route at 87,404 B. It still PASSES its 99,328 B cap with 11,924 B spare, so
+  // this is provenance drift and not a breach. The owner ruled that historical derivation inputs are
+  // NOT re-stamped merely because they stop reproducing: re-stamping 85,551 → 87,404 would re-derive
+  // this route's cap from 99,328 B to 101,376 B — a budget change performed to fix a report label.
+  // The finding is recorded in the campaign ledger §9.5; deriving a new cap from a later tree would
+  // require a separate, explicitly governed recalibration.
   '/dashboard/experiences': 85_551,
+  // D20-35 (owner decision, 2026-08-18) — FE-3 module 1's TWO EDITOR routes, measured on the tree
+  // that ships them (`M1·U3`, `7e6d11a`). Measured FIRST and escalated as one batched decision, which
+  // is what D20-34's standing instruction required: the collection's 99,328 B was NOT inherited.
+  '/dashboard/experiences/new': 105_051,
+  '/dashboard/experiences/00000000-0000-0000-0000-000000000000': 105_159,
   '/dashboard/projects': 95_029,
   '/dashboard/projects/new': 152_208,
   '/dashboard/projects/00000000-0000-0000-0000-000000000000': 152_393
@@ -815,6 +828,19 @@ export const DASHBOARD_APP_OWNED_CAP_BYTES = {
   // Articles' two editor routes were first registered at the collection's cap INHERITED before the
   // editor surface existed, and had to be corrected to 120 KiB once measured.
   '/dashboard/experiences': 97 * KB,
+  // D20-35 (owner decision, 2026-08-18) — the Experiences editor routes, each derived from its OWN
+  // measured baseline by D20-29's formula. The owner declined rounding them up to the Articles
+  // editor's 122,880 B for consistency: "use each route's own measured baseline under the
+  // already-governed D20-29 formula".
+  //
+  // Explicitly NOT a waiver, NOT a shared-floor change, NOT a generic incremental-allowance change,
+  // and NOT a D20-32 recalibration. Both surfaces are materially LEANER than the governed Articles
+  // (122,880 B) and Projects (176,128 B) editors, so nothing was loosened by precedent.
+  //
+  // Still no generic authoring-route class — D20-33's amendment held that back for FE-5, and four
+  // routes is not the repeated evidence it asked for.
+  '/dashboard/experiences/new': 118 * KB,
+  '/dashboard/experiences/00000000-0000-0000-0000-000000000000': 119 * KB,
   '/dashboard/media': 108 * KB,
   '/dashboard/profile': 121 * KB,
   '/dashboard/projects': 107 * KB,
