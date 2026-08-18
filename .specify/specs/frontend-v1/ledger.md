@@ -703,6 +703,76 @@ a new mutable lane still means **one spec file**; that invariant was upheld, nev
 
 ---
 
+### FE-3 · Module 1 — `experiences` · THE PLAN, AND THE PREDICTIONS IT IS CHECKED AGAINST
+
+Written **before any module code exists**, from the committed contract, so U-4's extraction verdict is
+a check against a falsifiable claim rather than a story authored after the fact. Everything in §5.1 is
+a contract reading with the schema named; everything in §5.2 is a prediction that can be wrong.
+
+#### 5.1 What the contract says this shape is
+
+| Fact | Source | Consequence |
+| --- | --- | --- |
+| `GET /admin/experiences` takes **zero query parameters** | contract | No server pagination, sort, filter or search. The collection is a FULL LIST. |
+| translations = `role`, `company`, `location`, `impact`, **all four required** | `ExperienceTranslationDto` | §10.3 rule 6's "unauthored OR complete, never half" is **contract-enforced here**, where Articles enforced it in the client. A genuinely different second shape. |
+| **no slug, no status, no `publishAt`** | `AdminExperienceEntity` | Publishing and scheduling are not Experiences concepts. |
+| **no per-entity public route** — public is `GET /experiences`, rendered on `/experience` | contract + `app/pages/experience.vue` | There is no per-locale per-entity destination to link to. |
+| `technologyIds` — *"Skill ids; replaces the full set. Empty array clears."* | `CreateExperienceDto` | A **replace-wholesale relation**, sourced from `GET /admin/skills` (also zero query params). Articles had nothing of this shape. |
+| `order: number`, required on create | `CreateExperienceDto` | Manual ordering — a new pattern. |
+| `employmentType` enum of 4 | contract | A select, not free text. |
+| `isCurrent: boolean` alongside `endDate: string \| null` | contract | A **cross-field rule**; nothing in Articles exercised one. |
+
+#### 5.2 Predicted extraction verdicts — commit now, check at U-4
+
+§10.2 declined four extractions for want of a second consumer. From the contract alone, before the
+module exists, the predicted verdicts are:
+
+| Candidate | Prediction | Why the contract already implies it |
+| --- | --- | --- |
+| `TranslationTabs` | **EXTRACT** | Four required per-locale fields, tabbed the same way. A real second shape. |
+| `useTranslatableForm` | **EXTRACT** | Second real field list — and a *shorter, all-required* one, which is the discriminating difference from Articles' longer optional-bearing list. |
+| `EntityFormLayout` | **PARTIAL AT BEST** | Its publish/schedule region has **no** second consumer: Experiences has no status and no `publishAt`, exactly as Projects had none. Two entities lacking a region is evidence the region is Articles-specific, not evidence to generalize it. |
+| `usePublicEntityLink` | **NO SECOND CONSUMER — do not extract** | No per-entity public destination exists. §10.3 rule 10 ("a public action needs a real per-locale destination") is UNSATISFIABLE here, so this module cannot prove it. |
+| `admin-articles-query` (list query composable) | **NO SECOND CONSUMER** | `GET /admin/experiences` has zero query params; there is no server query to build. |
+
+**A prediction that turns out wrong is a result to record, not an embarrassment to hide.** The point of
+stamping them now is that U-4 cannot quietly rewrite the target after seeing the code.
+
+#### 5.3 The three DIFFERENT clearing semantics in one form — the hazard this module introduces
+
+Articles never had these three in one save. They are recorded together because the failure is silent:
+
+1. `translations` — **upsert, never deletes.** Emptying a locale the server already holds is BLOCKED (§10.3 rule 6).
+2. `technologyIds` — **replaces the full set; `[]` clears it.**
+3. `endDate` — **nullable; explicit `null` clears** (D10-23).
+
+⚠ **The defect this creates.** A form model that initializes `technologyIds: []` before the GET
+resolves, and then saves, **wipes the relation** — no 422, no error, every gate green. **The
+discriminating test is: load an experience holding N skills, save WITHOUT touching the picker, assert
+the response still holds N.** A test that sets skills and asserts they were set passes against the
+defect and is worthless here.
+
+#### 5.4 The skills picker — ownership decided up front, not stumbled into
+
+`technologyIds` needs skill options from `GET /admin/skills`, and Skills is FE-3 **module 2**. Writing
+a general Skills composable now is exactly the "one consumer and a guess" §10.2 declined. **Decision:**
+ship a **minimal read-only options source named for the picker role, not for the Skills module**,
+marked in its own header as provisional and **absorbed by FE-3 module 2** when the real one lands.
+§10.3 rule 12 applies — `app/composables/` auto-imports wholesale and Nuxt drops a duplicate name
+**silently**, so the name is prefixed and checked against the existing exports before it is written.
+
+#### 5.5 Unit plan — each ends at a committable, green boundary
+
+| Unit | Deliverable | Exit |
+| --- | --- | --- |
+| **U-1** | The e2e backend + **one** record in `scripts/e2e/lanes.ts` (§10.3 rule 14: mutable lane = ONE spec file, and it needs `delayMs` to make loading states observable) | The lane boots **1 pair** when selected; `lane-isolation.spec.mjs` green; full suite goes to 11 pairs — re-check R14's trigger |
+| **U-2** | The collection at `/dashboard/experiences` on the §14.9 request-state contract (§10.3 rules 1–3) | Ten §14.9 criteria demonstrated; **both** route caps escalated as ONE owner decision (§10.3 rule 13, D20-33 the worked example) |
+| **U-3** | The editor: bilingual, Zod + `UForm` computed schema, 422→locale-tab mapping through `dashboard-translation-errors.ts`, per-module `admin-experience-fields.ts` split (§10.1 — the split is worth 6,211 B and FE-3 must keep it), skill picker, `isCurrent`⇄`endDate`, `order` | §5.3's no-touch save test green; the `.refine()` for `isCurrent` carries an explicit `path: ['endDate']` or its message never reaches the field |
+| **U-4** | The extraction verdict, checked against §5.2 | Every prediction marked HELD or WRONG, with the evidence |
+| **U-5** | Gates + ledger | typecheck, unit, `size`, `size:routes`, axe in BOTH dashboard languages, the lane. ⚠ **R13 is the binding constraint at ~0.81 KB gz headroom** — and before reading any size number, assert the build exited 0 and the reported size is > 0, because a failed build leaves a stale `.output` and `size-limit` reports `passed: true, size: 0` against a missing one |
+
+---
+
 ## 6. Known risks carried
 
 | # | Risk |
@@ -1024,14 +1094,18 @@ untouched, and `npm run test:e2e:sharded` bounds the full suite to 4 pairs as an
    in-house.** It is the SECOND CONSUMER — §10.2 declined four extractions for want of one, so
    `TranslationTabs`, `EntityFormLayout`, `useTranslatableForm` and `usePublicEntityLink` become
    provable *then*, against two real shapes. Adding its e2e lane is now one record in
-   `scripts/e2e/lanes.ts`. **Why `experiences` and not another of the five:** it is the richest
-   translation-bearing shape among experiences / skills / testimonials / categories / tags, and it has
-   a real public destination (`/experience`) — the two properties the declined extractions need in
-   order to be *proved* rather than merely *reused*. Categories/tags is the weakest second consumer
-   (name + slug, taxonomy rather than authoring) and would leave all four abstractions unproven.
-   ⚠ Expect `usePublicEntityLink` to be the one that does NOT generalize cleanly: Articles resolve to a
-   per-entity URL (`/blog/{slug}`), experiences to a page-level destination. That asymmetry is a
-   finding to record, not a defect to paper over.
+   `scripts/e2e/lanes.ts`. **Why `experiences` and not another of the five:** it is by far the richest
+   AUTHORING shape among experiences / skills / testimonials / categories / tags — four required
+   translation fields plus five article-level fields, three of which exercise patterns Articles never
+   had (a replace-wholesale relation, a manual `order`, and a cross-field `isCurrent`⇄`endDate` rule).
+   ⚠ **A first version of this row also claimed `experiences` has "a real public destination
+   (`/experience`)" and called that one of "the two properties the declined extractions need."
+   That justification is WITHDRAWN as non-discriminating.** The contract sweep found that **none** of
+   the five has a per-entity public destination — `GET /experiences` is a list rendered on one page —
+   so the property could not have selected between candidates, and if anything **categories/tags are
+   the only two carrying per-locale `slug`s**, making them the better exercise of §10.3 rule 10. The
+   choice stands on the authoring-shape criterion alone, which does discriminate. Recorded rather than
+   silently rewritten, because a justification that cannot separate the options is not a reason.
 2. **Carry the two §10.3 rules that bind before any code is written:** keep the per-module
    `*-fields.ts` split (worth 6,211 B on a collection route), and get a **governed cap** for each new
    dashboard route before it ships (D20-33 is the worked example). Watch **R13** — 29.19 / 30.00 KB
