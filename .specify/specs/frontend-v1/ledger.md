@@ -36,7 +36,7 @@ git -C /home/eslam-muatamed/worktrees/web-026-phase8 fetch origin && git rev-par
 | Phase | State |
 | --- | --- |
 | **FE-1 — Contract & Integration Foundation** | **COMPLETE** — commit `19e3a05`. Contract adopted + gtm reconciliation; reply flow deliberately moved to FE-2 (see §4). Gates re-verified on the committed tree: typecheck 0, 1501/1501. |
-| **FE-2 — Articles Tracer Bullet + Dashboard Architecture** | **IN PROGRESS.** OD-11 resolved (§9, option B). Three sub-phases: **FE-2a COMPLETE** (bilingual Dashboard architecture) · **FE-2b COMPLETE** (bilingual login: card composition, password-visibility control, 380px, axe both languages) · **FE-2c NOT STARTED** (Articles tracer bullet — now also owns the Dashboard request-state contract, plan §14.9). |
+| **FE-2 — Articles Tracer Bullet + Dashboard Architecture** | **IN PROGRESS.** OD-11 resolved (§9, option B). Three sub-phases: **FE-2a COMPLETE** · **FE-2b COMPLETE** · **FE-2c IN PROGRESS** — F-1 locale wiring DONE (below); the Articles surface itself and plan §14.9 criteria 1–10 are NOT started. |
 | FE-3 — Content Module Replication | NOT STARTED |
 | FE-4 — System Modules | NOT STARTED |
 | FE-5 — Coherence, D20-32 Review, M4 Closure | NOT STARTED |
@@ -257,11 +257,25 @@ hand-positioning it is how a physical `right:` enters dashboard chrome.
 | `lint` | 0 problems |
 | `typecheck` | exit 0 |
 | `typecheck:e2e` | exit 0 |
-| `test` (unit) | **1534/1534**, 107 files — includes `i18n/locale-parity` with the two new keys |
+| `test` (unit) | ⚠ **CORRECTED — see the note below this table.** Reported as 1534/1534; that reading was taken BEFORE the e2e spec was written, and the committed tree was in fact **1533/1534** |
 | `check:logical` | exit 0, **negative-controlled** (below) |
 | `size` (CSS) | **29.09 KB / 30.00 KB gz** — unchanged from baseline |
 | `size:routes` | exit 0 |
 | `e2e` login lane | **9/9**, incl. unfiltered axe in EN and AR |
+
+> ⚠ **CORRECTION, found by FE-2c's first full run.** The unit reading above was taken after the
+> i18n keys landed but **before** `e2e/dashboard/login.spec.ts` was created, and I did not re-run the
+> suite afterwards. The new spec made `e2e/dashboard/` hold two spec files, which breaks
+> `scripts/e2e/lane-isolation.spec.mjs` — a mutable-backend lane must hold exactly ONE spec file,
+> because `workers` is a top-level Playwright option and a second file is scheduled on a second
+> worker that resets the first's fixtures mid-assertion. **So `97a7166` was committed with a red unit
+> suite (1533/1534) while this record claimed green.** The gate was right and the record was wrong.
+> Fixed in FE-2c/F-1 by giving login its own lane and process pair; the other FE-2b readings
+> (lint, typecheck, budgets, the 9 login e2e tests) were unaffected and stand.
+>
+> **The transferable lesson:** a gate reading is only valid for the tree it was taken on. Adding a
+> FILE after the run invalidates any gate that inspects the file tree, and those gates are exactly
+> the ones a code-shaped mental model forgets exist.
 
 **Budget deltas, measured as a CONTROLLED comparison** — same directory, same `node_modules`, same
 env, the three changed files reverted to `d6180d7` and rebuilt, then restored by file copy and
@@ -311,6 +325,85 @@ that produced were misread as a component defect for three cycles. Playwright se
 nonsense. **Gate on the inner exit code explicitly, and assert a marker of the change is present in
 the built chunks before trusting any reading** — `grep -rl aria-pressed .output/public/_nuxt/` is
 what finally exposed it.
+
+---
+
+### FE-2c · F-1 — the loading system speaks the surface's language
+
+**First logical unit of FE-2c**, and deliberately its own commit: it is a prerequisite the Articles
+surface depends on, it is independently reviewable and revertable, and its measurements belong to it
+rather than to a large Articles diff.
+
+**Root cause, and why nothing caught it.** `eslammuatamed/dashboard-localization` bans `useI18n()`
+on dashboard surfaces, and it is scoped **by surface** — `app/pages/dashboard/**`,
+`app/components/dashboard/**`, and the two dashboard layouts by name. The 007 loading components
+live in `app/components/ui/` and are rendered by **both** worlds, so they sit outside that scope and
+each called `useI18n()` directly. They were correct on the surface they were written for and wrong
+on the one they had never been used on yet, which is why neither the rule, the type-checker nor a
+test saw it.
+
+**The fix is at the ownership boundary, not the call sites.** `useSurfaceI18n()` asks which locale
+owns the route being rendered and resolves against it; `UiContentSkeleton`, `UiDataLoadingOverlay`
+and `UiStateError` translate through it. Reuses the existing `isDashboardPath` predicate — the same
+one `<UApp>` uses to pick the direction of teleported overlays — whose doc comment claimed exactly
+one caller and has been corrected rather than left to become false.
+
+| Rejected alternative | Why |
+| --- | --- |
+| Callers pass translated strings down as props | The components already accept `label` / `updatingLabel` / `message`, so this needed no new code — and that is the problem. It makes correctness opt-in at every future call site, and forgetting produces the identical silent English-in-Arabic |
+| `provide`/`inject` from the dashboard shell | More literally "ownership", but a layout that forgets to provide falls back to public copy **silently** — F-1 again, one level up |
+
+**No key was added or duplicated.** `state.loading` / `state.updating` / `state.error` and
+`common.retry` already exist in both locales; only the locale they resolve against changed.
+**State semantics are untouched** — `useRequestState` and `UiRequestState` were not modified, so
+initial→skeleton, refresh→updating, error→retry and loaded-empty→empty stand exactly as they were.
+
+**A guard, scoped by surface rather than by directory.** New ESLint block
+`eslammuatamed/shared-surface-localization` bans `useI18n()` in those three files by name. Listed
+individually on purpose: the other `ui/` components are public-only today, and banning it across
+`app/components/ui/**` would be a rule about where files sit rather than which surfaces they serve.
+
+**One observation for the Articles surface, not acted on here.** `UiStateError`'s default message is
+`home.sectionError` ("This section couldn't be loaded.") — public-homepage phrasing that reads oddly
+in a Dashboard. It takes a `message` prop, and `state.error` ("Something went wrong") already exists
+in both locales, so dashboard callers have a correct option without a new key. Changing the *default*
+would change public copy and is out of this unit's scope.
+
+**Gates — clean build, `NUXT_PUBLIC_SITE_URL=https://example.com`.**
+
+| Gate | Result |
+| --- | --- |
+| `lint` | 0 |
+| `typecheck` | exit 0 |
+| `typecheck:e2e` | exit 0 |
+| `test` (unit) | **1541/1541**, 108 files |
+| `test:e2e` `dashboard-login` + `dashboard` | **61 passed**, exit 0 |
+| `size` (CSS) | 29.09 KB / 30.00 KB gz — unchanged |
+| `size:routes` | exit 0 |
+
+| Metric | FE-2b `97a7166` | F-1 | Δ |
+| --- | --- | --- | --- |
+| Shared **public** floor | 253904 B gz / 37 assets | 253745 B gz / **36** | **−159 B, one fewer asset** |
+| Shared **dashboard** floor | 260908 B gz / 47 assets | 260755 B gz / **46** | **−153 B, one fewer asset** |
+| `/dashboard/login` Δ-above-floor | 27913 B | 27915 B | +2 B |
+
+The floors **fell**, and the asset count falling with them makes it structural rather than the
+build-to-build noise `reference-web-build-output-nondeterministic` would otherwise explain: three
+components that each pulled in the i18n composable independently now share one module that the
+dashboard bundle already contained, and a small chunk collapsed. Recorded as measured; not claimed
+as the reason this unit exists.
+
+**Both instruments controlled.**
+
+| Control | Result |
+| --- | --- |
+| ESLint `shared-surface-localization` — reverted `DataLoadingOverlay` to `useI18n()` | **FAILED**, naming file and line (`✖ 1 problem`); restored, `sha256` verified, passes |
+| `useSurfaceI18n.spec.ts` — removed the per-call locale override, i.e. the exact pre-fix behaviour | **3 of 5 tests FAILED**; restored, 5/5 pass |
+
+**The e2e proof of F-1 is owed by the Articles surface and is not yet written.** No dashboard surface
+renders these components today — `messages.vue` hand-rolls its own (F-2, deliberately left). Until
+Articles renders a real skeleton/updating/error state, F-1 is proven at the unit and lint level only.
+That is stated rather than glossed: it is the one assertion this unit cannot yet make.
 
 ---
 

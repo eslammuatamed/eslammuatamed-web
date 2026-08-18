@@ -78,9 +78,10 @@ export function dashboardDir(locale: DashboardLocale): 'ltr' | 'rtl' {
 /**
  * Does this path belong to the dashboard world?
  *
- * Used by the ONE place that has to serve both worlds — the app-level `<UApp>`, whose Reka
- * `ConfigProvider` is what teleported overlays read their direction from. Everything else is already
- * inside one world or the other and does not need to ask.
+ * Used by the places that have to serve BOTH worlds and therefore cannot assume one: the app-level
+ * `<UApp>`, whose Reka `ConfigProvider` is what teleported overlays read their direction from, and
+ * `useSurfaceI18n()`, which the shared 007 loading components translate through. Everything else is
+ * already inside one world or the other and does not need to ask.
  *
  * Matches unprefixed paths only, because after D04-7 those are the only dashboard routes there are.
  * `/dashboards`, `/dashboard-notes` and any future public route that merely starts with the same

@@ -95,5 +95,34 @@ export default withNuxt(
         }
       ]
     }
+  },
+  {
+    /**
+     * The same silent defect, one surface further out.
+     *
+     * `dashboard-localization` above is scoped by surface, and the 007 loading components are on
+     * NEITHER surface — they live in `app/components/ui/` and are rendered by both worlds. Each
+     * called `useI18n()` and was correct on the public site and wrong inside the dashboard, with
+     * nothing to catch it (plan §14.9, F-1). They translate through `useSurfaceI18n()` now, which
+     * asks which locale owns the surface.
+     *
+     * Listed BY NAME rather than as `app/components/ui/**`: the other `ui/` components are
+     * public-only today, and banning `useI18n()` across the whole directory would be a rule about
+     * where files sit rather than about which surfaces they serve. Add a component here when it
+     * gains a dashboard consumer.
+     */
+    name: 'eslammuatamed/shared-surface-localization',
+    files: [
+      'app/components/ui/ContentSkeleton.vue',
+      'app/components/ui/DataLoadingOverlay.vue',
+      'app/components/ui/StateError.vue'
+    ],
+    ignores: ['app/**/*.spec.ts'],
+    rules: {
+      'no-restricted-syntax': ['error', {
+        selector: "CallExpression[callee.name='useI18n']",
+        message: 'This component renders in BOTH worlds, so it must translate through useSurfaceI18n(), not useI18n(). useI18n() resolves the ROUTE locale, which is always `en` on an unprefixed dashboard route (D04-7) — it renders English `Loading`/`Updating`/`Try again` inside an Arabic dashboard, silently (plan §14.9, F-1).'
+      }]
+    }
   }
 )
