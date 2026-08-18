@@ -488,6 +488,14 @@ third: exclude the tree.
 | `82494d0` | D20-32 floor regression isolated by measurement and removed (`UDropdownMenu`, 28.0 KB gz) |
 | `c6a5b21` | two review findings a green pipeline could not see; **FE-2a complete** |
 | `d6180d7` | the resume block stops asserting two things that were not true (no upstream; self-invalidating tip stamp) |
+| `97a7166` | **FE-2b** — bilingual login: `UCard` composition, password-visibility control, 9 e2e |
+| `ca0e2dd` → `b435bec` | a convention this ledger invented, and its correction. `ca0e2dd` promoted "one commit per phase" to binding; the repository rule is **one commit per logical unit**, and `b435bec` restores it. Both are kept: the wrong rule governed nothing, but deleting it would hide that the ledger over-reached |
+| `273d4ab` | **FE-2c** — Dashboard sign-in gets its own e2e lane; repairs the lane-isolation breach `97a7166` shipped |
+| `d5d493b` | **FE-2c · F-1** — the 007 loading system translates through `useSurfaceI18n()` |
+
+*This table lists commits that exist when it is written; the commit carrying this edit is
+deliberately absent rather than stamped as a SHA it cannot know. `git log --oneline c6a5b21..HEAD`
+is authoritative.*
 
 **FE-2 sub-phases.** OD-11 enlarged FE-2, so it is split rather than run as one long stretch.
 Each boundary is committable and leaves the tree green.
