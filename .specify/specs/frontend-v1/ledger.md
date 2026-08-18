@@ -794,7 +794,7 @@ commit is history and is not being rewritten, so it is named here instead.)*
 | Unit | Deliverable | Exit |
 | --- | --- | --- |
 | **M1·U1** | The e2e backend + **one** record in `scripts/e2e/lanes.ts` (§10.3 rule 14: mutable lane = ONE spec file, and it needs `delayMs` to make loading states observable) | ⚠ **MET IN PART, and the ledger says which part.** MET: `typecheck` exit 0, `eslint` 0 problems, unit suite **1714/1714 exit 0**, calibration **31/31**, and **four injected defects each caught by its own test** with a byte-identical restore. NOT met, and deliberately deferred to `M1·U2`: *"the lane boots 1 pair when selected."* `lane-isolation` IS green — but on a registry this unit never touched, which is **not evidence about this unit**. See the sequencing finding in §5/M1·U1. |
-| **M1·U2** | The collection at `/dashboard/experiences` on the §14.9 request-state contract (§10.3 rules 1–3) | Ten §14.9 criteria demonstrated; **both** route caps escalated as ONE owner decision (§10.3 rule 13, D20-33 the worked example) |
+| **M1·U2** | The collection at `/dashboard/experiences` on the §14.9 request-state contract (§10.3 rules 1–3) | ⚠ **MET IN PART, and the mapping below says which part** — M1·U1's precedent. **MET (4):** c1 first-load skeleton with no empty flash · c7 ONE reusable error/empty/retry contract (`UiRequestState` + `UiStateError` reused unchanged, no copy overridden) · c9 locale/RTL in both languages on a COLD load · c10 mobile at 380px, **list surface only**. **MET IN PART (3):** c2 and c6 — the keep-content property is proven in `useAdminExperiences.spec.ts`, but is **browser-unreachable for this module** because a zero-parameter endpoint gives the page no filter, search or pagination control to trigger a second request (F-D); c8 — `aria-busy` and a polite `role="status"` stale notice are asserted, **focus behaviour and no-noisy-repeat are not, and axe has not run** (it is `M1·U5`'s exit). **DEFERRED to `M1·U3` (3):** c3 editor first load · c4 save mutations · c5 destructive mutations — none has a collection surface. **Cap half: DONE and NARROWED** — `/dashboard/experiences` escalated and decided as **D20-34** (99,328 B). The editor caps were NOT batched with it; the owner ratified measuring them first. |
 | **M1·U3** | The editor: bilingual, Zod + `UForm` computed schema, 422→locale-tab mapping through `dashboard-translation-errors.ts`, per-module `admin-experience-fields.ts` split (§10.1 — the split is worth 6,211 B and FE-3 must keep it), skill picker, `isCurrent`⇄`endDate`, `order` | §5.3's no-touch save test green; the `.refine()` for `isCurrent` carries an explicit `path: ['endDate']` or its message never reaches the field |
 | **M1·U4** | The extraction verdict, checked against §5.2 | Every prediction marked HELD or WRONG, with the evidence |
 | **M1·U5** | Gates + ledger | typecheck, unit, `size`, `size:routes`, axe in BOTH dashboard languages, the lane. ⚠ **R13 is the binding constraint at ~0.81 KB gz headroom** — and before reading any size number, assert the build exited 0 and the reported size is > 0, because a failed build leaves a stale `.output` and `size-limit` reports `passed: true, size: 0` against a missing one |
@@ -915,8 +915,11 @@ to ship "a minimal provisional read-only options source" for the skills picker. 
 already exists, already reads `GET /admin/skills`, and already localizes `skillLabel()` under OD-11.
 ⚠ **A first pass overstated this as "Articles is already a consumer."** It is not: both hits in
 `admin-article-fields.ts` and `useAdminArticles.ts` are **comments**, not usage. The true state is
-one real consumer — `ProjectTechnologyPicker.vue` via `ProjectEditor` — so **Experiences is the second
-consumer of the DATA SOURCE**, which is exactly §10.2's bar. The **picker COMPONENT** is a separate,
+one real consumer — `ProjectTechnologyPicker.vue` via `ProjectEditor` — and **Experiences BECOMES its
+second consumer in `M1·U3`**, which is exactly §10.2's bar. ⚠ Stated in the future tense on purpose:
+`M1·U2` does not call `useAdminSkills()` at all — the collection renders `technologyIds.length`, not
+skill labels. Writing "is the second consumer" would be a forward claim asserted as established fact,
+which is the same error this finding corrects one sentence earlier. The **picker COMPONENT** is a separate,
 still-open question with one consumer, and it belongs to `M1·U3` where the editor needs it. §5.4 spoke
 only to the data source; extending its verdict to the component would be the same conflation.
 
@@ -967,6 +970,13 @@ re-derived later:
 
 The order control was run through a **rebuild**, because Playwright serves a prebuilt `.output` — a
 source mutation without one tests the previous build and proves nothing.
+
+**⚠ What was NOT run, stated so silence is not read as coverage.** `npm run test:e2e` — the FULL
+suite — was **not** run for this unit; only the `dashboard-experiences` lane (10/10) and
+`lane-isolation` at unit level. That is a deliberate scope call for one unit, but it matters here
+because R14's whole claim is that the suite's fixed cost already exceeds this machine at 10 lanes,
+and this unit makes it **11**. The last full-suite control run was **471 passed / exit 0 at 10
+lanes**; 11 lanes should report **481**. Nothing has verified that, and `axe` did not run either.
 
 **Deliberately NOT done in this unit:** the `/dashboard/experiences/new` and `/:id` routes do not
 exist, so the "New role" button and the empty state's action point at a route that arrives in
