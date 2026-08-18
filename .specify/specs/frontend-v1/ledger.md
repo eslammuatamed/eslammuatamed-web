@@ -18,7 +18,7 @@ Verify every line against live state before acting on it. Report drift before do
 | **Branch tip** | **Do not read a SHA for this from this table — run `git rev-parse HEAD`.** A checkpoint commit that stamps its own SHA here is false the instant it lands, and this ledger has done it once already. |
 | **Last source-touching commit** | **Do not read a SHA from this table — run `git log -1 --name-only`.** The repository rule is **ONE COMMIT PER LOGICAL UNIT**, so a phase may land as several coherent commits; the FE-2b commit bundled source + tests + ledger because that phase *was* one unit, not because bundling is required. What this row exists to prevent is narrower: **never stamp a SHA here that a later commit invalidates.** |
 | **Remote state** | **NOT PUSHED.** `origin/dev` = `54cea28737c558767ccb24a34e2b437b62f7f058`, `origin/main` = `648aa467cd8bc7157cbcad2fd7c0e8981ee1f16c` — neither moved by this campaign, re-verified after FE-2a |
-| **Docs repo** | branch `docs/od-11-dashboard-localization`, HEAD `3b607af9e6b0fe9662abe0058f5e50c88bcd545f`, **local-only** (R10). `origin/main` = `1896d8c7…`, untouched |
+| **Docs repo** | ⚠ **TWO branches, and they DIVERGE — neither is an ancestor of the other.** (a) `docs/od-11-dashboard-localization` `3b607af9…` holds OD-11 (D02-15, D04-7, D11-8, doc 18). (b) `docs/web-modernization-campaign` `95e9101` (was `565abef8…`) holds doc 20's whole D20-2x/3x sequence and the governed inventory table — **D20-33 is NOT on the od-11 branch**, and **D20-34 landed on (b)** for that reason: writing it against a doc 20 lacking D20-33 would manufacture a conflict in the same table. Both **local-only** (R10); `origin/main` = `1896d8c7…`, untouched |
 | **Production** | Web release `20260817T175534Z-648aa46` — untouched |
 | **API** | `origin/main` = `origin/dev` = `9af1aace…`, live and complete for v1 scope |
 
@@ -47,7 +47,15 @@ nothing”** and is a closed-campaign record, not a competing source of live sta
 git -C /home/eslam-muatamed/worktrees/web-026-phase8 rev-parse HEAD --abbrev-ref HEAD
 git -C /home/eslam-muatamed/worktrees/web-026-phase8 status --porcelain
 git -C /home/eslam-muatamed/worktrees/web-026-phase8 fetch origin && git rev-parse origin/dev origin/main
+git -C /home/eslam-muatamed/worktrees/docs-web-campaign rev-parse HEAD --abbrev-ref HEAD
 ```
+
+**Checkpoint 2026-08-18 — `M1·U2` LANDED.** Web `campaign/frontend-v1` = **`fd4e9df`** (working tree
+clean, still unpushed, still no upstream). Docs `docs/web-modernization-campaign` = **`95e9101`**
+(D20-34, local-only; its `docs:group:check` gate was verified green BEFORE the edit and again after
+regenerating the bundle). Nothing pushed, nothing deployed, `origin/dev` and `origin/main` unmoved on
+both repos. ⚠ These two SHAs are stamped deliberately — unlike the branch-tip row above, they name
+commits that already exist and that a later commit does not invalidate. **Next: `M1·U3`, the editor.**
 
 ---
 
