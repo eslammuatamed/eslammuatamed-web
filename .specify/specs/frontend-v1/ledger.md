@@ -50,12 +50,18 @@ git -C /home/eslam-muatamed/worktrees/web-026-phase8 fetch origin && git rev-par
 git -C /home/eslam-muatamed/worktrees/docs-web-campaign rev-parse HEAD --abbrev-ref HEAD
 ```
 
-**Checkpoint 2026-08-18 — `M1·U2` LANDED.** Web `campaign/frontend-v1` = **`fd4e9df`** (working tree
-clean, still unpushed, still no upstream). Docs `docs/web-modernization-campaign` = **`95e9101`**
-(D20-34, local-only; its `docs:group:check` gate was verified green BEFORE the edit and again after
-regenerating the bundle). Nothing pushed, nothing deployed, `origin/dev` and `origin/main` unmoved on
-both repos. ⚠ These two SHAs are stamped deliberately — unlike the branch-tip row above, they name
-commits that already exist and that a later commit does not invalidate. **Next: `M1·U3`, the editor.**
+**Checkpoint 2026-08-18 — `M1·U2` LANDED.** The unit is commit **`fd4e9df`** on
+`campaign/frontend-v1`; the doc 20 entry is Docs **`95e9101`** on `docs/web-modernization-campaign`
+(local-only; its `docs:group:check` gate was verified green BEFORE the edit and again after
+regenerating the bundle). Working trees clean on both, still unpushed, still no upstream, and
+`origin/dev` / `origin/main` unmoved on both repos.
+
+⚠ **Read the Web branch TIP with `git rev-parse HEAD`, not from this paragraph.** A first draft of
+this checkpoint wrote "`campaign/frontend-v1` = `fd4e9df`" and argued the stamp was safe because the
+SHA already existed — which missed the point: the commit carrying the checkpoint invalidated it
+immediately, and the table above forbids exactly this. Naming *which commit is the unit* stays true;
+naming *what the branch points at* does not. The same distinction applies to `95e9101`: it is the
+D20-34 commit, not a promise about that branch's tip. **Next: `M1·U3`, the editor.**
 
 ---
 
