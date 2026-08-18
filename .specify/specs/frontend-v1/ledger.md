@@ -109,7 +109,10 @@ failed (a trailing `echo`/`tee` masked it). Always read the explicit `*_EXIT=` l
 | `npm test` | **exit 0** — 107 files, **1534/1534** (1501 before; +33 new) |
 | `npm run typecheck:e2e` | **exit 0** |
 | `node scripts/check-logical-properties.mjs` | **exit 0** |
+| `npm run check:bundle` | **exit 0** — 100 public chunks, no editor/renderer leakage (D06-5) |
 | `npm run build` | **exit 0** |
+| `npm run size` | **29.09 / 30.00 KB gz** (+9 B — the shell's one new `a11y` string) |
+| `npm run size:routes` | **exit 0** — shared dashboard floor **260,989 / 268,288 B gz** |
 
 **Three gates, each positive-controlled before it was trusted.** Every one of them guards a failure
 that is SILENT in production — untranslated chrome renders English or a raw key path, and nothing
@@ -153,6 +156,30 @@ once in `setup`, justified by a comment reading *"a locale switch is a route cha
 this page"*. True when written; OD-11 made it false, because the dashboard switch is deliberately
 state and not navigation. Left alone, validation messages would have stayed in the load-time
 language while everything around them changed. Now a `computed`.
+
+**A 28 KB regression, caught by the gate and attributed by measurement rather than by argument.**
+`size:routes` first came back RED: the shared dashboard floor had gone to **288,523 B gz**, breaching
+D20-32 by **20,235 B**. D20-32 is INTERIM and plan §7.3 / risk R3 forbid recalibrating it before
+FE-5, so the only honest options were to find the cause or to stop and report — never to raise the
+number. Three builds, **same directory and same `node_modules`** (a cross-worktree comparison is
+invalid — separate installs cascade chunk-hash renames into a false diff):
+
+| Tree | Shared dashboard floor | vs baseline |
+| --- | --- | --- |
+| baseline `84f53f6` (pre-FE-2a) | **259,900 B gz** | — |
+| FE-2a as first written | **288,523 B gz** | **+28,623 B** ✗ |
+| FE-2a with the account dropdown replaced | **260,989 B gz** | **+1,089 B** ✓ |
+
+So the **entire bilingual architecture** — composables, switcher, `dir`/`lang` handling, route
+exclusion and 306 Arabic strings — costs **+1,089 B gz** on the floor. The other **28.0 KB was one
+`UDropdownMenu`**: wrapping the operator's e-mail and Sign-out in it pulled Reka's whole menu
+subsystem and its floating-ui dependency into the dashboard LAYOUT chunk, which every dashboard route
+loads. Rebuilt as plain text + a button; both halves of the owner's "operator identity / session
+actions" survive, and the presentation is a legitimate FE-5 coherence question with this number
+attached to it.
+
+**The public floor went DOWN**, 254,582 → 253,891 B gz (**−691 B**), because the `/ar/dashboard/**`
+route records left the public router with the tree that generated them.
 
 **Exit-code note, again.** A backgrounded `npm run build` was reported by the harness as **exit 0**
 while the underlying build had **failed** on a missing `NUXT_PUBLIC_SITE_URL` — a trailing `tee`

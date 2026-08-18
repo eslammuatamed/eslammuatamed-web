@@ -73,16 +73,6 @@ async function signOut(): Promise<void> {
   await navigateTo('/dashboard/login')
 }
 
-/**
- * Operator identity + session actions, as one menu rather than a bare e-mail and a button.
- *
- * The e-mail is a non-interactive `label` item: it identifies who is signed in, which was previously
- * inline text that disappeared below `sm`. In the menu it survives at every width.
- */
-const accountMenuItems = computed(() => [[
-  { label: auth.user?.email ?? t('dashboard.shell.account'), type: 'label' as const },
-  { label: t('dashboard.signOut'), icon: 'i-lucide-log-out', onSelect: signOut }
-]])
 </script>
 
 <template>
@@ -151,15 +141,37 @@ const accountMenuItems = computed(() => [[
               <DashboardLangSwitch />
               <LayoutThemeToggle :label="t('dashboard.shell.theme')" />
 
-              <UDropdownMenu :items="accountMenuItems">
-                <UButton
-                  color="neutral"
-                  variant="ghost"
-                  size="sm"
-                  icon="i-lucide-user-round"
-                  :aria-label="t('dashboard.shell.account')"
-                />
-              </UDropdownMenu>
+              <!--
+                OPERATOR IDENTITY AS PLAIN TEXT, NOT A DROPDOWN — and the reason is measured, not
+                aesthetic. Wrapping these two in a `UDropdownMenu` put Reka's whole menu subsystem
+                (and its floating-ui dependency) into the dashboard LAYOUT chunk, which every
+                dashboard route loads: the shared dashboard floor went 259,900 → 288,523 B gz,
+                **+28.0 KB**, breaching D20-32 by 20 KB. D20-32 is INTERIM and must not be
+                recalibrated before FE-5 (plan §7.3, risk R3), so the control was rebuilt to cost
+                nothing instead.
+
+                No requirement is dropped: the owner asked for "operator identity / session actions",
+                and both are here. The e-mail is `title`-bearing so a truncated address is still
+                readable, and it is hidden below `sm` only because the four header controls cannot
+                all fit at 380px — the sign-out action, which is the actionable half, survives at
+                every width. Revisit the presentation in the FE-5 coherence pass, with this number in
+                hand.
+              -->
+              <span
+                v-if="auth.user"
+                class="hidden max-w-48 truncate text-sm text-muted sm:inline"
+                :title="auth.user.email"
+              >{{ auth.user.email }}</span>
+              <UButton
+                color="neutral"
+                variant="ghost"
+                size="sm"
+                icon="i-lucide-log-out"
+                :aria-label="t('dashboard.signOut')"
+                @click="signOut"
+              >
+                <span class="hidden md:inline">{{ t('dashboard.signOut') }}</span>
+              </UButton>
             </div>
           </div>
         </header>
