@@ -22,6 +22,19 @@ Verify every line against live state before acting on it. Report drift before do
 | **Production** | Web release `20260817T175534Z-648aa46` — untouched |
 | **API** | `origin/main` = `origin/dev` = `9af1aace…`, live and complete for v1 scope |
 
+**Re-baselined 2026-08-18 (zero-trust resume, session start).** Every row above was verified live
+and **matched — zero drift**: worktree present, branch `campaign/frontend-v1`, working tree clean, no
+upstream (`@{upstream}` exit 128), `merge-base HEAD origin/dev` = `54cea287…` (the recorded base),
+campaign branch absent from every `origin` ref (**still unpushed**), `origin/dev` = `54cea287…`,
+`origin/main` = `648aa467…`, Docs `docs/od-11-dashboard-localization` = `3b607af9…` and absent from
+`origin`, API `origin/main` = `origin/dev` = `9af1aace…`. Deliberately **no tip SHA stamped** — the
+table's own rule. Two live facts the table does not cover, recorded so a later session does not read
+them as drift: (a) the **Docs** working tree is dirty with three owner-content files
+(`content/cv/*-2026-07.pdf` deleted, `*-2026-08.pdf` and `content/og_image.png` untracked, all dated
+Jul–Aug 6) — pre-existing owner content churn, no campaign commit touches them; (b) Web has three
+unrelated open PRs — **#69**/**#68** Dependabot, **#46** the BLOCKED violet-glass branch — none from
+this campaign.
+
 **Verify with:**
 ```bash
 git -C /home/eslam-muatamed/worktrees/web-026-phase8 rev-parse HEAD --abbrev-ref HEAD
@@ -37,7 +50,7 @@ git -C /home/eslam-muatamed/worktrees/web-026-phase8 fetch origin && git rev-par
 | --- | --- |
 | **FE-1 — Contract & Integration Foundation** | **COMPLETE** — commit `19e3a05`. Contract adopted + gtm reconciliation; reply flow deliberately moved to FE-2 (see §4). Gates re-verified on the committed tree: typecheck 0, 1501/1501. |
 | **FE-2 — Articles Tracer Bullet + Dashboard Architecture** | **COMPLETE.** OD-11, OD-3, D20-33 and its amendment all resolved. FE-2a/2b/2c done: F-1 **CLOSED** with browser evidence · collection · editor · §14.6 extraction pass · **all ten §14.9 criteria demonstrated** · every gate green including `size:routes`. The reusable architecture is recorded in **§10**. |
-| FE-3 — Content Module Replication | NOT STARTED |
+| **FE-3 — Content Module Replication** | **OPENS — not yet implementing.** Its first unit is **R14**, the e2e lane strategy: `playwright.config.ts` boots 10 preview-server pairs on 12 cores and the full suite now loses exactly one test per run to transport/timeout, a different one each time. Five more modules cannot each take a process pair. R14 is a design decision against the `lane-isolation.spec.mjs` invariant, not a tuning knob, and no module lands before it is settled. |
 | FE-4 — System Modules | NOT STARTED |
 | FE-5 — Coherence, D20-32 Review, M4 Closure | NOT STARTED |
 
@@ -884,6 +897,48 @@ against one and a guess.
 14. **A mutable e2e lane is ONE spec file**, and it needs `delayMs` to make any loading state observable.
 
 ---
+
+### Where FE-3 picks up — the e2e LANE STRATEGY (R14) comes first
+
+**FE-2 is closed in full.** FE-2a, FE-2b and FE-2c are all landed and verified; the §14.6 extraction
+pass is done and its judgement is recorded in **§10**, which is the artifact FE-3 replicates. FE-3's
+scope (plan §6) is five content modules — experiences, skills, testimonials, categories/tags — plus
+the shared per-entity SEO panel (FR-DSH-050).
+
+**But the first unit is not a module.** R14 says the suite's FIXED cost already exceeds this machine:
+10 preview-server pairs (~20 processes) on 12 cores, one test lost per full run to
+transport/timeout — a *different* test each run, never a content assertion, and gone entirely when
+the tenth server is removed. Five more modules at one process pair each makes the suite unrunnable.
+Starting a module first would bury that under new work and make every subsequent red run ambiguous.
+
+**Next three actions:**
+
+1. **Settle R14 as a design decision, with the invariant visible.** The candidates named in §5/U-5 —
+   one shared mutable backend with per-spec reset, serialised server startup, or a longer navigation
+   timeout for heavy SSR routes — each trade against `lane-isolation.spec.mjs`'s rule that a mutable
+   backend belongs to exactly ONE spec file. Whichever wins must say what happens to that invariant:
+   upheld, narrowed with a stated reason, or replaced by a different guarantee. A change that
+   silently weakens it is the failure mode to avoid, because the invariant is what makes a mutable
+   lane trustworthy at all. **CI behaviour is UNVERIFIED** (fewer cores, and Actions has been
+   billing-blocked), so any fix must be argued from the fixed-cost measurement, not from "CI is fine".
+2. **Positive-control the fix before believing it.** The current symptom is *load-dependent and
+   non-deterministic* — a green run proves nothing on its own (`reference-pre-hydration-click-class`
+   is the same trap: N failures is a sample, not a set). The instrument has to be proven: reproduce
+   the failure on demand at a known configuration, apply the fix, then show repeated full-suite runs
+   green at BOTH the local worker count and `--workers=2`. Isolate any failing spec by name first —
+   never re-run the full suite to discover what failed.
+3. **Only then the first FE-3 module, and it is the SECOND CONSUMER.** §10.2 declined four
+   extractions on purpose: `TranslationTabs`, `EntityFormLayout`, `useTranslatableForm`,
+   `usePublicEntityLink` all had one consumer. The first FE-3 module is what makes them provable, so
+   extract *then*, against two real shapes. Two rules from §10.3 bind before any code: the
+   per-module `*-fields.ts` split must be kept (it is worth 6,211 B on a collection route), and a new
+   dashboard route needs a **governed cap** before it ships (D20-33 is the worked example). Watch
+   **R13** — 29.19 / 30.00 KB gz, ~0.81 KB headroom; two modules of Articles' size exhaust it.
+
+**Open before the modules start, owner's call, not mine:** plan §6 calls FE-3 the strongest Codex
+delegation fit in the campaign (five structurally similar modules, fixed contract, disjoint lanes).
+Nothing about R14 is delegable — it is judgement against an invariant — so the question can wait
+until action 3, but it should be answered before the first module rather than during it.
 
 ### Where FE-2c picked up — the §14.6 EXTRACTION PASS
 
