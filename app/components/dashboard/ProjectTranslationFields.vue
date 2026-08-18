@@ -15,9 +15,11 @@ import {
  * is what makes "no cross-locale fallback" structural rather than a rule someone has to remember —
  * this component has no access to the other locale's state at all, so it cannot borrow from it.
  *
- * `dir` IS PINNED PER FIELD rather than inherited from the UI locale. The Arabic case study is
- * Arabic text even while the dashboard chrome is in English, and an RTL string in an LTR-forced box
- * renders its punctuation in the wrong place — the same reasoning as the Profile alt-text inputs.
+ * `dir` IS PINNED PER FIELD rather than inherited from the chrome. Field direction and chrome
+ * direction are independent (doc 11 §6), and it cuts both ways now that the dashboard is bilingual
+ * (D02-15): the Arabic case study is Arabic text inside an English dashboard, and the English one is
+ * English text inside an Arabic dashboard. An RTL string in an LTR-forced box renders its
+ * punctuation in the wrong place — the same reasoning as the Profile alt-text inputs.
  *
  * THE NARRATIVE FIELDS ARE PLAIN TEXTAREAS, deliberately. The contract calls all eleven "Opaque
  * Markdown": the API stores the characters and the public site renders them through the one
@@ -36,7 +38,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{ 'update:modelValue': [value: ProjectTranslationForm] }>()
 
-const { t } = useI18n()
+const { t } = useDashboardI18n()
 
 /** The single-line fields; everything else in the required set is long-form Markdown. */
 const SHORT_FIELDS = ['title', 'slug'] as const

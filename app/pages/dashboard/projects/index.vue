@@ -27,9 +27,13 @@ import type { AdminProject } from '~/composables/admin-project-types'
  * translation summary — so a single list of rows reads correctly from 320px up and there is exactly
  * one node per project in the DOM, which makes that entire class of bug impossible here.
  */
+// No locale-prefixed twin of this route (D04-7) — the dashboard is bilingual through a persisted
+// application locale, not through the URL. Rationale in `~/utils/dashboard-locale`.
+defineI18nRoute(false)
+
 definePageMeta({ layout: 'dashboard', middleware: 'auth' })
 
-const { t, locale } = useI18n()
+const { t, locale } = useDashboardI18n()
 const route = useRoute()
 const router = useRouter()
 const { items, total, totalPages, pending, forbidden, failed, load } = useAdminProjects()
@@ -164,16 +168,20 @@ function goToPage(next: number): void {
 /**
  * The row's heading.
  *
- * Prefers the English title and falls back to the ARABIC one, then to a neutral placeholder — never
- * to the slug alone and never to an empty row. This is the ONE place a cross-locale read is correct:
- * it is a label for a row in an English-only chrome, not authored content, and the translation
- * column right beside it states plainly which languages actually exist. The editor itself does no
- * such thing.
+ * Prefers the title in the DASHBOARD's language and falls back to the other one, then to a neutral
+ * placeholder — never to the slug alone and never to an empty row. This is the ONE place a
+ * cross-locale read is correct: it is a way to identify a row, not authored content, and the
+ * translation column right beside it states plainly which languages actually exist. The editor
+ * itself does no such thing.
+ *
+ * The preferred locale used to be hard-coded `en`, because the chrome was English-only. OD-11
+ * (D02-15) makes the chrome bilingual, so an Arabic-working operator now sees Arabic titles first —
+ * with the same fallback shape, only the preference order follows the operator.
  */
 function rowTitle(project: AdminProject): string {
-  const english = project.translations.en?.title
-  if (english && english.trim().length > 0) return english
-  const arabic = project.translations.ar?.title
+  const preferred = project.translations[locale.value]?.title
+  if (preferred && preferred.trim().length > 0) return preferred
+  const arabic = project.translations[locale.value === 'ar' ? 'en' : 'ar']?.title
   if (arabic && arabic.trim().length > 0) return arabic
   return t('dashboard.projects.untitled')
 }

@@ -22,7 +22,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{ 'update:modelValue': [value: string[]] }>()
 
-const { t } = useI18n()
+const { t, locale } = useDashboardI18n()
 const { skills, pending, forbidden, failed, load } = useAdminSkills()
 
 const filter = ref('')
@@ -38,7 +38,7 @@ const visible = computed(() => {
   const needle = filter.value.trim().toLowerCase()
   if (needle === '') return ordered.value
   return ordered.value.filter(skill =>
-    skillLabel(skill).toLowerCase().includes(needle) || skill.slug.toLowerCase().includes(needle)
+    skillLabel(skill, locale.value).toLowerCase().includes(needle) || skill.slug.toLowerCase().includes(needle)
   )
 })
 
@@ -103,7 +103,7 @@ function toggle(id: string, checked: boolean): void {
             v-for="skill in visible"
             :key="skill.id"
             :model-value="modelValue.includes(skill.id)"
-            :label="skillLabel(skill)"
+            :label="skillLabel(skill, locale)"
             :disabled="disabled"
             :data-technology="skill.id"
             @update:model-value="toggle(skill.id, $event === true)"

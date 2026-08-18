@@ -1,5 +1,6 @@
 import type { Envelope } from '~/types/models'
 import type { AdminSkill } from '~/composables/admin-project-types'
+import type { DashboardLocale } from '~/utils/dashboard-locale'
 import { ApiError } from '~/utils/api-error'
 
 /**
@@ -51,10 +52,15 @@ export function useAdminSkills() {
  *
  * Falls back to the SLUG, never to the other locale's label: a slug is a neutral, unambiguous
  * identifier the operator can still act on, while an Arabic label rendered as if it were the English
- * one is a confident wrong answer. The dashboard chrome is English-only today (`dashboard.nav.*`
- * exists in `en.json` alone), so `en` is the label locale here.
+ * one is a confident wrong answer.
+ *
+ * THE LABEL LOCALE IS THE DASHBOARD'S, and it is a parameter rather than a hard-coded `en`. It was
+ * `en` because the chrome was English-only, with the reasoning stated as such — OD-11 (D02-15)
+ * removes that premise, so an Arabic-working operator now reads Arabic skill names. The
+ * no-cross-locale-fallback rule is unchanged: a skill with no label in the requested language shows
+ * its slug, exactly as before.
  */
-export function skillLabel(skill: AdminSkill): string {
-  const label = skill.translations.en?.label
+export function skillLabel(skill: AdminSkill, locale: DashboardLocale): string {
+  const label = skill.translations[locale]?.label
   return label && label.trim().length > 0 ? label : skill.slug
 }

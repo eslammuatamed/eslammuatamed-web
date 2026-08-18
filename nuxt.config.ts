@@ -223,9 +223,11 @@ export default defineNuxtConfig({
   // than the detail wildcards. `/ar/**` mirrors the public rules (i18n prefixes Arabic).
   routeRules: {
     '/dashboard/**': { ssr: false },
-    // i18n `prefix_except_default` generates real `/ar/dashboard/**` routes; they must be client-only
-    // too or the Arabic dashboard would SSR, breaking the two-worlds isolation (D06-1).
-    '/ar/dashboard/**': { ssr: false },
+    // NO `/ar/dashboard/**` RULE, because there is no such route any more (D04-7). It used to exist
+    // as a by-product of `prefix_except_default` and needed its own `ssr: false` to keep the
+    // two-worlds isolation (D06-1) intact. Each dashboard page now calls `defineI18nRoute(false)`,
+    // so the twin is never generated and the rule would match nothing. The dashboard is bilingual
+    // through a persisted application locale instead (D02-15 / D11-8) — a preference, not a URL.
     '/': { swr: 60 },
     '/blog/**': { swr: 60 },
     '/projects': { swr: 60 },

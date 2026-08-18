@@ -35,7 +35,7 @@ const props = withDefaults(defineProps<{
 
 const emit = defineEmits<{ 'update:modelValue': [value: string | null] }>()
 
-const { t, locale } = useI18n()
+const { t, locale } = useDashboardI18n()
 const library = useMediaLibrary()
 
 const open = ref(false)

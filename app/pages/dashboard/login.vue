@@ -6,19 +6,37 @@ import type { FormError, FormSubmitEvent } from '@nuxt/ui'
 // ssr:false — D06-1); this page uses the bare `auth` layout (centered card, no dashboard chrome)
 // and deliberately carries NO `auth` middleware so a logged-out visitor can reach it. On success
 // the access token lives in memory only (D11-1) and we forward to the originally requested route.
+// No locale-prefixed twin of this route (D04-7) — the dashboard is bilingual through a persisted
+// application locale, not through the URL. Rationale in `~/utils/dashboard-locale`.
+defineI18nRoute(false)
+
 definePageMeta({ layout: 'auth' })
 
-const { t } = useI18n()
+const { t } = useDashboardI18n()
 const auth = useAuthStore()
 const route = useRoute()
 
-// Zod schema per current ui.nuxt.com form docs (Standard Schema). Messages come from i18n; a locale
-// switch is a route change that remounts this page, so building the schema in setup stays correct.
-const schema = z.object({
-  email: z.email(t('auth.errorEmail')),
-  password: z.string().min(12, t('auth.errorPassword'))
-})
-type Schema = z.output<typeof schema>
+/**
+ * Zod schema per current ui.nuxt.com form docs (Standard Schema), REBUILT WHEN THE LANGUAGE CHANGES.
+ *
+ * It used to be built once in setup, and the comment justifying that said: "a locale switch is a
+ * route change that remounts this page". That was true, and OD-11 made it false — the dashboard
+ * language switch is state, not navigation (D04-7), precisely so it cannot discard form state. The
+ * schema closes over `t`, so a `const` schema would keep serving validation messages in whichever
+ * language the page happened to load in, while every other string on screen changed around them.
+ *
+ * A `computed` is enough: `t` reads the dashboard locale ref, so the schema is invalidated by the
+ * switch and `UForm` re-validates against the new one. Field VALUES are untouched — rebuilding the
+ * schema does not remount the inputs.
+ */
+function loginSchema(translate: typeof t) {
+  return z.object({
+    email: z.email(translate('auth.errorEmail')),
+    password: z.string().min(12, translate('auth.errorPassword'))
+  })
+}
+type Schema = z.output<ReturnType<typeof loginSchema>>
+const schema = computed(() => loginSchema(t))
 
 const state = reactive<Partial<Schema>>({ email: undefined, password: undefined })
 const form = useTemplateRef('form')

@@ -22,7 +22,8 @@
     "closeMenu": "Close menu",
     "homeLink": "Go to homepage",
     "backToTop": "Back to top",
-    "switchToOtherLocale": "Switch to Arabic"
+    "switchToOtherLocale": "Switch to Arabic",
+    "opensInNewTab": "Opens in a new tab"
   },
   "theme": {
     "light": "Light",
@@ -319,6 +320,13 @@
     "welcome": "Signed in as {email}",
     "signOut": "Sign out",
     "placeholder": "Modules arrive in the next milestone.",
+    "shell": {
+      "language": "Dashboard language",
+      "theme": "Dashboard appearance",
+      "account": "Account",
+      "viewSite": "View site",
+      "backToSite": "Back to the site"
+    },
     "nav": {
       "overview": "Overview",
       "content": "Content",

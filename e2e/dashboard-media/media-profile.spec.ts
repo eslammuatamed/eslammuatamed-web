@@ -63,6 +63,17 @@ const cards = (page: Page) => page.locator('[data-media-card]')
 const pageButton = (page: Page, n: number) =>
   page.locator('nav[data-slot=root] button').filter({ hasText: new RegExp(`^${n}$`) }).first()
 const card = (page: Page, id: string) => page.locator(`[data-media-id="${id}"]`)
+/**
+ * Drive the REAL application-language control (D02-15), not a cookie write and not a URL.
+ *
+ * Selected by `data-dashboard-locale`, per this file's rule that selection never goes through
+ * rendered copy — the button's visible text is exactly what these tests exist to check.
+ */
+async function switchDashboardLocale(page: Page, locale: 'en' | 'ar'): Promise<void> {
+  await page.locator(`[data-dashboard-locale="${locale}"]`).click()
+  await expect(page.locator(`[data-dashboard-locale="${locale}"]`)).toHaveAttribute('aria-current', 'true')
+}
+
 const altInput = (page: Page, locale: 'en' | 'ar') => page.locator(`[data-portrait-alt="${locale}"] input, input[data-portrait-alt="${locale}"]`).first()
 
 /** A tiny but genuinely valid PNG, so the upload path carries real bytes rather than a text blob. */
@@ -470,45 +481,85 @@ test.describe('navigation and RTL', () => {
     await expect(page).toHaveURL(/\/dashboard\/profile$/)
   })
 
-  test('the Arabic route renders RTL, and the Arabic alt field stays RTL in either UI language', async ({ page }) => {
-    // Doc 02 §8 makes dashboard CHROME English-only a governed non-goal; what must hold in `ar` is
-    // that the document direction is correct and the bilingual CONTENT fields keep their own
-    // direction. An RTL string in an LTR-forced box renders its punctuation in the wrong place.
+  test('switching the dashboard language flips the shell to RTL, while each alt field keeps its own direction', async ({ page }) => {
+    // ⚠ THIS TEST USED TO NAVIGATE TO `/ar/dashboard/profile`. That route no longer exists (D04-7):
+    // it was a by-product of the PUBLIC `prefix_except_default` strategy, it rendered raw i18n key
+    // paths, and OD-11 removed it in favour of a persisted application locale. The behaviour under
+    // test is unchanged and the assertions are stronger — they now exercise the control an operator
+    // actually uses instead of a URL nobody was meant to type.
+    //
+    // `<html dir>` is NOT asserted, and that is the decision rather than an omission: `<html lang
+    // dir>` is owned solely by @nuxtjs/i18n under strict SEO (D22-7), and the dashboard deliberately
+    // does not compete for it (D11-8). Direction lives on the dashboard shell root instead.
     await setBackendState(page, { portraitAssetId: ASSET.portrait })
     await signIn(page)
-
-    await page.goto('/ar/dashboard/profile')
+    await page.goto('/dashboard/profile')
     await settled(page)
-    await expect(page.locator('html')).toHaveAttribute('dir', 'rtl')
+
+    const shell = page.locator('[dir]').first()
+    await expect(shell).toHaveAttribute('dir', 'ltr')
     await expect(altInput(page, 'ar')).toHaveAttribute('dir', 'rtl')
     await expect(altInput(page, 'en')).toHaveAttribute('dir', 'ltr')
 
-    await page.goto('/dashboard/profile')
-    await settled(page)
-    await expect(page.locator('html')).toHaveAttribute('dir', 'ltr')
-    // The Arabic field is Arabic text even while the dashboard is in English.
+    await switchDashboardLocale(page, 'ar')
+
+    // The URL must NOT move. A language switch that navigates would remount the editor and discard
+    // unsaved translation state, which D02-15 forbids in as many words.
+    await expect(page).toHaveURL(/\/dashboard\/profile$/)
+    await expect(shell).toHaveAttribute('dir', 'rtl')
+    await expect(shell).toHaveAttribute('lang', 'ar')
+
+    // Field direction is INDEPENDENT of chrome direction (doc 11 §6): editing English copy inside an
+    // Arabic dashboard must still render that field LTR.
     await expect(altInput(page, 'ar')).toHaveAttribute('dir', 'rtl')
+    await expect(altInput(page, 'en')).toHaveAttribute('dir', 'ltr')
   })
 
-  test('the Arabic media route renders RTL and still lists the library', async ({ page }) => {
+  test('the Arabic dashboard renders Arabic chrome on a COLD load, not only after a toggle', async ({ page, context, baseURL }) => {
+    // THE DISCRIMINATING VERSION OF THE OBVIOUS TEST. Locale messages are code-split, so the shell
+    // can render before `ar.json` arrives and paint raw key paths — silently, because a missing
+    // message is not an error. A test that loads in English and then toggles never enters that
+    // state, and would pass with the layout's `await ensureMessages()` deleted. Presetting the
+    // cookie BEFORE the first paint is what makes this test able to fail.
+    // `baseURL`, not a hard-coded origin: this lane runs on its own port (playwright.config.ts), and
+    // a cookie scoped to the wrong origin is simply never sent — the test would then silently
+    // measure an English cold load and pass.
+    await context.addCookies([{ name: 'dashboard_locale', value: 'ar', url: baseURL as string }])
     await signIn(page)
-    await page.goto('/ar/dashboard/media')
+    await page.goto('/dashboard/media')
     await settled(page)
-    await expect(page.locator('html')).toHaveAttribute('dir', 'rtl')
+
+    await expect(page.locator('[dir]').first()).toHaveAttribute('dir', 'rtl')
+
+    // Asserted as ABSENCE OF KEY PATHS rather than presence of a translation, so a copy edit cannot
+    // turn this red — the failure it guards is `dashboard.media.title` rendering as itself.
+    await expect(page.locator('body')).not.toContainText(/dashboard\.[a-z]+\.[a-zA-Z]+/)
+
+    // ...and the page still works in Arabic. A shell that is RTL and empty would satisfy everything
+    // above; the grid count is what proves the module rendered.
     await expect(cards(page)).toHaveCount(12)
   })
 
-  // NO ASSERTION HERE ON THE ARABIC CHROME STRINGS, deliberately.
-  //
-  // `ar.json` carries no `dashboard.*` keys beyond the four shell ones (doc 02 §8 lists dashboard
-  // localization as a non-goal), and there is no `fallbackLocale`, so vue-i18n renders the KEY PATH:
-  // `/ar/dashboard/media` shows `dashboard.media.title`. That is NOT introduced here — the untouched
-  // Inbox shows `dashboard.messages.title` and the shared sidebar shows `dashboard.nav.messages`,
-  // both measured. See `evidence/m4-a/agent1/ar-dashboard-chrome-finding.md`.
-  //
-  // It is left unasserted rather than pinned: a test that locks in broken output makes the defect
-  // permanent, and every candidate fix (a global `fallbackLocale`, full Arabic chrome, or excluding
-  // `/dashboard/**` from localized routing) is a governed decision outside this lane. What IS
-  // asserted above is everything this lane owns and the M4 flow depends on — RTL document direction,
-  // a working grid under `/ar`, and the per-field direction of the bilingual alt inputs.
+  test('switching the dashboard language preserves unsaved edits in BOTH locale fields', async ({ page }) => {
+    // Distinct code path from a TAB switch, and neither substitutes for the other: this one touches
+    // the shell, the tab test touches the form. D02-15: "Changing the Dashboard locale must NOT
+    // discard unsaved translation state."
+    await setBackendState(page, { portraitAssetId: ASSET.portrait })
+    await signIn(page)
+    await page.goto('/dashboard/profile')
+    await settled(page)
+
+    await altInput(page, 'en').fill('An unsaved English description')
+    await altInput(page, 'ar').fill('وصف عربي غير محفوظ')
+
+    await switchDashboardLocale(page, 'ar')
+
+    await expect(altInput(page, 'en')).toHaveValue('An unsaved English description')
+    await expect(altInput(page, 'ar')).toHaveValue('وصف عربي غير محفوظ')
+
+    // And back again — a switch that survives one direction but not the other is still broken.
+    await switchDashboardLocale(page, 'en')
+    await expect(altInput(page, 'en')).toHaveValue('An unsaved English description')
+    await expect(altInput(page, 'ar')).toHaveValue('وصف عربي غير محفوظ')
+  })
 })

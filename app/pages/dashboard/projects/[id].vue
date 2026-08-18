@@ -7,9 +7,13 @@
  * router. A repeated parameter arrives as an array from Vue Router; the first entry is taken so a
  * hand-edited address cannot produce `[object Object]` in a request path.
  */
+// No locale-prefixed twin of this route (D04-7) — the dashboard is bilingual through a persisted
+// application locale, not through the URL. Rationale in `~/utils/dashboard-locale`.
+defineI18nRoute(false)
+
 definePageMeta({ layout: 'dashboard', middleware: 'auth' })
 
-const { t } = useI18n()
+const { t } = useDashboardI18n()
 const route = useRoute()
 
 const id = computed(() => {

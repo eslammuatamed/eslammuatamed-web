@@ -93,7 +93,7 @@
         عرض Markdown ─────────────► /api/prose (Nitro، SSR فقط)
 ```
 
-عزل العالمين مفروض **آليًّا**: `routeRules` تجعل `/dashboard/**` و`/ar/dashboard/**` بـ `ssr:false`؛ وقاعدة ESLint تمنع الكود العام من استيراد أي وحدة `dashboard/**`؛ وفحص البناء `check-forbidden-modules` يمنع تسرّب المحرّر/العارض إلى حزم العميل العامّة.
+عزل العالمين مفروض **آليًّا**: `routeRules` تجعل `/dashboard/**` بـ `ssr:false` (ولا وجود لـ `/ar/dashboard/**` — انظر D04-7)؛ وقاعدة ESLint تمنع الكود العام من استيراد أي وحدة `dashboard/**`؛ وفحص البناء `check-forbidden-modules` يمنع تسرّب المحرّر/العارض إلى حزم العميل العامّة.
 
 خريطة المجلدات المعنيّة (لكلٍّ `README.md` مفصّل):
 

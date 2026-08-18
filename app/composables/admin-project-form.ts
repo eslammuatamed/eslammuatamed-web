@@ -28,7 +28,10 @@ import type {
  *    blocks the save and names the empty fields instead of quietly discarding what was typed.
  */
 
-/** The two authored locales (D04-2). The dashboard itself is English-only; these are CONTENT locales. */
+/**
+ * The two authored locales (D04-2). These are CONTENT locales — independent of the dashboard's own
+ * chrome language, which is a separate persisted preference (D02-15).
+ */
 export const PROJECT_LOCALES = ['en', 'ar'] as const
 export type ProjectLocale = (typeof PROJECT_LOCALES)[number]
 

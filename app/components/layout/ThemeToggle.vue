@@ -5,6 +5,18 @@
 const { t } = useI18n()
 const colorMode = useColorMode()
 
+/**
+ * `label` exists for the DASHBOARD, which has its own application locale (D11-8).
+ *
+ * This component is shared between both worlds, and `useI18n()` resolves against the ROUTE-derived
+ * public locale — always English on an unprefixed `/dashboard/**` route (D04-7). Left to itself it
+ * would announce an English "Toggle theme" inside an Arabic dashboard: invisible on screen, wrong in
+ * a screen reader, and caught by nothing. The dashboard passes its own translated label instead of
+ * this component growing a second locale source. Public callers pass nothing and are unchanged.
+ */
+const props = defineProps<{ label?: string }>()
+const ariaLabel = computed(() => props.label ?? t('a11y.toggleTheme'))
+
 const isDark = computed({
   get: () => colorMode.value === 'dark',
   set: (value) => {
@@ -25,7 +37,7 @@ function toggleTheme(): void {
       :icon="isDark ? 'i-lucide-moon' : 'i-lucide-sun'"
       color="neutral"
       variant="ghost"
-      :aria-label="t('a11y.toggleTheme')"
+      :aria-label="ariaLabel"
       @click="toggleTheme"
     />
     <template #fallback>

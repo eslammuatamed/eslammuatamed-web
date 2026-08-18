@@ -41,7 +41,7 @@ const props = defineProps<{
   id: string | null
 }>()
 
-const { t } = useI18n()
+const { t } = useDashboardI18n()
 const router = useRouter()
 const editor = useAdminProject()
 const { project, pending, forbidden, notFound, failed } = editor

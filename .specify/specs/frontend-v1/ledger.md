@@ -100,6 +100,67 @@ failed (a trailing `echo`/`tee` masked it). Always read the explicit `*_EXIT=` l
 
 ---
 
+### FE-2a — bilingual Dashboard architecture
+
+| Gate | Result |
+| --- | --- |
+| `npm run typecheck` | **exit 0** |
+| `npm run lint` | **exit 0** |
+| `npm test` | **exit 0** — 107 files, **1534/1534** (1501 before; +33 new) |
+| `npm run typecheck:e2e` | **exit 0** |
+| `node scripts/check-logical-properties.mjs` | **exit 0** |
+| `npm run build` | **exit 0** |
+
+**Three gates, each positive-controlled before it was trusted.** Every one of them guards a failure
+that is SILENT in production — untranslated chrome renders English or a raw key path, and nothing
+throws. A gate for a silent failure that has never been seen to fail is indistinguishable from a
+gate that does not work.
+
+| Gate | Mutation | Mutated | Reverted (SHA256 verified identical) |
+| --- | --- | --- | --- |
+| ESLint `eslammuatamed/dashboard-localization` | `media.vue` back to `useI18n()` | **exit 1**, named the file and the rule | **exit 0**, `77241ca4…` unchanged |
+| `check-logical-properties` (new `side` literal rule) | drawer pinned to `side="left"` | **exit 1** | **exit 0**, `0a19ea26…` unchanged |
+| `useDashboardI18n.spec.ts` | dropped `{ locale }` from the `t` wrapper | **1 failed / 3 passed** | **4 passed**, `049645b1…` unchanged |
+
+**The parity gate needed no synthetic control — it failed naturally first.** `i18n/locale-parity.spec.ts`
+was written before the Arabic copy existed and reported all **306** missing keys by name. Same
+discriminating evidence as FE-1's contract-fixtures gate.
+
+**`/ar/dashboard/**` is gone, measured rather than assumed.** Localized routes carry a `___<locale>`
+name suffix, so the built server chunks were read for them:
+
+```
+about___ar  about___en  blog___ar  blog___en  blog-slug___ar  blog-slug___en
+contact___ar  contact___en  experience___ar  experience___en  index___ar  index___en
+preview-articles-id___ar  …  projects___ar  projects___en  resume___ar  resume___en
+```
+
+Every public page appears twice — **that is the positive control, in the same reading**: the
+instrument is live. No dashboard route appears with either suffix, while all eight still exist
+unprefixed (`dashboard`, `dashboard-login`, `dashboard-media`, `dashboard-messages`,
+`dashboard-profile`, `dashboard-projects`, `dashboard-projects-id`, `dashboard-projects-new`).
+
+**A superseded test caught by the suite, not by a sweep.** `useMessages.spec.ts` asserted
+*"adds NO dashboard.messages or dashboard.nav keys to ar.json"* — a correct guard for the
+English-only decision, protecting it from being "fixed" by someone mistaking it for a parity gap. It
+is **inverted, not deleted**, and its header records what it used to enforce and why. Two further
+premises retired the same way rather than quietly edited: `skillLabel()` and the projects-list
+`rowTitle()` both hard-coded `en` *because the chrome was English-only* — both now follow the
+operator's language, with the same fallback shapes.
+
+**One defect this phase introduced and fixed before it shipped.** `login.vue` built its Zod schema
+once in `setup`, justified by a comment reading *"a locale switch is a route change that remounts
+this page"*. True when written; OD-11 made it false, because the dashboard switch is deliberately
+state and not navigation. Left alone, validation messages would have stayed in the load-time
+language while everything around them changed. Now a `computed`.
+
+**Exit-code note, again.** A backgrounded `npm run build` was reported by the harness as **exit 0**
+while the underlying build had **failed** on a missing `NUXT_PUBLIC_SITE_URL` — a trailing `tee`
+masked it. The explicit `BUILD_EXIT=` line in the log is what showed it. Read the recorded exit
+code, never the wrapper's.
+
+---
+
 ## 6. Known risks carried
 
 | # | Risk |

@@ -68,22 +68,30 @@ describe('pagination constant', () => {
 })
 
 /**
- * The English-only boundary (owner decision 10), enforced rather than merely intended.
+ * The Inbox's copy contract.
  *
- * There is no whole-file EN/AR parity gate in this repository — parity is asserted per page spec
- * over that page's OWNED namespaces — so English-only dashboard keys break nothing and no public
- * parity check is weakened. This test states the boundary explicitly so the decision cannot be
- * quietly reversed by someone "fixing" a perceived parity gap with machine-translated chrome.
+ * ⚠ THIS BLOCK USED TO ENFORCE THE OPPOSITE. It was titled "dashboard copy is English-only by
+ * decision" and asserted that `ar.json` carried NO `dashboard.messages` or `dashboard.nav` keys —
+ * a correct guard at the time, protecting a governed decision from being "fixed" by someone
+ * mistaking it for a parity gap. Owner decision **OD-11 (D02-15)** reverses that decision, so the
+ * guard is inverted rather than deleted: the Inbox namespace must now be translated, and a
+ * regression that drops the Arabic copy has to fail somewhere.
+ *
+ * Whole-catalogue parity now lives in `i18n/locale-parity.spec.ts`, which did not exist while
+ * dashboard chrome was English-only. What stays here is what is specific to THIS module: the keys
+ * the Inbox actually consumes, the exact owner-specified retention sentence, and the two retired
+ * key sets that must not come back.
  */
-describe('dashboard copy is English-only by decision', () => {
+describe('the Inbox copy contract', () => {
   const localeFile = (code: string) =>
     JSON.parse(readFileSync(resolve(process.cwd(), `i18n/locales/${code}.json`), 'utf8')) as Record<string, Record<string, unknown>>
 
+  const INBOX_KEYS = ['title', 'view', 'column', 'status', 'detail', 'actions', 'retentionNotice', 'staleSelection', 'forbiddenTitle', 'offlineTitle'] as const
+
   it('every key the Inbox uses exists in en.json', () => {
-    const en = localeFile('en')
-    const messages = en.dashboard?.messages as Record<string, unknown> | undefined
+    const messages = localeFile('en').dashboard?.messages as Record<string, unknown> | undefined
     expect(messages).toBeDefined()
-    for (const key of ['title', 'view', 'column', 'status', 'detail', 'actions', 'retentionNotice', 'staleSelection', 'forbiddenTitle', 'offlineTitle']) {
+    for (const key of INBOX_KEYS) {
       expect(messages).toHaveProperty(key)
     }
   })
@@ -94,10 +102,19 @@ describe('dashboard copy is English-only by decision', () => {
       .toBe('Archived messages are retained for 12 months from the date they were archived.')
   })
 
-  it('adds NO dashboard.messages or dashboard.nav keys to ar.json', () => {
-    const ar = localeFile('ar').dashboard ?? {}
-    expect(ar).not.toHaveProperty('messages')
-    expect(ar).not.toHaveProperty('nav')
+  it('translates every Inbox key the page consumes into ar.json', () => {
+    // The inverse of the assertion this replaced. Asserted on the SAME key list the English test
+    // above uses, so the two cannot drift: adding a key to one list without the other is what
+    // produces a raw `dashboard.messages.…` key path on screen (D02-15).
+    const messages = localeFile('ar').dashboard?.messages as Record<string, unknown> | undefined
+    expect(messages).toBeDefined()
+    for (const key of INBOX_KEYS) {
+      expect(messages).toHaveProperty(key)
+    }
+
+    // The shell namespace too: the sidebar renders on every dashboard route, so an untranslated
+    // `dashboard.nav` leaks key paths into every module rather than only this one.
+    expect(localeFile('ar').dashboard).toHaveProperty('nav')
   })
 
   it('does not carry the retired archiveConfirm keys in either locale', () => {

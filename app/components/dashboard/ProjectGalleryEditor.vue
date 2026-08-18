@@ -25,7 +25,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{ 'update:modelValue': [value: ProjectGalleryItemForm[]] }>()
 
-const { t } = useI18n()
+const { t } = useDashboardI18n()
 
 function replace(next: ProjectGalleryItemForm[]): void {
   emit('update:modelValue', next)

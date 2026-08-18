@@ -45,9 +45,13 @@ import {
  * gated by the readiness state (`portrait-alt-missing`, D18-7). This is the authoring surface, so
  * this is where "you have not finished this" belongs.
  */
+// No locale-prefixed twin of this route (D04-7) — the dashboard is bilingual through a persisted
+// application locale, not through the URL. Rationale in `~/utils/dashboard-locale`.
+defineI18nRoute(false)
+
 definePageMeta({ layout: 'dashboard', middleware: 'auth' })
 
-const { t } = useI18n()
+const { t } = useDashboardI18n()
 const admin = useAdminSettings()
 const { settings, pending, forbidden, failed } = admin
 
@@ -310,9 +314,10 @@ async function saveResume(): Promise<void> {
             <label :for="`portrait-alt-${altLocale}`" class="text-sm font-medium text-highlighted">
               {{ t(`dashboard.profile.portrait.altLabel.${altLocale}`) }}
             </label>
-            <!-- `dir` is pinned PER FIELD, not inherited from the UI locale: the Arabic alt is Arabic
-                 text even while the dashboard is in English, and an RTL string in an LTR-forced box
-                 renders its punctuation in the wrong place. -->
+            <!-- `dir` is pinned PER FIELD, not inherited from the chrome: the Arabic alt is Arabic
+                 text inside an English dashboard, and the English alt is English text inside an
+                 Arabic one (doc 11 §6). An RTL string in an LTR-forced box renders its punctuation
+                 in the wrong place. -->
             <UInput
               :id="`portrait-alt-${altLocale}`"
               :model-value="form.alt[altLocale]"

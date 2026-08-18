@@ -20,7 +20,7 @@ defineProps<{
   onNavigate?: () => void
 }>()
 
-const { t } = useI18n()
+const { t } = useDashboardI18n()
 const route = useRoute()
 </script>
 

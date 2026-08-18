@@ -1,8 +1,12 @@
 <script setup lang="ts">
 // Placeholder overview behind the auth guard (doc 04 §1). Modules land in feature 002.
+// No locale-prefixed twin of this route (D04-7) — the dashboard is bilingual through a persisted
+// application locale, not through the URL. Rationale in `~/utils/dashboard-locale`.
+defineI18nRoute(false)
+
 definePageMeta({ layout: 'dashboard', middleware: 'auth' })
 
-const { t } = useI18n()
+const { t } = useDashboardI18n()
 const auth = useAuthStore()
 
 useHead({ title: () => t('dashboard.title') })

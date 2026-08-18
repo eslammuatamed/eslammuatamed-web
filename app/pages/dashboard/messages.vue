@@ -12,9 +12,13 @@ import { parseMessagesQuery } from '~/utils/messages-query'
  * Back/Forward, deep links and reload correct without any manual synchronisation, because history
  * navigation changes the query and the UI simply follows.
  */
+// No locale-prefixed twin of this route (D04-7) — the dashboard is bilingual through a persisted
+// application locale, not through the URL. Rationale in `~/utils/dashboard-locale`.
+defineI18nRoute(false)
+
 definePageMeta({ layout: 'dashboard', middleware: 'auth' })
 
-const { t, locale } = useI18n()
+const { t, locale } = useDashboardI18n()
 const route = useRoute()
 const router = useRouter()
 const { items, total, totalPages, pending, forbidden, failed, load, patch } = useMessages()
