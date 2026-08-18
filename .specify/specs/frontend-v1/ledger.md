@@ -67,6 +67,7 @@ git -C /home/eslam-muatamed/worktrees/web-026-phase8 fetch origin && git rev-par
 | ~~**OD-10**~~ | ~~Dashboard shell is fully localized EN/AR.~~ **Withdrawn as an inference, then RE-ESTABLISHED as an owner decision.** It was originally inferred from "locale control in the header" before doc 02 §9 / doc 04 §1 were found, and withdrawn for that reason. The owner has since chosen exactly it, deliberately and with the cost visible, as **OD-11 option B**. **Cite OD-11, never this row** — the conclusion is the same but only one of them is authority. |
 | **OD-3 (plan §12)** | **RESOLVED 2026-08-18 — the article `body` ships as a plain Markdown textarea.** Tiptap/ProseMirror is NOT introduced in FE-2c. ⚠ **Numbering collision, stated so nobody conflates them:** *this* OD-3 is plan §12's "Confirm Tiptap"; the **OD-3** in this section's row above ("Backend/API is complete") is a different scheme with the same label — the same trap §14.8 records for OD-10. The rich-editor requirement is **NOT dropped from v1**: it is recorded as a separate governed unit in §9.2 with the questions it must answer first. |
 | **OD-11** | **RESOLVED 2026-08-18 — option B. The Dashboard ships fully localized EN/AR.** The header control is a real **application-language** switcher. Dashboard routes stay **unprefixed**; the application locale is a persisted preference, independent of route structure. It drives chrome language, shell direction, and the default active translation tab. Changing it must **not** discard unsaved translation state. Governing record: docs **D02-15** (scope), **D04-7** (routing), **D11-8** (architecture), doc 18 §3 (coverage) — Docs commit `3b607af`, branch `docs/od-11-dashboard-localization`, **local-only** (R10). |
+| **OD-12** | **RESOLVED 2026-08-18 — FE-3 runs HYBRID, and the split is by kind of work, not by volume.** Module 1 (**Experiences**) is built **in-house**: it is not replication, it is the **second consumer** that proves, rejects or refines the four abstractions §10.2 deliberately declined, and that is judgement against an unestablished pattern. Codex delegation is **authorized** for modules 2–5 **only after Articles + Experiences have established the pattern**, and only as bounded, disjoint lanes. Non-delegable and retained here regardless: **architecture, integration, review, the authoritative tests/gates, and rejecting incorrect delegated work.** ⚠ Binding constraint on every delegated lane: **a lane must not invent a competing shared abstraction.** A lane that needs a pattern the shared set does not provide escalates it — plan §6's rule ("extend the shared pattern, not fork it") is the lane contract, not advice. |
 | **UX** | Multilingual authoring: shared fields once + locale tabs; preserved unsaved state; validation visible across inactive tabs; correct RTL/LTR; 380px. |
 | **UX** | Dashboard shell needs a locale control, appearance control, obvious **View/Open Portfolio**, contextual **View-on-site** where a real public destination exists. The locale control switches the **chrome language** (OD-11 option B) — settled, no longer contingent. |
 | **UX** | `/dashboard/login` gets a full product-quality redesign — Nuxt UI + standard Zod, obvious way back to the public site. **Bilingual under OD-11**: it carries the same language control and appearance control, localized labels/errors/actions, and correct RTL/LTR composition. |
@@ -1019,10 +1020,18 @@ untouched, and `npm run test:e2e:sharded` bounds the full suite to 4 pairs as an
 
 **Next three actions:**
 
-1. **Answer the delegation question, then start the first FE-3 module.** It is the SECOND CONSUMER —
-   §10.2 declined four extractions for want of one, so `TranslationTabs`, `EntityFormLayout`,
-   `useTranslatableForm` and `usePublicEntityLink` become provable *then*, against two real shapes.
-   Adding its e2e lane is now one record in `scripts/e2e/lanes.ts`.
+1. ~~**Answer the delegation question**~~ **— DONE, OD-12.** **Build FE-3 module 1 = `experiences`,
+   in-house.** It is the SECOND CONSUMER — §10.2 declined four extractions for want of one, so
+   `TranslationTabs`, `EntityFormLayout`, `useTranslatableForm` and `usePublicEntityLink` become
+   provable *then*, against two real shapes. Adding its e2e lane is now one record in
+   `scripts/e2e/lanes.ts`. **Why `experiences` and not another of the five:** it is the richest
+   translation-bearing shape among experiences / skills / testimonials / categories / tags, and it has
+   a real public destination (`/experience`) — the two properties the declined extractions need in
+   order to be *proved* rather than merely *reused*. Categories/tags is the weakest second consumer
+   (name + slug, taxonomy rather than authoring) and would leave all four abstractions unproven.
+   ⚠ Expect `usePublicEntityLink` to be the one that does NOT generalize cleanly: Articles resolve to a
+   per-entity URL (`/blog/{slug}`), experiences to a page-level destination. That asymmetry is a
+   finding to record, not a defect to paper over.
 2. **Carry the two §10.3 rules that bind before any code is written:** keep the per-module
    `*-fields.ts` split (worth 6,211 B on a collection route), and get a **governed cap** for each new
    dashboard route before it ships (D20-33 is the worked example). Watch **R13** — 29.19 / 30.00 KB
@@ -1056,10 +1065,14 @@ it would do next.)*
    dashboard route needs a **governed cap** before it ships (D20-33 is the worked example). Watch
    **R13** — 29.19 / 30.00 KB gz, ~0.81 KB headroom; two modules of Articles' size exhaust it.
 
-**Open before the modules start, owner's call, not mine:** plan §6 calls FE-3 the strongest Codex
-delegation fit in the campaign (five structurally similar modules, fixed contract, disjoint lanes).
-Nothing about R14 is delegable — it is judgement against an invariant — so the question can wait
-until action 3, but it should be answered before the first module rather than during it.
+**~~Open before the modules start, owner's call, not mine~~ — ANSWERED 2026-08-18 as OD-12 (§3).**
+Plan §6 called FE-3 the strongest Codex delegation fit in the campaign (five structurally similar
+modules, fixed contract, disjoint lanes). The owner's answer keeps that fit but gates it on the
+condition plan §6 itself names — *an established pattern*. Module 1 is built in-house because it is
+the second consumer, not a replication; delegation opens for modules 2–5 once Articles + Experiences
+have proven the shape. Architecture, integration, review and the authoritative gates stay here, and no
+delegated lane may invent a competing shared abstraction. Nothing about R14 was ever delegable — it is
+judgement against an invariant.
 
 ### Where FE-2c picked up — the §14.6 EXTRACTION PASS
 
