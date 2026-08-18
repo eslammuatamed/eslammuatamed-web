@@ -781,6 +781,12 @@ export const DASHBOARD_APP_OWNED_CAP_BYTES = {
   // a failing route — the measured route fits the model with 13,384 B to spare. If an editor route
   // later cannot meet it, the cause is attributed and escalated; the cap is not silently raised.
   '/dashboard/articles': 100 * KB,
+  // INHERITED under D20-33, not derived: the decision governs the module's three routes together
+  // at one cap, because the editor surfaces were expected to share the collection's architecture
+  // and delivery profile. No baseline is recorded for them, because inventing one would be a
+  // fiction — the same reason the three D20-23 routes carry none.
+  '/dashboard/articles/new': 100 * KB,
+  '/dashboard/articles/00000000-0000-0000-0000-000000000000': 100 * KB,
   '/dashboard/media': 108 * KB,
   '/dashboard/profile': 121 * KB,
   '/dashboard/projects': 107 * KB,

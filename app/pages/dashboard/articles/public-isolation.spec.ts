@@ -32,7 +32,10 @@ const MODULE_FILES = [
   'composables/admin-article-types.ts',
   'composables/admin-articles-query.ts',
   'composables/useAdminArticles.ts',
-  'pages/dashboard/articles/index.vue'
+  'components/dashboard/ArticleEditor.vue',
+  'pages/dashboard/articles/index.vue',
+  'pages/dashboard/articles/new.vue',
+  'pages/dashboard/articles/[id].vue'
 ]
 
 /**
@@ -70,7 +73,11 @@ const FORBIDDEN_REFERENCES = [
   'articleHasTranslation',
   'articleIsPubliclyVisible',
   'articleStatusColor',
-  'ARTICLE_LOCALES'
+  'ARTICLE_LOCALES',
+  // The auto-imported component tag, in both spellings a template may use. A public page could
+  // render the whole editor with no import statement at all.
+  'DashboardArticleEditor',
+  'dashboard-article-editor'
 ]
 
 function sourceFiles(dir: string): string[] {

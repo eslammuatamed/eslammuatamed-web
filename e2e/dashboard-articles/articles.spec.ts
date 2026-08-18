@@ -369,3 +369,354 @@ test.describe('accessibility, direction and 380px', () => {
     expect(await arabicSlug.innerText()).toMatch(ARABIC)
   })
 })
+
+/* ══════════════════════════════════════════════════════════════════════════════════════════════
+   THE EDITOR — §14.9 criteria 3, 4 and 5, plus the §14.1 multilingual contract
+   ══════════════════════════════════════════════════════════════════════════════════════════════ */
+
+const DRAFT_ID = '00000000-0000-4000-a000-000000000002'
+const PUBLISHED_BOTH_ID = '00000000-0000-4000-a000-000000000001'
+const EN_ONLY_ID = '00000000-0000-4000-a000-000000000003'
+/** The Arabic slug fixture `articles-server.ts` already owns, so a collision can be provoked. */
+const TAKEN_AR = 'الهندسة-المعمارية-المعيارية'
+
+const tab = (page: import('@playwright/test').Page, locale: 'en' | 'ar') =>
+  page.locator('[data-editor-tabs]').getByRole('tab').nth(locale === 'en' ? 0 : 1)
+
+async function openEditor(
+  page: import('@playwright/test').Page,
+  baseURL: string,
+  path: string,
+  locale: 'en' | 'ar' = 'en'
+): Promise<void> {
+  await signIn(page, locale, baseURL)
+  await page.goto(path)
+  await hydrated(page)
+}
+
+test.describe('§14.9 criterion 3 — the editor never shows blank fields before the entity resolves', () => {
+  test('renders a loading state, not an empty form, while the article is in flight', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL as string)
+    await setBackendState(page, { delayMs: 2500 })
+    await page.goto(`/dashboard/articles/${DRAFT_ID}`)
+    await hydrated(page)
+
+    await expect(page.locator('[data-editor-loading]')).toBeVisible()
+    // THE ASSERTION THAT MATTERS. A blank editable field here invites the operator to type over
+    // content that has not arrived, and then to save nothing over something real.
+    await expect(page.locator('[data-editor-title="en"]'), 'no editable title before data lands').toHaveCount(0)
+    await expect(page.locator('[data-editor-body="en"]')).toHaveCount(0)
+    await expect(page.locator('[data-editor-save]'), 'and no save control to press').toHaveCount(0)
+
+    await setBackendState(page, { delayMs: 0 })
+    await expect(page.locator('[data-editor-title="en"]')).toBeVisible({ timeout: 15_000 })
+    await expect(page.locator('[data-editor-title="en"]')).toHaveValue(/Draft/)
+  })
+
+  test('an absent article says so, rather than offering an empty form', async ({ page, baseURL }) => {
+    await openEditor(page, baseURL as string, '/dashboard/articles/00000000-0000-4000-a000-0000000000ff')
+    await expect(page.locator('[data-editor-unreadable]')).toBeVisible()
+    await expect(page.locator('[data-editor-title="en"]')).toHaveCount(0)
+  })
+})
+
+test.describe('§14.1 — multilingual authoring', () => {
+  test('shared fields appear ONCE, outside the tabs', async ({ page, baseURL }) => {
+    await openEditor(page, baseURL as string, `/dashboard/articles/${DRAFT_ID}`)
+    // Article-level fields are not per-locale, so exactly one control each.
+    await expect(page.locator('[data-editor-status]')).toHaveCount(1)
+    await expect(page.locator('[data-editor-category]')).toHaveCount(1)
+    await expect(page.locator('[data-editor-publish-at]')).toHaveCount(1)
+    // Translated fields exist per locale.
+    await expect(page.locator('[data-editor-title="en"]')).toHaveCount(1)
+    await expect(page.locator('[data-editor-title="ar"]')).toHaveCount(1)
+  })
+
+  test('switching tabs PRESERVES unsaved edits in both languages', async ({ page, baseURL }) => {
+    await openEditor(page, baseURL as string, `/dashboard/articles/${DRAFT_ID}`)
+
+    await page.locator('[data-editor-title="en"]').fill('English edit in flight')
+    await tab(page, 'ar').click()
+    await page.locator('[data-editor-title="ar"]').fill('تعديل عربي')
+    await tab(page, 'en').click()
+
+    await expect(
+      page.locator('[data-editor-title="en"]'),
+      'the English edit survived a round trip through the Arabic tab'
+    ).toHaveValue('English edit in flight')
+
+    await tab(page, 'ar').click()
+    await expect(page.locator('[data-editor-title="ar"]')).toHaveValue('تعديل عربي')
+  })
+
+  test('the tabs are REAL ARIA tabs, reachable and operable from the keyboard', async ({ page, baseURL }) => {
+    await openEditor(page, baseURL as string, `/dashboard/articles/${DRAFT_ID}`)
+    const tabs = page.locator('[data-editor-tabs]').getByRole('tab')
+    await expect(tabs).toHaveCount(2)
+
+    await tab(page, 'en').click()
+    await expect(tab(page, 'en')).toHaveAttribute('aria-selected', 'true')
+    // Arrow-key navigation is the tab pattern's contract, not a nicety.
+    await page.keyboard.press('ArrowRight')
+    await expect(tab(page, 'ar')).toHaveAttribute('aria-selected', 'true')
+  })
+
+  test('MIXED DIRECTION in one form — Arabic fields RTL, English fields LTR', async ({ page, baseURL }) => {
+    await openEditor(page, baseURL as string, `/dashboard/articles/${DRAFT_ID}`)
+    await expect(page.locator('[data-editor-panel="en"]')).toHaveAttribute('dir', 'ltr')
+    await expect(page.locator('[data-editor-panel="ar"]')).toHaveAttribute('dir', 'rtl')
+  })
+
+  test('the completeness indicator reads the real translation state', async ({ page, baseURL }) => {
+    await openEditor(page, baseURL as string, `/dashboard/articles/${EN_ONLY_ID}`)
+    await expect(page.locator('[data-editor-tab-fill="en:complete"]')).toBeVisible()
+    // This fixture has no Arabic at all, and the badge must say so rather than look complete.
+    await expect(page.locator('[data-editor-tab-fill="ar:empty"]')).toBeVisible()
+  })
+
+  test('the DASHBOARD locale seeds the initial tab (OD-9)', async ({ page, baseURL }) => {
+    await openEditor(page, baseURL as string, `/dashboard/articles/${DRAFT_ID}`, 'ar')
+    await expect(
+      tab(page, 'ar'),
+      'an Arabic dashboard opens on the Arabic tab'
+    ).toHaveAttribute('aria-selected', 'true')
+  })
+})
+
+test.describe('§14.9 criterion 4 — saving', () => {
+  test('the submitting state belongs to the ACTION, and a double click sends ONE request', async ({ page, baseURL }) => {
+    await openEditor(page, baseURL as string, `/dashboard/articles/${DRAFT_ID}`)
+    await page.locator('[data-editor-title="en"]').fill('A new heading')
+
+    let writes = 0
+    page.on('request', (request) => {
+      if (request.method() === 'PATCH' && request.url().includes('/admin/articles/')) writes += 1
+    })
+
+    // The write is HELD OPEN — the only condition under which a duplicate-submission guard is
+    // actually exercised. Against an instant backend the second click lands after the first has
+    // resolved and the test passes whether or not the guard exists.
+    await setBackendState(page, { delayMs: 1500 })
+    const save = page.locator('[data-editor-save]')
+    await save.click()
+
+    // Loading is on the action, not on a page-blocking screen: the rest of the form stays live.
+    await expect(save).toBeDisabled()
+    await expect(page.locator('[data-editor-title="en"]'), 'the form context is preserved').toBeVisible()
+
+    await save.click({ force: true }).catch(() => undefined)
+    await expect(save).toBeEnabled({ timeout: 15_000 })
+
+    expect(writes, 'a held save must not be submitted twice').toBe(1)
+    await expect(page.locator('[data-editor-save-state="saved"]')).toBeVisible()
+    await setBackendState(page, { delayMs: 0 })
+  })
+
+  test('a failed save keeps the operator\'s input on screen', async ({ page, baseURL }) => {
+    await openEditor(page, baseURL as string, `/dashboard/articles/${DRAFT_ID}`)
+    await page.locator('[data-editor-title="en"]').fill('Words worth keeping')
+    await setBackendState(page, { failNextWrite: true })
+
+    await page.locator('[data-editor-save]').click()
+    await expect(page.locator('[data-editor-save-error]')).toBeVisible()
+    // Discarding edits it cannot prove were stored is the one outcome a content editor must
+    // never produce.
+    await expect(page.locator('[data-editor-title="en"]')).toHaveValue('Words worth keeping')
+  })
+
+  test('creating an article lands on its own URL and stops being a create form', async ({ page, baseURL }) => {
+    await openEditor(page, baseURL as string, '/dashboard/articles/new')
+
+    await page.locator('[data-editor-category]').click()
+    await page.getByRole('option').first().click()
+    await page.locator('[data-editor-title="en"]').fill('A brand new article')
+    await page.locator('[data-editor-slug="en"]').fill('a-brand-new-article')
+    await page.locator('[data-editor-excerpt="en"]').fill('An excerpt.')
+    await page.locator('[data-editor-body="en"]').fill('# Body\n\nText.')
+
+    await page.locator('[data-editor-save]').click()
+    await page.waitForURL(/\/dashboard\/articles\/[0-9a-f-]{36}$/)
+    await expect(page.locator('[data-editor-title="en"]')).toHaveValue('A brand new article')
+    // A delete control only exists once there is something to delete.
+    await expect(page.locator('[data-editor-delete]')).toBeVisible()
+  })
+})
+
+/**
+ * THE MAPPING TEST §14.1 CALLS THE DISCRIMINATING ONE.
+ *
+ * Writes send `translations` as an ARRAY and the API answers `translations[N].slug`. The error is
+ * seeded in the INACTIVE locale on purpose: a hidden tab must never swallow it, and an
+ * implementation that assumed a fixed locale order would put an Arabic collision on the English tab
+ * — against a field that looks fine, with nothing the operator could act on.
+ */
+test.describe('§14.1 — a validation error in an INACTIVE locale tab', () => {
+  test('surfaces on the ARABIC tab, marks that tab invalid, and activates it', async ({ page, baseURL }) => {
+    // Opened in ENGLISH, so Arabic is the inactive tab when the error arrives.
+    await openEditor(page, baseURL as string, '/dashboard/articles/new', 'en')
+
+    await page.locator('[data-editor-category]').click()
+    await page.getByRole('option').first().click()
+
+    await page.locator('[data-editor-title="en"]').fill('Fine in English')
+    await page.locator('[data-editor-slug="en"]').fill('fine-in-english')
+    await page.locator('[data-editor-excerpt="en"]').fill('e')
+    await page.locator('[data-editor-body="en"]').fill('b')
+
+    // Arabic is complete but its slug is already taken — a REAL 422 from the store.
+    await tab(page, 'ar').click()
+    await page.locator('[data-editor-title="ar"]').fill('عنوان')
+    await page.locator('[data-editor-slug="ar"]').fill(TAKEN_AR)
+    await page.locator('[data-editor-excerpt="ar"]').fill('مقتطف')
+    await page.locator('[data-editor-body="ar"]').fill('نص')
+
+    // Back to English, so the offending locale is genuinely hidden at submit time.
+    await tab(page, 'en').click()
+    await expect(tab(page, 'en')).toHaveAttribute('aria-selected', 'true')
+
+    await page.locator('[data-editor-save]').click()
+
+    // The summary names the LANGUAGE, so the problem is discoverable without opening tabs.
+    const summary = page.locator('[data-editor-error-summary]')
+    await expect(summary).toBeVisible()
+
+    // The Arabic tab is marked invalid — and the English one is NOT.
+    await expect(page.locator('[data-editor-tab-invalid="ar"]')).toBeVisible()
+    await expect(
+      page.locator('[data-editor-tab-invalid="en"]'),
+      'the English tab is fine and must not be blamed'
+    ).toHaveCount(0)
+
+    // And the operator is taken to it.
+    await expect(tab(page, 'ar')).toHaveAttribute('aria-selected', 'true')
+    // The message is attached to the Arabic SLUG field, not to some other input.
+    await expect(page.locator('[data-editor-slug="ar"]')).toHaveAttribute('aria-invalid', 'true')
+    await expect(page.locator('[data-editor-slug="en"]')).not.toHaveAttribute('aria-invalid', 'true')
+  })
+
+  /**
+   * THE CASE THAT ACTUALLY DISCRIMINATES THE ORDERING, and it is reachable in the product.
+   *
+   * The test above sends BOTH locales, and `articlePayloadLocales` emits them in canonical order —
+   * so `translations[1]` is Arabic under a correct implementation AND under one that assumed the
+   * canonical order. It proves the wiring, not the ordering.
+   *
+   * An ARABIC-ONLY article is the discriminating shape: the payload carries one entry, so the API
+   * answers `translations[0].slug`, and index 0 is ARABIC. An implementation that resolved indices
+   * against the canonical locale list would attach that to the ENGLISH slug — a field the operator
+   * left deliberately empty, with the real problem invisible on the other tab.
+   */
+  test('an ARABIC-ONLY article maps translations[0] to ARABIC, not to English', async ({ page, baseURL }) => {
+    await openEditor(page, baseURL as string, '/dashboard/articles/new', 'en')
+
+    await page.locator('[data-editor-category]').click()
+    await page.getByRole('option').first().click()
+
+    // English is left entirely empty — so the payload has exactly ONE translation, the Arabic one.
+    await tab(page, 'ar').click()
+    await page.locator('[data-editor-title="ar"]').fill('عنوان عربي فقط')
+    await page.locator('[data-editor-slug="ar"]').fill(TAKEN_AR)
+    await page.locator('[data-editor-excerpt="ar"]').fill('مقتطف')
+    await page.locator('[data-editor-body="ar"]').fill('نص')
+
+    await page.locator('[data-editor-save]').click()
+
+    await expect(page.locator('[data-editor-error-summary]')).toBeVisible()
+    await expect(page.locator('[data-editor-slug="ar"]')).toHaveAttribute('aria-invalid', 'true')
+    await expect(
+      page.locator('[data-editor-slug="en"]'),
+      'the English slug was never written and must not be blamed'
+    ).not.toHaveAttribute('aria-invalid', 'true')
+    await expect(page.locator('[data-editor-tab-invalid="ar"]')).toBeVisible()
+    await expect(page.locator('[data-editor-tab-invalid="en"]')).toHaveCount(0)
+  })
+})
+
+test.describe('§14.9 criterion 5 — destructive action', () => {
+  test('needs a deliberate confirmation, and its loading is action-local', async ({ page, baseURL }) => {
+    await openEditor(page, baseURL as string, `/dashboard/articles/${DRAFT_ID}`)
+
+    // One click does not delete.
+    await page.locator('[data-editor-delete]').click()
+    await expect(page.locator('[data-editor-delete-confirm]')).toBeVisible()
+    await expect(page.locator('[data-editor-title="en"]'), 'the form is still live').toBeVisible()
+
+    // Backing out leaves the article alone.
+    await page.locator('[data-editor-delete-cancel]').click()
+    await expect(page.locator('[data-editor-delete-confirm]')).toHaveCount(0)
+
+    await page.locator('[data-editor-delete]').click()
+    await page.locator('[data-editor-delete-confirm]').click()
+    await page.waitForURL('**/dashboard/articles')
+    await listSettled(page)
+    // The row is really gone.
+    await expect(page.locator(`[data-article-row="${DRAFT_ID}"]`)).toHaveCount(0)
+  })
+})
+
+test.describe('§14.2 — the contextual public action', () => {
+  test('offers View on site for a published article, at the LOCALE-AWARE route', async ({ page, baseURL }) => {
+    await openEditor(page, baseURL as string, `/dashboard/articles/${PUBLISHED_BOTH_ID}`, 'en')
+    const link = page.locator('[data-editor-view-public]')
+    await expect(link).toBeVisible()
+    await expect(link).toHaveAttribute('href', '/blog/a-modular-monolith-in-practice')
+
+    // Switching to the Arabic tab points it at the ARABIC public route, not the English one.
+    await tab(page, 'ar').click()
+    await expect(link).toHaveAttribute('href', /^\/ar\/blog\//)
+  })
+
+  test('offers PREVIEW for a draft, and no public link', async ({ page, baseURL }) => {
+    await openEditor(page, baseURL as string, `/dashboard/articles/${DRAFT_ID}`)
+    await expect(page.locator('[data-editor-view-public]')).toHaveCount(0)
+    await expect(page.locator('[data-editor-preview]')).toBeVisible()
+  })
+
+  test('offers NEITHER for a published article in a language it does not have', async ({ page, baseURL }) => {
+    // PUBLISHED, but English-only. `GET /articles/{slug}` resolves per locale, so the Arabic route
+    // would 404 — and §14.2 forbids linking an operator to a 404.
+    await openEditor(page, baseURL as string, `/dashboard/articles/${EN_ONLY_ID}`, 'en')
+    await expect(page.locator('[data-editor-view-public]')).toBeVisible()
+
+    await tab(page, 'ar').click()
+    await expect(
+      page.locator('[data-editor-view-public]'),
+      'no public link for a language the article does not have'
+    ).toHaveCount(0)
+  })
+})
+
+test.describe('the editor in both languages, at 380px, with axe', () => {
+  for (const locale of ['en', 'ar'] as const) {
+    test(`${locale}: unfiltered axe scan reports no violations`, async ({ page, baseURL }) => {
+      await openEditor(page, baseURL as string, `/dashboard/articles/${DRAFT_ID}`, locale)
+      const results = await new AxeBuilder({ page }).analyze()
+      expect(results.violations).toEqual([])
+    })
+
+    test(`${locale}: does not overflow horizontally at 380px`, async ({ page, baseURL }) => {
+      await page.setViewportSize(NARROW)
+      await openEditor(page, baseURL as string, `/dashboard/articles/${DRAFT_ID}`, locale)
+      expect(await page.evaluate(() => window.innerWidth)).toBe(NARROW.width)
+      const overflow = await page.evaluate(() => ({
+        scrollWidth: document.documentElement.scrollWidth,
+        clientWidth: document.documentElement.clientWidth
+      }))
+      expect(
+        overflow.scrollWidth,
+        `the editor overflows at ${NARROW.width}px in ${locale}`
+      ).toBeLessThanOrEqual(overflow.clientWidth + 1)
+    })
+
+    test(`${locale}: the primary actions stay reachable, and no key path shows`, async ({ page, baseURL }) => {
+      await openEditor(page, baseURL as string, `/dashboard/articles/${DRAFT_ID}`, locale)
+      // Sticky, so Save is in reach from anywhere in a long article rather than only after
+      // scrolling past a 16-row body field. Scrolled by the DOCUMENT rather than to a named panel:
+      // in Arabic the initial tab is Arabic, so the English panel is hidden and cannot be scrolled
+      // to at all — the earlier version of this test timed out on exactly that.
+      await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight))
+      await expect(page.locator('[data-editor-save]')).toBeInViewport()
+      await expectNoKeyPaths(page)
+    })
+  }
+})

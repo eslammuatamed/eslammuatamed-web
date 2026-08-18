@@ -585,9 +585,33 @@ describe('dashboard app-owned caps — frozen, per route (D20-29)', () => {
     '/dashboard/projects/00000000-0000-0000-0000-000000000000'
   ]
 
-  it('governs exactly the nine routes doc 20 §1.1 names — no more, no fewer', () => {
+  /**
+   * D20-33's INHERITED caps — a third provenance class.
+   *
+   * The Articles editor routes are governed at the same 102,400 B as the collection, by decision,
+   * because they are one module expected to share its architecture and delivery profile. Their caps
+   * are NOT derived from baselines of their own, so they are deliberately absent from
+   * `DASHBOARD_APP_OWNED_BASELINE_BYTES` — for exactly the reason the three D20-23 routes are:
+   * recording a baseline nobody measured would be a fiction.
+   */
+  const D20_33_INHERITED_ROUTES = [
+    '/dashboard/articles/new',
+    '/dashboard/articles/00000000-0000-0000-0000-000000000000'
+  ]
+
+  it('governs exactly the eleven routes doc 20 §1.1 names — no more, no fewer', () => {
     expect(Object.keys(DASHBOARD_APP_OWNED_CAP_BYTES).sort())
-      .toEqual([...D20_23_ROUTES, ...D20_29_ROUTES].sort())
+      .toEqual([...D20_23_ROUTES, ...D20_29_ROUTES, ...D20_33_INHERITED_ROUTES].sort())
+  })
+
+  it('records NO baseline for an inherited cap, and pins it to the module cap', () => {
+    for (const route of D20_33_INHERITED_ROUTES) {
+      expect(DASHBOARD_APP_OWNED_CAP_BYTES[route]).toBe(102_400)
+      expect(
+        DASHBOARD_APP_OWNED_BASELINE_BYTES[route],
+        `${route} inherits its cap; a baseline here would be invented`
+      ).toBeUndefined()
+    }
   })
 
   it('pins every cap to the exact byte value doc 20 §1.1 publishes', () => {
@@ -598,6 +622,8 @@ describe('dashboard app-owned caps — frozen, per route (D20-29)', () => {
       '/dashboard': 103_424,
       '/dashboard/messages': 103_424,
       '/dashboard/articles': 102_400,
+      '/dashboard/articles/new': 102_400,
+      '/dashboard/articles/00000000-0000-0000-0000-000000000000': 102_400,
       '/dashboard/media': 110_592,
       '/dashboard/profile': 123_904,
       '/dashboard/projects': 109_568,
@@ -710,7 +736,7 @@ describe('assertGovernedRouteCoverage — both directions (D20-29)', () => {
     // (DASHBOARD_ROUTES) against the routes doc 20 GOVERNS. Comparing the cap map to itself would
     // be trivially true and would protect nothing.
     const measured = DASHBOARD_ROUTES.map(r => r.route)
-    expect(measured).toHaveLength(9)
+    expect(measured).toHaveLength(11)
     expect(() => assertGovernedRouteCoverage(measured)).not.toThrow()
   })
 
@@ -1005,9 +1031,13 @@ describe('D20-32 — resolveDashboardSharedFloor and its FROZEN reference set', 
       expect(governed, `${route} is a floor reference and must still be governed`).toContain(route)
     }
     expect(
-      governed.filter(route => !DASHBOARD_FLOOR_REFERENCE_ROUTES.includes(route)),
+      governed.filter(route => !DASHBOARD_FLOOR_REFERENCE_ROUTES.includes(route)).sort(),
       'a route governed AFTER calibration must not be in the frozen floor set'
-    ).toEqual(['/dashboard/articles'])
+    ).toEqual([
+      '/dashboard/articles',
+      '/dashboard/articles/00000000-0000-0000-0000-000000000000',
+      '/dashboard/articles/new'
+    ])
   })
 
   it('freezes a ROUTE LIST, never content-hashed asset filenames', () => {

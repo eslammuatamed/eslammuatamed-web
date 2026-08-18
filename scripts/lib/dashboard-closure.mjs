@@ -188,6 +188,13 @@ export const DASHBOARD_ROUTES = [
   // page does not exist yet would be measured as an error shell. The editor's two routes join in
   // the commit that creates them.
   { route: '/dashboard/articles', pageModule: 'app/pages/dashboard/articles/index.vue' },
+  { route: '/dashboard/articles/new', pageModule: 'app/pages/dashboard/articles/new.vue' },
+  // A CONCRETE id, for the same reason the projects editor uses one: the gate FETCHES the route to
+  // read its closure, and `/dashboard/**` is `ssr: false`, so every id returns the same shell.
+  {
+    route: '/dashboard/articles/00000000-0000-0000-0000-000000000000',
+    pageModule: 'app/pages/dashboard/articles/[id].vue'
+  },
   { route: '/dashboard/projects', pageModule: 'app/pages/dashboard/projects/index.vue' },
   { route: '/dashboard/projects/new', pageModule: 'app/pages/dashboard/projects/new.vue' },
   // A CONCRETE id, because the gate fetches each route to read the CSS out of its rendered shell.

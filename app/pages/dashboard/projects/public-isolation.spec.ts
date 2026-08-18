@@ -97,6 +97,9 @@ const OTHER_DASHBOARD_MODULE_FILES = [
   'composables/admin-articles-query.ts',
   'composables/useAdminArticles.ts'
 ]
+// `components/dashboard/**` and `pages/dashboard/**` files need no entry here — the public-surface
+// filter already drops anything under a `dashboard/` directory. Only the `app/composables/` files
+// need naming, because that directory serves both worlds.
 
 function sourceFiles(dir: string): string[] {
   const found: string[] = []
