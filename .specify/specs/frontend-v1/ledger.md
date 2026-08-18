@@ -771,7 +771,7 @@ commit is history and is not being rewritten, so it is named here instead.)*
 
 | Unit | Deliverable | Exit |
 | --- | --- | --- |
-| **M1·U1** | The e2e backend + **one** record in `scripts/e2e/lanes.ts` (§10.3 rule 14: mutable lane = ONE spec file, and it needs `delayMs` to make loading states observable) | The lane boots **1 pair** when selected; `lane-isolation.spec.mjs` green; full suite goes to 11 pairs — re-check R14's trigger |
+| **M1·U1** | The e2e backend + **one** record in `scripts/e2e/lanes.ts` (§10.3 rule 14: mutable lane = ONE spec file, and it needs `delayMs` to make loading states observable) | ⚠ **MET IN PART, and the ledger says which part.** MET: `typecheck` exit 0, `eslint` 0 problems, unit suite **1714/1714 exit 0**, calibration **31/31**, and **four injected defects each caught by its own test** with a byte-identical restore. NOT met, and deliberately deferred to `M1·U2`: *"the lane boots 1 pair when selected."* `lane-isolation` IS green — but on a registry this unit never touched, which is **not evidence about this unit**. See the sequencing finding in §5/M1·U1. |
 | **M1·U2** | The collection at `/dashboard/experiences` on the §14.9 request-state contract (§10.3 rules 1–3) | Ten §14.9 criteria demonstrated; **both** route caps escalated as ONE owner decision (§10.3 rule 13, D20-33 the worked example) |
 | **M1·U3** | The editor: bilingual, Zod + `UForm` computed schema, 422→locale-tab mapping through `dashboard-translation-errors.ts`, per-module `admin-experience-fields.ts` split (§10.1 — the split is worth 6,211 B and FE-3 must keep it), skill picker, `isCurrent`⇄`endDate`, `order` | §5.3's no-touch save test green; the `.refine()` for `isCurrent` carries an explicit `path: ['endDate']` or its message never reaches the field |
 | **M1·U4** | The extraction verdict, checked against §5.2 | Every prediction marked HELD or WRONG, with the evidence |
@@ -819,9 +819,9 @@ failure would have meant the tests were coupled, not discriminating. After resto
 `sha256 255982611e554ba088c7536b401a3c728fcbb204bf7c3bc71089d6e5d6f1296f`, identical to the pre-mutation
 value, and **31/31 passed**.
 
-#### ⚠ A sequencing finding: the lane RECORD cannot land in U-1
+#### ⚠ A sequencing finding: the lane RECORD cannot land in `M1·U1`
 
-The unit plan said U-1 would add the `scripts/e2e/lanes.ts` record and show the lane booting one
+The unit plan said `M1·U1` would add the `scripts/e2e/lanes.ts` record and show the lane booting one
 pair. It cannot, and the reason is a guard working correctly rather than an obstacle:
 `lane-isolation.spec.mjs` asserts *"the $project lane owns a real directory with specs"*, so a record
 whose `e2e/dashboard-experiences/` directory holds no spec **fails the guard** — and a mutable lane
