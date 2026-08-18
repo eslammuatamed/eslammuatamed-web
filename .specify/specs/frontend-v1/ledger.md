@@ -36,7 +36,7 @@ git -C /home/eslam-muatamed/worktrees/web-026-phase8 fetch origin && git rev-par
 | Phase | State |
 | --- | --- |
 | **FE-1 — Contract & Integration Foundation** | **COMPLETE** — commit `19e3a05`. Contract adopted + gtm reconciliation; reply flow deliberately moved to FE-2 (see §4). Gates re-verified on the committed tree: typecheck 0, 1501/1501. |
-| **FE-2 — Articles Tracer Bullet + Dashboard Architecture** | **IN PROGRESS.** OD-11 resolved (§9, option B). Three sub-phases: **FE-2a COMPLETE** · **FE-2b COMPLETE** · **FE-2c IN PROGRESS** — F-1 locale wiring DONE (below); the Articles surface itself and plan §14.9 criteria 1–10 are NOT started. |
+| **FE-2 — Articles Tracer Bullet + Dashboard Architecture** | **IN PROGRESS.** OD-11 resolved (§9, option B); OD-3 resolved (§9.2, Markdown textarea). Sub-phases: **FE-2a COMPLETE** · **FE-2b COMPLETE** · **FE-2c IN PROGRESS** — F-1 **CLOSED** with browser evidence; the Articles **collection** is complete (§5 FE-2c/U-2); the **editor** (create/edit, translation tabs, validation, mutations, preview) is NOT started. §14.9 criteria 1, 2, 6, 7, 8, 9, 10 are demonstrated for the collection; 3, 4, 5 belong to the editor. |
 | FE-3 — Content Module Replication | NOT STARTED |
 | FE-4 — System Modules | NOT STARTED |
 | FE-5 — Coherence, D20-32 Review, M4 Closure | NOT STARTED |
@@ -52,6 +52,7 @@ git -C /home/eslam-muatamed/worktrees/web-026-phase8 fetch origin && git rev-par
 | **OD-3** | Backend/API is complete and Production-ready for v1 scope unless fresh evidence proves otherwise. |
 | **OD-9** | **The Dashboard application locale seeds the initial** translation tab; tab selection is thereafter independent per entity. ⚠ **Restated 2026-08-18 under OD-11.** It previously read "the active *content* locale seeds the tab" — deliberately phrased to avoid presuming a chrome locale, because none was settled. OD-11 settles it: there **is** a Dashboard application locale and it is the seed. The old phrasing is not a second valid reading; do not carry it forward. |
 | ~~**OD-10**~~ | ~~Dashboard shell is fully localized EN/AR.~~ **Withdrawn as an inference, then RE-ESTABLISHED as an owner decision.** It was originally inferred from "locale control in the header" before doc 02 §9 / doc 04 §1 were found, and withdrawn for that reason. The owner has since chosen exactly it, deliberately and with the cost visible, as **OD-11 option B**. **Cite OD-11, never this row** — the conclusion is the same but only one of them is authority. |
+| **OD-3 (plan §12)** | **RESOLVED 2026-08-18 — the article `body` ships as a plain Markdown textarea.** Tiptap/ProseMirror is NOT introduced in FE-2c. ⚠ **Numbering collision, stated so nobody conflates them:** *this* OD-3 is plan §12's "Confirm Tiptap"; the **OD-3** in this section's row above ("Backend/API is complete") is a different scheme with the same label — the same trap §14.8 records for OD-10. The rich-editor requirement is **NOT dropped from v1**: it is recorded as a separate governed unit in §9.2 with the questions it must answer first. |
 | **OD-11** | **RESOLVED 2026-08-18 — option B. The Dashboard ships fully localized EN/AR.** The header control is a real **application-language** switcher. Dashboard routes stay **unprefixed**; the application locale is a persisted preference, independent of route structure. It drives chrome language, shell direction, and the default active translation tab. Changing it must **not** discard unsaved translation state. Governing record: docs **D02-15** (scope), **D04-7** (routing), **D11-8** (architecture), doc 18 §3 (coverage) — Docs commit `3b607af`, branch `docs/od-11-dashboard-localization`, **local-only** (R10). |
 | **UX** | Multilingual authoring: shared fields once + locale tabs; preserved unsaved state; validation visible across inactive tabs; correct RTL/LTR; 380px. |
 | **UX** | Dashboard shell needs a locale control, appearance control, obvious **View/Open Portfolio**, contextual **View-on-site** where a real public destination exists. The locale control switches the **chrome language** (OD-11 option B) — settled, no longer contingent. |
@@ -405,6 +406,89 @@ renders these components today — `messages.vue` hand-rolls its own (F-2, delib
 Articles renders a real skeleton/updating/error state, F-1 is proven at the unit and lint level only.
 That is stated rather than glossed: it is the one assertion this unit cannot yet make.
 
+### FE-2c · U-1 — the Articles e2e backend (`0a1b3b8`)
+
+The instrument, built and calibrated before anything depended on it.
+`scripts/e2e/articles-server.ts` is the only backend in the repo that can **hold a response open**
+(`delayMs` via `POST /__e2e/state`). Six of §14.9's ten criteria describe a state that exists only
+while a request is in flight; against an instant mock every one of them passes without the state
+ever rendering. Duplicate-submission prevention is the sharpest: with an instant backend the second
+click lands after the first write resolved, so the test passes whether or not the guard exists.
+
+Validation is **enforced, not canned** — per-locale slug uniqueness and the `SCHEDULED`/`publishAt`
+rule are computed against the store and the payload as sent, so a 422 carries
+`translations[N].slug` with N the index in the array the CLIENT built. That index is load-bearing:
+reads are a locale-KEYED map, writes are an ARRAY.
+
+| Control | Result |
+| --- | --- |
+| removed `await sleep(delayMs)` | **2 failed / 23 passed** — exactly the two hold tests, 13 ms and 7 ms elapsed |
+| hard-coded `translations[0].slug` | **1 failed / 24 passed** — the index test only |
+| restored (`sha256 98d5fa75…` verified identical) | **25/25, exit 0** |
+
+The index control sends the SAME collision at both array positions, because with Arabic sent first
+a hard-coded `[0]` is accidentally correct.
+
+### FE-2c · U-2 — the Articles collection (`5be7740`)
+
+| Gate | Result |
+| --- | --- |
+| `lint` | exit 0 |
+| `typecheck` | exit 0 |
+| `typecheck:e2e` | exit 0 |
+| `test` (unit) | **1625/1625**, 114 files (1566/109 before) |
+| `test:e2e --project=dashboard-articles` | **22/22**, exit 0 |
+| `check:bundle` | exit 0 — 104 chunks, no tiptap/prosemirror (OD-3 leaves D06-5 untouched) |
+| `check:logical` | exit 0 |
+| `size` (CSS) | **29.11 / 30.00 KB gz** (29.09 before) — **+~20 B**, new utilities on this page. R2 headroom now ~0.89 KB |
+| `size:routes` | exit 0 |
+
+| Metric | F-1 `d5d493b` | U-2 | Δ |
+| --- | --- | --- | --- |
+| Shared **public** floor | 253745 B gz / 36 | 253828 B gz / 36 | **+83 B** |
+| Shared **dashboard** floor | 260755 B gz / 46 | 260861 B gz / 46 | **+106 B** |
+
+Both deltas are the **shared i18n catalogue**, which both worlds load — the same mechanism and the
+same symmetry FE-2b measured for its two keys. Attributable, not build noise.
+
+**Required D20-24 attribution:** the four quality-target warnings are the SAME four as before
+(`/dashboard/messages`, `/dashboard/projects`, `/dashboard/projects/new`,
+`/dashboard/projects/{id}`). None is caused by FE-2c.
+
+**Measured for the route that is not yet governed** (§9.3): `/dashboard/articles` app-owned
+**89,016 B**, Δ-above-floor **51,373 B** against the 86,016 B allowance, route total 304.9 KB gz.
+D20-29-derived cap would be `ceil((89016 × 115) / (100 × 1024)) × 1024` = **102,400 B (100 KB)**.
+
+**No provenance marker was stamped** — `stamp-build` refuses on a dirty tree, so these numbers carry
+no build SHA. They were taken on the exact source this commit contains; re-run on the committed tree
+if a governed reading is ever needed.
+
+#### F-1 — CLOSED, and the first attempt at closing it was vacuous
+
+The four browser assertions written first would have **passed against the pre-F-1 code**. Reverting
+all three 007 components to `useI18n()` failed only **one of four**: the page was passing its own
+translated `updating-label` to the overlay and hand-rolling the error surface, so it was supplying
+exactly what the components were supposed to resolve — which is also the alternative F-1's own
+commit rejected, because it makes correctness opt-in at every call site.
+
+The page therefore stopped overriding them: it reuses `UiStateError` with only a `message` and
+leaves the retry label to `useSurfaceI18n()`, and lets the overlay use its own `state.updating`. Two
+i18n keys became unused and were **removed** rather than left as decoration.
+
+| Control | Result |
+| --- | --- |
+| all three components reverted to `useI18n()`, rebuilt | **3 failed / 19 passed** — skeleton, shared retry label, updating overlay |
+| restored (`e7555ec1…` / `b2fbb49e…` / `f54f9bfe…` verified), rebuilt | **22/22, exit 0** |
+
+The empty-state test is relabelled **`[not F-1]`**: `UiRequestState`'s empty slot is caller-owned by
+design, so it never exercised the boundary and passing there proves only that the page is bilingual.
+
+**Two traps worth carrying forward.** `[role=status].first()` matches **Nuxt's own route announcer**,
+an empty `<span role="status" aria-live="polite">` — the overlay is identified by `aria-live` AND
+`aria-busy` together. And `listSettled()` can return in the instant between a click and the router
+starting, so a filter assertion must `waitForURL`, not merely settle: the list was correctly
+filtered on screen while `page.url()` still carried no `status`.
+
 ---
 
 ## 6. Known risks carried
@@ -418,6 +502,7 @@ That is stated rather than glossed: it is the one assertion this unit cannot yet
 | R9 | `content:sync` never run — one project 404s in Production (content gap, not a defect) |
 | R10 | `D19-11` id collision across Docs branches — blocks any Docs integration |
 | R11 | Issue #30 hydration defect — `test:e2e:repeat` red by design, out of scope |
+| **R12** | **`/dashboard/articles` ships UNMEASURED.** It is absent from `DASHBOARD_ROUTES` and `DASHBOARD_APP_OWNED_CAP_BYTES`, so no route-size budget applies to it. Deliberate, not an omission — registering it requires an owner decision (§9.3). The measurements are already taken and recorded in §5. The editor's two routes will inherit the same debt until that decision lands. |
 | — | **About portrait** is an owner content dependency for M4 closure; do not fabricate or substitute owner content |
 
 ---
@@ -471,6 +556,64 @@ there is no `fallbackLocale`. It was measured and deliberately left unasserted b
 called the choice a governed decision outside its scope. OD-11 is that decision, and it picks the
 third: exclude the tree.
 
+### 9.2 OD-3 (plan §12) — the rich-text editor · **RESOLVED 2026-08-18**
+
+**The owner chose the plain Markdown textarea for FE-2c. Tiptap/ProseMirror is not introduced here,
+and the rich-editor requirement is NOT dropped from v1** — it becomes a separate governed unit,
+sequenced after the tracer bullet proves the authoring architecture.
+
+Three governing inputs contradicted each other, which is what made this the owner's call and not an
+implementation preference:
+
+1. `FR-DSH-013` is an `M` requirement and it names Tiptap (plan §5.2, risk **high**).
+2. `ProjectTranslationFields.vue:28` records the opposite argument for the SAME opaque-Markdown
+   contract — a rich editor "would have to round-trip Markdown through a document model and hand
+   back something subtly different from what was typed". Article `body` is that same opaque Markdown.
+3. **Measured during this session:** `scripts/check-forbidden-modules.mjs` bans the substrings
+   `tiptap` and `prosemirror` across **`.output/public/**/*.js`**, and dashboard chunks live there —
+   confirmed, `DESB09DI.js` carries `data-shell="dashboard"`; all 104 chunks are scanned. Adopting
+   Tiptap therefore turns `check:bundle` RED and requires **re-scoping a governed isolation gate
+   (D06-5)**, which is not an implementation detail.
+
+**The owner's reasoning, recorded:** FE-2c's purpose is to establish the reusable authoring
+architecture; it should not simultaneously absorb a rich-editor serialization and bundle-governance
+project. Markdown stays the canonical persisted representation. D06-5 must not be weakened,
+bypassed or silently re-scoped. D20-32 is interim and frozen until FE-5.
+
+**What the later unit must answer BEFORE changing code** (owner-set):
+is Markdown still the canonical persisted representation · can the editor round-trip the project's
+real Markdown corpus without material mutation · what exact D06-5 change is required and does it
+preserve the original isolation intent · what is the measured route/shared-floor cost · can the
+editor be loaded at a genuine interaction boundary rather than into every Dashboard route · does
+the UX gain justify the added architecture and bundle cost. If it needs a D06-5 or budget change,
+it returns as a dedicated owner-decision package at that boundary.
+
+**Option 3 (a custom Markdown toolbar) was explicitly declined as a compromise:** start with the
+simplest honest surface, and add affordances only if the real implementation demonstrates the need.
+
+### 9.3 OPEN — governing the Articles routes in doc 20 · **OWNER DECISION NEEDED**
+
+`/dashboard/articles` currently ships **UNMEASURED** (R12). Registering it was implemented and then
+**deliberately reverted**, because `scripts/lib/route-assets.mjs` states that a new cap "requires an
+owner decision plus a decision-log entry in `eslammuatamed-docs/docs/20-performance.md` — never an
+edit here", and three specs pin the governed set to *exactly* the eight routes doc 20 §1.1
+publishes, as byte literals. Editing those pins would have manufactured the authority the file
+forbids.
+
+**The decision package, measured and ready:**
+
+| Route | app-owned | D20-29 derived cap | Δ-above-floor | allowance |
+| --- | --- | --- | --- | --- |
+| `/dashboard/articles` | **89,016 B** | **102,400 B (100 KB)** | 51,373 B | 86,016 B |
+
+Derivation is D20-12's methodology verbatim: `ceil((baseline × 115) / (100 × 1024)) × 1024`.
+Registering it moves the governed set from eight routes to nine and requires updating the literal
+pins in `scripts/lib/route-assets.spec.mjs` and `scripts/lib/dashboard-closure.spec.mjs`.
+
+**The editor adds two more routes** (`/dashboard/articles/new`, `/dashboard/articles/{id}`) with the
+same debt, so one decision can govern all three. Nothing blocks FE-2c's implementation meanwhile —
+only the budget governance is deferred.
+
 ---
 
 ## 8. Exact next action
@@ -492,6 +635,8 @@ third: exclude the tree.
 | `ca0e2dd` → `b435bec` | a convention this ledger invented, and its correction. `ca0e2dd` promoted "one commit per phase" to binding; the repository rule is **one commit per logical unit**, and `b435bec` restores it. Both are kept: the wrong rule governed nothing, but deleting it would hide that the ledger over-reached |
 | `273d4ab` | **FE-2c** — Dashboard sign-in gets its own e2e lane; repairs the lane-isolation breach `97a7166` shipped |
 | `d5d493b` | **FE-2c · F-1** — the 007 loading system translates through `useSurfaceI18n()` |
+| `0a1b3b8` | **FE-2c · U-1** — the Articles e2e backend, and the hold that makes its states observable |
+| `5be7740` | **FE-2c · U-2** — the Articles collection on the §14.9 request-state contract; **F-1 closed** with browser evidence |
 
 *This table lists commits that exist when it is written; the commit carrying this edit is
 deliberately absent rather than stamped as a SHA it cannot know. `git log --oneline c6a5b21..HEAD`
@@ -504,7 +649,7 @@ Each boundary is committable and leaves the tree green.
 | --- | --- | --- |
 | ~~**FE-2a**~~ **DONE** | **Bilingual Dashboard architecture.** Persisted application locale; one localization mechanism for all dashboard surfaces; `dir`/`lang` on the shell root; dashboard pages excluded from localized route generation (`/ar/dashboard/**` removed); shell header — language switcher, theme, **View site**, session menu; logical drawer side; **the gate that makes untranslated chrome a lint/test failure**; full Arabic chrome for the modules that already exist | Arabic dashboard renders Arabic chrome RTL on a **cold load**; no key paths; gate positive-controlled; CI green |
 | ~~**FE-2b**~~ **DONE** | **Login + shell finish.** `/dashboard/login` bilingual with the same language and appearance controls and a branded route back to the portfolio; localized Zod error presentation | Login usable and correct in both languages at 380px; keyboard + error-focus behaviour asserted — **met, see §5 FE-2b** |
-| **FE-2c** | **Articles tracer bullet.** The real flow first — list, editor, Tiptap, slug, scheduling, preview wiring — then extract `TranslationTabs` / `useTranslatableForm` / `EntityFormLayout` **only once it demonstrates the boundary**. **Also establishes the Dashboard request-state contract** (owner follow-up 2026-08-18, plan §14.9) — the ten criteria there are exit criteria, not aspirations | An article authored in the Dashboard is live on `/blog` in both locales; Tiptap round-trip green; no public bundle regression; axe clean in **both** dashboard languages; **plan §14.9 criteria 1–10 each demonstrated by a discriminating test** |
+| **FE-2c** *(in progress)* | **Articles tracer bullet.** The real flow first — list, editor, Tiptap, slug, scheduling, preview wiring — then extract `TranslationTabs` / `useTranslatableForm` / `EntityFormLayout` **only once it demonstrates the boundary**. **Also establishes the Dashboard request-state contract** (owner follow-up 2026-08-18, plan §14.9) — the ten criteria there are exit criteria, not aspirations | An article authored in the Dashboard is live on `/blog` in both locales; Tiptap round-trip green; no public bundle regression; axe clean in **both** dashboard languages; **plan §14.9 criteria 1–10 each demonstrated by a discriminating test** |
 
 **Discriminating tests that must exist before the pattern is trusted** (doc 18 §3, plan §14.7):
 
@@ -526,6 +671,36 @@ control and the branded route back to the portfolio, and `login.vue` is localize
 locale-reactive Zod schema — so the *contract* OD-11 asked for is established. What FE-2b owes is the
 page's product-quality composition: card/layout, password-visibility control, error-focus behaviour,
 380px, and the axe pass in both dashboard languages.
+
+### Where FE-2c picks up — the EDITOR
+
+U-1 (backend instrument) and U-2 (collection) are landed and verified. The next unit is the
+authoring surface, and it is where §14.9 criteria **3, 4 and 5** live — none of which the collection
+could demonstrate.
+
+**Next three actions:**
+
+1. **`admin-article-form.ts` grows the form model** — shared fields (`status`, `publishAt`,
+   `categoryId`, `coverImageId`, `tagIds`) outside the tabs; per-locale `title`/`slug`/`excerpt`/
+   `body`/SEO inside them. `readingTimeMin`, `createdAt` and `updatedAt` must stay OUT of the form
+   model: they are server-computed, and putting them in the dirty-comparison baseline makes a fresh
+   save look dirty. Payload sends **every complete locale**, never only the edited one — the PATCH
+   upserts per locale and never deletes, proven in `articles-server.spec.ts`.
+2. **`app/pages/dashboard/articles/{new,[id]}.vue` + `components/dashboard/ArticleEditor.vue`** —
+   one page, `id: string | null`, following `ProjectEditor`'s single-form decision. Zod + `UForm`
+   (plan §5.2 names zod + UForm as the Dashboard validation architecture; `ProjectEditor`'s
+   hand-rolled validator is the outlier and is NOT the precedent to copy). Criterion 3: never render
+   blank editable fields before the entity resolves.
+3. **The 422 → locale-tab mapping.** Writes send `translations` as an ARRAY and the API answers
+   `translations[N].slug`, so the editor must retain the index→locale mapping of the request it just
+   issued. Get it wrong and an Arabic slug collision surfaces on the English tab. The mock produces
+   a REAL index (`articles-server.spec.ts` proves it moves with the payload), so assert the correct
+   TAB is marked invalid with the error seeded in the INACTIVE locale — a test asserting only that
+   "an error appeared" cannot catch it.
+
+**Then:** delete/archive, publish/schedule, preview + `View on site` (gated on
+`articleIsPubliclyVisible` — PUBLISHED alone is not enough, since the public route resolves
+per-locale and would 404), and only then the §14.6 extraction pass.
 
 **Push discipline:** nothing is pushed. `origin/dev` and `origin/main` are untouched. No merge to
 `main`, no deploy, no Docs publication.
