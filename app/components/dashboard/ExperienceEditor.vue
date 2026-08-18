@@ -1,13 +1,11 @@
 <script setup lang="ts">
-import type { FormErrorEvent, FormSubmitEvent } from '@nuxt/ui'
+import type { FormSubmitEvent } from '@nuxt/ui'
 import {
   EXPERIENCE_EMPLOYMENT_TYPES,
   EXPERIENCE_LOCALES,
   type ExperienceLocale
 } from '~/composables/admin-experience-fields'
 import {
-  experienceFieldErrorLocale,
-  experienceFieldErrorName,
   experienceFillState,
   experienceFormSchema,
   experiencePayload,
@@ -69,25 +67,6 @@ const alertRef = useTemplateRef<HTMLElement>('alertRef')
 const saving = ref(false)
 const savedAt = ref<number | null>(null)
 const saveError = ref<string | null>(null)
-const fieldErrorSummary = ref<{ locale: ExperienceLocale | null, message: string }[]>([])
-
-/**
- * SERVER field errors, keyed by form path — rendered through `UFormField`'s own `error` prop.
- *
- * `UForm.setErrors()` is deliberately not used, and that was MEASURED during FE-2c rather than
- * assumed: it attaches correctly under a component test's DOM and does NOT survive in a real
- * browser, where the tab activation that follows it re-renders the panel and the schema-backed store
- * reclaims the field. Passing the message explicitly behaves identically in both environments.
- *
- * This is NOT a second validation architecture (§14.3): validation is still Zod through `UForm`.
- * This is how a 422 that only the API could know about is PRESENTED.
- */
-const serverFieldErrors = ref<Record<string, string>>({})
-
-/** Clear a stale server error as soon as the operator edits anything — it described the old input. */
-watch(form, () => {
-  if (Object.keys(serverFieldErrors.value).length > 0) serverFieldErrors.value = {}
-}, { deep: true })
 
 const deleting = ref(false)
 const confirmingDelete = ref(false)
@@ -120,6 +99,7 @@ const unreadable = computed(() => forbidden.value || notFound.value || loadFaile
    `const` schema keeps serving messages in the load-time language while everything else changes. */
 const schema = computed(() => experienceFormSchema(t, experience.value))
 
+
 const activeLocale = ref<ExperienceLocale>('en')
 
 /**
@@ -135,10 +115,26 @@ onMounted(() => {
     : 'en'
 })
 
-const localesWithErrors = computed(() => {
-  const found = new Set<ExperienceLocale>()
-  for (const entry of fieldErrorSummary.value) if (entry.locale) found.add(entry.locale)
-  return found
+/**
+ * The 422 / error-summary / tab-activation machinery, shared with `ArticleEditor` (`M1·U4b`).
+ *
+ * It knows about locales and field paths and nothing about what an experience is — the form model,
+ * the schema, the payload and the three clearing semantics all stay in `admin-experience-form.ts`.
+ * `activeLocale` is passed in rather than owned there because OD-9 makes the initial tab this
+ * editor's policy; the composable only ever moves it toward an error the operator must see.
+ */
+const {
+  serverFieldErrors,
+  fieldErrorSummary,
+  localesWithErrors,
+  reset: resetFieldErrors,
+  applyFieldErrors,
+  onValidationError
+} = useTranslatableForm<ExperienceLocale>({
+  locales: EXPERIENCE_LOCALES,
+  activeLocale,
+  scope: '[data-experience-editor]',
+  clearOn: form
 })
 
 const tabItems = computed(() =>
@@ -189,8 +185,7 @@ async function onSubmit(_event: FormSubmitEvent<unknown>): Promise<void> {
   if (saving.value) return
   saving.value = true
   saveError.value = null
-  fieldErrorSummary.value = []
-  serverFieldErrors.value = {}
+  resetFieldErrors()
   deleteError.value = null
 
   // The ordering of THIS request, captured before it is sent — a 422's `translations[N]` indexes
@@ -230,72 +225,6 @@ async function onSubmit(_event: FormSubmitEvent<unknown>): Promise<void> {
   } finally {
     saving.value = false
   }
-}
-
-/**
- * Map a 422 onto the form — and onto the right TAB.
- *
- * Writes send `translations` as an ARRAY, so the API answers `translations[N].role` where N indexes
- * the array this client just built. Resolving it needs that ordering, which is why `sentLocales` is
- * threaded through from the request rather than assumed: with Arabic sent first, `translations[0]`
- * is Arabic, and a fixed assumption would put an Arabic error on the English tab.
- *
- * The offending tab is then ACTIVATED, because an error the operator cannot see is one they cannot
- * fix — §14.1's "a hidden tab must never swallow an error".
- */
-function applyFieldErrors(
-  errors: readonly { field: string, message: string }[],
-  sentLocales: readonly ExperienceLocale[]
-): void {
-  const formErrors: { name: string, message: string }[] = []
-  const summary: { locale: ExperienceLocale | null, message: string }[] = []
-
-  for (const item of errors) {
-    const name = experienceFieldErrorName(item.field, sentLocales)
-    const errorLocale = experienceFieldErrorLocale(item.field, sentLocales)
-    summary.push({ locale: errorLocale, message: item.message })
-    // A path that could not be resolved to a field stays in the summary only — better unattached
-    // than confidently pinned to the wrong input.
-    if (name) formErrors.push({ name, message: item.message })
-  }
-
-  fieldErrorSummary.value = summary
-  // Assigned as ONE whole object, after the summary, so the `form` watcher cannot observe a
-  // half-populated map and clear it.
-  const map: Record<string, string> = {}
-  for (const item of formErrors) map[item.name] = item.message
-  serverFieldErrors.value = map
-
-  const firstLocale = summary.find(entry => entry.locale)?.locale
-  if (firstLocale) activeLocale.value = firstLocale
-  void nextTick(() => focusFirstError())
-}
-
-/**
- * §14.4 — send the operator to the first problem rather than leaving them to hunt for it.
- *
- * Runs after the tab switch, so the target is on screen when it is focused; `UForm`'s own scroll
- * cannot reach a field inside a panel that was hidden when validation ran.
- */
-function focusFirstError(): void {
-  const target = document.querySelector<HTMLElement>('[data-experience-editor] [aria-invalid="true"]')
-  if (!target) return
-  target.focus({ preventScroll: true })
-  target.scrollIntoView({ block: 'center', behavior: 'smooth' })
-}
-
-/** Client-side validation failures get the same treatment: switch to the offending tab, then focus. */
-function onValidationError(event: FormErrorEvent): void {
-  const errors = event.errors ?? []
-  const summary: { locale: ExperienceLocale | null, message: string }[] = []
-  for (const item of errors) {
-    const match = /^translations\.(en|ar)\./.exec(String(item.name ?? ''))
-    summary.push({ locale: (match?.[1] as ExperienceLocale | undefined) ?? null, message: item.message ?? '' })
-  }
-  fieldErrorSummary.value = summary
-  const firstLocale = summary.find(entry => entry.locale)?.locale
-  if (firstLocale) activeLocale.value = firstLocale
-  void nextTick(() => focusFirstError())
 }
 
 /* ── delete ────────────────────────────────────────────────────────────────────────────────────── */
@@ -355,21 +284,10 @@ const saveState = computed<'saving' | 'unsaved' | 'saved' | 'idle'>(() => {
 
     <!-- §14.9 CRITERION 3 — an editor-shaped loading state. No blank fields before the data lands,
          and on this module no empty skill relation an operator could submit over a real one. -->
-    <div
+    <DashboardEntityEditorSkeleton
       v-else-if="resolving"
-      role="status"
-      :aria-busy="true"
-      :aria-label="t('dashboard.experiences.editor.loadingRole')"
-      data-editor-loading
-      class="flex flex-col gap-6"
-    >
-      <span class="sr-only">{{ t('dashboard.experiences.editor.loadingRole') }}</span>
-      <div aria-hidden="true" class="flex flex-col gap-4">
-        <div class="skeleton h-9 w-2/3" />
-        <div class="skeleton h-32 w-full" />
-        <div class="skeleton h-64 w-full" />
-      </div>
-    </div>
+      :label="t('dashboard.experiences.editor.loadingRole')"
+    />
 
     <template v-else>
       <div class="mb-6 flex flex-wrap items-start justify-between gap-4">
@@ -503,165 +421,99 @@ const saveState = computed<'saving' | 'unsaved' | 'saved' | 'idle'>(() => {
         <section :aria-label="t('dashboard.experiences.editor.contentSection')" class="flex flex-col gap-4">
           <h2 class="text-h3 text-highlighted">{{ t('dashboard.experiences.editor.contentSection') }}</h2>
 
-          <UTabs
+          <DashboardTranslationTabs
             v-model="activeLocale"
             :items="tabItems"
-            :unmount-on-hide="false"
-            variant="link"
-            data-editor-tabs
+            :invalid-label="t('dashboard.experiences.editor.tabInvalid')"
+            :fill-labels="{
+              empty: t('dashboard.experiences.editor.fill.empty'),
+              partial: t('dashboard.experiences.editor.fill.partial'),
+              complete: t('dashboard.experiences.editor.fill.complete')
+            }"
           >
-            <template #default="{ item }">
-              <span class="flex items-center gap-2">
-                {{ item.label }}
-                <!-- The completeness indicator (FR-DSH-011), and the invalid marker. Both carry a
-                     word or an accessible name — never colour alone. -->
-                <UBadge
-                  v-if="item.invalid"
-                  color="error"
-                  variant="subtle"
-                  size="sm"
-                  :data-editor-tab-invalid="item.value"
-                >
-                  {{ t('dashboard.experiences.editor.tabInvalid') }}
-                </UBadge>
-                <UBadge
-                  v-else
-                  :color="item.fill === 'complete' ? 'success' : item.fill === 'partial' ? 'warning' : 'neutral'"
-                  variant="subtle"
-                  size="sm"
-                  :data-editor-tab-fill="`${item.value}:${item.fill}`"
-                >
-                  {{ t(`dashboard.experiences.editor.fill.${item.fill}`) }}
-                </UBadge>
-              </span>
-            </template>
+            <template #panel="{ locale: fieldLocale }">
+            <UFormField
+              :name="`translations.${fieldLocale}.role`"
+              :error="serverFieldErrors[`translations.${fieldLocale}.role`]"
+              :label="t('dashboard.experiences.field.role')"
+              required
+            >
+              <UInput
+                v-model="form.translations[fieldLocale].role"
+                class="w-full"
+                :data-editor-role="fieldLocale"
+              />
+            </UFormField>
 
-            <template #content="{ item }">
-              <!-- Field content direction is INDEPENDENT of chrome direction (OD-11): an Arabic
-                   field is RTL inside an English dashboard and an English field is LTR inside an
-                   Arabic one. Set per panel, never inherited from the shell. -->
-              <div
-                class="flex flex-col gap-4 pt-4"
-                :dir="item.value === 'ar' ? 'rtl' : 'ltr'"
-                :data-editor-panel="item.value"
+            <div class="grid gap-4 sm:grid-cols-2">
+              <UFormField
+                :name="`translations.${fieldLocale}.company`"
+                :error="serverFieldErrors[`translations.${fieldLocale}.company`]"
+                :label="t('dashboard.experiences.field.company')"
+                required
               >
-                <UFormField
-                  :name="`translations.${item.value}.role`"
-                  :error="serverFieldErrors[`translations.${item.value}.role`]"
-                  :label="t('dashboard.experiences.field.role')"
-                  required
-                >
-                  <UInput
-                    v-model="form.translations[item.value as ExperienceLocale].role"
-                    class="w-full"
-                    :data-editor-role="item.value"
-                  />
-                </UFormField>
+                <UInput
+                  v-model="form.translations[fieldLocale].company"
+                  class="w-full"
+                  :data-editor-company="fieldLocale"
+                />
+              </UFormField>
 
-                <div class="grid gap-4 sm:grid-cols-2">
-                  <UFormField
-                    :name="`translations.${item.value}.company`"
-                    :error="serverFieldErrors[`translations.${item.value}.company`]"
-                    :label="t('dashboard.experiences.field.company')"
-                    required
-                  >
-                    <UInput
-                      v-model="form.translations[item.value as ExperienceLocale].company"
-                      class="w-full"
-                      :data-editor-company="item.value"
-                    />
-                  </UFormField>
+              <UFormField
+                :name="`translations.${fieldLocale}.location`"
+                :error="serverFieldErrors[`translations.${fieldLocale}.location`]"
+                :label="t('dashboard.experiences.field.location')"
+                required
+              >
+                <UInput
+                  v-model="form.translations[fieldLocale].location"
+                  class="w-full"
+                  :data-editor-location="fieldLocale"
+                />
+              </UFormField>
+            </div>
 
-                  <UFormField
-                    :name="`translations.${item.value}.location`"
-                    :error="serverFieldErrors[`translations.${item.value}.location`]"
-                    :label="t('dashboard.experiences.field.location')"
-                    required
-                  >
-                    <UInput
-                      v-model="form.translations[item.value as ExperienceLocale].location"
-                      class="w-full"
-                      :data-editor-location="item.value"
-                    />
-                  </UFormField>
-                </div>
-
-                <UFormField
-                  :name="`translations.${item.value}.impact`"
-                  :error="serverFieldErrors[`translations.${item.value}.impact`]"
-                  :label="t('dashboard.experiences.field.impact')"
-                  :help="t('dashboard.experiences.editor.impactHelp')"
-                  required
-                >
-                  <UTextarea
-                    v-model="form.translations[item.value as ExperienceLocale].impact"
-                    :rows="8"
-                    class="w-full font-mono"
-                    :data-editor-impact="item.value"
-                  />
-                </UFormField>
-              </div>
+            <UFormField
+              :name="`translations.${fieldLocale}.impact`"
+              :error="serverFieldErrors[`translations.${fieldLocale}.impact`]"
+              :label="t('dashboard.experiences.field.impact')"
+              :help="t('dashboard.experiences.editor.impactHelp')"
+              required
+            >
+              <UTextarea
+                v-model="form.translations[fieldLocale].impact"
+                :rows="8"
+                class="w-full font-mono"
+                :data-editor-impact="fieldLocale"
+              />
+            </UFormField>
             </template>
-          </UTabs>
+          </DashboardTranslationTabs>
         </section>
 
-        <!-- ── PRIMARY ACTIONS — persistently reachable (§14.4) ─────────────────────────────── -->
-        <div
-          class="sticky bottom-0 z-10 -mx-4 flex flex-wrap items-center justify-between gap-3 border-t border-default bg-default/95 px-4 py-3 backdrop-blur"
-          data-editor-actions
-        >
-          <!-- saved / saving / unsaved, announced politely rather than asserted on every keystroke. -->
-          <p role="status" class="text-sm text-muted" :data-editor-save-state="saveState">
-            <span v-if="saveState === 'saving'">{{ t('dashboard.experiences.editor.saving') }}</span>
-            <span v-else-if="saveState === 'unsaved'">{{ t('dashboard.experiences.editor.unsaved') }}</span>
-            <span v-else-if="saveState === 'saved'">{{ t('dashboard.experiences.editor.saved') }}</span>
-          </p>
-
-          <div class="flex flex-wrap items-center gap-2">
-            <!-- Destructive action placed AWAY from the primary, and two-step (§14.4). -->
-            <template v-if="!isCreate">
-              <template v-if="confirmingDelete">
-                <UButton
-                  color="error"
-                  variant="solid"
-                  size="sm"
-                  :loading="deleting"
-                  :disabled="deleting"
-                  data-editor-delete-confirm
-                  @click="confirmDelete()"
-                >
-                  {{ t('dashboard.experiences.editor.deleteConfirm') }}
-                </UButton>
-                <UButton
-                  color="neutral"
-                  variant="ghost"
-                  size="sm"
-                  :disabled="deleting"
-                  data-editor-delete-cancel
-                  @click="confirmingDelete = false"
-                >
-                  {{ t('dashboard.experiences.editor.deleteCancel') }}
-                </UButton>
-              </template>
-              <UButton
-                v-else
-                color="neutral"
-                variant="ghost"
-                size="sm"
-                icon="i-lucide-trash-2"
-                data-editor-delete
-                @click="confirmingDelete = true"
-              >
-                {{ t('dashboard.experiences.editor.delete') }}
-              </UButton>
-            </template>
-
-            <!-- Loading belongs to THIS action, never to a page-blocking screen (§14.9 criterion 4). -->
-            <UButton type="submit" :loading="saving" :disabled="saving" data-editor-save>
-              {{ t('dashboard.experiences.editor.save') }}
-            </UButton>
-          </div>
-        </div>
+        <!-- ── PRIMARY ACTIONS — persistently reachable (§14.4) ───────────────────────────────
+             No `#leading` and no `#actions` here: an experience has no status badge and no publish
+             shortcut, because it has no `status` and no `publishAt`. That absence is the evidence
+             §5.2 predicted and `M1·U4` confirmed — the publication region is Articles-specific. -->
+        <DashboardEntityFormActions
+          v-model:confirming="confirmingDelete"
+          :save-state="saveState"
+          :save-state-labels="{
+            saving: t('dashboard.experiences.editor.saving'),
+            unsaved: t('dashboard.experiences.editor.unsaved'),
+            saved: t('dashboard.experiences.editor.saved')
+          }"
+          :save-label="t('dashboard.experiences.editor.save')"
+          :saving="saving"
+          :deletable="!isCreate"
+          :deleting="deleting"
+          :delete-labels="{
+            delete: t('dashboard.experiences.editor.delete'),
+            confirm: t('dashboard.experiences.editor.deleteConfirm'),
+            cancel: t('dashboard.experiences.editor.deleteCancel')
+          }"
+          @delete="confirmDelete()"
+        />
       </UForm>
 
       <p v-if="deleteError" role="alert" class="mt-4 text-sm text-error" data-editor-delete-error>

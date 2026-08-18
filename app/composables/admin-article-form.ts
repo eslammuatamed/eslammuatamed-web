@@ -7,10 +7,6 @@ import {
   type ArticleLocale,
   type ArticleRequiredField
 } from '~/composables/admin-article-fields'
-import {
-  translationFieldErrorLocale,
-  translationFieldErrorName
-} from '~/composables/dashboard-translation-errors'
 import type { AdminArticle, ArticleStatus, CreateArticlePayload } from '~/composables/admin-article-types'
 
 /**
@@ -186,26 +182,6 @@ export function articleClearedLocales(
 /** The locales the payload will carry, in the order it will carry them. */
 export function articlePayloadLocales(form: ArticleFormState): ArticleLocale[] {
   return ARTICLE_LOCALES.filter(locale => articleTranslationInUse(form.translations[locale]))
-}
-
-/**
- * Map an API field path onto a FORM field path, and onto a locale tab.
- *
- * The RULE now lives in `dashboard-translation-errors.ts`, because it is a property of the contract
- * rather than of this module: sixteen admin write DTOs carry translations as an array and answer 422
- * with array-indexed paths. These two wrappers exist only to narrow the shared functions' `string`
- * locale to this module's `ArticleLocale`, so call sites stay type-safe.
- */
-export function articleFieldErrorName(field: string, sentLocales: readonly ArticleLocale[]): string | null {
-  return translationFieldErrorName(field, sentLocales)
-}
-
-export function articleFieldErrorLocale(
-  field: string,
-  sentLocales: readonly ArticleLocale[]
-): ArticleLocale | null {
-  const locale = translationFieldErrorLocale(field, sentLocales)
-  return locale === null ? null : (locale as ArticleLocale)
 }
 
 /** `''` becomes the explicit `null` that CLEARS a nullable field; a real value passes through (D10-23). */

@@ -27,7 +27,10 @@ export type AdminArticleTranslation = Schemas['AdminArticleTranslationEntity']
  * `translations` as a locale-KEYED MAP, writes carry it as an ARRAY of locale-tagged objects. The
  * API's 422 field paths are therefore array-indexed (`translations[0].slug`) into the array the
  * CLIENT built, so attributing a field error back to a locale tab depends on the request's own
- * ordering — see `articleFieldErrorLocale()` in `admin-article-form.ts`.
+ * ordering — see `translationFieldErrorLocale()` in `dashboard-translation-errors.ts`, applied by
+ * `useTranslatableForm`. (This cited `articleFieldErrorLocale()` until `M1·U4b` deleted that
+ * per-module wrapper: the composable is now generic over the locale type, so the narrowing the
+ * wrapper existed to perform happens there instead.)
  */
 export type CreateArticlePayload = Schemas['CreateArticleDto']
 export type UpdateArticlePayload = Schemas['UpdateArticleDto']

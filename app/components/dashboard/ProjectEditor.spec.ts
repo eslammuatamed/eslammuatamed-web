@@ -298,6 +298,27 @@ describe('technologies', () => {
     expect(lastWrite()?.body.technologyIds).toEqual(['skill-a', 'skill-b'])
   })
 
+  /**
+   * `M1·U4b` REGRESSION GUARD. `ProjectTechnologyPicker` became the shared `DashboardSkillPicker`
+   * and its copy moved from i18n keys it looked up itself to LABEL PROPS the parent passes in.
+   *
+   * That change fails in a specific, quiet way: a missing or misspelled key on the parent side
+   * renders the literal string `undefined` into the picker, and every assertion above still passes
+   * because they all read `data-technology*` attributes rather than text. So the text is asserted
+   * here, against the one surface that carries it.
+   */
+  it('renders real copy from the labels the parent passes, not undefined', async () => {
+    const wrapper = await mount('p1', { project: project({ technologyIds: ['skill-a'] }) })
+    const count = wrapper.find('[data-technologies-count]')
+    expect(count.exists()).toBe(true)
+    expect(count.text()).not.toBe('')
+    expect(count.text()).not.toContain('undefined')
+    // The count is interpolated from the selection, so it must reflect it rather than be static.
+    expect(count.text()).toContain('1')
+    // A raw i18n key path reaching the screen is the other failure mode of a copy change.
+    expect(wrapper.text()).not.toMatch(/dashboard\.projects\.editor\.technolog/)
+  })
+
   it('keeps a selected id the vocabulary cannot name, rather than dropping it', async () => {
     // `technologyIds` is replaced on save, so a selection that vanished from the UI would be
     // deleted from the project by the next save.

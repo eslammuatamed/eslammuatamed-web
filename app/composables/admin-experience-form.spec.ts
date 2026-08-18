@@ -4,8 +4,6 @@ import {
   emptyExperienceTranslationForm,
   experienceClearedLocales,
   experienceDateInputToApi,
-  experienceFieldErrorLocale,
-  experienceFieldErrorName,
   experienceFillState,
   experienceFormSchema,
   experienceIsoToDateInput,
@@ -246,34 +244,6 @@ describe('a locale is in use when any required field is written', () => {
     expect(experienceFillState(emptyExperienceTranslationForm())).toBe('empty')
     expect(experienceFillState({ ...emptyExperienceTranslationForm(), role: 'x' })).toBe('partial')
     expect(experienceFillState(translation())).toBe('complete')
-  })
-})
-
-/* ══════════════════════════════════════════════════════════════════════════════════════════════
-   422 MAPPING
-   ══════════════════════════════════════════════════════════════════════════════════════════════ */
-
-describe('422 field paths map back onto the right locale tab', () => {
-  it('resolves an index against the array THIS request sent', () => {
-    expect(experienceFieldErrorName('translations[1].role', ['en', 'ar'])).toBe('translations.ar.role')
-    expect(experienceFieldErrorLocale('translations[1].role', ['en', 'ar'])).toBe('ar')
-  })
-
-  it('resolves a SINGLE-locale payload against its own ordering, not a canonical list', () => {
-    // The case that actually bites: an Arabic-only role sends ONE entry, so index 0 is Arabic. An
-    // implementation resolving against a canonical ['en','ar'] pins the error to the English tab —
-    // a field the operator deliberately left empty — while the real problem stays invisible.
-    expect(experienceFieldErrorName('translations[0].company', ['ar'])).toBe('translations.ar.company')
-    expect(experienceFieldErrorLocale('translations[0].company', ['ar'])).toBe('ar')
-  })
-
-  it('passes a non-translation path through unchanged and reports no locale', () => {
-    expect(experienceFieldErrorName('startDate', ['en'])).toBe('startDate')
-    expect(experienceFieldErrorLocale('startDate', ['en'])).toBeNull()
-  })
-
-  it('refuses to guess when the index is outside the sent array', () => {
-    expect(experienceFieldErrorName('translations[3].role', ['en'])).toBeNull()
   })
 })
 

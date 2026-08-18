@@ -1,8 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
   articleClearedLocales,
-  articleFieldErrorLocale,
-  articleFieldErrorName,
   articleFormSchema,
   articleIsoToPublishAtLocal,
   articlePayload,
@@ -178,23 +176,6 @@ describe('the payload speaks D10-23 — explicit null clears', () => {
  * `dashboard-translation-errors.spec.ts` with the rule. What is left here is what these wrappers add:
  * the narrowing to `ArticleLocale`, exercised on the two paths this module actually produces.
  */
-describe('422 field paths map back onto the right locale tab', () => {
-  it('resolves an article translation path to a typed locale', () => {
-    expect(articleFieldErrorName('translations[1].slug', ['en', 'ar'])).toBe('translations.ar.slug')
-    expect(articleFieldErrorLocale('translations[1].slug', ['en', 'ar'])).toBe('ar')
-  })
-
-  it('resolves a SINGLE-locale article payload to that locale', () => {
-    expect(articleFieldErrorName('translations[0].slug', ['ar'])).toBe('translations.ar.slug')
-    expect(articleFieldErrorLocale('translations[0].slug', ['ar'])).toBe('ar')
-  })
-
-  it('passes an article-level path through untouched', () => {
-    expect(articleFieldErrorName('publishAt', ['en', 'ar'])).toBe('publishAt')
-    expect(articleFieldErrorLocale('publishAt', ['en', 'ar'])).toBeNull()
-  })
-})
-
 describe('dirty tracking', () => {
   it('is clean immediately after seeding', () => {
     const saved = article()

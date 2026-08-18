@@ -7,10 +7,6 @@ import {
   type ExperienceLocale,
   type ExperienceRequiredField
 } from '~/composables/admin-experience-fields'
-import {
-  translationFieldErrorLocale,
-  translationFieldErrorName
-} from '~/composables/dashboard-translation-errors'
 import type {
   AdminExperience,
   CreateExperiencePayload,
@@ -200,30 +196,6 @@ export function experienceClearedLocales(
 /** The locales the payload will carry, in the order it will carry them. */
 export function experiencePayloadLocales(form: ExperienceFormState): ExperienceLocale[] {
   return EXPERIENCE_LOCALES.filter(locale => experienceTranslationInUse(form.translations[locale]))
-}
-
-/**
- * Map an API field path onto a FORM field path, and onto a locale tab.
- *
- * The RULE is shared (`dashboard-translation-errors.ts`) because it belongs to the CONTRACT, not to
- * a module: sixteen admin write DTOs read a locale-keyed map, write a locale-tagged array, and
- * answer 422 with array-indexed paths. These wrappers exist only to narrow that module's `string`
- * locale to this module's `ExperienceLocale`. Experiences is the SECOND consumer of the shared
- * rule, which is the evidence §14.6 asked for rather than an anticipation of it.
- */
-export function experienceFieldErrorName(
-  field: string,
-  sentLocales: readonly ExperienceLocale[]
-): string | null {
-  return translationFieldErrorName(field, sentLocales)
-}
-
-export function experienceFieldErrorLocale(
-  field: string,
-  sentLocales: readonly ExperienceLocale[]
-): ExperienceLocale | null {
-  const locale = translationFieldErrorLocale(field, sentLocales)
-  return locale === null ? null : (locale as ExperienceLocale)
 }
 
 /**
