@@ -44,6 +44,31 @@ const alert = useTemplateRef<HTMLElement>('alert')
 const formError = ref<string | null>(null)
 const pending = ref(false)
 
+/**
+ * Password visibility, built as `UInput`'s `#trailing` slot rather than an absolutely-positioned
+ * control of our own. This is the shape `@nuxt/ui@4.10`'s own `UAuthForm` uses for a `password`
+ * field, copied deliberately: the slot is inside `UInput`'s markup, so the theme positions it with
+ * the LOGICAL `end-*` utilities and the control lands on the correct side in Arabic for free.
+ * Hand-positioning it is how a physical `right:` enters dashboard chrome, which is a defect class
+ * here (`check-logical-properties`).
+ *
+ * `UAuthForm` itself is not adopted, and the reason is specific rather than aesthetic: this page
+ * needs `form.setErrors()` for 422 field errors and a focus-managed `role="alert"` for everything
+ * else (D21 §5), and it needs the schema rebuilt when the dashboard language changes. Those are
+ * reachable on `UForm` and not on `UAuthForm`'s surface. Composition polish is FE-5's.
+ *
+ * `type` flips rather than a second input being revealed, so the field keeps its value, its
+ * `v-model` binding and its validation state across a toggle.
+ */
+/**
+ * `UCard` supplies the page's surface, border, radius and dark-mode states, for the same reason
+ * `messages.vue` uses it: Nuxt UI-first, so this page inherits the design system rather than
+ * restating it. No colour or spacing decision is taken here — visual finalize is FE-5's.
+ */
+const icons = useAppConfig().ui.icons
+const passwordInput = useTemplateRef<{ inputRef?: HTMLInputElement | null }>('passwordInput')
+const passwordVisible = ref(false)
+
 useSeoMeta({ title: () => t('auth.title'), robots: 'noindex' })
 
 async function onSubmit(event: FormSubmitEvent<Schema>): Promise<void> {
@@ -73,11 +98,11 @@ async function onSubmit(event: FormSubmitEvent<Schema>): Promise<void> {
 </script>
 
 <template>
-  <div>
-    <header class="mb-8">
+  <UCard>
+    <template #header>
       <h1 class="text-h1 text-highlighted">{{ t('auth.title') }}</h1>
       <p class="mt-2 text-muted">{{ t('auth.subtitle') }}</p>
-    </header>
+    </template>
 
     <div v-if="formError" ref="alert" tabindex="-1" role="alert" class="mb-6 outline-none">
       <UAlert color="error" variant="subtle" icon="i-lucide-circle-alert" :title="formError" />
@@ -96,11 +121,25 @@ async function onSubmit(event: FormSubmitEvent<Schema>): Promise<void> {
 
       <UFormField name="password" :label="t('auth.password')" required>
         <UInput
+          ref="passwordInput"
           v-model="state.password"
-          type="password"
+          :type="passwordVisible ? 'text' : 'password'"
           autocomplete="current-password"
           class="w-full"
-        />
+        >
+          <template #trailing>
+            <UButton
+              color="neutral"
+              variant="link"
+              size="sm"
+              :icon="passwordVisible ? icons.eyeOff : icons.eye"
+              :aria-label="passwordVisible ? t('auth.hidePassword') : t('auth.showPassword')"
+              :aria-pressed="passwordVisible"
+              :aria-controls="passwordInput?.inputRef?.id"
+              @click="passwordVisible = !passwordVisible"
+            />
+          </template>
+        </UInput>
       </UFormField>
 
       <UButton
@@ -112,5 +151,5 @@ async function onSubmit(event: FormSubmitEvent<Schema>): Promise<void> {
         :label="pending ? t('auth.submitting') : t('auth.submit')"
       />
     </UForm>
-  </div>
+  </UCard>
 </template>

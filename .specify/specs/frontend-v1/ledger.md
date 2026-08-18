@@ -16,7 +16,7 @@ Verify every line against live state before acting on it. Report drift before do
 | **Branch** | `campaign/frontend-v1` |
 | **Branched from** | `origin/dev` `54cea28737c558767ccb24a34e2b437b62f7f058`, via `plan/frontend-v1`. ⚠ The branch has **no upstream configured** — `git status` reports no ahead-of-upstream count at all, and `@{upstream}` exits 128. Compare against `origin/dev` **by name**. *(A previous revision of this row claimed the branch tracks `origin/dev`; it never did.)* |
 | **Branch tip** | **Do not read a SHA for this from this table — run `git rev-parse HEAD`.** A checkpoint commit that stamps its own SHA here is false the instant it lands, and this ledger has done it once already. |
-| **Last source-touching commit** | `c6a5b21bd7e72003a596a7d2c4cbadd86e7534a5` — FE-2a complete. Every commit after it touches `.specify/specs/frontend-v1/` only, so gate results measured at `c6a5b21` stay valid until one does not. Verify with `git diff --name-only c6a5b21 HEAD`. |
+| **Last source-touching commit** | **The FE-2b commit carries the source, the tests AND this ledger in one commit, so there is no gap between the code and the record of it.** That is deliberate: the previous shape stamped a SHA that a later doc-only commit then invalidated. Verify with `git log -1 --name-only`. |
 | **Remote state** | **NOT PUSHED.** `origin/dev` = `54cea28737c558767ccb24a34e2b437b62f7f058`, `origin/main` = `648aa467cd8bc7157cbcad2fd7c0e8981ee1f16c` — neither moved by this campaign, re-verified after FE-2a |
 | **Docs repo** | branch `docs/od-11-dashboard-localization`, HEAD `3b607af9e6b0fe9662abe0058f5e50c88bcd545f`, **local-only** (R10). `origin/main` = `1896d8c7…`, untouched |
 | **Production** | Web release `20260817T175534Z-648aa46` — untouched |
@@ -36,7 +36,7 @@ git -C /home/eslam-muatamed/worktrees/web-026-phase8 fetch origin && git rev-par
 | Phase | State |
 | --- | --- |
 | **FE-1 — Contract & Integration Foundation** | **COMPLETE** — commit `19e3a05`. Contract adopted + gtm reconciliation; reply flow deliberately moved to FE-2 (see §4). Gates re-verified on the committed tree: typecheck 0, 1501/1501. |
-| **FE-2 — Articles Tracer Bullet + Dashboard Architecture** | **IN PROGRESS.** OD-11 resolved (§9, option B). Three sub-phases: **FE-2a COMPLETE** (bilingual Dashboard architecture) · **FE-2b NOT STARTED** (login redesign + shell finish) · **FE-2c NOT STARTED** (Articles tracer bullet). |
+| **FE-2 — Articles Tracer Bullet + Dashboard Architecture** | **IN PROGRESS.** OD-11 resolved (§9, option B). Three sub-phases: **FE-2a COMPLETE** (bilingual Dashboard architecture) · **FE-2b COMPLETE** (bilingual login: card composition, password-visibility control, 380px, axe both languages) · **FE-2c NOT STARTED** (Articles tracer bullet — now also owns the Dashboard request-state contract, plan §14.9). |
 | FE-3 — Content Module Replication | NOT STARTED |
 | FE-4 — System Modules | NOT STARTED |
 | FE-5 — Coherence, D20-32 Review, M4 Closure | NOT STARTED |
@@ -234,6 +234,86 @@ code, never the wrapper's.
 
 ---
 
+### FE-2b — bilingual login
+
+**What it shipped.** `/dashboard/login` composed on `UCard`; a password-visibility control built as
+`UInput`'s `#trailing` slot; both new labels localized. The OD-11 *contract* was already in place
+from FE-2a (`layouts/auth.vue` carries the language control, the appearance control and the branded
+route home; the Zod schema is locale-reactive), so FE-2b is the composition FE-2a deliberately left.
+
+**`UAuthForm` was NOT adopted, and the reason is mechanical, not aesthetic.** `@nuxt/ui@4.10` ships a
+`UAuthForm` whose `password` field already has this toggle. It was rejected because this page needs
+`form.setErrors()` for 422 field errors and a focus-managed `role="alert"` for everything else — both
+reachable on `UForm`, neither on `UAuthForm`'s surface. **The toggle markup is copied from
+`UAuthForm`'s own implementation** (`type` flip, `aria-pressed`, `aria-controls`, `appConfig.ui.icons`),
+so this is the library's idiom rather than a bespoke equivalent — which is what §14.3's constraint asks.
+Putting it in the `#trailing` slot also means the *theme* positions it with logical `end-*` utilities;
+hand-positioning it is how a physical `right:` enters dashboard chrome.
+
+**Gates — all measured on a clean build at `NUXT_PUBLIC_SITE_URL=https://example.com` (the value CI uses).**
+
+| Gate | Result |
+| --- | --- |
+| `lint` | 0 problems |
+| `typecheck` | exit 0 |
+| `typecheck:e2e` | exit 0 |
+| `test` (unit) | **1534/1534**, 107 files — includes `i18n/locale-parity` with the two new keys |
+| `check:logical` | exit 0, **negative-controlled** (below) |
+| `size` (CSS) | **29.09 KB / 30.00 KB gz** — unchanged from baseline |
+| `size:routes` | exit 0 |
+| `e2e` login lane | **9/9**, incl. unfiltered axe in EN and AR |
+
+**Budget deltas, measured as a CONTROLLED comparison** — same directory, same `node_modules`, same
+env, the three changed files reverted to `d6180d7` and rebuilt, then restored by file copy and
+`sha256sum -c` verified. A cross-worktree or cross-session comparison would not have been valid.
+
+| Metric | Baseline `d6180d7` | FE-2b | Δ |
+| --- | --- | --- | --- |
+| Shared **public** floor | 253884 B gz | 253904 B gz | **+20 B** |
+| Shared **dashboard** floor | 260888 B gz | 260908 B gz | **+20 B** |
+| `/dashboard/login` Δ-above-floor (cap 86016 B) | 26912 B | **27913 B** | +1001 B |
+| `/dashboard/login` app-rendered (cap 103424 B) | 65553 B | **66511 B** | +958 B |
+| CSS all-sheets | 29.09 KB | 29.09 KB | 0 |
+
+**The +20 B is identical on both floors and that is the explanation, not a coincidence.** It is the
+two new i18n keys: `auth.showPassword` / `auth.hidePassword` in `en.json` and `ar.json` land in the
+**shared** locale bundle that both worlds load. It is attributable, not build noise — worth stating
+because `reference-web-build-output-nondeterministic` would make "noise" the lazy reading. Public
+floor is 248.0 KB against a 257.0 KB cap, so R2's headroom concern is not touched by it.
+
+The route itself grew ~1.0 KB gz (`UCard` + `UButton` + two eye icons), landing at **32% of its
+incremental cap**. No floor regression of the kind `82494d0` had to isolate.
+
+**Required attribution — 4 pre-existing D20-24 quality-target warnings.** `size:routes` passes but
+prints them, and the gate states the attribution block is required in any verification report:
+`/dashboard/messages` 330.8 KB gz · `/dashboard/projects` 307.4 KB gz · `/dashboard/projects/new`
+304.7 KB gz · `/dashboard/projects/{id}` 304.8 KB gz. **None is caused by FE-2b** — all four are
+above the 300 KB target on the baseline build too, and they pass on the D20-32 shared-floor model.
+
+**No provenance marker was stamped.** `stamp-build` refuses on a dirty tree, so these numbers carry
+no build SHA and `lighthouse:ci` would refuse until the tree is clean. They were taken on the exact
+source that this commit contains, but the marker is the thing that would *prove* it — re-run on the
+committed tree if a governed reading is ever needed.
+
+**Both instruments were controlled before being trusted.**
+
+| Control | Result |
+| --- | --- |
+| `check:logical` **negative control** — added `class="absolute right-2"` to the toggle, i.e. the exact defect the slot-based approach avoids | **FAILED**, naming the file and the utility; restored, PASSED; source `sha256` identical before and after |
+| Arabic-localization e2e **positive control** — hard-coded the `aria-label` to English, rebuilt, re-ran | **FAILED** as required. This is the defect no other gate sees: `locale-parity` still passes (the keys exist and are translated) and `typecheck` is silent. Restored, `sha256` verified |
+
+**A method finding that cost four invalid gate readings.** The first build of this phase exited **1**
+(`NUXT_PUBLIC_SITE_URL` is required at build time and was unset), but the harness reported the
+*wrapper's* exit 0 and the failure sat unread in the log. `size`, `size:routes` and a 9-test e2e run
+were then taken against a **stale `.output` from the previous session**, and the two e2e failures
+that produced were misread as a component defect for three cycles. Playwright serves a prebuilt
+`.output`; a failed build leaves the old one in place and every downstream gate reads green-ish
+nonsense. **Gate on the inner exit code explicitly, and assert a marker of the change is present in
+the built chunks before trusting any reading** — `grep -rl aria-pressed .output/public/_nuxt/` is
+what finally exposed it.
+
+---
+
 ## 6. Known risks carried
 
 | # | Risk |
@@ -314,6 +394,7 @@ third: exclude the tree.
 | `dfba453` | **FE-2a** — bilingual EN/AR dashboard chrome + the three gates that keep it bilingual |
 | `82494d0` | D20-32 floor regression isolated by measurement and removed (`UDropdownMenu`, 28.0 KB gz) |
 | `c6a5b21` | two review findings a green pipeline could not see; **FE-2a complete** |
+| `d6180d7` | the resume block stops asserting two things that were not true (no upstream; self-invalidating tip stamp) |
 
 **FE-2 sub-phases.** OD-11 enlarged FE-2, so it is split rather than run as one long stretch.
 Each boundary is committable and leaves the tree green.
@@ -321,8 +402,8 @@ Each boundary is committable and leaves the tree green.
 | Sub-phase | Deliverable | Exit |
 | --- | --- | --- |
 | ~~**FE-2a**~~ **DONE** | **Bilingual Dashboard architecture.** Persisted application locale; one localization mechanism for all dashboard surfaces; `dir`/`lang` on the shell root; dashboard pages excluded from localized route generation (`/ar/dashboard/**` removed); shell header — language switcher, theme, **View site**, session menu; logical drawer side; **the gate that makes untranslated chrome a lint/test failure**; full Arabic chrome for the modules that already exist | Arabic dashboard renders Arabic chrome RTL on a **cold load**; no key paths; gate positive-controlled; CI green |
-| **FE-2b** | **Login + shell finish.** `/dashboard/login` bilingual with the same language and appearance controls and a branded route back to the portfolio; localized Zod error presentation | Login usable and correct in both languages at 380px; keyboard + error-focus behaviour asserted |
-| **FE-2c** | **Articles tracer bullet.** The real flow first — list, editor, Tiptap, slug, scheduling, preview wiring — then extract `TranslationTabs` / `useTranslatableForm` / `EntityFormLayout` **only once it demonstrates the boundary** | An article authored in the Dashboard is live on `/blog` in both locales; Tiptap round-trip green; no public bundle regression; axe clean in **both** dashboard languages |
+| ~~**FE-2b**~~ **DONE** | **Login + shell finish.** `/dashboard/login` bilingual with the same language and appearance controls and a branded route back to the portfolio; localized Zod error presentation | Login usable and correct in both languages at 380px; keyboard + error-focus behaviour asserted — **met, see §5 FE-2b** |
+| **FE-2c** | **Articles tracer bullet.** The real flow first — list, editor, Tiptap, slug, scheduling, preview wiring — then extract `TranslationTabs` / `useTranslatableForm` / `EntityFormLayout` **only once it demonstrates the boundary**. **Also establishes the Dashboard request-state contract** (owner follow-up 2026-08-18, plan §14.9) — the ten criteria there are exit criteria, not aspirations | An article authored in the Dashboard is live on `/blog` in both locales; Tiptap round-trip green; no public bundle regression; axe clean in **both** dashboard languages; **plan §14.9 criteria 1–10 each demonstrated by a discriminating test** |
 
 **Discriminating tests that must exist before the pattern is trusted** (doc 18 §3, plan §14.7):
 

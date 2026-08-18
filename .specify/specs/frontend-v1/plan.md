@@ -1012,6 +1012,74 @@ rather than an alternative reading.
 
 ---
 
+### 14.9 Dashboard request-state contract — owner follow-up 2026-08-18
+
+**Status: an APPROVED REQUIREMENT, not an owner decision.** The owner stated explicitly that this
+opens no decision. It is recorded here so FE-2c builds it once and FE-3/FE-4 inherit it rather than
+each module inventing its own loading behaviour.
+
+**The precedent is the public site's 007 loading system, and it is treated as proven architecture,
+not as something to replace casually.** The established behaviour, restated as the owner set it:
+
+| Situation | Behaviour |
+| --- | --- |
+| Route navigation | Its own page-transition experience — a **separate concern** from data-request state |
+| Initial load, no usable content | Content-shaped **skeleton** |
+| Error, no usable content | Explicit **error state + retry** |
+| Empty after a successful load | Deliberate **empty state** |
+| Refresh/revalidation with usable content on screen | **Keep the content visible**, restrained updating treatment |
+| Mutations (Save/Delete) | Loading belongs to the **affected action/control**, never a page-blocking screen |
+
+**Explicitly forbidden:** a global full-screen loading screen for ordinary API fetching, adopted for
+visual consistency. Route transition and data-request state must not be collapsed into one thing.
+
+**Governing principle for reuse:** prefer shared **state semantics** over forcing every surface into
+the same visual component. Do not extract an abstraction merely because the public and Dashboard
+loading states share names — extract only where responsibility and behaviour are genuinely shared.
+
+#### Survey of the existing system, done 2026-08-18 before any FE-2c code
+
+| Artifact | Verdict |
+| --- | --- |
+| `useRequestState` | **Reuse directly, unchanged.** Pure derivation — `initialPending = pending && !hasData`, `refreshing = pending && hasData`, `show`. No presentation, no locale, no public-site assumption. It already *is* the state contract this follow-up asks for |
+| `UiRequestState` | **Reuse the CONTRACT, not necessarily the component.** Its branching is exactly criteria 1, 2, 6 and 7 — skeleton / error+retry / empty / content-with-overlay, and the invariant that **exactly one state renders at a time**. Its `skeleton` prop enum is public-shaped (`capabilities \| work \| timeline \| articles \| quotes \| rows`) |
+| `UiContentSkeleton` | **Presentation is public-specific; the a11y shape is right and must be preserved** — `role="status"`, `aria-busy`, an `aria-label` from a translated key, and decorative innards `aria-hidden`. Dashboard needs its own variants (table rows, card list, entity form) |
+| `UiDataLoadingOverlay` | **Reusable as presentation.** Already direction-aware (`rtl:[animation-direction:reverse]`), `role="status"` + `aria-live="polite"`, and it communicates "updating" rather than fake progress. ⚠ its RTL variant keys off an ancestor `[dir=rtl]`; FE-2a puts `dir` on the **shell root**, not `<html>` (D22-7) — so this must be **tested**, not assumed |
+| `UiStateError` | Reusable shape — message + accessible retry, `role="alert"` |
+
+#### Two findings from the survey that FE-2c must act on
+
+**F-1 — the whole 007 loading system reads its copy from the PUBLIC locale.** `UiContentSkeleton`,
+`UiDataLoadingOverlay` and `UiStateError` all call `useI18n()`. Dashboard routes are **unprefixed**
+under D04-7, so `useI18n().locale` on `/dashboard/**` is always the default — an Arabic dashboard
+would render English `Loading` / `Updating` / `Try again`. This is criterion 9, and it is a **wiring**
+defect, not a translation gap: `state.*` and `common.retry` already exist in both locales. Any
+dashboard reuse of these components must route copy through `useDashboardI18n()` first.
+
+**F-2 — one Dashboard module has already invented its own loading behaviour, and it is the
+anti-pattern.** `pages/dashboard/messages.vue` hand-rolls `v-if="pending"` + six `USkeleton` rows
+with its own `aria-busy`. It replaces the **whole surface** with a skeleton on every load, so a
+refresh, a filter change or a pagination step discards content that is still usable — precisely what
+criterion 2 forbids. It is correct about one thing the public components are not: its label comes
+from the dashboard i18n namespace. Reconciling it is FE-3/FE-4 work, not FE-2c's, but it is the
+evidence that this contract is needed rather than speculative.
+
+#### FE-2c acceptance criteria — added to the tracer bullet
+
+Articles must establish, and demonstrate, all ten. Nothing here is satisfied by a component
+existing; each is satisfied by a **discriminating test**.
+
+1. **Collection first load** — content-shaped rows/table skeleton; **no empty table flashing** before data resolves.
+2. **Collection refresh / filter / search / pagination** — preserve usable content, restrained update feedback, no full-surface skeleton replacement.
+3. **Entity editor first load** — deliberate editor loading state; **never render blank editable fields** before existing entity data resolves, which would invite the operator to overwrite real content with nothing.
+4. **Save/publish mutations** — submitting state on the primary action, **duplicate-submission prevention**, form context preserved, clear success/failure feedback.
+5. **Delete/destructive mutations** — loading on the destructive action/dialog only; unrelated Dashboard chrome stays live.
+6. **Background refresh/revalidation** — usable data stays visible, updating announced accessibly.
+7. **Error / empty / retry** — ONE coherent reusable contract across modules.
+8. **Accessibility** — correct `aria-busy`, status/live announcements, focus behaviour, and **no noisy repeated announcements** from a state that toggles.
+9. **Locale / RTL** — every loading/error/empty/updating surface follows the **Dashboard** application locale (see F-1) and composes correctly in EN and AR.
+10. **Mobile** — all of the above verified at **380px**, list and form surfaces alike.
+
 ## 15. FE-1 execution record · VERIFIED CURRENT
 
 Branch `campaign/frontend-v1`, off `origin/dev` `54cea287`. **Nothing pushed; nothing deployed.**
