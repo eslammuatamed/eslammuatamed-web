@@ -17,8 +17,10 @@ import process from 'node:process'
  * about the same entity, served by a different contract (`GET /articles`, locale-resolved). The
  * nearest-miss assertion below is therefore about a real adjacency, not a hypothetical one.
  *
- * TEXT-BASED by design, following the Projects gate and `scripts/e2e/lane-isolation.spec.mjs`: an
- * auto-imported symbol has no import statement to follow, so the NAME is the reference.
+ * TEXT-BASED by design, following the Projects gate: an auto-imported symbol has no import statement
+ * to follow, so the NAME is the reference. (`scripts/e2e/lane-isolation.spec.mjs` was cited here too;
+ * it now asserts against the typed lane registry instead of the config's text, so it is no longer a
+ * precedent for this technique.)
  *
  * What this does NOT prove is bytes — that is `size:routes` and `check-forbidden-modules.mjs`.
  */

@@ -1,19 +1,26 @@
 import { existsSync } from 'node:fs'
+import process from 'node:process'
 import { defineConfig, devices } from '@playwright/test'
+import type { Lane } from './scripts/e2e/lanes'
+import { LANES, LANE_DIRS, lanesToBoot } from './scripts/e2e/lanes'
 
 /**
  * End-to-end + accessibility harness (doc 18 §3, D18-3).
  *
  * The web repo's CI never boots the API — repositories test independently (doc 00 §3). Every e2e run
- * therefore targets the **committed** contract (`openapi/openapi.json`), and both lanes below run the
+ * therefore targets the **committed** contract (`openapi/openapi.json`), and every lane below runs the
  * real `.output` build rather than the dev server, because SSR correctness, hydration and route rules
  * are precisely what these tests exist to protect.
  *
- * TWO LANES, ONE ORCHESTRATOR.
+ * TEN LANES, ONE ORCHESTRATOR, ONE REGISTRY. Each lane is a Playwright project, a spec directory, a
+ * backend and a port pair, and all four now come from ONE record in `scripts/e2e/lanes.ts` — which is
+ * also where each lane's justification lives, next to the record it justifies. The two anchor lanes:
  *
  *   `contract`      — Prism serving the committed contract. The normal journey: routing, ordering,
  *                     filters, gallery, SEO, locale switching, navigation and axe. This is the
- *                     primary lane and Prism remains the primary contract mock.
+ *                     primary lane and Prism remains the primary contract mock. It is the only
+ *                     project that selects by EXCLUSION, and its exclusion list is now GENERATED
+ *                     from the registry — see the note on `testIgnore` below.
  *
  *   `ssr-scenarios` — a small deterministic Web-owned backend (`scripts/e2e/scenario-server.ts`)
  *                     serving ONLY the six states Prism cannot express, because Prism replays one
@@ -33,67 +40,21 @@ import { defineConfig, devices } from '@playwright/test'
  * server-rendered before the backend is listening renders its ERROR state, which silently changes
  * what the test asserts. The `--backend` flag swaps only the upstream; the lifecycle is shared.
  *
- * The two lanes use DISJOINT PORTS so they can run in the same invocation without colliding.
+ * The lanes use DISJOINT PORTS so they can run in the same invocation without colliding.
+ *
+ * `webServer` IS SCOPED TO THE SELECTED LANES, AND HAD TO BE. Playwright's `webServer` is a top-level
+ * array with no per-project option (its documentation exposes none), so before this every invocation
+ * booted every lane: measured, `--project=dashboard-articles` — a run needing exactly ONE lane —
+ * started all ten Nitro servers and passed 48/48 while doing it. `lanesToBoot()` narrows that to the
+ * lanes named by `--project`, and boots all of them when none is named, because a `--grep`-only or
+ * `--last-failed` run may touch any lane. `E2E_ALL_LANE_SERVERS=1` restores the old behaviour, which
+ * is what the negative control for the change needs. Full rationale and the measurements are in
+ * `scripts/e2e/lanes.ts`; `scripts/e2e-shards.mjs` is the bounded-concurrency full-suite runner built
+ * on top of it.
  */
-const CONTRACT_PORT = Number(process.env.CI_PREVIEW_PORT ?? 3000)
-const CONTRACT_API_PORT = Number(process.env.CI_MOCK_PORT ?? 3001)
-const SCENARIO_PORT = Number(process.env.CI_SCENARIO_PORT ?? 3100)
-const SCENARIO_API_PORT = Number(process.env.CI_SCENARIO_MOCK_PORT ?? 3101)
 
-// The About readiness lane. Its own ports because it is its own preview + backend pair: the settings
-// variant it needs must not be visible to the other two lanes.
-const READINESS_PORT = Number(process.env.CI_READINESS_PORT ?? 3200)
-const READINESS_API_PORT = Number(process.env.CI_READINESS_MOCK_PORT ?? 3201)
-
-// The résumé PDF lane (010). Its own preview + backend pair again: the populated `resumeAsset`
-// must not be visible to the other lanes, because the PDF-NULL state is the real live state and is
-// what every other lane must keep rendering. This backend also serves the PDF object itself, so the
-// attachment headers are observable by a real browser.
-const RESUME_PDF_PORT = Number(process.env.CI_RESUME_PDF_PORT ?? 3300)
-const RESUME_PDF_API_PORT = Number(process.env.CI_RESUME_PDF_MOCK_PORT ?? 3301)
-
-// The Dashboard Inbox lane (012). Its own preview + backend pair for a reason the other lanes do not
-// have: this backend is MUTABLE (a PATCH changes what the next GET returns), which is required to
-// prove that the list and the unread badge follow CONFIRMED server state. Its project therefore runs
-// SERIALLY — see `fullyParallel: false` on the project below — while every other lane keeps running
-// in parallel, because mutable state is confined to this process.
-const DASHBOARD_PORT = Number(process.env.CI_DASHBOARD_PORT ?? 3500)
-const DASHBOARD_API_PORT = Number(process.env.CI_DASHBOARD_MOCK_PORT ?? 3501)
-
-// The settings-dedupe lane. Its own preview + backend pair again, because its backend COUNTS
-// requests: any other lane sharing the process would add renders to the count under test.
-const SETTINGS_COUNT_PORT = Number(process.env.CI_SETTINGS_COUNT_PORT ?? 3600)
-const SETTINGS_COUNT_API_PORT = Number(process.env.CI_SETTINGS_COUNT_MOCK_PORT ?? 3601)
-
-// The Media Library + Profile lane. Its own preview + backend pair for the same reason as the
-// Dashboard Inbox: this backend is MUTABLE in three ways at once (upload adds, delete removes or is
-// refused, settings PATCH changes the next GET), and none of that can be shared with a lane that
-// asserts a fixed fixture set.
-const MEDIA_PORT = Number(process.env.CI_MEDIA_PORT ?? 3700)
-const MEDIA_API_PORT = Number(process.env.CI_MEDIA_MOCK_PORT ?? 3701)
-
-// The public project-detail freshness lane. Its upstream changes from an empty gallery to a
-// populated gallery while the test is running, so it gets a dedicated serial process pair.
-const PROJECT_CACHE_PORT = Number(process.env.CI_PROJECT_CACHE_PORT ?? 3800)
-const PROJECT_CACHE_API_PORT = Number(process.env.CI_PROJECT_CACHE_MOCK_PORT ?? 3801)
-
-// The Dashboard sign-in lane. It shares the `dashboard` BACKEND SCRIPT but not its process: the
-// `dashboard` lane's backend holds mutable Inbox state that its specs reset, and a lane backed by
-// mutable state is only serial for as long as it is a single spec file (see the `dashboard` project
-// and `scripts/e2e/lane-isolation.spec.mjs`). Putting the login specs in that directory made it two
-// files, which is a second worker resetting the Inbox lane's fixtures mid-assertion. A dedicated
-// process pair is what the existing lanes do in this situation, so login gets one rather than an
-// exemption.
-const DASHBOARD_LOGIN_PORT = Number(process.env.CI_DASHBOARD_LOGIN_PORT ?? 3900)
-const DASHBOARD_LOGIN_API_PORT = Number(process.env.CI_DASHBOARD_LOGIN_MOCK_PORT ?? 3901)
-
-// The Articles authoring lane (FE-2c). Its own preview + backend pair for the same reason as the
-// Dashboard Inbox and Media lanes: this backend is MUTABLE (create/update/delete change what the
-// next GET returns), and it is additionally the only one that can HOLD A RESPONSE OPEN, which is
-// what makes the §14.9 loading, updating and submitting states observable at all. A lane that can
-// pause its own backend must not share that backend with lanes asserting fixed fixtures.
-const ARTICLES_PORT = Number(process.env.CI_ARTICLES_PORT ?? 4000)
-const ARTICLES_API_PORT = Number(process.env.CI_ARTICLES_MOCK_PORT ?? 4001)
+const port = (lane: Lane) => Number(process.env[lane.ports.webEnv] ?? lane.ports.webDefault)
+const mockPort = (lane: Lane) => Number(process.env[lane.ports.apiEnv] ?? lane.ports.apiDefault)
 
 // Fail with an actionable message instead of a connection-refused timeout 90 s later. `ci-preview.mjs`
 // boots `.output/server/index.mjs` directly, so a missing build is a setup mistake, not a test failure.
@@ -107,24 +68,60 @@ if (!existsSync('.output/server/index.mjs')) {
 /**
  * Shared `webServer` policy. Never reuse a stray server: it may be running a stale build.
  *
- * `readyPath` exists because the readiness probe is not free of side effects. Playwright GETs this
- * URL to decide the server is up, and `nuxt.config.ts` puts `swr: 60` on `/` — so probing the
+ * `lane.readyPath` exists because the readiness probe is not free of side effects. Playwright GETs
+ * this URL to decide the server is up, and `nuxt.config.ts` puts `swr: 60` on `/` — so probing the
  * default `/` RENDERS AND CACHES the home page before any test runs. The `settings-dedupe` lane then
  * measured that cache instead of the application: its outage test asserted against a healthy `/`
- * that had been rendered while the backend was still answering 200. Lanes that count requests point
- * the probe at a route with no SWR rule; the rest keep `/`, which is the cheapest liveness signal.
+ * that had been rendered while the backend was still answering 200. Lanes that count requests or
+ * measure a cold route point the probe at a route with no SWR rule; the rest keep `/`, which is the
+ * cheapest liveness signal.
  */
-function previewServer(backend: string, webPort: number, apiPort: number, readyPath = '/') {
+function previewServer(lane: Lane) {
+  const webPort = port(lane)
   return {
-    command: `node scripts/ci-preview.mjs --backend ${backend}`,
-    url: `http://127.0.0.1:${webPort}${readyPath}`,
-    env: { CI_PREVIEW_PORT: String(webPort), CI_MOCK_PORT: String(apiPort) },
+    command: `node scripts/ci-preview.mjs --backend ${lane.backend}`,
+    url: `http://127.0.0.1:${webPort}${lane.readyPath}`,
+    env: { CI_PREVIEW_PORT: String(webPort), CI_MOCK_PORT: String(mockPort(lane)) },
     reuseExistingServer: false,
     timeout: 120_000,
     stdout: 'pipe' as const,
     stderr: 'pipe' as const
   }
 }
+
+/**
+ * One Playwright project per lane.
+ *
+ * `contract`'s `testIgnore` is GENERATED from the registry's lane directories, and that is the point.
+ * It used to be a hand-written list, and it is the one project that selects by EXCLUSION — so it
+ * silently ADOPTED any lane directory nobody remembered to exclude, and it did: `testIgnore` listed
+ * `dashboard/**`, which does not match `dashboard-media/**`, so the media specs ran a SECOND time
+ * here against Prism, which serves a static example and holds no mutable state — 19 failures that
+ * described the wrong backend rather than the product. Generating the list makes that class of
+ * mistake unrepresentable rather than merely guarded.
+ *
+ * `fullyParallel: false` follows `resetsBackendState`, and is NOT what makes those lanes serial:
+ * `workers` is a TOP-LEVEL option and cannot be set per project, and `fullyParallel: false` only
+ * serialises tests WITHIN a file — so what actually serialises such a lane is being a SINGLE spec
+ * file, which `scripts/e2e/lane-isolation.spec.mjs` asserts. This is a property of a shared mutable
+ * backend, not a flake workaround: nothing is retried anywhere in this config.
+ *
+ * ONE CAVEAT, MEASURED. Playwright groups work by (file, repeatEachIndex), so `--repeat-each` splits
+ * the repeat copies of one file across workers and they then race on that lane's mutable backend.
+ * Observed: `--repeat-each=3 --workers=2` produced 10 dashboard failures, while the identical
+ * `--repeat-each=3 --workers=1` produced 0 — the difference is interference, not product behaviour.
+ * A repeat sweep over a mutable lane must therefore pass `--workers=1`; the normal `npm run test:e2e`
+ * invocation is unaffected because each test runs once.
+ */
+const projects = LANES.map(lane => ({
+  name: lane.project,
+  ...(lane.dir === null
+    // `contract` owns the flat specs at the root of `e2e/` and excludes every lane directory.
+    ? { testIgnore: LANE_DIRS.map(dir => `${dir}/**`) }
+    : { testMatch: `${lane.dir}/**/*.spec.ts` }),
+  ...(lane.resetsBackendState ? { fullyParallel: false } : {}),
+  use: { ...devices['Desktop Chrome'], baseURL: `http://127.0.0.1:${port(lane)}` }
+}))
 
 export default defineConfig({
   testDir: './e2e',
@@ -150,120 +147,7 @@ export default defineConfig({
   // One desktop browser is enough for the behaviours under test (routing, locale, SSR, a11y). Viewport
   // -specific rendering is covered by the Lighthouse mobile profile and the manual visual matrix; adding
   // browser engines here would multiply run time without testing a different code path.
-  projects: [
-    {
-      name: 'contract',
-      // `dashboard-media/**` is listed SEPARATELY and must stay that way: `dashboard/**` does not
-      // match it. Every other project selects with `testMatch`, so this is the one project that
-      // silently ADOPTS any directory it forgets to exclude — and it did. Measured: the media specs
-      // ran a second time here against Prism, which serves a static example and holds no mutable
-      // state, producing 19 failures that described the wrong backend rather than the product.
-      testIgnore: [
-        'scenarios/**', 'readiness/**', 'resume-pdf/**', 'dashboard/**', 'dashboard-media/**',
-        'dashboard-login/**', 'dashboard-articles/**', 'dedupe/**', 'cache/**'
-      ],
-      use: { ...devices['Desktop Chrome'], baseURL: `http://127.0.0.1:${CONTRACT_PORT}` }
-    },
-    {
-      name: 'ssr-scenarios',
-      testMatch: 'scenarios/**/*.spec.ts',
-      use: { ...devices['Desktop Chrome'], baseURL: `http://127.0.0.1:${SCENARIO_PORT}` }
-    },
-    {
-      name: 'about-readiness',
-      testMatch: 'readiness/**/*.spec.ts',
-      use: { ...devices['Desktop Chrome'], baseURL: `http://127.0.0.1:${READINESS_PORT}` }
-    },
-    {
-      name: 'resume-pdf',
-      testMatch: 'resume-pdf/**/*.spec.ts',
-      use: { ...devices['Desktop Chrome'], baseURL: `http://127.0.0.1:${RESUME_PDF_PORT}` }
-    },
-    {
-      name: 'dashboard',
-      testMatch: 'dashboard/**/*.spec.ts',
-      // SERIAL, unlike every other project here. Its backend holds mutable state that each test
-      // resets, so concurrent tests would reset each other's fixtures mid-assertion. `workers` is a
-      // TOP-LEVEL option and cannot be set per project, and `fullyParallel: false` only serialises
-      // tests within a FILE — so the lane is kept to a SINGLE spec file, which is what actually
-      // makes it serial. This is a property of the shared mutable backend, not a flake workaround:
-      // nothing is retried anywhere in this config.
-      //
-      // ONE CAVEAT, MEASURED. Playwright groups work by (file, repeatEachIndex), so `--repeat-each`
-      // splits the repeat copies of this file across workers and they then race on the one mutable
-      // backend. Observed: `--repeat-each=3 --workers=2` produced 10 dashboard failures, while the
-      // identical `--repeat-each=3 --workers=1` produced 0 — the difference is interference, not
-      // product behaviour. A repeat sweep over this project must therefore pass `--workers=1`;
-      // the normal `npm run test:e2e` invocation is unaffected because each test runs once.
-      fullyParallel: false,
-      use: { ...devices['Desktop Chrome'], baseURL: `http://127.0.0.1:${DASHBOARD_PORT}` }
-    },
-    {
-      name: 'settings-dedupe',
-      testMatch: 'dedupe/**/*.spec.ts',
-      // SERIAL, for the same reason as `dashboard`: its backend holds a mutable counter that each
-      // test resets, so concurrent tests would count each other's renders. `workers` is a TOP-LEVEL
-      // option, so what actually makes this lane serial is keeping it to a SINGLE spec file.
-      fullyParallel: false,
-      use: { ...devices['Desktop Chrome'], baseURL: `http://127.0.0.1:${SETTINGS_COUNT_PORT}` }
-    },
-    {
-      name: 'dashboard-media',
-      testMatch: 'dashboard-media/**/*.spec.ts',
-      // SERIAL, for the same reason as `dashboard` and `settings-dedupe`, and with the same caveat:
-      // what actually makes this lane serial is keeping it to a SINGLE spec file, because `workers`
-      // is a top-level option and `fullyParallel: false` only serialises tests within a file. A
-      // second spec file here would run in a second worker and reset this backend's fixtures
-      // mid-assertion. A repeat sweep over this project must pass `--workers=1`.
-      fullyParallel: false,
-      use: { ...devices['Desktop Chrome'], baseURL: `http://127.0.0.1:${MEDIA_PORT}` }
-    },
-    {
-      name: 'dashboard-login',
-      testMatch: 'dashboard-login/**/*.spec.ts',
-      // NOT marked `fullyParallel: false`. These specs neither seed nor reset backend state — they
-      // drive the real sign-in form and one deliberate 401 — so they are safe to parallelise, and
-      // claiming otherwise would misdescribe why the neighbouring lanes are serial.
-      use: { ...devices['Desktop Chrome'], baseURL: `http://127.0.0.1:${DASHBOARD_LOGIN_PORT}` }
-    },
-    {
-      name: 'dashboard-articles',
-      testMatch: 'dashboard-articles/**/*.spec.ts',
-      // SERIAL, for the same reason as `dashboard`, `dashboard-media` and `settings-dedupe`, and
-      // with the same caveat: what actually makes this lane serial is keeping it to a SINGLE spec
-      // file, because `workers` is a top-level option and `fullyParallel: false` only serialises
-      // tests within a file. A second spec file here would run in a second worker and reset this
-      // backend's fixtures — or its response delay — mid-assertion.
-      fullyParallel: false,
-      use: { ...devices['Desktop Chrome'], baseURL: `http://127.0.0.1:${ARTICLES_PORT}` }
-    },
-    {
-      name: 'project-detail-cache',
-      testMatch: 'cache/**/*.spec.ts',
-      // One spec file owns one mutable upstream. Keeping the lane serial prevents a reset in a
-      // future test from racing the publish transition that this regression measures.
-      fullyParallel: false,
-      use: { ...devices['Desktop Chrome'], baseURL: `http://127.0.0.1:${PROJECT_CACHE_PORT}` }
-    }
-  ],
+  projects,
 
-  webServer: [
-    // Readiness probes `/about`, NOT `/` (INF-A). `/` carries `swr: 60` (nuxt.config.ts:85), so a
-    // probe that lands before Prism is listening caches the API-unavailable render and Nitro serves
-    // that stale entry to every subsequent `/` request for the rest of the lane — the whole contract
-    // run then asserts against the error state. `/about` has no SWR rule, so probing it cannot poison
-    // a cache. `settings-count` below already probes `/about` for the same reason.
-    previewServer('prism', CONTRACT_PORT, CONTRACT_API_PORT, '/about'),
-    previewServer('scenarios', SCENARIO_PORT, SCENARIO_API_PORT),
-    previewServer('about-readiness', READINESS_PORT, READINESS_API_PORT),
-    previewServer('resume-pdf', RESUME_PDF_PORT, RESUME_PDF_API_PORT),
-    previewServer('dashboard', DASHBOARD_PORT, DASHBOARD_API_PORT),
-    // `/about` carries no SWR rule, so probing it leaves every route this lane measures cold.
-    previewServer('settings-count', SETTINGS_COUNT_PORT, SETTINGS_COUNT_API_PORT, '/about'),
-    previewServer('media', MEDIA_PORT, MEDIA_API_PORT),
-    // `/about` proves the page shell is ready without priming either detail URL under test.
-    previewServer('project-cache', PROJECT_CACHE_PORT, PROJECT_CACHE_API_PORT, '/about'),
-    previewServer('dashboard', DASHBOARD_LOGIN_PORT, DASHBOARD_LOGIN_API_PORT),
-    previewServer('articles', ARTICLES_PORT, ARTICLES_API_PORT)
-  ]
+  webServer: lanesToBoot().map(previewServer)
 })

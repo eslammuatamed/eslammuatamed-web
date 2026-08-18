@@ -50,7 +50,7 @@ git -C /home/eslam-muatamed/worktrees/web-026-phase8 fetch origin && git rev-par
 | --- | --- |
 | **FE-1 — Contract & Integration Foundation** | **COMPLETE** — commit `19e3a05`. Contract adopted + gtm reconciliation; reply flow deliberately moved to FE-2 (see §4). Gates re-verified on the committed tree: typecheck 0, 1501/1501. |
 | **FE-2 — Articles Tracer Bullet + Dashboard Architecture** | **COMPLETE.** OD-11, OD-3, D20-33 and its amendment all resolved. FE-2a/2b/2c done: F-1 **CLOSED** with browser evidence · collection · editor · §14.6 extraction pass · **all ten §14.9 criteria demonstrated** · every gate green including `size:routes`. The reusable architecture is recorded in **§10**. |
-| **FE-3 — Content Module Replication** | **OPENS — not yet implementing.** Its first unit is **R14**, the e2e lane strategy: `playwright.config.ts` boots 10 preview-server pairs on 12 cores and the full suite now loses exactly one test per run to transport/timeout, a different one each time. Five more modules cannot each take a process pair. R14 is a design decision against the `lane-isolation.spec.mjs` invariant, not a tuning knob, and no module lands before it is settled. |
+| **FE-3 — Content Module Replication** | **OPEN — unit 1 (R14) LANDED, no module started.** A run now boots only the lanes it selected: measured 1 preview pair for `--project=dashboard-articles`, against 10 before, same command. The full suite still boots all ten by design, so R14 is **NARROWED, NOT CLOSED** — see §6 and §5/FE-3/U-1. ⚠ This row previously said the full suite "loses exactly one test per run"; the pre-change control run **did not reproduce that** (471 passed, exit 0) and the claim is corrected here rather than carried forward. |
 | FE-4 — System Modules | NOT STARTED |
 | FE-5 — Coherence, D20-32 Review, M4 Closure | NOT STARTED |
 
@@ -572,7 +572,14 @@ closes the gap FE-2b and U-2 both recorded, where numbers had no build SHA behin
 | `size` (CSS) | **29.19 / 30.00 KB gz** |
 | `size:routes` | **exit 0** — all three Articles routes measured and passing |
 
-#### ⚠ R14 — the full suite now fails exactly one test per run, and the cause is this lane's SERVER
+#### ⚠ R14 — the suite's FIXED COST, and one test lost per run in three consecutive readings
+
+> **Amended 2026-08-18, FE-3/U-1.** The three readings below stand as taken. What they do NOT support
+> is the present tense: a fourth full-suite run on the same tree, taken as the control for the R14 fix,
+> passed **471, exit 0** with no casualty. The symptom is load-dependent, so three consecutive hits do
+> not make it reproducible on demand and the fourth run's green does not make it fixed. The heading
+> used to read "the full suite now fails exactly one test per run"; it says what was measured instead.
+> The FIXED COST claim is unaffected — that one is deterministic and was re-measured (§5 FE-3/U-1).
 
 **The Articles lane never fails.** 48/48 in every run. But the FULL suite does, and the measurement
 is unambiguous:
@@ -604,6 +611,97 @@ its own lane is green in every configuration measured, including at CI's worker 
 
 ---
 
+### FE-3 · U-1 — the e2e lane strategy (R14), narrowed by construction
+
+**The mechanism, measured first.** `webServer` is a TOP-LEVEL Playwright array with no per-project
+scoping — its documented options contain none — so every invocation booted every lane. Measured
+before any change: `--project=dashboard-articles`, a run needing exactly ONE lane, booted **10 Nitro
+servers** and passed 48/48 while doing it. That is the fixed cost, and it is deterministic.
+
+**What the fixed cost actually is.** Sampled across a full run on 12 cores: peak load average
+**17.4**, available memory down to **5.9 GB**, **~1 GB of fresh swap** on top of what was resident,
+ten Nitro servers at **140–290 MB RSS** each plus ten backends, workers and browsers.
+
+**The control run did not reproduce the casualty, and that changed the argument.** The pre-change
+full suite passed **471, exit 0, 3.8 min** — no lost test, where three earlier readings each lost one.
+So the fix is justified by the deterministic quantity (pairs booted per run) and **not** by a failure
+it cannot reproduce on demand. §5 FE-2c/U-5 is amended to say so.
+
+**The change.** One record per lane in `scripts/e2e/lanes.ts` — project, spec directory, backend,
+port pair, readiness path, whether its specs reset backend state, and why it needs its own process.
+`playwright.config.ts` derives `projects` **and** `webServer` from it, and `lanesToBoot()` narrows
+`webServer` to the lanes named by `--project`. No `--project` boots everything, because a
+`--grep`-only or `--last-failed` run may touch any lane and starving it would turn a filter into a
+false failure.
+
+| Reading | Before | After |
+| --- | --- | --- |
+| `--project=dashboard-articles` — preview pairs | **10** | **1** · 48/48, exit 0 |
+| Same command, `E2E_ALL_LANE_SERVERS=1` (negative control) | — | **10** · 48/48, exit 0 |
+| Full suite (`npx playwright test`) | 471 passed, exit 0, 3.8 min, 10 pairs | **471 passed**, exit 0, 3.8 min, **10 pairs** — unchanged by design |
+| `npm run test:e2e:sharded` | — | **471** (329+85+57), exit 0, **5.0 min**, **peak 4 pairs**, min avail 7.4 GB |
+| `lint` · `typecheck` · `typecheck:e2e` | — | exit 0 · 0 · 0 |
+| `test` (unit) | 1673 | **1683/1683**, 117 files |
+| `check:bundle` · `check:logical` · `size` | — | exit 0 · exit 0 · **29.19 / 30.00 KB gz** (unchanged — no `app/` source was touched) |
+
+**471 is the acceptance criterion, not an observation.** The generated `contract.testIgnore` had to
+reproduce the hand-written one exactly; any other total would mean `contract` had adopted or dropped
+a lane, which is the precise failure this whole area exists to prevent. It matched on both paths —
+the single full run, and the three shards summed.
+
+**The negative control is what makes the 1-pair reading mean anything.** `E2E_ALL_LANE_SERVERS=1`
+restores the old behaviour, and the SAME command then boots 10 again. Without it, "1 pair" is a
+number with nothing to compare against.
+
+**The guard was rewritten and positive-controlled three times**, each mutation reverted with the file
+hash checked back to its pre-mutation value:
+
+| Mutation | Result |
+| --- | --- |
+| A lane directory with a spec and **no registry record** | **FAILS** — `e2e/unregistered-lane has a lane record` |
+| A **second spec file** in the mutable `cache` lane | **FAILS** — `e2e/cache … must hold exactly one spec file` |
+| A **duplicated port** across two lanes | **FAILS** — `gives every lane its own port pair` |
+
+**Mutation B closed a real hole rather than demonstrating an existing one.** The old guard checked a
+HAND-WRITTEN list — `['dashboard', 'dashboard-media', 'dashboard-articles', 'dedupe']` — and `cache`
+was not on it, although its backend mutates a gallery mid-test and its project is serial. The old
+guard therefore PASSED on mutation B. Deriving the list from `resetsBackendState` covers every mutable
+lane, including ones added later. *(Read out of the pre-change file, not inferred.)*
+
+**Two things the refactor made unrepresentable rather than merely guarded.** `contract` is the only
+project that selects by EXCLUSION, and its `testIgnore` is now GENERATED from the registry's lane
+directories — the class of bug where a forgotten directory is silently adopted and run against Prism
+(19 failures describing the wrong backend) can no longer be written. And a lane's port pair, project
+and backend can no longer disagree, because they are one record.
+
+**Costs and consequences, stated plainly.**
+
+- **Wall clock.** Sharded is **5.0 min vs 3.8 min** (+31%): the `contract` lane dominates and no
+  longer overlaps the rest. That is the price of the bound, and it is why sharding is opt-in.
+- **`test:e2e` is UNCHANGED** — still `playwright test`, still what CI runs. No CI YAML was touched.
+  A governed gate is not re-pointed on evidence that could not be reproduced.
+- **`test:e2e:repeat` now boots fewer servers.** `repeat-flake-sweep.mjs` passes explicit `--project`
+  lists, so its `public` sweep boots 4 pairs and its `dashboard` sweep 1, where both booted 10. Same
+  tests, less contention. ⚠ **NOT re-run here**: that sweep is red by design (issue #30), so a run
+  would not discriminate a new failure from the expected one. Flagged rather than claimed.
+- **`playwright.race.config.ts` is standalone** — its own projects and `webServer`, no import of the
+  main config, so it is untouched.
+- **Load average barely moved** (23.5 → 21.6 across the two runs) and is NOT offered as evidence:
+  workers and browsers dominate it, and the two runs were sampled under different background load.
+  The clean numbers are the **pair count** and available memory (5.9 → 7.4 GB).
+
+**One accidental reading, kept because it is the mechanism.** The unit suite was run once *while* a
+10-pair Playwright control run was executing and reported **2 failed / 1681 passed**; run alone
+immediately after, **1683/1683, exit 0**. Self-inflicted, and not evidence for anything about the
+product — but it is the R14 symptom class reproduced by construction: non-assertion failures that
+appear only under concurrent load and vanish without it.
+
+**Two rules FE-3 inherits from this unit.** A new module adds **one record** to
+`scripts/e2e/lanes.ts` and nothing else — the config, the shard plan and the guard all follow it. And
+a new mutable lane still means **one spec file**; that invariant was upheld, never traded.
+
+---
+
 ## 6. Known risks carried
 
 | # | Risk |
@@ -616,7 +714,7 @@ its own lane is green in every configuration measured, including at CI's worker 
 | R10 | `D19-11` id collision across Docs branches — blocks any Docs integration |
 | R11 | Issue #30 hydration defect — `test:e2e:repeat` red by design, out of scope |
 | ~~**R12**~~ | ~~`/dashboard/articles` ships UNMEASURED.~~ **CLOSED by D20-33** (`e0128c2`, Docs `3f2626e`). Superseded by the open cap question in §9.4. |
-| **R14** | **The e2e suite's FIXED COST now exceeds this machine, and the Articles lane is what tipped it.** Measured, not suspected — see §5 FE-2c/U-5. Every Articles assertion passes; the casualties are transport/timeout failures in OTHER lanes. **FE-3 must not add a preview-server pair per module** or the suite stops being runnable. Decide the lane strategy before the first FE-3 module, and note CI's behaviour is UNVERIFIED (fewer cores, and Actions has been billing-blocked). |
+| **R14** | **NARROWED 2026-08-18 (FE-3/U-1), not closed.** The e2e suite's FIXED COST exceeds this machine — deterministic and re-measured: a full run peaks at load **17.4** on 12 cores, drives available memory to **5.9 GB** and adds **~1 GB of swap**, for ten Nitro servers at 140–290 MB RSS each plus ten backends. What is FIXED: a run now boots only the lanes it selects (**1 pair** for a one-lane run, against 10, same command — §5 FE-3/U-1), so per-module development runs and the `test:e2e:repeat` sweeps no longer pay for the whole farm. What is NOT: `npm run test:e2e` still selects nothing and therefore still boots all ten, so **FE-3's five modules still take it to 15 pairs on the default path**. `npm run test:e2e:sharded` bounds it to 4 concurrent pairs and is available but is NOT the default, because the intermittent casualty did not reproduce (see the amendment in §5 FE-2c/U-5) and a governed CI gate must not be re-pointed on unreproduced evidence. **Trigger to make it the default:** either a full-suite casualty reproduced on demand, or the lane count passing **12**. CI's behaviour stays UNVERIFIED — fewer cores, and nothing is pushed. |
 | **R13** | **CSS budget R2 tightened.** 29.19 / 30.00 KB gz — **~0.81 KB headroom**, down from ~0.91 KB. Two more modules of this size would exhaust it. Watch on every FE-3 module. |
 | — | **About portrait** is an owner content dependency for M4 closure; do not fabricate or substitute owner content |
 
@@ -911,7 +1009,26 @@ transport/timeout — a *different* test each run, never a content assertion, an
 the tenth server is removed. Five more modules at one process pair each makes the suite unrunnable.
 Starting a module first would bury that under new work and make every subsequent red run ambiguous.
 
+**U-1 is LANDED — R14 is narrowed, not closed (§5 FE-3/U-1, §6 R14).** A run boots only the lanes it
+selects (1 pair, against 10); the full suite still boots all ten, `test:e2e` and the CI YAML are
+untouched, and `npm run test:e2e:sharded` bounds the full suite to 4 pairs as an opt-in.
+
 **Next three actions:**
+
+1. **Answer the delegation question, then start the first FE-3 module.** It is the SECOND CONSUMER —
+   §10.2 declined four extractions for want of one, so `TranslationTabs`, `EntityFormLayout`,
+   `useTranslatableForm` and `usePublicEntityLink` become provable *then*, against two real shapes.
+   Adding its e2e lane is now one record in `scripts/e2e/lanes.ts`.
+2. **Carry the two §10.3 rules that bind before any code is written:** keep the per-module
+   `*-fields.ts` split (worth 6,211 B on a collection route), and get a **governed cap** for each new
+   dashboard route before it ships (D20-33 is the worked example). Watch **R13** — 29.19 / 30.00 KB
+   gz, ~0.81 KB headroom; two modules of Articles' size exhaust it.
+3. **Re-check R14's trigger after the module lands**: the full suite goes to 11 pairs. The recorded
+   trigger for making `test:e2e:sharded` the default is a reproduced full-suite casualty, or the lane
+   count passing 12 — which the third FE-3 module would reach.
+
+*(Superseded — the opening actions this unit was given, kept because the ledger records what it said
+it would do next.)*
 
 1. **Settle R14 as a design decision, with the invariant visible.** The candidates named in §5/U-5 —
    one shared mutable backend with per-spec reset, serialised server startup, or a longer navigation

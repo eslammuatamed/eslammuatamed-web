@@ -27,8 +27,11 @@ import process from 'node:process'
  * directory. A public page could therefore call `useAdminProjects()` with no import statement at
  * all and no existing gate would say a word until someone read a bundle report. This does.
  *
- * Deliberately TEXT-BASED rather than import-graph based, following `scripts/e2e/lane-isolation.spec.mjs`:
- * an auto-imported symbol has no import statement to follow, so the name IS the reference.
+ * Deliberately TEXT-BASED rather than import-graph based: an auto-imported symbol has no import
+ * statement to follow, so the name IS the reference. (This used to cite
+ * `scripts/e2e/lane-isolation.spec.mjs` as the precedent. That gate now asserts against the typed lane
+ * registry rather than the config's text, so the citation was removed rather than left to read as a
+ * description of something that changed — the reason above never depended on it.)
  */
 
 const ROOT = process.cwd()
