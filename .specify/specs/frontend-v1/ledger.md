@@ -1869,6 +1869,62 @@ and accepting it is what keeps the constraint honest.
 `useAdminSkills` absorption landing and the collection's cap, U3 on the two editor caps. U1 (the
 mutable Skills backend and its spec) depends on none of them, which is why it goes first.
 
+### M2 · **M2·U1** — the instrument LANDED, and the controls I re-ran rather than accepted
+
+Commit **`a65aa36`**. The first delegated lane to produce code. Scope held exactly: two new files,
+`git status` showed nothing else, and the lane did not commit.
+
+#### Gates — re-run HERE with real exit codes, not accepted from the report
+
+| Gate | Result |
+| --- | --- |
+| `typecheck` | exit **0** |
+| `lint` | exit **0** |
+| `npx vitest run scripts/e2e/skills-server.spec.ts` | exit **0** — **30/30** |
+
+⚠ **My first gate run reported nothing, and I nearly read that as green.** `${PIPESTATUS[0]}` was
+clobbered by an intervening `echo`, so all three `exit=` lines came back EMPTY while the wrapper
+exited 0. Re-run with each status captured to its own variable. This is the repository's own
+pipefail rule biting the reviewer rather than the lane.
+
+#### The negative controls, reproduced independently
+
+The lane reported four. **The instrument's pre-control hash it published — `e1d589e8…b719` — matches
+the file I reviewed byte-for-byte**, so the controls were run against these exact bytes and not an
+earlier draft. I re-ran the inverse pair myself, which is the pair that matters:
+
+| Control | Mutation | Observed | Restored |
+| --- | --- | --- | --- |
+| explicit `null` CLEARS | treat `null` as omission | **1 failed** — `CLEARS a stored brandColor on explicit null` | byte-identical ✓ |
+| omission PRESERVES | treat omission as clear | **2 failed** — the preservation test **and** the empty-PATCH test | byte-identical ✓ |
+
+⚠ **They are inverses and were controlled SEPARATELY, which is the point.** Each mutation breaks a
+different test; an implementation confusing the two directions passes a suite that only ever probes
+one. This is the defect class that produced module 1's silent relation wipe.
+
+#### A FIFTH control the lane did not run, and OD-14 is why it was owed
+
+Since **OD-14 is a FRONTEND invariant**, the instrument must NOT enforce it — otherwise module 2's
+OD-14 tests would pass against the mock instead of against the form, and the frontend rule could be
+deleted with the suite still green. The lane wrote a test asserting an empty `translations` array is
+accepted with 201, but never proved that test can fail.
+
+**Mutation:** make the instrument reject an empty `translations` array.
+**Result:** exactly **1 failed** — `does not invent a non-empty-translations server rule the contract
+never declares` — and nothing else. Restored byte-identical (`e1d589e8…b719`), clean re-run 30/30.
+
+⚠ **My first attempt at this control was INVALID and is recorded rather than quietly re-run.** The
+mutation was shell-escaped into the file and wrote broken TypeScript, so vitest reported `no tests`
+and exit 1. **A suite that did not run is not a failing test** — read as a passing control it would
+have "proved" the guard while proving nothing. Re-done through a Python mutation with a parse check
+before the run.
+
+#### What the instrument deliberately does NOT do
+
+`order` accepts negative and fractional values, and `brandColor` accepts non-hex strings — both under
+my ruling that Skills must not inherit **Experiences'** narrower rules, which is the replication
+drift plan R6 names. Both are written in the file header with that reason, not left implicit.
+
 ### ⚠ R14 RE-DERIVED AT THE MODULE-2 BOUNDARY — the trigger is reached one module EARLIER than the prose says
 
 Counted live, not inherited: `scripts/e2e/lanes.ts` declares **11** lanes (`contract`,
