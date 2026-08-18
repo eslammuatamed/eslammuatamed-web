@@ -1004,10 +1004,14 @@ scope (plan §6) is five content modules — experiences, skills, testimonials, 
 the shared per-entity SEO panel (FR-DSH-050).
 
 **But the first unit is not a module.** R14 says the suite's FIXED cost already exceeds this machine:
-10 preview-server pairs (~20 processes) on 12 cores, one test lost per full run to
-transport/timeout — a *different* test each run, never a content assertion, and gone entirely when
-the tenth server is removed. Five more modules at one process pair each makes the suite unrunnable.
-Starting a module first would bury that under new work and make every subsequent red run ambiguous.
+10 preview-server pairs (~20 processes) on 12 cores, deterministic and re-measured. Five more modules
+at one process pair each makes the suite unrunnable. Starting a module first would bury that under new
+work and make every subsequent red run ambiguous. ⚠ **Corrected 2026-08-18.** This paragraph also used
+to assert "one test lost per full run to transport/timeout — a *different* test each run, never a
+content assertion, and gone entirely when the tenth server is removed." The control run for the R14 fix
+**did not reproduce it** (471 passed, exit 0). §2, §5 and §6 were each amended for that; this sentence
+was missed by the sweep and asserted a corrected claim as live fact until now. The FIXED COST claim is
+unaffected — only the casualty claim was withdrawn.
 
 **U-1 is LANDED — R14 is narrowed, not closed (§5 FE-3/U-1, §6 R14).** A run boots only the lanes it
 selects (1 pair, against 10); the full suite still boots all ten, `test:e2e` and the CI YAML are
