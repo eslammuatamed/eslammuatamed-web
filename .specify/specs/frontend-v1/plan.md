@@ -155,11 +155,27 @@ not yet performed.**
 | Fact | Value |
 | --- | --- |
 | `origin/main` | `9af1aace27289404efa57e8111c5fc3786c65f75` |
-| `origin/dev` | `9af1aace27289404efa57e8111c5fc3786c65f75` — **identical**, 0 commits ahead |
-| Tip subject | `release: promote Frontend v1 API completion to production (#85)` |
-| Preceding | `feat: API complete for Frontend v1 — static-page SEO, GTM-only tracking, nullable clearing semantics, and a temporary deepmerge-ts security override (CVE-2026-40345)` |
+| `origin/dev` | `e87f427cad9c276db8e78e686c2b4238938aa82e` — **1 commit ahead of `main`** as of 2026-08-19 |
+| Tip subject (`main`) | `release: promote Frontend v1 API completion to production (#85)` |
+| Preceding (`main`) | `feat: API complete for Frontend v1 — static-page SEO, GTM-only tracking, nullable clearing semantics, and a temporary deepmerge-ts security override (CVE-2026-40345)` |
+| Tip subject (`dev`) | `docs: backend learnability — retire unresolvable references, remove rotting state, add the learning path (#86)` |
 
-`dev` and `main` are the same commit: nothing is staged behind the release.
+⚠ **This table asserted `dev` and `main` were the same commit and that "nothing is staged behind the
+release". That stopped being true on 2026-08-18**, when the separate Backend workstream merged PR #86
+into `dev`. Corrected at the fifth zero-trust resume (ledger §1), and **it changes nothing this plan
+depends on** — measured rather than assumed:
+
+- **`origin/main` is unchanged** at `9af1aace…`, and it is `main` that this plan's "API is complete
+  and Production-ready" verdict rests on. Production API still serves
+  `releases/20260817T183604Z-9af1aac`.
+- **`openapi.json` is the same blob `7a9e0ba6…` on both `main` and `dev`** — the merge carried no
+  contract change, so no statement in §2.2–§2.4 about endpoints, DTOs or nullable semantics moves.
+- **The Web's vendored `openapi/openapi.json` is byte-identical to API `origin/main`'s**
+  (`sha256` `2679bf3580…` both sides), so the contract adoption at `19e3a05` is still exact.
+
+What *is* now true and was not before: **something is staged behind the release.** #86 is a
+documentation/learnability change plus test-harness work; the only Skills-module change it carries is
+a comment. A future reader must not infer from `dev ≠ main` that a Frontend-v1 API gap re-opened.
 
 ### 2.2 The campaign that closed the gaps
 

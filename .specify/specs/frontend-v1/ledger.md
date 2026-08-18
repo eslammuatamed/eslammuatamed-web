@@ -20,7 +20,7 @@ Verify every line against live state before acting on it. Report drift before do
 | **Remote state** | **NOT PUSHED.** `origin/dev` = `54cea28737c558767ccb24a34e2b437b62f7f058`, `origin/main` = `648aa467cd8bc7157cbcad2fd7c0e8981ee1f16c` — neither moved by this campaign, re-verified after FE-2a |
 | **Docs repo** | ⚠ **TWO branches, and they DIVERGE — neither is an ancestor of the other.** (a) `docs/od-11-dashboard-localization` `3b607af9…` holds OD-11 (D02-15, D04-7, D11-8, doc 18). (b) `docs/web-modernization-campaign` `97efd02` (was `95e9101`, was `565abef8…`) holds doc 20's whole D20-2x/3x sequence and the governed inventory table — **D20-33 is NOT on the od-11 branch**, and **D20-34 landed on (b)** for that reason: writing it against a doc 20 lacking D20-33 would manufacture a conflict in the same table. Both **local-only** (R10); `origin/main` = `1896d8c7…`, untouched |
 | **Production** | Web release `20260817T175534Z-648aa46` — untouched |
-| **API** | `origin/main` = `origin/dev` = `9af1aace…`, live and complete for v1 scope |
+| **API** | `origin/main` = `9af1aace…` — live, deployed, and complete for v1 scope. ⚠ `origin/dev` is **no longer equal to it**: it is `e87f427c…`, the merge of Backend PR #86. That is a **separate workstream**, not Campaign 027 movement — measured, not assumed: `openapi.json` is the **same blob** `7a9e0ba6…` on both `main` and `dev`, so the contract this campaign consumes did not move. Read the API row as `origin/main`; `origin/dev` is informational. |
 
 **Re-baselined 2026-08-18 (zero-trust resume, session start).** Every row above was verified live
 and **matched — zero drift**: worktree present, branch `campaign/frontend-v1`, working tree clean, no
@@ -72,6 +72,11 @@ still hold unchanged (Docs owner-content churn; Web PRs #69/#68/#46, re-verified
   `9af1aace…` still holds — but it did not exist when the earlier re-baselines were written, so it
   is named here rather than discovered later and misread as movement. API local HEAD sits on
   `feature/api-frontend-v1-completion` `ce64b22e…`; no campaign of this ledger touches it.
+  ⚠ **SUPERSEDED at the fifth resume — #86 MERGED 2026-08-18T21:52:05Z** as `e87f427c…`, so the
+  equality this bullet asserts (`origin/main` = `origin/dev`) **no longer holds**; `origin/main` does.
+  The bullet is kept unedited above the line because it records what was true when written — and
+  because the reason it gives, that #86 belongs to another workstream, is precisely what makes the
+  merge **non-drift** for this campaign rather than a contradiction of it.
 - **Docs PR #54** is the live handle on **R10**. It is `docs/api-frontend-v1-completion`
   `2345a7a0…`, titled *"govern temporary scoped overrides for unfixed transitive advisories
   (D19-11)"* — the same `D19-11` id whose collision across Docs branches R10 records as blocking
@@ -109,6 +114,68 @@ campaign. No tip SHA is stamped here, for the reason the table gives.
    `scripts/lib/route-assets.mjs` carries `118 * KB` = 120,832 B and `119 * KB` = 121,856 B for the
    two editor routes, matching D20-35 exactly. **Header corrected in §9.5**; its standing
    do-not-re-stamp warning is deliberately preserved there.
+
+**Re-verified 2026-08-19, FIFTH zero-trust resume (new session, `/resume-ledger frontend v1`).**
+Twenty-three claims were checked live. **Twenty-one matched exactly; the two that did not are both
+API pointer rows, and the owner has ruled them stale TEXT rather than campaign drift** (see below).
+Verified exact: worktree present, branch `campaign/frontend-v1`, working tree **clean**, no upstream
+(`@{upstream}` exit 128), `merge-base HEAD origin/dev` = `54cea287…` (the recorded base),
+`campaign/frontend-v1` absent from `ls-remote --heads origin` (**still unpushed**), Web `origin/dev`
+= `54cea287…` and `origin/main` = `648aa467…` (both read from `ls-remote`, not from local
+remote-tracking refs); all seven Module 1 unit commits plus `b0bb8de`, `a65aa36` resolve as ancestors
+of HEAD; Docs `docs/od-11-dashboard-localization` = `3b607af9…` and `docs/web-modernization-campaign`
+= `97efd02…`, `merge-base --is-ancestor` **false in both directions**, neither in `ls-remote`, Docs
+`origin/main` = `1896d8c7…`, Docs tree dirty with the same three owner-content files; Web PRs **#69**
+/**#68** (`UNSTABLE`) and **#46** (`DIRTY`) OPEN; Docs **PR #54** `2345a7a0…` OPEN `CLEAN`; API **PR
+#83** OPEN `CLEAN`; **Production re-verified live over ssh** — `/srv/eslammuatamed-web/current` =
+`releases/20260817T175534Z-648aa46` and `/srv/eslammuatamed-api/current` =
+`releases/20260817T183604Z-9af1aac`. No tip SHA is stamped here, for the reason the table gives.
+
+**The two mismatches, and the owner ruling on them (2026-08-19).**
+
+1. **API `origin/dev`** — the table said `= origin/main` = `9af1aace…`; live is `e87f427c…`.
+2. **API PR #86** — recorded OPEN at head `ad5a5a7`; live is **MERGED** (`mergedAt`
+   `2026-08-18T21:52:05Z`, `mergeCommit` `e87f427c…` — i.e. mismatch 1 *is* mismatch 2).
+
+One cause: **a separate Backend-workstream merge.** The owner confirmed live state as authoritative,
+directed that these informational pointers be re-baselined and the cause recorded accurately, and
+ruled explicitly that **this is not Campaign 027 drift** — because the load-bearing Frontend-v1 API
+state is unchanged on all four counts, each measured rather than argued:
+
+| What had to hold | Measurement |
+| --- | --- |
+| API `origin/main` unchanged | `9af1aace2728…` from `ls-remote` — exact |
+| Production API unchanged | `readlink -f /srv/eslammuatamed-api/current` = `releases/20260817T183604Z-9af1aac` |
+| The OpenAPI contract unchanged | `openapi.json` blob = `7a9e0ba6ffd9…` on **both** API `main` and API `dev` |
+| The Web campaign's vendored contract still matches API `main` | `sha256` = `2679bf3580…` on **both** `HEAD:openapi/openapi.json` (this branch) and `origin/main:openapi.json` (API) |
+
+⚠ **The fourth row had never been measured in this campaign before today.** Every prior resume
+carried the contract linkage forward from `19e3a05`'s "atomic contract adoption" as an assertion. It
+is now a byte-identity, and it is the one that actually matters for module 2: the eight contract
+claims the `M2` investigation was accepted on, and the premises `scripts/e2e/skills-server.ts`
+encodes, rest on that file. Recorded as newly-obtained evidence, not as a re-confirmation.
+
+**Two further live facts, recorded so a later session does not read them as movement:**
+
+- **API PR #87** (`3afa00f0…`, `fix/contributing-rollback-gate` → **`dev`**, "correct the deploy
+  acceptance gate and rollback semantics (R10-1)") is OPEN and `CLEAN`. It did not exist when this
+  session's own verification sweep ran twenty minutes earlier — it appeared mid-session. Its four
+  files are `…/deploy.yml`, `CONTRIBUTING.md`, `PROJECT_GUIDE.md`, `scripts/deploy/README.md`: no
+  contract surface, and it targets `dev`, which this campaign does not consume.
+- **The only Skills-module change in API `main..dev` is a comment.** `skill.dto.ts` gains a note that
+  the slug rule is *also* a database `CHECK` (`skills_slug_format_check`), and `skills.service.ts`
+  changes one line. Checked deliberately, because Skills is the active module and "no contract
+  change" would be a weaker claim if the module's source had moved underneath it.
+
+**Status of the NEXT THREE ACTIONS, re-derived at this resume.** `M2·U1` landed after that block was
+written, so two of the three are discharged:
+
+1. **R14 lane-count trigger — ✅ DISCHARGED.** Re-derived in §8 and re-counted live here: `lanes.ts`
+   declares **11**, Skills lands the twelfth, so the trigger arrives at the **second** FE-3 module,
+   not the third. `test:e2e:sharded` deliberately **not** promoted to the default gate.
+2. **Baseline-provenance attribution — ⏳ STILL OWED**, and the owner has directed it be closed **as
+   its own clean unit** this session, before `M2·U2`. Its constraints are restated in §9.7.
+3. **Module 2 routing — ✅ DISCHARGED** (OD-13, bounded Codex lane), and `M2·U1` has landed green.
 
 ⚠ **One owed item closed silently, and is re-opened here.** §9.5 ended *"Attribution belongs to
 `M1·U5`"* — meaning the `DASHBOARD_APP_OWNED_BASELINE_BYTES` provenance drift (nine routes, deltas in
@@ -1758,6 +1825,74 @@ route-cap decision remains the one open owner gate for M2 — return with the th
 and their D20-29-derived caps as **one batched decision**, after the collection and editor routes are
 actually implemented and measured. Not before, and never inherited.
 
+### 9.7 OD-15 — the M2 sequencing, and the baseline-provenance unit · **RESOLVED 2026-08-19 · OWNER**
+
+Raised at the fifth zero-trust resume, which reported `M2·U2` as owner-blocked. **It was not**, and
+the owner corrected the premise rather than answering the question.
+
+#### Two things this decision retires
+
+1. **`useAdminSkills` absorption is NOT an open owner decision.** It was **already approved** under
+   the **preserve-the-surface contract**, and that contract states the terms precisely:
+   - absorb it in `M2·U2` **if the implementation satisfies the established contract**;
+   - **both shipped picker consumers must remain green WITHOUT being edited** — that is the whole
+     test, and it is discriminating: editing a consumer to make it pass converts the evidence into
+     its own opposite;
+   - **if either consumer requires modification, that is EVIDENCE the absorption broke the preserved
+     surface** — and it is then **resolved centrally**, never by patching the consumer.
+2. **No route cap may be invented or approved before the route exists and has been measured.** A cap
+   is an **output** of the unit, not an input to it. Explicitly: **no cap is inherited from Articles,
+   Experiences, or Projects merely for consistency.**
+
+#### The consequence for `size:routes`, stated so it is not "fixed" by someone later
+
+It is **ACCEPTABLE** for `size:routes` to be **intentionally non-green** when the sole cause is that
+a new route is *registered but not yet governed* — the same measured-then-decide flow D20-33 and
+D20-35 already ran. **Do NOT fabricate a temporary cap to make the gate green.** A gate turned green
+by a number invented for that purpose reports nothing, and the invented number then becomes a
+derivation input that outlives its excuse.
+
+#### The unit ordering the owner set
+
+**The baseline-provenance attribution is closed FIRST, as its own clean unit** — it is the only
+outstanding item that is not owner-gated — and `M2·U2` follows it. Its constraints, verbatim in
+force:
+
+- **measure and explain** the provenance mismatch;
+- **fix reporting/attribution** if that is what is wrong;
+- **do NOT re-stamp historical derivation inputs**;
+- **do NOT move governed caps**;
+- **do NOT convert `85,551` → `87,404`** merely to make a current report reproduce;
+- **distinguish HISTORICAL CAP DERIVATION from CURRENT-TREE MEASUREMENT** — this is the distinction
+  the whole finding turns on, and §9.5's warning is the same rule stated from the other side.
+
+#### What `M2·U2` owes when it runs
+
+Build the Skills collection and its **twelfth** lane; perform the approved `useAdminSkills`
+absorption; run the **preserve-surface discriminating checks** (both consumers green, unedited);
+**re-evaluate R14** now that the declared lane count reaches 12; and measure the completed
+`/dashboard/skills` route.
+
+#### ⚠ OD-15 amendment (same day, same owner) — `M2·U2` does NOT stop for the collection cap
+
+An earlier revision of this section ended `M2·U2` by *"returning the measured baseline plus its
+D20-29-derived cap as an owner decision"*. **That stop is removed.** The owner directed: record the
+measured `/dashboard/skills` baseline and its D20-29-derived **proposed** cap, then **continue
+directly into `M2·U3`**, leaving that route **intentionally ungoverned** meanwhile.
+
+**Implement and measure all three routes** — `/dashboard/skills`, `/dashboard/skills/new`,
+`/dashboard/skills/{id}` — and **return ONCE** with all three measured baselines and all three
+D20-29-derived proposed caps as **one batched owner decision**. This is the same batching §9.6's
+standing instruction already asked for; the amendment settles it as binding sequencing rather than
+preference, and removes the intermediate stop that would have split the batch in half.
+
+**`size:routes` may remain intentionally non-green across that whole measurement window**, solely
+because these newly implemented routes are registered but not yet governed. **Do not invent
+temporary caps to make the gate green.**
+
+**Stop earlier only for a genuine owner-level product/architecture decision, or a hard unresolved
+blocker.** A cap awaiting measurement is neither.
+
 ---
 
 ## 8. Exact next action
@@ -1865,9 +2000,15 @@ and accepting it is what keeps the constraint honest.
 `M2·U1` instrument → `M2·U2` collection + lane → `M2·U3` editor → `M2·U4` extraction verdicts →
 `M2·U5` gates + axe. It mirrors Module 1's sequence, which is what replication should look like.
 
-⚠ **`M2·U1` is dispatched; `M2·U2` and `M2·U3` are BLOCKED on owner decisions** — U2 on the
-`useAdminSkills` absorption landing and the collection's cap, U3 on the two editor caps. U1 (the
-mutable Skills backend and its spec) depends on none of them, which is why it goes first.
+⚠ **This blocking claim was WRONG on both counts, and OD-15 retired it — see §9.7.** It read:
+*"`M2·U1` is dispatched; `M2·U2` and `M2·U3` are BLOCKED on owner decisions — U2 on the
+`useAdminSkills` absorption landing and the collection's cap, U3 on the two editor caps."* The
+absorption was **already approved** under the preserve-the-surface contract and was never an open
+gate; and a cap **cannot** be an input to the unit that produces the route it governs — it is an
+**output**, decided from measurement afterwards. Kept rather than deleted because the error is
+instructive: it would have stalled the campaign waiting for a decision nobody was ever going to make,
+and it inverted the measured-then-decide order that D20-33 and D20-35 both establish. `M2·U1` did
+correctly go first.
 
 ### M2 · **M2·U1** — the instrument LANDED, and the controls I re-ran rather than accepted
 
