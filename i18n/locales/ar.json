@@ -342,7 +342,8 @@
       "library": "المكتبة",
       "media": "الوسائط",
       "system": "النظام",
-      "profile": "الملف الشخصي"
+      "profile": "الملف الشخصي",
+      "experiences": "الخبرات"
     },
     "messages": {
       "title": "الرسائل",
@@ -634,6 +635,50 @@
         "loadFailedBody": "لم يكتمل الطلب. عادةً ما يكون هذا مؤقتًا.",
         "deleteCancel": "احتفظ بها"
       }
+    },
+    "experiences": {
+      "title": "الخبرات",
+      "description": "الأدوار والمناصب، باللغتين.",
+      "retry": "حاول مرة أخرى",
+      "staleNotice": "قد تكون هذه القائمة غير محدّثة — لم يكتمل التحديث الأخير.",
+      "errorTitle": "تعذّر تحميل الخبرات",
+      "forbiddenTitle": "ليس لديك صلاحية الوصول إلى الخبرات",
+      "forbiddenBody": "هذا الحساب غير مصرّح له بإدارة الخبرات.",
+      "emptyTitle": "لا توجد خبرات بعد",
+      "emptyBody": "أضف أول دور وسيظهر هنا.",
+      "listRegionLabel": "الخبرات",
+      "resultCount": "{total} أدوار",
+      "untitled": "دور بلا عنوان",
+      "create": "دور جديد",
+      "edit": "تحرير",
+      "editFor": "تحرير {role}",
+      "current": "حالي",
+      "present": "حتى الآن",
+      "period": "{start} – {end}",
+      "translationState": {
+        "label": "الترجمات",
+        "present": "{locale} مكتوبة",
+        "missing": "{locale} ناقصة"
+      },
+      "locale": {
+        "en": "الإنجليزية",
+        "ar": "العربية"
+      },
+      "field": {
+        "company": "الشركة",
+        "location": "الموقع",
+        "employmentType": "نوع التوظيف",
+        "period": "الفترة",
+        "skills": "المهارات",
+        "order": "الترتيب"
+      },
+      "employmentType": {
+        "FULL_TIME": "دوام كامل",
+        "PART_TIME": "دوام جزئي",
+        "CONTRACT": "عقد",
+        "FREELANCE": "عمل حر"
+      },
+      "skillCount": "{count} مرتبطة"
     },
     "projects": {
       "title": "المشاريع",

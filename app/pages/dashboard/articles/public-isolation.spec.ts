@@ -49,6 +49,12 @@ const MODULE_FILES = [
  * the same reason this module's files are excluded from theirs: neither is public.
  */
 const OTHER_DASHBOARD_MODULE_FILES = [
+  // FE-3 module 1 (Experiences). Registered for the same reason the Projects files above
+  // are: `app/composables/` holds dashboard modules too, and the scan's public set is defined by
+  // PATH, so an unregistered dashboard composable is treated as public surface.
+  'composables/admin-experience-fields.ts',
+  'composables/admin-experience-types.ts',
+  'composables/useAdminExperiences.ts',
   'composables/admin-project-form.ts',
   'composables/admin-project-types.ts',
   'composables/admin-projects-query.ts',

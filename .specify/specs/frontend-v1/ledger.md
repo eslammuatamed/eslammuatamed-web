@@ -57,7 +57,7 @@ git -C /home/eslam-muatamed/worktrees/web-026-phase8 fetch origin && git rev-par
 | --- | --- |
 | **FE-1 — Contract & Integration Foundation** | **COMPLETE** — commit `19e3a05`. Contract adopted + gtm reconciliation; reply flow deliberately moved to FE-2 (see §4). Gates re-verified on the committed tree: typecheck 0, 1501/1501. |
 | **FE-2 — Articles Tracer Bullet + Dashboard Architecture** | **COMPLETE.** OD-11, OD-3, D20-33 and its amendment all resolved. FE-2a/2b/2c done: F-1 **CLOSED** with browser evidence · collection · editor · §14.6 extraction pass · **all ten §14.9 criteria demonstrated** · every gate green including `size:routes`. The reusable architecture is recorded in **§10**. |
-| **FE-3 — Content Module Replication** | **OPEN — lane-strategy unit LANDED; module 1 (`experiences`) STARTED at `M1·U1`.** Delegation settled as **OD-12** (hybrid: module 1 in-house, modules 2–5 delegable once the pattern holds). `M1·U1` landed the Experiences e2e instrument and proved it able to fail; **no Dashboard code exists yet**. §5.2 stamps the five extraction verdicts this module will be checked against.<br>**Lane-strategy unit (R14):** A run now boots only the lanes it selected: measured 1 preview pair for `--project=dashboard-articles`, against 10 before, same command. The full suite still boots all ten by design, so R14 is **NARROWED, NOT CLOSED** — see §6 and §5/FE-3/U-1. ⚠ This row previously said the full suite "loses exactly one test per run"; the pre-change control run **did not reproduce that** (471 passed, exit 0) and the claim is corrected here rather than carried forward. |
+| **FE-3 — Content Module Replication** | **OPEN — module 1 (`experiences`) through `M1·U2`: the collection SHIPS.** Delegation settled as **OD-12** (hybrid: module 1 in-house, modules 2–5 delegable once the pattern holds). `M1·U1` landed the instrument; **`M1·U2` landed the collection at `/dashboard/experiences`, its `lanes.ts` record, and a third public-isolation gate** — every gate green, the lane 10/10 booting 1 pair, and the route measured at 85,551 B against its own D20-34 cap of 99,328 B. The new route cost **zero CSS**. Four unpredicted findings are in §5/M1·U2, including a gate (`typecheck:e2e`) that had been RED since `M1·U1` because that unit's exit row never listed it. **The editor (`M1·U3`) is next**, and its route caps are measured-then-escalated, never inherited. §5.2 stamps the five extraction verdicts this module will be checked against.<br>**Lane-strategy unit (R14):** A run now boots only the lanes it selected: measured 1 preview pair for `--project=dashboard-articles`, against 10 before, same command. The full suite still boots all ten by design, so R14 is **NARROWED, NOT CLOSED** — see §6 and §5/FE-3/U-1. ⚠ This row previously said the full suite "loses exactly one test per run"; the pre-change control run **did not reproduce that** (471 passed, exit 0) and the claim is corrected here rather than carried forward. |
 | FE-4 — System Modules | NOT STARTED |
 | FE-5 — Coherence, D20-32 Review, M4 Closure | NOT STARTED |
 
@@ -75,6 +75,7 @@ git -C /home/eslam-muatamed/worktrees/web-026-phase8 fetch origin && git rev-par
 | **OD-3 (plan §12)** | **RESOLVED 2026-08-18 — the article `body` ships as a plain Markdown textarea.** Tiptap/ProseMirror is NOT introduced in FE-2c. ⚠ **Numbering collision, stated so nobody conflates them:** *this* OD-3 is plan §12's "Confirm Tiptap"; the **OD-3** in this section's row above ("Backend/API is complete") is a different scheme with the same label — the same trap §14.8 records for OD-10. The rich-editor requirement is **NOT dropped from v1**: it is recorded as a separate governed unit in §9.2 with the questions it must answer first. |
 | **OD-11** | **RESOLVED 2026-08-18 — option B. The Dashboard ships fully localized EN/AR.** The header control is a real **application-language** switcher. Dashboard routes stay **unprefixed**; the application locale is a persisted preference, independent of route structure. It drives chrome language, shell direction, and the default active translation tab. Changing it must **not** discard unsaved translation state. Governing record: docs **D02-15** (scope), **D04-7** (routing), **D11-8** (architecture), doc 18 §3 (coverage) — Docs commit `3b607af`, branch `docs/od-11-dashboard-localization`, **local-only** (R10). |
 | **OD-12** | **RESOLVED 2026-08-18 — FE-3 runs HYBRID, and the split is by kind of work, not by volume.** Module 1 (**Experiences**) is built **in-house**: it is not replication, it is the **second consumer** that proves, rejects or refines the four abstractions §10.2 deliberately declined, and that is judgement against an unestablished pattern. Codex delegation is **authorized** for modules 2–5 **only after Articles + Experiences have established the pattern**, and only as bounded, disjoint lanes. Non-delegable and retained here regardless: **architecture, integration, review, the authoritative tests/gates, and rejecting incorrect delegated work.** ⚠ Binding constraint on every delegated lane: **a lane must not invent a competing shared abstraction.** A lane that needs a pattern the shared set does not provide escalates it — plan §6's rule ("extend the shared pattern, not fork it") is the lane contract, not advice. |
+| **D20-34** | **RESOLVED 2026-08-18 — `/dashboard/experiences` carries a 99,328 B app-owned cap**, derived by D20-29's formula from its OWN measured baseline (85,551 B), not inherited from the Articles collection. The owner declined rounding it to 100 KiB for visual consistency: *"the route should carry the cap derived from its own measured baseline under the governed formula."* Not a waiver, not a shared-floor change, not an incremental-allowance change, not a D20-32 recalibration. ⚠ Standing instruction attached to it: **do NOT inherit this cap for the Experiences editor routes — measure the real editor surfaces first and return with one batched decision.** Mirrored in `DASHBOARD_APP_OWNED_CAP_BYTES`; the doc 20 decision-log entry is owed in the Docs repo. |
 | **UX** | Multilingual authoring: shared fields once + locale tabs; preserved unsaved state; validation visible across inactive tabs; correct RTL/LTR; 380px. |
 | **UX** | Dashboard shell needs a locale control, appearance control, obvious **View/Open Portfolio**, contextual **View-on-site** where a real public destination exists. The locale control switches the **chrome language** (OD-11 option B) — settled, no longer contingent. |
 | **UX** | `/dashboard/login` gets a full product-quality redesign — Nuxt UI + standard Zod, obvious way back to the public site. **Bilingual under OD-11**: it carries the same language control and appearance control, localized labels/errors/actions, and correct RTL/LTR composition. |
@@ -854,6 +855,113 @@ read what actually executed, not the exit code alone.
 
 ---
 
+### FE-3 · Module 1 · **M1·U2** — the collection, the lane, and four findings the plan did not predict
+
+`app/pages/dashboard/experiences/index.vue` + `useAdminExperiences.ts` + `admin-experience-{types,fields}.ts`
++ the `dashboard-experiences` lane + its one spec + a third public-isolation gate.
+
+**Gates on the committed tree.** `typecheck` **exit 0** · `typecheck:e2e` **exit 0** · `lint` **exit 0**
+· `size` **29.19 / 30.00 KB gz — UNCHANGED** · `size:routes` **exit 0** · `check-logical-properties`
+**exit 0** · `check:bundle` **exit 0** · unit **122 files / 1748 tests, exit 0** (from 118 / 1714)
+· `playwright --project=dashboard-experiences` **10/10, exit 0**, booting **1 pair** (4100/4101).
+
+**The route, measured:** app-owned **85,551 B / 99,328 B** cap ✓, incremental **7,032 B / 86,016 B** ✓,
+total **262.8 KB gz** — *below* the 300 KB quality target, so unlike every other dashboard content
+route it raises **no D20-24 warning**.
+
+**⚠ The new route cost ZERO CSS.** `size` is byte-identical before and after: 29.19 KB gz. R13's
+~0.81 KB headroom is untouched, because the page composes existing utilities and introduces no new
+class. The R13 warning stands for the EDITOR, which is where Articles' CSS actually went.
+
+**D20-34 — the cap, and the trap it deliberately avoids.** Owner decision 2026-08-18: the cap is
+D20-29's formula applied to THIS route's own measured baseline — `ceil(85,551 × 115 / 102,400) × 1024`
+= **99,328 B**, 13,777 B of headroom. The owner explicitly **declined** rounding it up to the Articles
+100 KiB cap for visual consistency. Recorded as: not a waiver, not a shared-floor change, not a change
+to the generic incremental allowance, not a D20-32 recalibration.
+⚠ **The editor routes are NOT registered and do NOT inherit this.** They are measured first and
+escalated as one batched decision in `M1·U3`. This is the D20-33 amendment's lesson applied *in
+advance* rather than repeated: Articles' two editor routes were first registered at the collection's
+cap **inherited before the editor existed**, and had to be corrected to 120 KiB once measured. The
+ledger's own instruction to batch "BOTH caps" in U2 is therefore **NARROWED, not followed** — batching
+a measured number with an unmeasured one is what produced the correction.
+
+#### Four findings, none of them predicted
+
+**F-A · `typecheck:e2e` had been RED since `M1·U1`, because that unit's exit row never listed it.**
+Three strict-null errors in `experiences-server.spec.ts` (`translations` is an index signature, so
+every lookup is `T | undefined`). The file was committed at `ed4e69e` and is unmodified by this unit —
+confirmed by `git status` and by reading the blob at HEAD. M1·U1's exit row names `typecheck`,
+`eslint`, the unit suite and the calibration; `typecheck:e2e` is simply absent, so it was never run.
+A gate omitted from a unit's list is a gate that silently stays red. Fixed here (bound-then-assert,
+31/31 still green), and the omission is the transferable lesson: **an exit row is a claim about which
+gates ran, so a gate missing from it is not "unmentioned" — it is unverified.**
+
+**F-B · §5.4 is FALSIFIED, and the accurate reason is narrower than the first reading.** §5.4 decided
+to ship "a minimal provisional read-only options source" for the skills picker. `useAdminSkills()`
+already exists, already reads `GET /admin/skills`, and already localizes `skillLabel()` under OD-11.
+⚠ **A first pass overstated this as "Articles is already a consumer."** It is not: both hits in
+`admin-article-fields.ts` and `useAdminArticles.ts` are **comments**, not usage. The true state is
+one real consumer — `ProjectTechnologyPicker.vue` via `ProjectEditor` — so **Experiences is the second
+consumer of the DATA SOURCE**, which is exactly §10.2's bar. The **picker COMPONENT** is a separate,
+still-open question with one consumer, and it belongs to `M1·U3` where the editor needs it. §5.4 spoke
+only to the data source; extending its verdict to the component would be the same conflation.
+
+**F-C · An absence-based readiness probe is VACUOUS, and it produced a false red.** `listSettled()`
+was copied from the Articles harness as "wait until nothing is `aria-busy`". Before the request
+starts, nothing is busy *either*, so it returns immediately. Every Articles assertion goes through
+Playwright's auto-retrying `expect(locator)`, which re-reads until it matches, so the defect was
+invisible there. It surfaced the moment a test did a **one-shot read** — `evaluateAll` to capture row
+ORDER, which cannot be written as a retrying locator assertion — and returned `[]` on the first
+navigation of the run. The barrier is now POSITIVE first: wait until one of the four terminal
+surfaces exists, *then* require nothing is busy. **The lesson generalises past this harness: an
+absence is not evidence of completion, and a retrying assertion can hide a broken barrier for a
+whole lane.**
+
+**F-D · §10.3 rule 2's KEEP branch is NOT reachable in a browser for this module.** "A failed REFRESH
+keeps the rows" needs a SECOND request for the same view. Articles can produce one — it has a status
+filter and pagination. `GET /admin/experiences` takes zero query parameters, so this page has no
+in-page control that re-requests, and the only other path to a second load is a full navigation,
+which is a FIRST load with nothing underneath it. The test written to cover it did exactly that and
+**re-proved the CLEAR branch under a KEEP branch's name** — a green test asserting the opposite of
+its title. Deleted, with the reason recorded in the spec; the property is proven in
+`useAdminExperiences.spec.ts` where it is genuinely observable.
+
+**F-E · The public-isolation gate classifies by PATH, so every new dashboard composable defaults to
+"public".** `app/composables/` holds dashboard modules but carries no `dashboard/` path segment, so
+the three new files were scanned as public surface and flagged — for naming Articles' modules **in
+comments**. Registration in `OTHER_DASHBOARD_MODULE_FILES` is the intended mechanism (Projects is
+already there), not an exemption. Fail-safe by design, and worth knowing before FE-3's next four
+modules each trip it.
+
+#### The §5.2 predictions, checked so far
+
+`M1·U4` renders the verdicts. Two are already settled by this unit and are recorded now rather than
+re-derived later:
+
+| Candidate | Prediction | Status after `M1·U2` |
+| --- | --- | --- |
+| `admin-articles-query` | NO SECOND CONSUMER | **HELD, with a second line of evidence.** No query composable was written, because the endpoint has no parameters. And keep-or-clear's view identity DEGENERATED with it: `useAdminArticles` needs a query key, `useAdminExperiences` needs only "has anything loaded", because a zero-parameter endpoint has exactly one view. A query key here would be a constant dressed as a variable. This is additional evidence for the SAME prediction, not a sixth verdict. |
+| `usePublicEntityLink` | NO SECOND CONSUMER — do not extract | **HELD.** No per-entity public destination exists; the collection links only to its own editor. §10.3 rule 10 remains unsatisfiable here. |
+| `TranslationTabs` · `useTranslatableForm` · `EntityFormLayout` | EXTRACT / EXTRACT / PARTIAL AT BEST | **UNTESTED — all three are editor-shaped and cannot be judged by a collection.** `M1·U3`. |
+
+#### Both instruments were proven before they were trusted
+
+| Instrument | Injected defect | Result |
+| --- | --- | --- |
+| `experiences/public-isolation.spec.ts` | a public page naming `useAdminExperiences` | **2 tests FAILED as designed** — the scan and the positive-direction check — and no others. Restored by file copy; sha256 identical. |
+| the ORDER assertion, unit **and** browser | `.sort((a, b) => b.startDate.localeCompare(a.startDate))` — the natural CV sort | **4 tests FAILED as designed**, and only those four: 2 unit, 2 e2e. The browser diff reproduced the exact production pair — `…004` (WaveX, ended) above `…001` (Findropica, current), five rows with one swap, NOT an empty array. Restored by file copy; sha256 identical, then rebuilt. |
+
+The order control was run through a **rebuild**, because Playwright serves a prebuilt `.output` — a
+source mutation without one tests the previous build and proves nothing.
+
+**Deliberately NOT done in this unit:** the `/dashboard/experiences/new` and `/:id` routes do not
+exist, so the "New role" button and the empty state's action point at a route that arrives in
+`M1·U3`. This matches Articles exactly — `5be7740` shipped its collection with the same dangling
+link, and `46e2f91` created the target. It is an intra-module transient on an unpushed branch, not a
+shipped defect; it is recorded because it is the kind of thing a reader would otherwise flag.
+
+---
+
 ## 6. Known risks carried
 
 | # | Risk |
@@ -866,7 +974,7 @@ read what actually executed, not the exit code alone.
 | R10 | `D19-11` id collision across Docs branches — blocks any Docs integration |
 | R11 | Issue #30 hydration defect — `test:e2e:repeat` red by design, out of scope |
 | ~~**R12**~~ | ~~`/dashboard/articles` ships UNMEASURED.~~ **CLOSED by D20-33** (`e0128c2`, Docs `3f2626e`). Superseded by the open cap question in §9.4. |
-| **R14** | **NARROWED 2026-08-18 (FE-3/U-1), not closed.** The e2e suite's FIXED COST exceeds this machine — deterministic and re-measured: a full run peaks at load **17.4** on 12 cores, drives available memory to **5.9 GB** and adds **~1 GB of swap**, for ten Nitro servers at 140–290 MB RSS each plus ten backends. What is FIXED: a run now boots only the lanes it selects (**1 pair** for a one-lane run, against 10, same command — §5 FE-3/U-1), so per-module development runs and the `test:e2e:repeat` sweeps no longer pay for the whole farm. What is NOT: `npm run test:e2e` still selects nothing and therefore still boots all ten, so **FE-3's five modules still take it to 15 pairs on the default path**. `npm run test:e2e:sharded` bounds it to 4 concurrent pairs and is available but is NOT the default, because the intermittent casualty did not reproduce (see the amendment in §5 FE-2c/U-5) and a governed CI gate must not be re-pointed on unreproduced evidence. **Trigger to make it the default:** either a full-suite casualty reproduced on demand, or the lane count passing **12**. CI's behaviour stays UNVERIFIED — fewer cores, and nothing is pushed. |
+| **R14** | **NARROWED 2026-08-18 (FE-3/U-1), not closed.** The e2e suite's FIXED COST exceeds this machine — deterministic and re-measured: a full run peaks at load **17.4** on 12 cores, drives available memory to **5.9 GB** and adds **~1 GB of swap**, for ten Nitro servers at 140–290 MB RSS each plus ten backends. What is FIXED: a run now boots only the lanes it selects (**1 pair** for a one-lane run, against 10, same command — §5 FE-3/U-1), so per-module development runs and the `test:e2e:repeat` sweeps no longer pay for the whole farm. What is NOT: `npm run test:e2e` still selects nothing and therefore still boots all ten, so **FE-3's five modules still take it to 15 pairs on the default path**. `npm run test:e2e:sharded` bounds it to 4 concurrent pairs and is available but is NOT the default, because the intermittent casualty did not reproduce (see the amendment in §5 FE-2c/U-5) and a governed CI gate must not be re-pointed on unreproduced evidence. **Trigger to make it the default:** either a full-suite casualty reproduced on demand, or the lane count passing **12**. ⚠ **RE-CHECKED 2026-08-18 when `M1·U2` landed the eleventh lane: the trigger is NOT tripped.** 11 < 12, and no casualty has been reproduced — the last full-suite control run was 471 passed / exit 0. Recorded explicitly rather than passed over in silence, because the check was owed at this exact point and a silent non-event is indistinguishable from a forgotten one. The **third** FE-3 module reaches 12 and trips it on lane count alone. Also confirmed live: a one-lane run still boots exactly **1 pair** (4100/4101), so U-1's narrowing holds with a lane added. CI's behaviour stays UNVERIFIED — fewer cores, and nothing is pushed. |
 | **R13** | **CSS budget R2 tightened.** 29.19 / 30.00 KB gz — **~0.81 KB headroom**, down from ~0.91 KB. Two more modules of this size would exhaust it. Watch on every FE-3 module. |
 | — | **About portrait** is an owner content dependency for M4 closure; do not fabricate or substitute owner content |
 
@@ -1174,7 +1282,38 @@ fail.** Backend, 31-test calibration, four injected defects each caught by its o
 file copy to a byte-identical SHA-256, `ci-preview` registered. **No Dashboard code exists yet**, and
 no `lanes.ts` record — see the sequencing finding in §5/M1·U1 for why the record belongs to `M1·U2`.
 
-**Next three actions:**
+**Next three actions (rewritten 2026-08-18 — `M1·U2` LANDED; the previous list is kept below it):**
+
+1. **Build `M1·U3` — the Experiences editor.** It carries everything the collection could not
+   exercise: bilingual `TranslationTabs`, Zod + `UForm` with a **computed** schema, 422→locale-tab
+   mapping through `dashboard-translation-errors.ts`, the per-module `admin-experience-form.ts`
+   split (the fields file already exists and the boundary is already drawn, §10.1), the skills
+   picker, `isCurrent`⇄`endDate`, and `order`.
+   ⚠ **The one test that must exist or the module ships a silent data-loss defect** (§5.3): load an
+   experience holding N skills, save WITHOUT touching the picker, assert the response still holds N.
+   A test that sets skills and asserts they were set passes against the defect. Three clearing
+   semantics coexist in this one save — translations upsert-never-delete, `technologyIds`
+   replace-wholesale, `endDate` clears on explicit `null`.
+   ⚠ The `.refine()` for `isCurrent` needs an explicit `path: ['endDate']` or its message never
+   reaches the field. And the server enforces NO cross-field rule, so the client is the only guard
+   and its test must face a backend that would accept the bad payload — which the mock does, by
+   design.
+2. **Measure the editor routes, THEN escalate their caps as ONE owner decision.** `/dashboard/experiences/new`
+   and `/dashboard/experiences/:id` must be added to `DASHBOARD_ROUTES` and to
+   `DASHBOARD_APP_OWNED_CAP_BYTES` together (the coverage assertion fails in BOTH directions, so a
+   measurement pass needs a provisional value in place first — see how `M1·U2` did it). The owner's
+   standing instruction under D20-34 is explicit: **do not inherit the collection's 99,328 B.**
+   Articles' editor measured ~106 KB against a collection baseline of ~88 KB, so expect a materially
+   larger number and let the formula produce it.
+   ⚠ **R13 binds here, not on the collection.** `M1·U2` cost zero CSS; Articles' CSS growth came from
+   its editor. Headroom is ~0.81 KB gz.
+3. **Then `M1·U4` — the extraction verdict against §5.2**, which is the whole reason module 1 is
+   built in-house. Two predictions already HELD (§5/M1·U2); the three editor-shaped candidates
+   (`TranslationTabs`, `useTranslatableForm`, `EntityFormLayout`) can only be judged once `M1·U3`
+   gives them a real second shape. Mark each HELD or WRONG **with the evidence**, then `M1·U5` runs
+   the gates and closes the module — after which OD-12 opens modules 2–5 to delegation.
+
+*(Superseded — the actions `M1·U2` was given, kept because the ledger records what it said it would do.)*
 
 1. **Build `M1·U2` — the Experiences collection at `/dashboard/experiences`, and the `lanes.ts`
    record with it.** The two are ONE logical unit: `lane-isolation.spec.mjs` requires a lane to own a

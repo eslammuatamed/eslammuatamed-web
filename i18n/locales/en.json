@@ -342,7 +342,8 @@
       "library": "Library",
       "media": "Media",
       "system": "System",
-      "profile": "Profile"
+      "profile": "Profile",
+      "experiences": "Experience"
     },
     "messages": {
       "title": "Messages",
@@ -634,6 +635,50 @@
         "loadFailedBody": "The request did not complete. This is usually temporary.",
         "deleteCancel": "Keep it"
       }
+    },
+    "experiences": {
+      "title": "Experience",
+      "description": "Roles and positions, in both languages.",
+      "retry": "Try again",
+      "staleNotice": "This list may be out of date — the last refresh did not complete.",
+      "errorTitle": "Experience could not be loaded",
+      "forbiddenTitle": "You do not have access to experience",
+      "forbiddenBody": "This account is not permitted to manage experience.",
+      "emptyTitle": "No experience yet",
+      "emptyBody": "Add the first role and it will appear here.",
+      "listRegionLabel": "Experience",
+      "resultCount": "{total} roles",
+      "untitled": "Untitled role",
+      "create": "New role",
+      "edit": "Edit",
+      "editFor": "Edit {role}",
+      "current": "Current",
+      "present": "Present",
+      "period": "{start} – {end}",
+      "translationState": {
+        "label": "Translations",
+        "present": "{locale} written",
+        "missing": "{locale} missing"
+      },
+      "locale": {
+        "en": "English",
+        "ar": "Arabic"
+      },
+      "field": {
+        "company": "Company",
+        "location": "Location",
+        "employmentType": "Employment type",
+        "period": "Period",
+        "skills": "Skills",
+        "order": "Order"
+      },
+      "employmentType": {
+        "FULL_TIME": "Full time",
+        "PART_TIME": "Part time",
+        "CONTRACT": "Contract",
+        "FREELANCE": "Freelance"
+      },
+      "skillCount": "{count} linked"
     },
     "projects": {
       "title": "Projects",

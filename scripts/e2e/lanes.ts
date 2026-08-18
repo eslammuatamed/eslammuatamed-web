@@ -175,6 +175,15 @@ export const LANES: readonly Lane[] = [
     readyPath: '/',
     resetsBackendState: true,
     why: 'FE-2c authoring: mutable, and the only backend that can HOLD A RESPONSE OPEN (`delayMs`), which is what makes six of plan §14.9\'s ten criteria observable at all'
+  },
+  {
+    project: 'dashboard-experiences',
+    dir: 'dashboard-experiences',
+    backend: 'experiences',
+    ports: { webEnv: 'CI_EXPERIENCES_PORT', apiEnv: 'CI_EXPERIENCES_MOCK_PORT', webDefault: 4100, apiDefault: 4101 },
+    readyPath: '/',
+    resetsBackendState: true,
+    why: 'FE-3 module 1: mutable, and it is the only lane whose fixtures can prove the API ORDER is honoured — `EXP.endedLater` ranks differently under the contract\'s sort than under the `startDate desc` a client would naturally write, so a re-sorting Dashboard fails HERE instead of in Production'
   }
 ] as const
 

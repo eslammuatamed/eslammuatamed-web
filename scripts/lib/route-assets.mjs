@@ -744,6 +744,8 @@ export const DASHBOARD_APP_OWNED_BASELINE_BYTES = {
   '/dashboard/articles': 88_344,
   '/dashboard/articles/new': 106_095,
   '/dashboard/articles/00000000-0000-0000-0000-000000000000': 106_203,
+  // D20-34 — FE-3 module 1's collection, measured on the tree that ships it.
+  '/dashboard/experiences': 85_551,
   '/dashboard/projects': 95_029,
   '/dashboard/projects/new': 152_208,
   '/dashboard/projects/00000000-0000-0000-0000-000000000000': 152_393
@@ -798,6 +800,21 @@ export const DASHBOARD_APP_OWNED_CAP_BYTES = {
   // to generalise from. Two routes is not that evidence.
   '/dashboard/articles/new': 120 * KB,
   '/dashboard/articles/00000000-0000-0000-0000-000000000000': 120 * KB,
+  // D20-34 (owner decision, 2026-08-18) — FE-3 module 1's collection.
+  //
+  // Derived by D20-29's formula from THIS route's own measured baseline (85,551 B), not inherited
+  // from a sibling: ceil(85,551 × 115 / 102,400) × 1024 = 99,328 B, leaving 13,777 B of headroom.
+  // The owner declined rounding it up to the Articles 100 KiB cap for visual consistency — a cap
+  // set by a sibling is a cap set by something other than evidence.
+  //
+  // The decision is explicitly NOT a waiver, NOT a shared-floor change, NOT a change to the generic
+  // incremental allowance, and NOT a D20-32 recalibration.
+  //
+  // ⚠ THE EDITOR ROUTES DO NOT INHERIT THIS. They are measured first and escalated as one batched
+  // decision when `M1·U3` creates them. That is the D20-33 amendment's lesson applied in advance:
+  // Articles' two editor routes were first registered at the collection's cap INHERITED before the
+  // editor surface existed, and had to be corrected to 120 KiB once measured.
+  '/dashboard/experiences': 97 * KB,
   '/dashboard/media': 108 * KB,
   '/dashboard/profile': 121 * KB,
   '/dashboard/projects': 107 * KB,

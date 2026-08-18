@@ -195,6 +195,13 @@ export const DASHBOARD_ROUTES = [
     route: '/dashboard/articles/00000000-0000-0000-0000-000000000000',
     pageModule: 'app/pages/dashboard/articles/[id].vue'
   },
+  // The Experiences module (FE-3 module 1), registered as each route becomes RENDERABLE — the same
+  // rule the Articles comment above states. `M1·U2` ships the collection only; the editor's two
+  // routes join in the commit that creates them, and they will derive their OWN caps from their own
+  // measured baselines rather than inheriting this one. That is the D20-33 amendment's lesson
+  // applied in advance: inheriting a collection cap for an editor surface that does not exist yet is
+  // exactly what had to be corrected for Articles.
+  { route: '/dashboard/experiences', pageModule: 'app/pages/dashboard/experiences/index.vue' },
   { route: '/dashboard/projects', pageModule: 'app/pages/dashboard/projects/index.vue' },
   { route: '/dashboard/projects/new', pageModule: 'app/pages/dashboard/projects/new.vue' },
   // A CONCRETE id, because the gate fetches each route to read the CSS out of its rendered shell.

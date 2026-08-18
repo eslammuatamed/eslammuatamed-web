@@ -115,9 +115,16 @@ describe('translations — upsert, never delete', () => {
 
     expect(res.status).toBe(200)
     const after = await get(EXP.current)
-    expect(after.translations.en.role).toBe('Staff Engineer')
-    expect(after.translations.ar).toBeDefined()
-    expect(after.translations.ar.role).toBe('مهندس واجهات أول')
+    // Bound and asserted BEFORE they are read: `translations` is an index signature, so every
+    // lookup is `T | undefined`. Reading through it directly made `typecheck:e2e` red — the gate
+    // M1·U1's exit row never listed, and therefore never ran.
+    const en = after.translations.en
+    const ar = after.translations.ar
+    expect(en).toBeDefined()
+    expect(ar).toBeDefined()
+    expect(en!.role).toBe('Staff Engineer')
+    // The untouched locale SURVIVES the upsert — translations never delete.
+    expect(ar!.role).toBe('مهندس واجهات أول')
   })
 
   it('ADDS a locale that did not exist', async () => {
@@ -233,7 +240,8 @@ describe('list order — current first, and the defect that proves it', () => {
     // `startDate desc` — the sort that actually shipped and was caught in Production — endedLater
     // comes first. A Dashboard that re-sorts locally fails here instead of live.
     const rows = await list()
-    expect(rows[0].id).toBe(EXP.current)
+    expect(rows[0]).toBeDefined()
+    expect(rows[0]!.id).toBe(EXP.current)
     expect(rows.findIndex(r => r.id === EXP.endedLater)).toBeGreaterThan(0)
   })
 

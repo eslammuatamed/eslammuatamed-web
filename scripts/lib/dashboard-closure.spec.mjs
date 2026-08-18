@@ -271,6 +271,10 @@ describe('dashboard closure — governed routes must always be measurable', () =
       // registered here when they exist — this gate fetches what it governs.
       '/dashboard/articles', '/dashboard/articles/new',
       '/dashboard/articles/00000000-0000-0000-0000-000000000000',
+      // The Experiences module (FE-3 module 1, D20-34). The COLLECTION only: its editor routes are
+      // registered when they exist, and they derive their own caps rather than inheriting this
+      // one — the correction D20-33 had to make for Articles, avoided here by construction.
+      '/dashboard/experiences',
       // The Projects module. The editor is registered under a concrete id because the gate fetches
       // the route; `/dashboard/**` is `ssr: false`, so which id is used cannot change the shell.
       '/dashboard/projects', '/dashboard/projects/new',
