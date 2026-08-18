@@ -155,6 +155,19 @@ const BACKENDS = {
     command: process.execPath,
     args: () => ['scripts/e2e/media-server.ts']
   },
+  // Articles authoring (FE-2c). Mutable like `dashboard` and `media` — a create/update/delete must
+  // change what the next GET returns — and its own process for the same lane-isolation reason: a
+  // mutable lane is serial only while it is ONE spec file, so it cannot share a directory with the
+  // Inbox or Media specs.
+  //
+  // It is also the ONLY backend that can HOLD A RESPONSE OPEN (`delayMs`, via `POST /__e2e/state`).
+  // Six of plan §14.9's ten criteria assert a state that exists only while a request is in flight;
+  // against an instant mock every one of them passes without that state ever rendering.
+  articles: {
+    label: 'articles backend (FE-2c authoring, mutable, latency-controllable)',
+    command: process.execPath,
+    args: () => ['scripts/e2e/articles-server.ts']
+  },
   // Project-detail freshness. This backend starts with an empty gallery and exposes test-only
   // controls that publish the authored gallery after both localized detail pages have been primed.
   // Its own process is essential: the regression observes mutable upstream state while every other
