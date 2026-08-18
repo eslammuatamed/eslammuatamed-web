@@ -168,6 +168,17 @@ const BACKENDS = {
     command: process.execPath,
     args: () => ['scripts/e2e/articles-server.ts']
   },
+  // FE-3 module 1. A separate process from `articles` for the same invariant, not for symmetry: a
+  // mutable lane is serial only while it is ONE spec file. What it holds that `articles` cannot is
+  // a DIFFERENT write shape — `technologyIds` replaces its whole set while `translations` upsert and
+  // `endDate` clears on an explicit null, so the three clearing semantics can disagree in one save.
+  // It also answers the skills 422 WITHOUT a field path, which is the shape the real service throws
+  // and the one an editor reading only `errors[]` would swallow.
+  experiences: {
+    label: 'experiences backend (FE-3 module 1, mutable, latency-controllable)',
+    command: process.execPath,
+    args: () => ['scripts/e2e/experiences-server.ts']
+  },
   // Project-detail freshness. This backend starts with an empty gallery and exposes test-only
   // controls that publish the authored gallery after both localized detail pages have been primed.
   // Its own process is essential: the regression observes mutable upstream state while every other

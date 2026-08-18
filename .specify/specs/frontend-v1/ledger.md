@@ -773,6 +773,74 @@ marked in its own header as provisional and **absorbed by FE-3 module 2** when t
 
 ---
 
+### FE-3 · Module 1 · U-1 — the instrument, and the proof it can fail
+
+`scripts/e2e/experiences-server.ts` (680 lines) + `scripts/e2e/experiences-server.spec.ts` (31 tests)
++ the `experiences` entry in `scripts/ci-preview.mjs`.
+
+**The backend is transcribed from the real service, not guessed.** `eslammuatamed-api`'s
+`experiences.service.ts` was read directly for four behaviours the OpenAPI document does not state,
+and each one changed what got written:
+
+| Read from the API source | What it changed here |
+| --- | --- |
+| `compareExperiences` — CURRENT FIRST, then `startDate` desc, then `order`, then `id` | The mock's order is **not** `startDate desc`. The service's own comment records the defect that shipped: WaveX (started 2026-03, **ended**) outranked Findropica (started 2025-01, **current**) on the live site. `EXP.endedLater` reproduces exactly that pair, so a Dashboard that re-sorts locally fails **here** instead of in Production. |
+| `assertSkillIds` throws a bare `UnprocessableEntityException(message)` | The skills 422 carries **no `errors[]` and no field path** — a different shape from every 422 Articles produces. An editor that renders only `errors[]` shows the operator nothing and the save silently does not happen. |
+| `if (dto.technologyIds !== undefined)` guards the relation write | An **omitted** key preserves; `[]` clears. Three clearing semantics now coexist in one save (§5.3). |
+| The DTOs carry **no** `isCurrent`⇄`endDate` cross-field rule | The mock **accepts** a current role with an end date, deliberately. Rejecting it would test the Dashboard's guard against a server rule that does not exist — the most flattering possible green. The client is the only guard, and its test must face a server that would take the bad payload. |
+
+**Two contract facts confirmed by reading, not assumed:** `GET /admin/experiences` answers
+`{ data: [...] }` with **no `meta`** and takes **zero query parameters**. The mock ignores query
+parameters rather than pretending to honour them, so a collection built on Articles' paginated shape
+cannot read a field the real API never sends.
+
+#### The instrument was proven before anything was built on it
+
+Per the standing rule, the calibration was not trusted for being green. Four defects were injected
+into the backend, the suite was run, then the source was restored **by file copy** — `git checkout --`
+would have **deleted** the file, which is untracked at that point, not reverted it — and the restored
+file's SHA-256 was checked against the pre-mutation value.
+
+| Injected defect | Expected catch | Result |
+| --- | --- | --- |
+| `technologyIds` applied even when omitted (`?? []`) | the no-touch save | **FAILED as designed** |
+| `endDate` cleared on an omitted key | omitted-preserves | **FAILED as designed** |
+| skills 422 given an `errors[]` field path | the pathless-422 test | **FAILED as designed** |
+| `isCurrent` lead removed from the sort | current-outranks-ended | **FAILED as designed** |
+
+`Tests 4 failed | 27 passed`, and **each defect was caught by its own test and no other** — a broad
+failure would have meant the tests were coupled, not discriminating. After restore:
+`sha256 255982611e554ba088c7536b401a3c728fcbb204bf7c3bc71089d6e5d6f1296f`, identical to the pre-mutation
+value, and **31/31 passed**.
+
+#### ⚠ A sequencing finding: the lane RECORD cannot land in U-1
+
+The unit plan said U-1 would add the `scripts/e2e/lanes.ts` record and show the lane booting one
+pair. It cannot, and the reason is a guard working correctly rather than an obstacle:
+`lane-isolation.spec.mjs` asserts *"the $project lane owns a real directory with specs"*, so a record
+whose `e2e/dashboard-experiences/` directory holds no spec **fails the guard** — and a mutable lane
+may hold exactly ONE spec file, so the directory cannot be seeded with a placeholder either without
+spending the module's only slot on it.
+
+So the registry record lands in **U-2**, together with the collection's spec, as one coherent unit.
+This is the ONE-COMMIT-PER-LOGICAL-UNIT rule (`b435bec`) applied, not a slip: a lane record and the
+spec that gives it a reason to exist are one unit. **R14's re-check moves with it** — the suite goes
+to 11 pairs when the record lands in U-2, not now, and the recorded trigger for making
+`test:e2e:sharded` the default is a reproduced full-suite casualty or the lane count passing **12**.
+
+**Gates on the committed tree:** `typecheck` **exit 0**, 0 `error TS`; `eslint` on the three touched
+files **exit 0, 0 problems**; full unit suite **118 files / 1714 tests, exit 0** — which includes
+`lane-isolation` green with no `dashboard-experiences` record, the state the finding above describes.
+
+⚠ **A process note worth keeping.** The first full-suite run reported `exit 1` and was read, for a
+moment, as a regression. It was `npm error Missing script: "test:unit"` — this repository's script is
+`npm test`. A non-zero exit from a script that never ran looks exactly like a failing suite in a log
+tail, and the only reason it did not become a false regression report is that the failing test was
+isolated before anything was re-run. Same class as `reference-startup-failure-is-not-test-failure`:
+read what actually executed, not the exit code alone.
+
+---
+
 ## 6. Known risks carried
 
 | # | Risk |
