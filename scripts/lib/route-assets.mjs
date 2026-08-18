@@ -742,6 +742,8 @@ export const DASHBOARD_APP_OWNED_BASELINE_BYTES = {
   // Both derive the SAME cap (102,400 B), so the decision is unaffected; the value recorded here is
   // the one the artifact actually produces, because that is what provenance means.
   '/dashboard/articles': 88_344,
+  '/dashboard/articles/new': 106_095,
+  '/dashboard/articles/00000000-0000-0000-0000-000000000000': 106_203,
   '/dashboard/projects': 95_029,
   '/dashboard/projects/new': 152_208,
   '/dashboard/projects/00000000-0000-0000-0000-000000000000': 152_393
@@ -781,12 +783,21 @@ export const DASHBOARD_APP_OWNED_CAP_BYTES = {
   // a failing route — the measured route fits the model with 13,384 B to spare. If an editor route
   // later cannot meet it, the cause is attributed and escalated; the cap is not silently raised.
   '/dashboard/articles': 100 * KB,
-  // INHERITED under D20-33, not derived: the decision governs the module's three routes together
-  // at one cap, because the editor surfaces were expected to share the collection's architecture
-  // and delivery profile. No baseline is recorded for them, because inventing one would be a
-  // fiction — the same reason the three D20-23 routes carry none.
-  '/dashboard/articles/new': 100 * KB,
-  '/dashboard/articles/00000000-0000-0000-0000-000000000000': 100 * KB,
+  // D20-33 as AMENDED 2026-08-18. These two were first registered at the collection's 100 KiB,
+  // INHERITED before the editor surface existed. It now exists and has been measured, so the cap is
+  // derived from their own baselines by D20-29's formula — which is a CORRECTION of a provisional
+  // ceiling, not a waiver, not a floor change, and not a D20-32 recalibration.
+  //
+  // The gap is attributable to real authoring functionality rather than to waste: an editor carries
+  // the media-authoring subsystem (MediaBrowser + MediaPicker + MediaCard = 20,352 B) that a list
+  // route does not, and 24,769 B were removed by moving it off the critical path before the cap was
+  // ever questioned. For scale, the Projects editor's governed cap is 176,128 B.
+  //
+  // NO generic authoring-route class: the owner held that back for FE-5, when Projects, the
+  // remaining content modules and the system modules have stabilised and there is repeated evidence
+  // to generalise from. Two routes is not that evidence.
+  '/dashboard/articles/new': 120 * KB,
+  '/dashboard/articles/00000000-0000-0000-0000-000000000000': 120 * KB,
   '/dashboard/media': 108 * KB,
   '/dashboard/profile': 121 * KB,
   '/dashboard/projects': 107 * KB,

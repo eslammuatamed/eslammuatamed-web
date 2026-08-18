@@ -575,9 +575,6 @@ describe('DASHBOARD_ACCEPTED_BASELINE_BYTES — reporting input, never a gate', 
 describe('dashboard app-owned caps — frozen, per route (D20-29)', () => {
   const D20_23_ROUTES = ['/dashboard/login', '/dashboard', '/dashboard/messages']
   const D20_29_ROUTES = [
-    // D20-33 registers this one at a cap derived by D20-29's formula from its own measured
-    // baseline, so it belongs to this class and is asserted by the derivation test below.
-    '/dashboard/articles',
     '/dashboard/media',
     '/dashboard/profile',
     '/dashboard/projects',
@@ -586,32 +583,42 @@ describe('dashboard app-owned caps — frozen, per route (D20-29)', () => {
   ]
 
   /**
-   * D20-33's INHERITED caps — a third provenance class.
+   * D20-33's routes, ALL derived from their own measured baselines.
    *
-   * The Articles editor routes are governed at the same 102,400 B as the collection, by decision,
-   * because they are one module expected to share its architecture and delivery profile. Their caps
-   * are NOT derived from baselines of their own, so they are deliberately absent from
-   * `DASHBOARD_APP_OWNED_BASELINE_BYTES` — for exactly the reason the three D20-23 routes are:
-   * recording a baseline nobody measured would be a fiction.
+   * The two editor routes were first registered at the collection's 100 KiB, inherited before the
+   * editor surface existed. The amendment of 2026-08-18 derives them from their own baselines once
+   * measured, which is why this class no longer has an "inherited, no baseline" member — the
+   * provenance changed, so the assertion changed with it rather than being left to describe a state
+   * that no longer holds.
    */
-  const D20_33_INHERITED_ROUTES = [
+  const D20_33_ROUTES = [
+    '/dashboard/articles',
     '/dashboard/articles/new',
     '/dashboard/articles/00000000-0000-0000-0000-000000000000'
   ]
 
   it('governs exactly the eleven routes doc 20 §1.1 names — no more, no fewer', () => {
     expect(Object.keys(DASHBOARD_APP_OWNED_CAP_BYTES).sort())
-      .toEqual([...D20_23_ROUTES, ...D20_29_ROUTES, ...D20_33_INHERITED_ROUTES].sort())
+      .toEqual([...D20_23_ROUTES, ...D20_29_ROUTES, ...D20_33_ROUTES].sort())
   })
 
-  it('records NO baseline for an inherited cap, and pins it to the module cap', () => {
-    for (const route of D20_33_INHERITED_ROUTES) {
-      expect(DASHBOARD_APP_OWNED_CAP_BYTES[route]).toBe(102_400)
-      expect(
-        DASHBOARD_APP_OWNED_BASELINE_BYTES[route],
-        `${route} inherits its cap; a baseline here would be invented`
-      ).toBeUndefined()
+  it('derives every D20-33 cap from its own recorded baseline, like D20-29 does', () => {
+    for (const route of D20_33_ROUTES) {
+      const baseline = DASHBOARD_APP_OWNED_BASELINE_BYTES[route]
+      expect(baseline, `${route} must record the baseline its cap was derived from`).toBeTypeOf('number')
+      expect(approvedAppLimitBytes(baseline), `${route} cap must equal ceil((baseline x 1.15)/KiB) x KiB`)
+        .toBe(DASHBOARD_APP_OWNED_CAP_BYTES[route])
     }
+  })
+
+  it('keeps the two editor routes ABOVE the collection route, which is the whole correction', () => {
+    // An editor carries the media-authoring subsystem a list route does not. Collapsing them back
+    // to one number is what produced the failing gate this amendment resolves.
+    expect(DASHBOARD_APP_OWNED_CAP_BYTES['/dashboard/articles']).toBe(102_400)
+    expect(DASHBOARD_APP_OWNED_CAP_BYTES['/dashboard/articles/new']).toBe(122_880)
+    // And still far below the comparable governed surface, so nothing was loosened by precedent.
+    expect(DASHBOARD_APP_OWNED_CAP_BYTES['/dashboard/articles/new'])
+      .toBeLessThan(DASHBOARD_APP_OWNED_CAP_BYTES['/dashboard/projects/new'])
   })
 
   it('pins every cap to the exact byte value doc 20 §1.1 publishes', () => {
@@ -622,8 +629,8 @@ describe('dashboard app-owned caps — frozen, per route (D20-29)', () => {
       '/dashboard': 103_424,
       '/dashboard/messages': 103_424,
       '/dashboard/articles': 102_400,
-      '/dashboard/articles/new': 102_400,
-      '/dashboard/articles/00000000-0000-0000-0000-000000000000': 102_400,
+      '/dashboard/articles/new': 122_880,
+      '/dashboard/articles/00000000-0000-0000-0000-000000000000': 122_880,
       '/dashboard/media': 110_592,
       '/dashboard/profile': 123_904,
       '/dashboard/projects': 109_568,
