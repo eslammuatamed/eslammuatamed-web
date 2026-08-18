@@ -737,6 +737,11 @@ export function resolveDashboardSharedFloor(assetsByRoute) {
 export const DASHBOARD_APP_OWNED_BASELINE_BYTES = {
   '/dashboard/media': 96_084,
   '/dashboard/profile': 106_990,
+  // Measured on the SHIPPED tree. The owner decision D20-33 quotes 89,016 B, taken one revision
+  // earlier — before the page dropped its bespoke error block in favour of reusing `UiStateError`.
+  // Both derive the SAME cap (102,400 B), so the decision is unaffected; the value recorded here is
+  // the one the artifact actually produces, because that is what provenance means.
+  '/dashboard/articles': 88_344,
   '/dashboard/projects': 95_029,
   '/dashboard/projects/new': 152_208,
   '/dashboard/projects/00000000-0000-0000-0000-000000000000': 152_393
@@ -768,6 +773,14 @@ export const DASHBOARD_APP_OWNED_CAP_BYTES = {
   '/dashboard': 101 * KB,
   '/dashboard/messages': 101 * KB,
   // D20-29 — derived from the baselines above.
+  //
+  // `/dashboard/articles` is D20-33 (owner decision, 2026-08-18): the cap is D20-29's formula
+  // applied to this route's own measured baseline, and the decision registers the SAME cap for the
+  // module's two editor routes, which inherit it rather than deriving their own. That is a
+  // deliberate registration of governance coverage, NOT a waiver and NOT a budget raised to excuse
+  // a failing route — the measured route fits the model with 13,384 B to spare. If an editor route
+  // later cannot meet it, the cause is attributed and escalated; the cap is not silently raised.
+  '/dashboard/articles': 100 * KB,
   '/dashboard/media': 108 * KB,
   '/dashboard/profile': 121 * KB,
   '/dashboard/projects': 107 * KB,

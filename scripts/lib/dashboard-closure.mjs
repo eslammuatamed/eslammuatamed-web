@@ -182,6 +182,12 @@ export const DASHBOARD_ROUTES = [
   // authoring surface the dashboard has (both content locales, the media picker and the technology
   // vocabulary on one page). All three are registered here rather than measuring the list alone —
   // the comment above is the rule, and an unmeasured editor is exactly the route a budget is for.
+  // The Articles module (FE-2c), registered under the owner decision of 2026-08-18 (D20-33). That
+  // decision governs all THREE Articles routes at the same 102,400 B cap; they are registered here
+  // as each becomes RENDERABLE, because this gate fetches every route it governs and a route whose
+  // page does not exist yet would be measured as an error shell. The editor's two routes join in
+  // the commit that creates them.
+  { route: '/dashboard/articles', pageModule: 'app/pages/dashboard/articles/index.vue' },
   { route: '/dashboard/projects', pageModule: 'app/pages/dashboard/projects/index.vue' },
   { route: '/dashboard/projects/new', pageModule: 'app/pages/dashboard/projects/new.vue' },
   // A CONCRETE id, because the gate fetches each route to read the CSS out of its rendered shell.

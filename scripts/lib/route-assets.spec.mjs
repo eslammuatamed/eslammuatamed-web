@@ -575,6 +575,9 @@ describe('DASHBOARD_ACCEPTED_BASELINE_BYTES — reporting input, never a gate', 
 describe('dashboard app-owned caps — frozen, per route (D20-29)', () => {
   const D20_23_ROUTES = ['/dashboard/login', '/dashboard', '/dashboard/messages']
   const D20_29_ROUTES = [
+    // D20-33 registers this one at a cap derived by D20-29's formula from its own measured
+    // baseline, so it belongs to this class and is asserted by the derivation test below.
+    '/dashboard/articles',
     '/dashboard/media',
     '/dashboard/profile',
     '/dashboard/projects',
@@ -582,7 +585,7 @@ describe('dashboard app-owned caps — frozen, per route (D20-29)', () => {
     '/dashboard/projects/00000000-0000-0000-0000-000000000000'
   ]
 
-  it('governs exactly the eight routes doc 20 §1.1 names — no more, no fewer', () => {
+  it('governs exactly the nine routes doc 20 §1.1 names — no more, no fewer', () => {
     expect(Object.keys(DASHBOARD_APP_OWNED_CAP_BYTES).sort())
       .toEqual([...D20_23_ROUTES, ...D20_29_ROUTES].sort())
   })
@@ -594,6 +597,7 @@ describe('dashboard app-owned caps — frozen, per route (D20-29)', () => {
       '/dashboard/login': 103_424,
       '/dashboard': 103_424,
       '/dashboard/messages': 103_424,
+      '/dashboard/articles': 102_400,
       '/dashboard/media': 110_592,
       '/dashboard/profile': 123_904,
       '/dashboard/projects': 109_568,
@@ -706,7 +710,7 @@ describe('assertGovernedRouteCoverage — both directions (D20-29)', () => {
     // (DASHBOARD_ROUTES) against the routes doc 20 GOVERNS. Comparing the cap map to itself would
     // be trivially true and would protect nothing.
     const measured = DASHBOARD_ROUTES.map(r => r.route)
-    expect(measured).toHaveLength(8)
+    expect(measured).toHaveLength(9)
     expect(() => assertGovernedRouteCoverage(measured)).not.toThrow()
   })
 
@@ -983,10 +987,27 @@ describe('D20-32 — resolveDashboardSharedFloor and its FROZEN reference set', 
     // over the governed set and a new governed route would participate in defining it.
     expect(DASHBOARD_FLOOR_REFERENCE_ROUTES).not.toBe(DASHBOARD_ROUTES)
     expect(Object.isFrozen(DASHBOARD_FLOOR_REFERENCE_ROUTES)).toBe(true)
-    // Today they cover the same routes, which is intended at calibration time; the point is that they
-    // are independently editable, so adding to DASHBOARD_ROUTES alone cannot move the floor.
-    expect([...DASHBOARD_FLOOR_REFERENCE_ROUTES].sort())
-      .toEqual(DASHBOARD_ROUTES.map(r => r.route).sort())
+
+    // THE TWO LISTS HAVE NOW DIVERGED, AND THAT IS THE DESIGN WORKING.
+    //
+    // They covered the same routes at calibration time, and an earlier revision of this test
+    // asserted that equality — which recorded a COINCIDENCE as if it were the contract. D20-33
+    // registered `/dashboard/articles` as a ninth governed route while the frozen reference set
+    // stayed at the eight routes D20-32 was calibrated over, which is exactly the shrink-on-add
+    // hazard the CONTROL above describes: a new page must never participate in defining the floor
+    // that every other route is measured against.
+    //
+    // So the assertion is inverted rather than deleted: the governed set is a strict superset, and
+    // the frozen set still holds precisely its eight calibration routes.
+    const governed = DASHBOARD_ROUTES.map(r => r.route)
+    expect(DASHBOARD_FLOOR_REFERENCE_ROUTES).toHaveLength(8)
+    for (const route of DASHBOARD_FLOOR_REFERENCE_ROUTES) {
+      expect(governed, `${route} is a floor reference and must still be governed`).toContain(route)
+    }
+    expect(
+      governed.filter(route => !DASHBOARD_FLOOR_REFERENCE_ROUTES.includes(route)),
+      'a route governed AFTER calibration must not be in the frozen floor set'
+    ).toEqual(['/dashboard/articles'])
   })
 
   it('freezes a ROUTE LIST, never content-hashed asset filenames', () => {
