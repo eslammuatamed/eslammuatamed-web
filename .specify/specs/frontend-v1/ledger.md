@@ -1706,6 +1706,67 @@ section was written during FE-1/FE-2 and its sub-phase table still marks **FE-2c
 while §2 records FE-2 **COMPLETE**. That table is kept as the FE-2 record and must not be read as a
 work queue. The live next action is here, and in §1's `M1·U5` checkpoint — nowhere else.
 
+### MODULE 2 IS **SKILLS**, and the routing is settled — owner decision 2026-08-19 (**OD-13**)
+
+**OD-13 — FE-3 module 2 runs as a BOUNDED CODEX LANE.** The owner ruled that OD-12's delegation
+threshold is satisfied: Articles established the tracer-bullet architecture and Experiences proved it
+against a materially different module, so module 2 is genuine replication *unless its contract proves
+otherwise*. Claude remains **architect, integrator, reviewer, and the authority for every gate**, and
+independently inspects the full diff, validates architecture compliance, runs the authoritative
+tests, verifies browser behaviour where claimed, and rejects or revises divergence. **All
+shared-abstraction changes stay central.** The lane may NOT touch the lane strategy, global CI
+behaviour, the governed performance model, the Backend/API repository, or the private Docs repo
+unless separately scoped. Codex must **investigate and report before building**, and must report a
+contract incompatibility with evidence rather than forking a competing pattern.
+
+**Which module — read from the plan, not chosen for convenience.** The owner explicitly declined to
+pull Projects forward to close R16. The FE-3 inventory (plan §5.2, §6/FE-3) is **experiences ·
+skills · testimonials · categories/tags**, plus the shared per-entity SEO panel. Module 2 = **Skills**,
+and this is **recorded rather than inferred**: §5.4 of the `M1·U3` plan already states *"Skills is
+FE-3 module 2"* in as many words.
+
+**Why that ordering still holds after Articles + Experiences — three reasons, all measured:**
+
+1. **Skills is the only FE-3 entity that two ALREADY-SHIPPED modules depend on.** Projects'
+   `technologyIds` and Experiences' skills relation both read `GET /admin/skills` through
+   `useAdminSkills.ts` / `DashboardSkillPicker`. Making it owner-editable is the one FE-3 module that
+   unblocks correctness in surfaces that already exist.
+2. **`M1·U3` deliberately took on a debt payable by exactly this module.** §5.4 shipped a minimal
+   read-only options source *"marked in its own header as provisional and absorbed by FE-3 module 2
+   when the real one lands"*. That debt is due now, and every module landed ahead of Skills extends
+   the window in which a provisional composable is the vocabulary source for the whole Dashboard.
+3. **Contract shape makes Skills the true replication case.** Measured on `openapi/openapi.json`:
+   `/admin/skills/{id}` carries **`get`**, as does `/admin/testimonials/{id}` — but
+   `/admin/categories/{id}` and `/admin/tags/{id}` carry only `patch`/`delete` and have **no detail
+   read**. So Skills replays the M1 collection-plus-editor pattern faithfully, while categories/tags
+   are a taxonomy shape that would force pattern invention on the FIRST delegated lane — the worst
+   possible place for it.
+
+**Nothing discovered so far invalidates the order.** R16 does not: Projects is an FE-2-era module,
+not an FE-3 one, so promoting it would swap a replication lane for a retrofit — which is precisely
+what the owner declined.
+
+### ⚠ R14 RE-DERIVED AT THE MODULE-2 BOUNDARY — the trigger is reached one module EARLIER than the prose says
+
+Counted live, not inherited: `scripts/e2e/lanes.ts` declares **11** lanes (`contract`,
+`ssr-scenarios`, `about-readiness`, `resume-pdf`, `dashboard`, `settings-dedupe`, `dashboard-media`,
+`project-detail-cache`, `dashboard-login`, `dashboard-articles`, `dashboard-experiences`).
+
+**Skills lands the twelfth.** R14 states its trip condition two ways that do not agree — *"the lane
+count passing **12**"* versus *"the **third** FE-3 module reaches 12"* — and the second is
+**arithmetically false**: 11 lanes plus module 2's one lane is 12 at the **SECOND** FE-3 module. The
+worked example was wrong, not the threshold.
+
+**What is NOT being done about it, deliberately.** The governed default gate is **not** re-pointed to
+`test:e2e:sharded` on this finding alone. R14's own rule is that a governed CI gate must not be
+re-pointed on unreproduced evidence, and no full-suite casualty has been reproduced — R15 records two
+runs, one failure each, different both times, each passing in isolation. Re-pointing a gate because a
+counter ticked over, under a threshold whose own prose is self-contradictory, would be a governance
+change made on ambiguity. **`npm run test:e2e:sharded` remains available and is the recommended local
+full-suite path meanwhile.** The arithmetic is corrected here so the next boundary check starts from a
+true count; whether "passing 12" means *reaches* or *exceeds* is an owner call the moment it is load-
+bearing, and it is not load-bearing while the sharded path is opt-in.
+
 ### THE NEXT THREE ACTIONS (set at the fourth zero-trust resume, 2026-08-19)
 
 **1. Re-derive R14's lane-count trigger BEFORE module 2 starts — do not inherit it.** R14 states its
