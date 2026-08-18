@@ -726,10 +726,35 @@ export function resolveDashboardSharedFloor(assetsByRoute) {
 }
 
 /**
- * App-owned baselines for the five routes D20-29 newly governs, measured at Web `origin/dev`
- * `d53af111168ffff56eadaacc0c1d7fdd6c2c635c3` by the §1.2 closure. Recorded so each frozen cap
- * below can be re-derived from its stated input rather than taken on trust — the caps are what the
- * gate enforces, these are only their provenance.
+ * App-owned baselines: the HISTORICAL DERIVATION INPUT each frozen cap below was computed from.
+ *
+ * ⚠ EACH VALUE IS PINNED TO THE TREE IT WAS MEASURED ON — see `DASHBOARD_APP_OWNED_BASELINE_PROVENANCE`
+ * for which tree that is, per route. They are NOT current-tree reproduction targets, and the gate
+ * never compares a build against them. A baseline that does not equal today's measurement is
+ * EXPECTED once the route's source has changed; that is the routes growing, not the record decaying.
+ *
+ * An earlier revision of this comment said these were recorded "so each frozen cap below can be
+ * re-derived from its stated input rather than taken on trust", with no tree named. That sentence is
+ * true of the DERIVATION and false of any REPRODUCTION, and the campaign ledger §9.5 opened a finding
+ * ("the recorded baselines no longer reproduce") on the strength of the second reading. Measured
+ * 2026-08-19, that finding's premise did not survive:
+ *
+ *   - `/dashboard/experiences` was rebuilt at its own provenance tree `fd4e9df` (`M1·U2`) and
+ *     measured **85,551 B — exact, to the byte**. The baseline reproduces perfectly where it was taken.
+ *   - Rebuilt at `7e6d11a` (`M1·U3`) the same route measures 87,404 B, and the +1,853 B attributes
+ *     EXACTLY, per module: `useAdminExperiences.ts` +1,345, `admin-experience-fields.ts` +187, and
+ *     the editor's two new route modules +161/+160. Four modules, summing to the delta with no
+ *     remainder. The editor's composable growth is charged to the COLLECTION route because both
+ *     share one composable inside the route's static closure.
+ *   - The ledger's candidate explanation — "~50 new i18n keys x 2 locales" — is REFUTED. The key
+ *     count was right (50 net new keys per locale) but the byte path is not: `i18n/locales/**` has
+ *     ZERO module records in the entire client build, because nuxt-i18n loads locale messages
+ *     outside the Rollup module graph this gate measures. Translation growth cannot move this number.
+ *
+ * So the comparison that produced the finding was a category error — a historical derivation input
+ * read against a later tree — and the fix belongs here, in the record, not in the numbers. Nothing
+ * below was re-stamped: re-stamping the Experiences collection 85,551 -> 87,404 would silently
+ * re-derive its cap 99,328 -> 101,376, a budget change performed to correct a report label.
  *
  * The three D20-23 routes are deliberately ABSENT: their cap is D20-12's constant and was not
  * derived from a dashboard measurement, so inventing a baseline for them here would be a fiction.
@@ -762,6 +787,37 @@ export const DASHBOARD_APP_OWNED_BASELINE_BYTES = {
   '/dashboard/projects': 95_029,
   '/dashboard/projects/new': 152_208,
   '/dashboard/projects/00000000-0000-0000-0000-000000000000': 152_393
+}
+
+/**
+ * The TREE each baseline above was measured on. Values carry no bytes and derive no cap — this map
+ * exists so "the baseline does not reproduce" can never again be raised without first asking
+ * "reproduce WHERE?", which is the question that dissolved the §9.5 finding.
+ *
+ * Keys must match `DASHBOARD_APP_OWNED_BASELINE_BYTES` exactly; the spec asserts it, so a future
+ * baseline added without its provenance fails rather than inheriting a neighbour's tree by proximity.
+ *
+ * ⚠ Adding an entry here is a RECORD-KEEPING act and must never be paired with an edit to the bytes
+ * above. Changing a baseline changes a cap.
+ */
+export const DASHBOARD_APP_OWNED_BASELINE_PROVENANCE = {
+  // D20-29 — measured at Web `origin/dev` by the §1.2 closure.
+  '/dashboard/media': 'd53af111168ffff56eadaacc0c1d7fdd6c2c635c3',
+  '/dashboard/profile': 'd53af111168ffff56eadaacc0c1d7fdd6c2c635c3',
+  '/dashboard/projects': 'd53af111168ffff56eadaacc0c1d7fdd6c2c635c3',
+  '/dashboard/projects/new': 'd53af111168ffff56eadaacc0c1d7fdd6c2c635c3',
+  '/dashboard/projects/00000000-0000-0000-0000-000000000000': 'd53af111168ffff56eadaacc0c1d7fdd6c2c635c3',
+  // D20-33 — measured on the FE-2c shipped tree, at the revision that dropped the bespoke error
+  // block for `UiStateError`. Recorded as the sub-phase rather than a SHA because the decision's own
+  // record names the tree that way; it is NOT one of the campaign's unit commits.
+  '/dashboard/articles': 'FE-2c shipped tree',
+  '/dashboard/articles/new': 'FE-2c shipped tree',
+  '/dashboard/articles/00000000-0000-0000-0000-000000000000': 'FE-2c shipped tree',
+  // D20-34 — `M1·U2`. VERIFIED by rebuild 2026-08-19: this tree reproduces 85,551 B exactly.
+  '/dashboard/experiences': 'fd4e9df',
+  // D20-35 — `M1·U3`, the commit that created the two editor routes.
+  '/dashboard/experiences/new': '7e6d11a',
+  '/dashboard/experiences/00000000-0000-0000-0000-000000000000': '7e6d11a'
 }
 
 /**

@@ -4,6 +4,7 @@ import {
   BUDGET,
   DASHBOARD_ACCEPTED_BASELINE_BYTES,
   DASHBOARD_APP_OWNED_BASELINE_BYTES,
+  DASHBOARD_APP_OWNED_BASELINE_PROVENANCE,
   DASHBOARD_APP_OWNED_CAP_BYTES,
   DASHBOARD_BUDGET,
   KB,
@@ -647,6 +648,29 @@ describe('dashboard app-owned caps — frozen, per route (D20-29)', () => {
       expect(DASHBOARD_APP_OWNED_CAP_BYTES[route])
         .toBeGreaterThan(DASHBOARD_APP_OWNED_CAP_BYTES['/dashboard/experiences'])
     }
+  })
+
+  it('records the provenance TREE of every baseline, so "does not reproduce" always has a "where"', () => {
+    // The §9.5 finding ("the recorded baselines no longer reproduce") rested on comparing a
+    // historical derivation input against a LATER tree. Rebuilding `/dashboard/experiences` at its
+    // own provenance tree `fd4e9df` measured 85,551 B exactly, which is what dissolved it. This
+    // assertion exists so a baseline can never again be added without the tree that answers the
+    // question — a bare number invites the same category error.
+    expect(Object.keys(DASHBOARD_APP_OWNED_BASELINE_PROVENANCE).sort())
+      .toEqual(Object.keys(DASHBOARD_APP_OWNED_BASELINE_BYTES).sort())
+    for (const [route, tree] of Object.entries(DASHBOARD_APP_OWNED_BASELINE_PROVENANCE)) {
+      expect(tree, `${route} must name the tree its baseline was measured on`).toBeTypeOf('string')
+      expect(tree.length, `${route} provenance must not be blank`).toBeGreaterThan(0)
+    }
+  })
+
+  it('keeps provenance a RECORD, not a second derivation input', () => {
+    // The discriminating half: provenance must never acquire the power to move a cap. If a future
+    // edit made a cap depend on this map, that cap would change when a SHA was corrected — which is
+    // exactly the "budget changed to fix a label" failure the whole finding is about.
+    expect(DASHBOARD_APP_OWNED_BASELINE_PROVENANCE['/dashboard/experiences']).toBe('fd4e9df')
+    expect(DASHBOARD_APP_OWNED_CAP_BYTES['/dashboard/experiences'])
+      .toBe(approvedAppLimitBytes(DASHBOARD_APP_OWNED_BASELINE_BYTES['/dashboard/experiences']))
   })
 
   it('leaves the D20-34 collection baseline UNCHANGED despite it no longer reproducing', () => {

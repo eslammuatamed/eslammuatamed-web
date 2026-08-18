@@ -1767,6 +1767,100 @@ label. The report is what is wrong, and this table is the correction. Attributio
 
 ---
 
+#### ⚠ **DISCHARGED 2026-08-19 — and the finding's own premise did not survive measurement**
+
+Owed to `M1·U5`, never received, re-opened at the fourth resume, closed here as its own unit under
+OD-15. **Measured, not argued.** The headline: *"the recorded baselines no longer reproduce"* is
+**false as stated**. They reproduce exactly — at the tree each was measured on. The comparison above
+was a **category error**: a historical derivation input read against a later tree.
+
+#### The instrument, and why it can be believed
+
+Per-module `renderedLength` for a route's closure, keyed by **module id** (never chunk filename, so
+build-to-build hash churn cannot manufacture a delta), reusing the gate's own `resolveDashboardClosure`,
+`attributeRenderedBytes` and `classifyModuleId` so it cannot drift from what `size:routes` enforces.
+`/dashboard/**` is `ssr: false`, so the closure comes from build metadata alone — no preview server.
+
+| Control | Result |
+| --- | --- |
+| **Negative** — build `HEAD` twice, compare | **0 of 14 routes differ; 0 modules differ.** Build-to-build noise is exactly zero |
+| **Positive (first attempt) — INVALID** | A 4,000 B unused `export const` probe moved the number by **0 B**. `renderedLength` is POST-tree-shaking, so an unused export contributes nothing **by construction**. Recorded rather than quietly re-run: read as a pass it would have "proved" sensitivity while proving none |
+| **Positive (redone)** | Probe referenced from the template so the build must retain it → delta localised to **exactly one module**, the right one. ⚠ Magnitude was **+32 B, not +4,000** — the literal was eliminated anyway (absent from every output chunk). So this control proves LOCALISATION, and does **not** prove magnitude fidelity |
+| **Reproduction (the control that actually settles it)** | Rebuilding `fd4e9df` reproduces `/dashboard/experiences` = **85,551 B, exact to the byte** — an independent reproduction of a measurement taken in another session. And rebuilding `7e6d11a` reproduces **all nine** of §9.5's "Measured" values **9-for-9**. Two historical measurements, reproduced exactly, by an instrument that had never seen them |
+
+The last row is why the synthetic probe's weakness does not undermine the result: the instrument is
+validated against real recorded numbers, which is a stronger claim than any injected probe.
+
+#### The attribution, exact and with no remainder
+
+`/dashboard/experiences`, `fd4e9df` (`M1·U2`) → `7e6d11a` (`M1·U3`): **+1,853 B across exactly four
+modules, summing to the delta with nothing left over.**
+
+| Δ bytes | Module |
+| --- | --- |
+| **+1,345** | `app/composables/useAdminExperiences.ts` |
+| **+187** | `app/composables/admin-experience-fields.ts` |
+| **+161** | `app/pages/dashboard/experiences/[id].vue` (route module, ADDED) |
+| **+160** | `app/pages/dashboard/experiences/new.vue` (route module, ADDED) |
+
+**The cause is architectural, and it generalises to every module FE-3 has left.** The COLLECTION
+route pays for the EDITOR's growth, because both share one composable inside the collection's static
+closure. Nothing regressed; the editor simply arrived. ⚠ **This is a live prediction for `M2·U3`:**
+building the Skills editor will raise the Skills COLLECTION's measured bytes, and that is expected
+behaviour, not a defect to hunt. It is also the measured argument for §10.1's `*-fields.ts` /
+`*-form.ts` split — the split is what keeps this charge small.
+
+#### ⚠ The ledger's own hypothesis is REFUTED — and it was right about the count
+
+§9.5 proposed *"the ~50 new i18n keys × 2 locales, plausible, NOT measured to attribution."* The key
+count was **correct**: `git diff fd4e9df 7e6d11a` shows **50 net new keys per locale** (51 added, 1
+removed, in both `en.json` and `ar.json`), +6,778 B of raw JSON across the two.
+
+**But those bytes cannot reach this number at all.** `i18n/locales/**` has **ZERO module records in
+the entire client build** — not zero in this route's closure, zero in all 121 chunks — because
+nuxt-i18n loads locale messages outside the Rollup module graph the gate measures. Translation
+growth is structurally incapable of moving an app-owned route measurement.
+
+⚠ **A correct-looking number nearly confirmed a wrong mechanism.** +6,778 B of raw i18n against a
++1,853 B route delta is the same order of magnitude and would have read as "some of it landed" under
+any estimate-based check. Only per-module attribution separates *the right count* from *the right cause*.
+
+#### Two findings this measurement uncovered that §9.5 does not contain
+
+1. **ELEVEN routes carry baselines, not nine — and all eleven drift.** §9.5 predates the D20-35
+   editor baselines drifting. On the current tree `/dashboard/experiences/new` is **109,711** against
+   a recorded **105,051** (+4,660) and `/dashboard/experiences/…/{id}` is **109,819** against
+   **105,159** (+4,660). **Every one of the eleven still PASSES its cap**, with the tightest headroom
+   at `/dashboard/articles/…/{id}` = **10,741 B**.
+2. **§9.5's own "Measured" column is now stale for the four editor routes, and `M1·U4b` is why.**
+   That column was taken at `7e6d11a`; since then `/dashboard/articles/new` moved **107,383 →
+   112,031** and `/dashboard/articles/…/{id}` **107,491 → 112,139** (+4,648 each), matching the
+   Experiences editors' +4,660 almost exactly. One shared cause across four routes, and it is the
+   ledger's own `M1·U4b` finding — *"the extraction COST bytes rather than saving them"* — now
+   measured on the routes that pay it.
+
+#### What was changed, and what deliberately was not
+
+**Changed — the record, which is what was wrong.** `route-assets.mjs`'s doc comment claimed the
+baselines were recorded *"so each frozen cap can be re-derived from its stated input"* **without
+naming a tree** — true of the derivation, false of any reproduction, and it is the sentence the
+finding was raised on. It now states the pinning explicitly and carries the measurements above. A new
+`DASHBOARD_APP_OWNED_BASELINE_PROVENANCE` map records **which tree each baseline was measured on**, so
+*"it does not reproduce"* can never again be raised without answering *"reproduce **where**?"*.
+
+**NOT changed — every byte value.** No baseline re-stamped, no cap moved, no gate re-pointed. The
+provenance map carries no bytes and derives nothing; a spec test pins that it cannot acquire the
+power to move a cap, because a SHA correction that changed a budget would be the exact failure this
+whole finding is about.
+
+**Gates on the committed tree:** `route-assets.spec.mjs` **156 passed**, and both new assertions were
+**proven able to fail before being trusted** — entry deleted → fails; value blanked → fails; restored
+byte-identical (`sha256` verified) → 156 pass. Each mutation was applied through Python with a module
+**parse check before the run**, because `M2·U1` established that a suite which did not run is not a
+failing test.
+
+---
+
 ### 9.6 OD-14 — the Skills minimum-translation rule · **RESOLVED 2026-08-19 · OWNER**
 
 Raised by the `M2` investigation as escalation 4. My architect ruling had provisionally required ≥1
