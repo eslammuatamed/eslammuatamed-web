@@ -538,6 +538,57 @@ Arabic. Both tests are kept — one proves the wiring, the other the ordering.
 tests failed for that reason alone and were misread as product defects for one cycle. The component
 spec submits the FORM; the click path is covered in the browser lane, where the browser does it.
 
+### FE-2c · U-5 — the extraction pass (`944443f`), and a suite-scalability finding
+
+**Extractions and declines are recorded in §10.** One measurement drove the third change: when the
+editor landed, the COLLECTION route's app-owned bytes rose **88,344 → 97,233 B** for a page that
+gained no features, because the list imported four field helpers from the file that also held the
+editor's form model and Zod schema. Splitting `admin-article-fields.ts` out recovered **6,211 B**
+(97,233 → 91,022) and left the editor routes unchanged (±123 B).
+
+**Final governed matrix at `e256bcc`**, on a CLEAN tree, so it carries a provenance marker —
+`.output/.provenance.json → e256bcc6… tree 0bf374df66ce output dc4d9229f3bd (1543 files)`. That
+closes the gap FE-2b and U-2 both recorded, where numbers had no build SHA behind them.
+
+| Gate | Result |
+| --- | --- |
+| `lint` · `typecheck` · `typecheck:e2e` | exit 0 · 0 · 0 |
+| `test` (unit) | **1673/1673**, 117 files |
+| `test:e2e --project=dashboard-articles` | **48/48**, exit 0 |
+| `check:bundle` · `check:logical` | exit 0 · exit 0 |
+| `size` (CSS) | **29.19 / 30.00 KB gz** |
+| `size:routes` | **exit 0** — all three Articles routes measured and passing |
+
+#### ⚠ R14 — the full suite now fails exactly one test per run, and the cause is this lane's SERVER
+
+**The Articles lane never fails.** 48/48 in every run. But the FULL suite does, and the measurement
+is unambiguous:
+
+| Configuration | Result |
+| --- | --- |
+| Full suite, local default workers (6) | 470 passed, **1 failed** — `nameplate.spec.ts`, 30 s navigation timeout |
+| Full suite, repeat | 470 passed, **1 failed** — `dashboard-locale-payload.spec.ts`, 30 s timeout |
+| Full suite, `--workers=2` (CI's count) | 470 passed, **1 failed** — `scenarios/bilingual.spec.ts`, `ECONNRESET` |
+| The failing spec, in isolation | **6/6 passed in 8.6 s** |
+| Suite with the Articles **webServer removed** | **423 passed, exit 0** |
+| Same, repeated | **423 passed, exit 0** |
+
+A different test each time, always a TRANSPORT or TIMEOUT symptom, never an assertion about content
+— and it disappears when the tenth preview server does. `workers` is not the lever: `--workers=2`
+failed too, because the cost is the FIXED one. `playwright.config.ts` now boots **10 preview server
+pairs (~20 processes) on 12 cores**, plus workers and browsers.
+
+**Why this is recorded as a risk rather than fixed here.** The fix is a lane-strategy decision, and
+FE-3 forces it: five more content modules cannot each take a process pair. The candidate answers —
+one shared mutable backend with per-spec reset, serialised server startup, or a longer navigation
+timeout for heavy SSR routes — trade against the invariant that makes a mutable lane safe
+(`lane-isolation.spec.mjs`: one spec file per mutable backend). That is a design question with a real
+constraint behind it, not a tuning knob, and it belongs at the head of FE-3 rather than bolted onto
+the end of FE-2c.
+
+**Not a regression in anything Articles ships**, and not a reason to distrust the Articles evidence:
+its own lane is green in every configuration measured, including at CI's worker count.
+
 ---
 
 ## 6. Known risks carried
@@ -552,6 +603,7 @@ spec submits the FORM; the click path is covered in the browser lane, where the 
 | R10 | `D19-11` id collision across Docs branches — blocks any Docs integration |
 | R11 | Issue #30 hydration defect — `test:e2e:repeat` red by design, out of scope |
 | ~~**R12**~~ | ~~`/dashboard/articles` ships UNMEASURED.~~ **CLOSED by D20-33** (`e0128c2`, Docs `3f2626e`). Superseded by the open cap question in §9.4. |
+| **R14** | **The e2e suite's FIXED COST now exceeds this machine, and the Articles lane is what tipped it.** Measured, not suspected — see §5 FE-2c/U-5. Every Articles assertion passes; the casualties are transport/timeout failures in OTHER lanes. **FE-3 must not add a preview-server pair per module** or the suite stops being runnable. Decide the lane strategy before the first FE-3 module, and note CI's behaviour is UNVERIFIED (fewer cores, and Actions has been billing-blocked). |
 | **R13** | **CSS budget R2 tightened.** 29.19 / 30.00 KB gz — **~0.81 KB headroom**, down from ~0.91 KB. Two more modules of this size would exhaust it. Watch on every FE-3 module. |
 | — | **About portrait** is an owner content dependency for M4 closure; do not fabricate or substitute owner content |
 
