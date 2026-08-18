@@ -11,7 +11,7 @@ import {
   articleHasTranslation,
   articleSlug,
   articleStatusColor
-} from '~/composables/admin-article-form'
+} from '~/composables/admin-article-fields'
 import type { AdminArticle } from '~/composables/admin-article-types'
 
 /**

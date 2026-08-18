@@ -93,6 +93,7 @@ const FORBIDDEN_REFERENCES = [
  */
 const OTHER_DASHBOARD_MODULE_FILES = [
   'composables/admin-article-form.ts',
+  'composables/admin-article-fields.ts',
   'composables/admin-article-types.ts',
   'composables/admin-articles-query.ts',
   'composables/useAdminArticles.ts'

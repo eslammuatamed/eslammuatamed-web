@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 import {
-  ARTICLE_LOCALES,
   articleClearedLocales,
   articleFieldErrorLocale,
   articleFieldErrorName,
@@ -13,13 +12,7 @@ import {
   emptyArticleTranslationForm,
   initialArticleForm,
   isArticleFormDirty,
-  type ArticleFormState,
-  articleDisplayTitle,
-  articleHasTranslation,
-  articleIsPubliclyVisible,
-  articleMissingLocales,
-  articleSlug,
-  articleStatusColor
+  type ArticleFormState
 } from './admin-article-form'
 import type { AdminArticle, AdminArticleTranslation } from './admin-article-types'
 
@@ -53,90 +46,8 @@ function article(over: Partial<AdminArticle> = {}): AdminArticle {
   }
 }
 
-describe('translation presence is read from the map, never inferred', () => {
-  it('is true only when the locale has both a title and a slug', () => {
-    expect(articleHasTranslation(article(), 'en')).toBe(true)
-    expect(articleHasTranslation(article({ translations: { en: translation() } }), 'ar')).toBe(false)
-  })
-
-  it('treats whitespace as absent, not as content', () => {
-    const blankish = article({ translations: { en: translation({ title: '   ' }) } })
-    expect(articleHasTranslation(blankish, 'en')).toBe(false)
-  })
-
-  it('reports exactly which locales are missing', () => {
-    expect(articleMissingLocales(article())).toEqual([])
-    expect(articleMissingLocales(article({ translations: { en: translation() } }))).toEqual(['ar'])
-    expect(articleMissingLocales(article({ translations: {} }))).toEqual([...ARTICLE_LOCALES])
-  })
-})
-
-describe('the row heading follows the operator, and never fabricates a translation', () => {
-  it('prefers the operator\'s own language', () => {
-    expect(articleDisplayTitle(article(), 'ar', 'untitled')).toBe('الهندسة')
-    expect(articleDisplayTitle(article(), 'en', 'untitled')).toBe('A modular monolith in practice')
-  })
-
-  it('falls back to the other language to IDENTIFY a row, which is the one place that is correct', () => {
-    const enOnly = article({ translations: { en: translation() } })
-    expect(articleDisplayTitle(enOnly, 'ar', 'untitled')).toBe('A modular monolith in practice')
-  })
-
-  it('falls back to a neutral label rather than to a slug or an empty heading', () => {
-    expect(articleDisplayTitle(article({ translations: {} }), 'en', 'Untitled article'))
-      .toBe('Untitled article')
-  })
-})
-
-describe('slugs are per-locale and never borrowed', () => {
-  it('returns the locale\'s own slug', () => {
-    expect(articleSlug(article(), 'en')).toBe('a-modular-monolith-in-practice')
-    expect(articleSlug(article(), 'ar')).toBe('الهندسة')
-  })
-
-  it('returns null for a locale that does not exist — never the other locale\'s slug', () => {
-    const enOnly = article({ translations: { en: translation() } })
-    expect(articleSlug(enOnly, 'ar')).toBeNull()
-  })
-})
-
-describe('a public destination requires BOTH published and a translation in that locale', () => {
-  it('is visible when published and translated', () => {
-    expect(articleIsPubliclyVisible(article(), 'en')).toBe(true)
-    expect(articleIsPubliclyVisible(article(), 'ar')).toBe(true)
-  })
-
-  /**
-   * The discriminating case. `GET /articles/{slug}` resolves per-locale, so a published article
-   * with no Arabic 404s in Arabic — and a `View on site` action offered there would link the
-   * operator to a 404, which plan §14.2 forbids by name. Status alone is not enough.
-   */
-  it('is NOT visible in a locale the article does not have, even though it is PUBLISHED', () => {
-    const enOnly = article({ translations: { en: translation() } })
-    expect(enOnly.status).toBe('PUBLISHED')
-    expect(articleIsPubliclyVisible(enOnly, 'ar')).toBe(false)
-    expect(articleIsPubliclyVisible(enOnly, 'en')).toBe(true)
-  })
-
-  it.each(['DRAFT', 'SCHEDULED', 'ARCHIVED'] as const)('is NOT visible while %s', (status) => {
-    expect(articleIsPubliclyVisible(article({ status }), 'en')).toBe(false)
-  })
-})
-
-describe('status colour is centralised so the list and the editor cannot drift', () => {
-  it('gives every contract status its own mapping', () => {
-    expect(articleStatusColor('PUBLISHED')).toBe('success')
-    expect(articleStatusColor('SCHEDULED')).toBe('primary')
-    expect(articleStatusColor('ARCHIVED')).toBe('warning')
-    expect(articleStatusColor('DRAFT')).toBe('neutral')
-  })
-})
-
-/* ══════════════════════════════════════════════════════════════════════════════════════════════
-   THE EDITOR'S FORM MODEL
-   ══════════════════════════════════════════════════════════════════════════════════════════════ */
-
 const T = (key: string) => key
+
 
 describe('seeding the form', () => {
   it('seeds a NEW article as a draft with nothing pre-filled', () => {
@@ -261,36 +172,25 @@ describe('the payload speaks D10-23 — explicit null clears', () => {
 })
 
 /**
- * THE MAPPING THIS MODULE EXISTS TO GET RIGHT.
+ * The article-facing wrappers over the shared contract rule.
  *
- * Reads are a locale-keyed map; writes are an array; a 422 names `translations[N].slug` where N
- * indexes the array THIS CLIENT built. Resolve it with the wrong ordering and an Arabic slug
- * collision lands on the English tab — against a field that looks fine, with no way for the
- * operator to act on it.
+ * The rule's own cases — request ordering, the single-locale index, the unresolvable index — moved to
+ * `dashboard-translation-errors.spec.ts` with the rule. What is left here is what these wrappers add:
+ * the narrowing to `ArticleLocale`, exercised on the two paths this module actually produces.
  */
 describe('422 field paths map back onto the right locale tab', () => {
-  it('follows the ORDER OF THE REQUEST, not a fixed assumption', () => {
-    expect(articleFieldErrorName('translations[0].slug', ['en', 'ar'])).toBe('translations.en.slug')
-    // Same index, different request ordering — the answer must move with it.
-    expect(articleFieldErrorName('translations[0].slug', ['ar', 'en'])).toBe('translations.ar.slug')
+  it('resolves an article translation path to a typed locale', () => {
     expect(articleFieldErrorName('translations[1].slug', ['en', 'ar'])).toBe('translations.ar.slug')
+    expect(articleFieldErrorLocale('translations[1].slug', ['en', 'ar'])).toBe('ar')
   })
 
-  it('resolves the TAB the same way', () => {
-    expect(articleFieldErrorLocale('translations[0].title', ['ar', 'en'])).toBe('ar')
-    expect(articleFieldErrorLocale('translations[1].title', ['ar', 'en'])).toBe('en')
-  })
-
-  it('handles a single-locale request, where index 1 does not exist', () => {
+  it('resolves a SINGLE-locale article payload to that locale', () => {
     expect(articleFieldErrorName('translations[0].slug', ['ar'])).toBe('translations.ar.slug')
-    // Better an unattached form-level message than one confidently pinned to the wrong field.
-    expect(articleFieldErrorName('translations[1].slug', ['ar'])).toBeNull()
-    expect(articleFieldErrorLocale('translations[1].slug', ['ar'])).toBeNull()
+    expect(articleFieldErrorLocale('translations[0].slug', ['ar'])).toBe('ar')
   })
 
-  it('passes a non-translation path straight through', () => {
+  it('passes an article-level path through untouched', () => {
     expect(articleFieldErrorName('publishAt', ['en', 'ar'])).toBe('publishAt')
-    expect(articleFieldErrorName('categoryId', ['en', 'ar'])).toBe('categoryId')
     expect(articleFieldErrorLocale('publishAt', ['en', 'ar'])).toBeNull()
   })
 })

@@ -654,6 +654,55 @@ test.describe('§14.9 criterion 5 — destructive action', () => {
   })
 })
 
+test.describe('OD-8 — the unsaved-changes guard', () => {
+  test('challenges an in-app navigation away from unsaved work, and honours the answer', async ({ page, baseURL }) => {
+    await openEditor(page, baseURL as string, `/dashboard/articles/${DRAFT_ID}`)
+    await page.locator('[data-editor-title="en"]').fill('Something not yet saved')
+
+    // DISMISS: the operator stays, and the edit is still there.
+    page.once('dialog', dialog => void dialog.dismiss())
+    await page.locator('[data-editor-back]').click()
+    await expect(page).toHaveURL(new RegExp(`/dashboard/articles/${DRAFT_ID}$`))
+    await expect(page.locator('[data-editor-title="en"]')).toHaveValue('Something not yet saved')
+
+    // ACCEPT: the operator leaves.
+    page.once('dialog', dialog => void dialog.accept())
+    await page.locator('[data-editor-back]').click()
+    await page.waitForURL('**/dashboard/articles')
+  })
+
+  test('does NOT challenge a clean form — the guard must not cry wolf', async ({ page, baseURL }) => {
+    await openEditor(page, baseURL as string, `/dashboard/articles/${DRAFT_ID}`)
+
+    let asked = false
+    page.on('dialog', (dialog) => { asked = true; void dialog.accept() })
+    await page.locator('[data-editor-back]').click()
+    await page.waitForURL('**/dashboard/articles')
+
+    expect(asked, 'an untouched form must navigate without a prompt').toBe(false)
+  })
+
+  test('does NOT challenge the redirect it performs itself after a successful save', async ({ page, baseURL }) => {
+    await openEditor(page, baseURL as string, '/dashboard/articles/new')
+
+    await page.locator('[data-editor-category]').click()
+    await page.getByRole('option').first().click()
+    await page.locator('[data-editor-title="en"]').fill('Saved then redirected')
+    await page.locator('[data-editor-slug="en"]').fill('saved-then-redirected')
+    await page.locator('[data-editor-excerpt="en"]').fill('e')
+    await page.locator('[data-editor-body="en"]').fill('b')
+
+    let asked = false
+    page.on('dialog', (dialog) => { asked = true; void dialog.accept() })
+    await page.locator('[data-editor-save]').click()
+    await page.waitForURL(/\/dashboard\/articles\/[0-9a-f-]{36}$/)
+
+    // Challenging the operator on the redirect they just earned is the guard firing on exactly the
+    // case it exists to allow.
+    expect(asked, 'the post-save redirect must not be challenged').toBe(false)
+  })
+})
+
 test.describe('§14.2 — the contextual public action', () => {
   test('offers View on site for a published article, at the LOCALE-AWARE route', async ({ page, baseURL }) => {
     await openEditor(page, baseURL as string, `/dashboard/articles/${PUBLISHED_BOTH_ID}`, 'en')

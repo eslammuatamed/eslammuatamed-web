@@ -2,18 +2,20 @@
 import type { FormErrorEvent, FormSubmitEvent } from '@nuxt/ui'
 import {
   ARTICLE_LOCALES,
+  articleIsPubliclyVisible,
+  articleStatusColor,
+  type ArticleLocale
+} from '~/composables/admin-article-fields'
+import {
   articleFieldErrorLocale,
   articleFieldErrorName,
   articleFillState,
   articleFormSchema,
-  articleIsPubliclyVisible,
   articlePayload,
   articlePayloadLocales,
-  articleStatusColor,
   initialArticleForm,
   isArticleFormDirty,
-  type ArticleFormState,
-  type ArticleLocale
+  type ArticleFormState
 } from '~/composables/admin-article-form'
 import { ADMIN_ARTICLE_STATUSES } from '~/composables/admin-articles-query'
 import type { ArticleStatus } from '~/composables/admin-article-types'
@@ -362,20 +364,15 @@ async function openPreview(): Promise<void> {
   }
 }
 
-/* ── unsaved-changes guard (OD-8) ──────────────────────────────────────────────────────────────── */
-
-onBeforeRouteLeave(() => {
-  if (bypassGuard.value || !dirty.value) return true
-  return window.confirm(t('dashboard.articles.editor.unsavedWarning'))
+/* ── unsaved-changes guard (OD-8) ───────────────────────────────────────────────────────────────
+   Both exits — in-app navigation and reload/close — come from the shared composable. It was
+   extracted because `ProjectEditor` had already written the same pair of hooks independently, which
+   is §14.6's "second real consumer" met by observation rather than by anticipation. */
+useUnsavedChangesGuard({
+  dirty,
+  bypass: bypassGuard,
+  message: () => t('dashboard.articles.editor.unsavedWarning')
 })
-
-function onBeforeUnload(event: BeforeUnloadEvent): void {
-  if (bypassGuard.value || !dirty.value) return
-  event.preventDefault()
-}
-
-onMounted(() => window.addEventListener('beforeunload', onBeforeUnload))
-onUnmounted(() => window.removeEventListener('beforeunload', onBeforeUnload))
 
 /* ── save-state presentation (§14.4) ───────────────────────────────────────────────────────────── */
 

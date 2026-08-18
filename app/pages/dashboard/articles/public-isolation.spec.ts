@@ -29,6 +29,7 @@ const APP = resolve(ROOT, 'app')
 /** Every file this module owns. They are allowed to name themselves; nothing else is. */
 const MODULE_FILES = [
   'composables/admin-article-form.ts',
+  'composables/admin-article-fields.ts',
   'composables/admin-article-types.ts',
   'composables/admin-articles-query.ts',
   'composables/useAdminArticles.ts',
@@ -66,6 +67,7 @@ const FORBIDDEN_REFERENCES = [
   'useAdminArticle',
   'useAdminTaxonomy',
   'admin-article-form',
+  'admin-article-fields',
   'admin-article-types',
   'admin-articles-query',
   'parseAdminArticlesQuery',
