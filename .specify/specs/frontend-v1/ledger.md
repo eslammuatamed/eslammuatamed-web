@@ -221,6 +221,7 @@ shared abstraction: the shared set is now `useTranslatableForm`, `DashboardTrans
 | **OD-11** | **RESOLVED 2026-08-18 — option B. The Dashboard ships fully localized EN/AR.** The header control is a real **application-language** switcher. Dashboard routes stay **unprefixed**; the application locale is a persisted preference, independent of route structure. It drives chrome language, shell direction, and the default active translation tab. Changing it must **not** discard unsaved translation state. Governing record: docs **D02-15** (scope), **D04-7** (routing), **D11-8** (architecture), doc 18 §3 (coverage) — Docs commit `3b607af`, branch `docs/od-11-dashboard-localization`, **local-only** (R10). |
 | **OD-12** | **RESOLVED 2026-08-18 — FE-3 runs HYBRID, and the split is by kind of work, not by volume.** Module 1 (**Experiences**) is built **in-house**: it is not replication, it is the **second consumer** that proves, rejects or refines the four abstractions §10.2 deliberately declined, and that is judgement against an unestablished pattern. Codex delegation is **authorized** for modules 2–5 **only after Articles + Experiences have established the pattern**, and only as bounded, disjoint lanes. Non-delegable and retained here regardless: **architecture, integration, review, the authoritative tests/gates, and rejecting incorrect delegated work.** ⚠ Binding constraint on every delegated lane: **a lane must not invent a competing shared abstraction.** A lane that needs a pattern the shared set does not provide escalates it — plan §6's rule ("extend the shared pattern, not fork it") is the lane contract, not advice. |
 | **D20-34** | **RESOLVED 2026-08-18 — `/dashboard/experiences` carries a 99,328 B app-owned cap**, derived by D20-29's formula from its OWN measured baseline (85,551 B), not inherited from the Articles collection. The owner declined rounding it to 100 KiB for visual consistency: *"the route should carry the cap derived from its own measured baseline under the governed formula."* Not a waiver, not a shared-floor change, not an incremental-allowance change, not a D20-32 recalibration. ⚠ Standing instruction attached to it: **do NOT inherit this cap for the Experiences editor routes — measure the real editor surfaces first and return with one batched decision.** Mirrored in `DASHBOARD_APP_OWNED_CAP_BYTES`; the doc 20 decision-log entry was owed at the time of writing and has since **LANDED** — Docs `95e9101` on `docs/web-modernization-campaign` (local-only). |
+| **OD-14** | **RESOLVED 2026-08-19 — a Skill must carry AT LEAST ONE non-empty translation before it can be saved; it must NOT require every configured locale.** Three states, and the middle one is the point: **zero translations → INVALID, block save · one → VALID but INCOMPLETE · all configured → VALID and COMPLETE.** The completeness indicator stays meaningful and must expose the incomplete state. ⚠ **This is a FRONTEND AUTHORING / PRODUCT invariant.** The API contract declares no `minItems` on `translations` and the database is not known to enforce it — **do not claim either does**, and **do not modify the Backend/API to add it from this campaign**. Owner's rationale: a Skill with no localized label has no meaningful human-facing representation, while requiring all locales up front would block incremental bilingual authoring. **There is no mandatory primary authoring language** — English-first and Arabic-first are both valid. Full record and its test consequences: **§9.6**. |
 | **UX** | Multilingual authoring: shared fields once + locale tabs; preserved unsaved state; validation visible across inactive tabs; correct RTL/LTR; 380px. |
 | **UX** | Dashboard shell needs a locale control, appearance control, obvious **View/Open Portfolio**, contextual **View-on-site** where a real public destination exists. The locale control switches the **chrome language** (OD-11 option B) — settled, no longer contingent. |
 | **UX** | `/dashboard/login` gets a full product-quality redesign — Nuxt UI + standard Zod, obvious way back to the public site. **Bilingual under OD-11**: it carries the same language control and appearance control, localized labels/errors/actions, and correct RTL/LTR composition. |
@@ -1699,6 +1700,66 @@ label. The report is what is wrong, and this table is the correction. Attributio
 
 ---
 
+### 9.6 OD-14 — the Skills minimum-translation rule · **RESOLVED 2026-08-19 · OWNER**
+
+Raised by the `M2` investigation as escalation 4. My architect ruling had provisionally required ≥1
+translation as a client rule while declining to narrow the contract anywhere else. **The owner has now
+decided it directly, which replaces my provisional call as the authority** — and supplied substance
+the ruling did not have.
+
+#### The rule
+
+| Translations authored | Verdict | Save |
+| --- | --- | --- |
+| **zero** | INVALID | **blocked** |
+| **one** | VALID but **INCOMPLETE** | allowed |
+| **all configured locales** | VALID and COMPLETE | allowed |
+
+**The middle row is the whole decision.** Requiring ≥1 and requiring *all* are two different rules,
+and the completeness indicator exists precisely to make the incomplete-but-valid state visible rather
+than to force it closed. The indicator must therefore keep reporting incompleteness for a one-locale
+Skill — it must not be reduced to a validity flag.
+
+#### ⚠ It is a FRONTEND invariant, and the code must say so
+
+`CreateSkillDto.translations` is **required** but declares **no `minItems`** — verified directly
+against `openapi/openapi.json`. So the contract permits an empty array, and the database is not known
+to reject one.
+
+- **Do NOT comment, document or assert that the API contract or the database enforces this.** This
+  ledger's standing rule is that a comment must never claim an invariant the code does not actually
+  enforce; here the trap is one step further out — claiming an invariant *another system* does not
+  enforce. The Zod schema is the only thing enforcing it, and the comment must name itself as such.
+- **Do NOT modify the Backend/API to add it.** Out of bounds for this campaign, and the owner said so
+  explicitly. If the backend should enforce it too, that is a separate Backend decision.
+
+#### Test consequences — two of them are discriminating, and one is easy to get wrong
+
+1. **Zero-translation save must be BLOCKED**, and the negative control is removing the rule from the
+   Zod schema: the block test must then fail, and it must be the ONLY one that fails. If removing the
+   rule breaks nothing, the rule is not what is doing the blocking.
+2. **A ONE-locale Skill must SAVE, and must still report INCOMPLETE.** ⚠ These are two assertions and
+   a test that only makes the first is vacuous for this decision — the whole point of OD-14 is the
+   state that is simultaneously valid and incomplete. Assert both, or the rule is indistinguishable
+   from "require all locales" in one direction and from "require none" in the other.
+3. **Arabic-only must be a first-class case, not a mirror of the English-only one.** The owner states
+   there is **no mandatory primary authoring language**. This lands exactly on the single-locale
+   indexed-422 hazard `dashboard-translation-errors` already documents: an Arabic-only payload sends
+   ONE entry, so `translations[0]` is **Arabic**, and any resolver pinned to a canonical `['en','ar']`
+   attaches the error to the English tab the operator deliberately left empty while the real problem
+   stays invisible. That module's own header records the proof: with the resolver pinned, a
+   both-locales test still PASSED and only the single-locale test failed. **So the Arabic-only save
+   test is not redundant coverage — it is the one that can fail.**
+
+#### Standing instruction attached by the owner
+
+**Do not stop separately for this rule again.** It is settled; implement it and continue. The
+route-cap decision remains the one open owner gate for M2 — return with the three MEASURED baselines
+and their D20-29-derived caps as **one batched decision**, after the collection and editor routes are
+actually implemented and measured. Not before, and never inherited.
+
+---
+
 ## 8. Exact next action
 
 ⚠ **Everything below the NEXT THREE ACTIONS block is HISTORICAL RECORD, not instruction.** This
@@ -1794,7 +1855,7 @@ and accepting it is what keeps the constraint honest.
 | 1 | `useAdminSkills` absorption | **APPROVED as proposed, under a preserve-the-surface contract.** Absorb in place; do NOT create a parallel `useAdminSkillsCollection`. `useAdminSkills`, `skillLabel`, `skills`, `pending`, `forbidden`, `failed`, `load` all keep their names and semantics; `AdminSkill` MOVES to `admin-skill-types.ts` under the same export name. ⚠ **The discriminating gate: `ProjectEditor.spec.ts` and the Experiences editor coverage must stay green WITHOUT being edited.** If either needs a change, the absorption broke a shipped consumer and the change is mine, not the lane's. |
 | 2 | Three route caps | **Deferred by design, not forgotten.** Measure collection, `/new` and `/{id}` independently and return ONE batched decision — the D20-34/D20-35 procedure. **Caps are never inherited** and never invented to silence a gate; `size:routes` exit 2 in the interim is a MEASUREMENT FAILURE, which this campaign has now handled twice. |
 | 3 | R14 lane 12 | **Already handled centrally** — see the re-derivation above. The lane correctly refused to touch lane strategy or CI. |
-| 4 | Validation policy | **Do NOT narrow the contract where it is silent.** No hex-only `brandColor` validator and no `<input type="color">` (it cannot express `null`, which is the one clearable field). No integer/nonnegative `order` — that rule was **Experiences'**, and copying it is exactly the replication drift R6 names. **One deliberate exception:** the editor requires **≥1 authored translation**, because `translations` is required on create and a zero-length array is a state the editor cannot present. ⚠ It must be commented as a **CLIENT rule the contract does not declare** — this ledger's standing rule is never to assert an invariant that is not actually enforced. **Carried to the owner in §9.6 as overturnable.** |
+| 4 | Validation policy | **Do NOT narrow the contract where it is silent.** No hex-only `brandColor` validator and no `<input type="color">` (it cannot express `null`, which is the one clearable field). No integer/nonnegative `order` — that rule was **Experiences'**, and copying it is exactly the replication drift R6 names. **One deliberate exception, which the owner has since decided directly — cite OD-14, not this cell.** My provisional call was ‘the editor requires ≥1 authored translation’; **OD-14 (§9.6) is now the authority**, and it carries substance this ruling did not: the three-state semantics (zero INVALID / one VALID-but-INCOMPLETE / all COMPLETE), the requirement that the completeness indicator keep exposing the incomplete state, and that **no primary authoring language is mandatory**. The commenting constraint survives unchanged and is reinforced there: it is a FRONTEND invariant and the code must not claim the contract or the database enforces it. |
 | 5 | Delete linkage | **Model ONLY the documented project-linked 409.** Adding experience linkage would encode backend behaviour no contract states and no test here can observe. If the real backend also blocks on experiences, the instrument is wrong in a way its own tests cannot reveal — recorded as a known limit of the instrument rather than guessed at. |
 | 6 | No shared-six extension | **Accepted** — and it is the verdict's main evidence, above. |
 | 7 | Navigation ordering | **Append only.** The lane must NOT reorder existing nav entries. The plan's eventual IA order and the shipped nav already differ; reconciling them is FE-5's coherence pass, and doing it inside a module lane would bury an IA change in a CRUD diff. |
