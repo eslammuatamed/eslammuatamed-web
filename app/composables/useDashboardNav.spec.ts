@@ -45,10 +45,10 @@ describe('isNavItemActive', () => {
 describe('the navigation model', () => {
   const items = () => useDashboardNav().groups.value.flatMap(group => group.items)
 
-  it('offers Projects, in the Content group', () => {
+  it('offers Articles and Projects, in the Content group', () => {
     const groups = useDashboardNav().groups.value
     const content = groups.find(group => group.key === 'content')
-    expect(content?.items.map(item => item.key)).toEqual(['projects'])
+    expect(content?.items.map(item => item.key)).toEqual(['articles', 'projects'])
   })
 
   it('points Projects at a route that EXISTS — no placeholder destinations', () => {

@@ -59,7 +59,7 @@ describe('Playwright lane isolation', () => {
     // WITHIN a file, so a lane backed by mutable state is serial exactly as long as it is one file.
     // A second file would be scheduled on another worker and the two would reset each other's
     // fixtures mid-assertion — measured previously at `--repeat-each=3 --workers=2`.
-    for (const dir of ['dashboard', 'dashboard-media', 'dedupe']) {
+    for (const dir of ['dashboard', 'dashboard-media', 'dashboard-articles', 'dedupe']) {
       const specs = readdirSync(resolve(ROOT, 'e2e', dir)).filter(file => file.endsWith('.spec.ts'))
       expect(specs, `e2e/${dir} is a mutable lane and must hold exactly one spec file`).toHaveLength(1)
     }

@@ -332,6 +332,7 @@
     "nav": {
       "overview": "Overview",
       "content": "Content",
+      "articles": "Articles",
       "projects": "Projects",
       "communication": "Communication",
       "messages": "Messages",
@@ -533,6 +534,50 @@
         "publishNote": "The Résumé page offers this download as soon as it is saved. With nothing selected the page says so plainly, and the written résumé on it stays readable and printable either way."
       },
       "saveFor": "Save {section}"
+    },
+    "articles": {
+      "title": "Articles",
+      "description": "Blog posts, in both languages.",
+      "retry": "Try again",
+      "staleNotice": "This list may be out of date — the last refresh did not complete.",
+      "errorTitle": "Articles could not be loaded",
+      "forbiddenTitle": "You do not have access to articles",
+      "forbiddenBody": "This account is not permitted to manage articles.",
+      "emptyTitle": "No articles yet",
+      "emptyBody": "Write the first article and it will appear here.",
+      "emptyFilteredTitle": "Nothing matches this filter",
+      "emptyFilteredBody": "Change the status filter to see more.",
+      "listRegionLabel": "Articles",
+      "resultCount": "{total} articles · page {page} of {pages}",
+      "untitled": "Untitled article",
+      "create": "New article",
+      "edit": "Edit",
+      "editFor": "Edit {title}",
+      "filters": {
+        "heading": "Filters",
+        "status": "Status",
+        "allStatuses": "All statuses"
+      },
+      "status": {
+        "DRAFT": "Draft",
+        "SCHEDULED": "Scheduled",
+        "PUBLISHED": "Published",
+        "ARCHIVED": "Archived"
+      },
+      "translationState": {
+        "label": "Translations",
+        "present": "{locale} written",
+        "missing": "{locale} missing"
+      },
+      "locale": {
+        "en": "English",
+        "ar": "Arabic"
+      },
+      "field": {
+        "status": "Status",
+        "publishAt": "Publish date",
+        "updated": "Updated"
+      }
     },
     "projects": {
       "title": "Projects",

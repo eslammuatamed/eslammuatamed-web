@@ -332,6 +332,7 @@
     "nav": {
       "overview": "نظرة عامة",
       "content": "المحتوى",
+      "articles": "المقالات",
       "projects": "المشاريع",
       "communication": "التواصل",
       "messages": "الرسائل",
@@ -532,6 +533,50 @@
         "blockedBody": "جرت الإشارة إليه أثناء اطّلاعك عليه. القائمة المحدَّثة معروضة أعلاه.",
         "errorTitle": "لم يُحذف الملف",
         "errorBody": "لم يكتمل الطلب. عادةً ما يكون هذا مؤقتًا."
+      }
+    },
+    "articles": {
+      "title": "المقالات",
+      "description": "التدوينات، باللغتين.",
+      "retry": "حاول مرة أخرى",
+      "staleNotice": "قد تكون هذه القائمة غير محدَّثة — لم يكتمل التحديث الأخير.",
+      "errorTitle": "تعذّر تحميل المقالات",
+      "forbiddenTitle": "لا تملك صلاحية الوصول إلى المقالات",
+      "forbiddenBody": "هذا الحساب غير مصرَّح له بإدارة المقالات.",
+      "emptyTitle": "لا توجد مقالات بعد",
+      "emptyBody": "اكتب أول مقالة وستظهر هنا.",
+      "emptyFilteredTitle": "لا شيء يطابق هذا المرشّح",
+      "emptyFilteredBody": "غيِّر مرشّح الحالة لرؤية المزيد.",
+      "listRegionLabel": "المقالات",
+      "resultCount": "{total} مقالة · صفحة {page} من {pages}",
+      "untitled": "مقالة بلا عنوان",
+      "create": "مقالة جديدة",
+      "edit": "تحرير",
+      "editFor": "تحرير {title}",
+      "filters": {
+        "heading": "المرشّحات",
+        "status": "الحالة",
+        "allStatuses": "كل الحالات"
+      },
+      "status": {
+        "DRAFT": "مسودة",
+        "SCHEDULED": "مجدولة",
+        "PUBLISHED": "منشورة",
+        "ARCHIVED": "مؤرشفة"
+      },
+      "translationState": {
+        "label": "الترجمات",
+        "present": "{locale} مكتوبة",
+        "missing": "{locale} ناقصة"
+      },
+      "locale": {
+        "en": "الإنجليزية",
+        "ar": "العربية"
+      },
+      "field": {
+        "status": "الحالة",
+        "publishAt": "تاريخ النشر",
+        "updated": "آخر تحديث"
       }
     },
     "projects": {

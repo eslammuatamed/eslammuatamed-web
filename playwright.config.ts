@@ -87,6 +87,14 @@ const PROJECT_CACHE_API_PORT = Number(process.env.CI_PROJECT_CACHE_MOCK_PORT ?? 
 const DASHBOARD_LOGIN_PORT = Number(process.env.CI_DASHBOARD_LOGIN_PORT ?? 3900)
 const DASHBOARD_LOGIN_API_PORT = Number(process.env.CI_DASHBOARD_LOGIN_MOCK_PORT ?? 3901)
 
+// The Articles authoring lane (FE-2c). Its own preview + backend pair for the same reason as the
+// Dashboard Inbox and Media lanes: this backend is MUTABLE (create/update/delete change what the
+// next GET returns), and it is additionally the only one that can HOLD A RESPONSE OPEN, which is
+// what makes the §14.9 loading, updating and submitting states observable at all. A lane that can
+// pause its own backend must not share that backend with lanes asserting fixed fixtures.
+const ARTICLES_PORT = Number(process.env.CI_ARTICLES_PORT ?? 4000)
+const ARTICLES_API_PORT = Number(process.env.CI_ARTICLES_MOCK_PORT ?? 4001)
+
 // Fail with an actionable message instead of a connection-refused timeout 90 s later. `ci-preview.mjs`
 // boots `.output/server/index.mjs` directly, so a missing build is a setup mistake, not a test failure.
 if (!existsSync('.output/server/index.mjs')) {
@@ -152,7 +160,7 @@ export default defineConfig({
       // state, producing 19 failures that described the wrong backend rather than the product.
       testIgnore: [
         'scenarios/**', 'readiness/**', 'resume-pdf/**', 'dashboard/**', 'dashboard-media/**',
-        'dashboard-login/**', 'dedupe/**', 'cache/**'
+        'dashboard-login/**', 'dashboard-articles/**', 'dedupe/**', 'cache/**'
       ],
       use: { ...devices['Desktop Chrome'], baseURL: `http://127.0.0.1:${CONTRACT_PORT}` }
     },
@@ -219,6 +227,17 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'], baseURL: `http://127.0.0.1:${DASHBOARD_LOGIN_PORT}` }
     },
     {
+      name: 'dashboard-articles',
+      testMatch: 'dashboard-articles/**/*.spec.ts',
+      // SERIAL, for the same reason as `dashboard`, `dashboard-media` and `settings-dedupe`, and
+      // with the same caveat: what actually makes this lane serial is keeping it to a SINGLE spec
+      // file, because `workers` is a top-level option and `fullyParallel: false` only serialises
+      // tests within a file. A second spec file here would run in a second worker and reset this
+      // backend's fixtures — or its response delay — mid-assertion.
+      fullyParallel: false,
+      use: { ...devices['Desktop Chrome'], baseURL: `http://127.0.0.1:${ARTICLES_PORT}` }
+    },
+    {
       name: 'project-detail-cache',
       testMatch: 'cache/**/*.spec.ts',
       // One spec file owns one mutable upstream. Keeping the lane serial prevents a reset in a
@@ -244,6 +263,7 @@ export default defineConfig({
     previewServer('media', MEDIA_PORT, MEDIA_API_PORT),
     // `/about` proves the page shell is ready without priming either detail URL under test.
     previewServer('project-cache', PROJECT_CACHE_PORT, PROJECT_CACHE_API_PORT, '/about'),
-    previewServer('dashboard', DASHBOARD_LOGIN_PORT, DASHBOARD_LOGIN_API_PORT)
+    previewServer('dashboard', DASHBOARD_LOGIN_PORT, DASHBOARD_LOGIN_API_PORT),
+    previewServer('articles', ARTICLES_PORT, ARTICLES_API_PORT)
   ]
 })

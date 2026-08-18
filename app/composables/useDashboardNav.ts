@@ -53,7 +53,12 @@ export function useDashboardNav() {
     // (D11-2) — a real answer, rather than an inference from a role name.
     {
       key: 'content',
-      items: [{ key: 'projects', to: '/dashboard/projects', icon: 'i-lucide-folder-kanban' }]
+      // Articles leads the Content group, matching doc 04's ordering rather than the order the
+      // modules happened to be built in. Both routes EXIST — neither is a placeholder destination.
+      items: [
+        { key: 'articles', to: '/dashboard/articles', icon: 'i-lucide-newspaper' },
+        { key: 'projects', to: '/dashboard/projects', icon: 'i-lucide-folder-kanban' }
+      ]
     },
     {
       key: 'communication',

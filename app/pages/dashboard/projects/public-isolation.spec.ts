@@ -77,6 +77,27 @@ const FORBIDDEN_REFERENCES = [
   'dashboard-project-translation-fields'
 ]
 
+/**
+ * Dashboard-only files belonging to ANOTHER dashboard module.
+ *
+ * These are the Articles module's composables. They are not public surface — they live in
+ * `app/composables/` for the same reason this module's do, and they are guarded by their own
+ * `pages/dashboard/articles/public-isolation.spec.ts` exactly as these files are guarded here.
+ *
+ * They are excluded because they legitimately NAME this module in PROSE: Articles was written
+ * against Projects as its precedent, and its comments cite `admin-project-form.ts`,
+ * `useAdminProjects` and `useAdminSkills` to explain what it copied and what it deliberately did
+ * differently. This gate is text-based by design (an auto-imported symbol has no import statement
+ * to follow), so it cannot tell a citation from a call — and deleting the citations to satisfy it
+ * would trade real explanation for a green scan. Their own gate is what keeps them honest.
+ */
+const OTHER_DASHBOARD_MODULE_FILES = [
+  'composables/admin-article-form.ts',
+  'composables/admin-article-types.ts',
+  'composables/admin-articles-query.ts',
+  'composables/useAdminArticles.ts'
+]
+
 function sourceFiles(dir: string): string[] {
   const found: string[] = []
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
@@ -95,6 +116,7 @@ const publicFiles = sourceFiles(APP)
   .map(file => relative(APP, file).split('\\').join('/'))
   .filter(file => !file.includes('dashboard/'))
   .filter(file => !MODULE_FILES.includes(file))
+  .filter(file => !OTHER_DASHBOARD_MODULE_FILES.includes(file))
 
 describe('the admin Projects module is invisible to the public surface', () => {
   it('scans a non-trivial number of public files, so a passing result is not vacuous', () => {
