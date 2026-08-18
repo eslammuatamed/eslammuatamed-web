@@ -42,6 +42,42 @@ the same reason the table gives. Also confirmed non-authoritative:
 `eslammuatamed-docs/docs/research/api-frontend-v1-completion-ledger.md` self-declares **“Governs —
 nothing”** and is a closed-campaign record, not a competing source of live state.
 
+**Re-verified 2026-08-18, THIRD zero-trust resume (same date, third session).** Every row of the
+table above was checked live and **matched — zero drift**: worktree present, branch
+`campaign/frontend-v1`, working tree clean, no upstream (`@{upstream}` exit 128), `merge-base HEAD
+origin/dev` = `54cea287…` (the recorded base), `campaign/frontend-v1` absent from `ls-remote --heads
+origin` (**still unpushed**), `origin/dev` = `54cea287…`, `origin/main` = `648aa467…`, Docs
+`docs/od-11-dashboard-localization` = `3b607af9…` and `docs/web-modernization-campaign` = `95e9101…`
+with **`merge-base --is-ancestor` false in BOTH directions** (the divergence the table asserts, now
+measured rather than restated) and neither present in `ls-remote --heads origin` (**both
+local-only**), Docs `origin/main` = `1896d8c7…`, API `origin/main` = `origin/dev` = `9af1aace…`. No
+tip SHA is stamped here, for the reason the table gives. `M1·U2` remains commit `fd4e9df`, D20-34
+remains Docs `95e9101` — those name *units*, not branch tips, which is the distinction the
+`8b66393` → `0282860` correction settled.
+
+**One row was verified live for the first time in this campaign: Production.** The previous two
+re-baselines carried the release forward from the table without checking it. `readlink -f
+/srv/eslammuatamed-web/current` over ssh returns
+`/srv/eslammuatamed-web/releases/20260817T175534Z-648aa46` — the release the table names, matching
+`origin/main` `648aa467…`, **untouched by this campaign**. Recorded as newly-obtained evidence, not
+as a re-confirmation of something previously proven.
+
+**Two further live facts this table does not cover, recorded so a later session does not read them
+as drift** — in addition to the two the second-resume paragraph above already lists, both of which
+still hold unchanged (Docs owner-content churn; Web PRs #69/#68/#46, re-verified OPEN with #46 still
+`CONFLICTING`/`DIRTY`):
+
+- **API PR #86** (`a00913a`, "backend learnability") is OPEN, from the separate Backend workstream
+  and unmerged. It does not contradict the table's API row — `origin/main` = `origin/dev` =
+  `9af1aace…` still holds — but it did not exist when the earlier re-baselines were written, so it
+  is named here rather than discovered later and misread as movement. API local HEAD sits on
+  `feature/api-frontend-v1-completion` `ce64b22e…`; no campaign of this ledger touches it.
+- **Docs PR #54** is the live handle on **R10**. It is `docs/api-frontend-v1-completion`
+  `2345a7a0…`, titled *"govern temporary scoped overrides for unfixed transitive advisories
+  (D19-11)"* — the same `D19-11` id whose collision across Docs branches R10 records as blocking
+  Docs integration. R10 has therefore had an open PR attached to it that §1 never mentioned. Nothing
+  about it blocks `M1·U3` (this campaign pushes nothing), but the pointer belongs with the risk.
+
 **Verify with:**
 ```bash
 git -C /home/eslam-muatamed/worktrees/web-026-phase8 rev-parse HEAD --abbrev-ref HEAD
@@ -995,7 +1031,7 @@ shipped defect; it is recorded because it is the kind of thing a reader would ot
 | R7 | Security posture stale — recount from paginated Dependabot API **plus** `npm audit`; carry no remembered count forward |
 | R8 | Production rollback pointer unverified |
 | R9 | `content:sync` never run — one project 404s in Production (content gap, not a defect) |
-| R10 | `D19-11` id collision across Docs branches — blocks any Docs integration |
+| R10 | `D19-11` id collision across Docs branches — blocks any Docs integration. **Live handle recorded 2026-08-18:** Docs **PR #54** (`docs/api-frontend-v1-completion` `2345a7a0…`, *"govern temporary scoped overrides for unfixed transitive advisories (D19-11)"*) is OPEN against this exact id. The risk is unchanged; it now names where it is being worked. |
 | R11 | Issue #30 hydration defect — `test:e2e:repeat` red by design, out of scope |
 | ~~**R12**~~ | ~~`/dashboard/articles` ships UNMEASURED.~~ **CLOSED by D20-33** (`e0128c2`, Docs `3f2626e`). Superseded by the open cap question in §9.4. |
 | **R14** | **NARROWED 2026-08-18 (FE-3/U-1), not closed.** The e2e suite's FIXED COST exceeds this machine — deterministic and re-measured: a full run peaks at load **17.4** on 12 cores, drives available memory to **5.9 GB** and adds **~1 GB of swap**, for ten Nitro servers at 140–290 MB RSS each plus ten backends. What is FIXED: a run now boots only the lanes it selects (**1 pair** for a one-lane run, against 10, same command — §5 FE-3/U-1), so per-module development runs and the `test:e2e:repeat` sweeps no longer pay for the whole farm. What is NOT: `npm run test:e2e` still selects nothing and therefore still boots all ten, so **FE-3's five modules still take it to 15 pairs on the default path**. `npm run test:e2e:sharded` bounds it to 4 concurrent pairs and is available but is NOT the default, because the intermittent casualty did not reproduce (see the amendment in §5 FE-2c/U-5) and a governed CI gate must not be re-pointed on unreproduced evidence. **Trigger to make it the default:** either a full-suite casualty reproduced on demand, or the lane count passing **12**. ⚠ **RE-CHECKED 2026-08-18 when `M1·U2` landed the eleventh lane: the trigger is NOT tripped.** 11 < 12, and no casualty has been reproduced — the last full-suite control run was 471 passed / exit 0. Recorded explicitly rather than passed over in silence, because the check was owed at this exact point and a silent non-event is indistinguishable from a forgotten one. The **third** FE-3 module reaches 12 and trips it on lane count alone. Also confirmed live: a one-lane run still boots exactly **1 pair** (4100/4101), so U-1's narrowing holds with a lane added. CI's behaviour stays UNVERIFIED — fewer cores, and nothing is pushed. |
