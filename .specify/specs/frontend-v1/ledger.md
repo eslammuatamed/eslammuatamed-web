@@ -1746,6 +1746,68 @@ FE-3 module 2"* in as many words.
 not an FE-3 one, so promoting it would swap a replication lane for a retrofit — which is precisely
 what the owner declined.
 
+### M2 · INVESTIGATION — the first delegated lane, and what I verified rather than accepted
+
+**Dispatch 1 was READ-ONLY**, per the owner's *"investigate first and report before building"*.
+Codex CLI 0.147.0, thread `01a016dc-b898-7bd1-899b-9c879d43a104`. The sandbox enforces read-only:
+`touchedFiles: []`, `readOnlyViolation: none`, worktree clean after. **No gates were run by the lane
+and none are claimed.**
+
+#### Independently re-verified — the report was checked against the contract, not believed
+
+Every load-bearing claim was re-derived here from `openapi/openapi.json` and the repo:
+
+| Claim | Verified |
+| --- | --- |
+| Skills **is** translatable | ✅ `SkillTranslationDto` = `{locale, label}`, both required; `AdminSkillEntity.translations` is a locale-keyed map |
+| `slug` is **immutable through PATCH** | ✅ `UpdateSkillDto` has no `slug` property at all — create-only |
+| Only `brandColor` admits explicit `null` | ✅ it is the sole `nullable: true` property on both DTOs |
+| The admin list is **unpaginated and unfiltered** | ✅ `parameters: []`, and the 200 schema's only property is `data` — no `meta` |
+| DELETE carries a **409** | ✅ `'Skill is linked to a project.'` — and it names ONLY project linkage |
+| `dashboard-translation-errors` already covers Skills | ✅ its header names `Create/UpdateSkillDto` among the sixteen |
+| `AdminSkill` sits in the **project-owned** type file | ✅ `admin-project-types.ts:29` |
+| `SkillGroup` is **already taken** | ✅ `app/utils/resume.ts:17` — a real auto-import collision; `AdminSkillGroup` avoids it |
+
+⚠ **My brief contained an error, and the lane caught it.** It stated an unsolicited `?locale=`
+answers **400**. `useApi.ts:14–19` says **422**, and it is right. The implementation rule is
+unchanged — every admin call passes `locale: false` — but the next brief must not repeat the wrong
+status, and a lane that corrects its briefing is behaving as intended rather than deferring to it.
+
+#### VERDICT — replication HOLDS, and the strongest evidence is what was NOT requested
+
+**Skills is genuine replication.** It has the decisive Experiences shape: unpaginated admin
+collection, detail `GET`, one create/edit component, translation-map reads with translation-array
+writes, Zod + `UForm`, indexed-422 → locale-tab mapping, delete. **No extension to any of the six
+shared abstractions was requested** — which is the outcome OD-12's constraint exists to test, and it
+is the first independent evidence that the pattern really is a pattern rather than two similar
+modules.
+
+One abstraction correctly **DOES NOT FIT**: `DashboardSkillPicker` edits a `string[]` relation
+*against* the skill vocabulary, and a Skill **is** that vocabulary rather than a reference into it.
+Recorded because a "does not fit, here is why" is the answer the fork-constraint is meant to produce,
+and accepting it is what keeps the constraint honest.
+
+#### My decisions on the escalations, as architect
+
+| # | Escalation | Decision |
+| --- | --- | --- |
+| 1 | `useAdminSkills` absorption | **APPROVED as proposed, under a preserve-the-surface contract.** Absorb in place; do NOT create a parallel `useAdminSkillsCollection`. `useAdminSkills`, `skillLabel`, `skills`, `pending`, `forbidden`, `failed`, `load` all keep their names and semantics; `AdminSkill` MOVES to `admin-skill-types.ts` under the same export name. ⚠ **The discriminating gate: `ProjectEditor.spec.ts` and the Experiences editor coverage must stay green WITHOUT being edited.** If either needs a change, the absorption broke a shipped consumer and the change is mine, not the lane's. |
+| 2 | Three route caps | **Deferred by design, not forgotten.** Measure collection, `/new` and `/{id}` independently and return ONE batched decision — the D20-34/D20-35 procedure. **Caps are never inherited** and never invented to silence a gate; `size:routes` exit 2 in the interim is a MEASUREMENT FAILURE, which this campaign has now handled twice. |
+| 3 | R14 lane 12 | **Already handled centrally** — see the re-derivation above. The lane correctly refused to touch lane strategy or CI. |
+| 4 | Validation policy | **Do NOT narrow the contract where it is silent.** No hex-only `brandColor` validator and no `<input type="color">` (it cannot express `null`, which is the one clearable field). No integer/nonnegative `order` — that rule was **Experiences'**, and copying it is exactly the replication drift R6 names. **One deliberate exception:** the editor requires **≥1 authored translation**, because `translations` is required on create and a zero-length array is a state the editor cannot present. ⚠ It must be commented as a **CLIENT rule the contract does not declare** — this ledger's standing rule is never to assert an invariant that is not actually enforced. **Carried to the owner in §9.6 as overturnable.** |
+| 5 | Delete linkage | **Model ONLY the documented project-linked 409.** Adding experience linkage would encode backend behaviour no contract states and no test here can observe. If the real backend also blocks on experiences, the instrument is wrong in a way its own tests cannot reveal — recorded as a known limit of the instrument rather than guessed at. |
+| 6 | No shared-six extension | **Accepted** — and it is the verdict's main evidence, above. |
+| 7 | Navigation ordering | **Append only.** The lane must NOT reorder existing nav entries. The plan's eventual IA order and the shipped nav already differ; reconciling them is FE-5's coherence pass, and doing it inside a module lane would bury an IA change in a CRUD diff. |
+
+#### The unit plan accepted for module 2
+
+`M2·U1` instrument → `M2·U2` collection + lane → `M2·U3` editor → `M2·U4` extraction verdicts →
+`M2·U5` gates + axe. It mirrors Module 1's sequence, which is what replication should look like.
+
+⚠ **`M2·U1` is dispatched; `M2·U2` and `M2·U3` are BLOCKED on owner decisions** — U2 on the
+`useAdminSkills` absorption landing and the collection's cap, U3 on the two editor caps. U1 (the
+mutable Skills backend and its spec) depends on none of them, which is why it goes first.
+
 ### ⚠ R14 RE-DERIVED AT THE MODULE-2 BOUNDARY — the trigger is reached one module EARLIER than the prose says
 
 Counted live, not inherited: `scripts/e2e/lanes.ts` declares **11** lanes (`contract`,
