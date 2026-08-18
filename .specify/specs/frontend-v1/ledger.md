@@ -50,7 +50,7 @@ git -C /home/eslam-muatamed/worktrees/web-026-phase8 fetch origin && git rev-par
 | --- | --- |
 | **FE-1 — Contract & Integration Foundation** | **COMPLETE** — commit `19e3a05`. Contract adopted + gtm reconciliation; reply flow deliberately moved to FE-2 (see §4). Gates re-verified on the committed tree: typecheck 0, 1501/1501. |
 | **FE-2 — Articles Tracer Bullet + Dashboard Architecture** | **COMPLETE.** OD-11, OD-3, D20-33 and its amendment all resolved. FE-2a/2b/2c done: F-1 **CLOSED** with browser evidence · collection · editor · §14.6 extraction pass · **all ten §14.9 criteria demonstrated** · every gate green including `size:routes`. The reusable architecture is recorded in **§10**. |
-| **FE-3 — Content Module Replication** | **OPEN — unit 1 (R14) LANDED, no module started.** A run now boots only the lanes it selected: measured 1 preview pair for `--project=dashboard-articles`, against 10 before, same command. The full suite still boots all ten by design, so R14 is **NARROWED, NOT CLOSED** — see §6 and §5/FE-3/U-1. ⚠ This row previously said the full suite "loses exactly one test per run"; the pre-change control run **did not reproduce that** (471 passed, exit 0) and the claim is corrected here rather than carried forward. |
+| **FE-3 — Content Module Replication** | **OPEN — lane-strategy unit LANDED; module 1 (`experiences`) STARTED at `M1·U1`.** Delegation settled as **OD-12** (hybrid: module 1 in-house, modules 2–5 delegable once the pattern holds). `M1·U1` landed the Experiences e2e instrument and proved it able to fail; **no Dashboard code exists yet**. §5.2 stamps the five extraction verdicts this module will be checked against.<br>**Lane-strategy unit (R14):** A run now boots only the lanes it selected: measured 1 preview pair for `--project=dashboard-articles`, against 10 before, same command. The full suite still boots all ten by design, so R14 is **NARROWED, NOT CLOSED** — see §6 and §5/FE-3/U-1. ⚠ This row previously said the full suite "loses exactly one test per run"; the pre-change control run **did not reproduce that** (471 passed, exit 0) and the claim is corrected here rather than carried forward. |
 | FE-4 — System Modules | NOT STARTED |
 | FE-5 — Coherence, D20-32 Review, M4 Closure | NOT STARTED |
 
@@ -763,17 +763,23 @@ marked in its own header as provisional and **absorbed by FE-3 module 2** when t
 
 #### 5.5 Unit plan — each ends at a committable, green boundary
 
+⚠ **Labelled `M1·U1…U5`, not `U-1…U-5`.** `FE-3 · U-1` already means the e2e LANE STRATEGY unit
+(§5, `806df17`), and this ledger has now been bitten three times by a reused label — OD-3, OD-10, and
+this. The distinct prefix is cheaper than the disambiguating paragraph each previous collision needed.
+*(The `M1·U1` commit `ed4e69e` was written before this rename and says `U-1` in its subject; the
+commit is history and is not being rewritten, so it is named here instead.)*
+
 | Unit | Deliverable | Exit |
 | --- | --- | --- |
-| **U-1** | The e2e backend + **one** record in `scripts/e2e/lanes.ts` (§10.3 rule 14: mutable lane = ONE spec file, and it needs `delayMs` to make loading states observable) | The lane boots **1 pair** when selected; `lane-isolation.spec.mjs` green; full suite goes to 11 pairs — re-check R14's trigger |
-| **U-2** | The collection at `/dashboard/experiences` on the §14.9 request-state contract (§10.3 rules 1–3) | Ten §14.9 criteria demonstrated; **both** route caps escalated as ONE owner decision (§10.3 rule 13, D20-33 the worked example) |
-| **U-3** | The editor: bilingual, Zod + `UForm` computed schema, 422→locale-tab mapping through `dashboard-translation-errors.ts`, per-module `admin-experience-fields.ts` split (§10.1 — the split is worth 6,211 B and FE-3 must keep it), skill picker, `isCurrent`⇄`endDate`, `order` | §5.3's no-touch save test green; the `.refine()` for `isCurrent` carries an explicit `path: ['endDate']` or its message never reaches the field |
-| **U-4** | The extraction verdict, checked against §5.2 | Every prediction marked HELD or WRONG, with the evidence |
-| **U-5** | Gates + ledger | typecheck, unit, `size`, `size:routes`, axe in BOTH dashboard languages, the lane. ⚠ **R13 is the binding constraint at ~0.81 KB gz headroom** — and before reading any size number, assert the build exited 0 and the reported size is > 0, because a failed build leaves a stale `.output` and `size-limit` reports `passed: true, size: 0` against a missing one |
+| **M1·U1** | The e2e backend + **one** record in `scripts/e2e/lanes.ts` (§10.3 rule 14: mutable lane = ONE spec file, and it needs `delayMs` to make loading states observable) | The lane boots **1 pair** when selected; `lane-isolation.spec.mjs` green; full suite goes to 11 pairs — re-check R14's trigger |
+| **M1·U2** | The collection at `/dashboard/experiences` on the §14.9 request-state contract (§10.3 rules 1–3) | Ten §14.9 criteria demonstrated; **both** route caps escalated as ONE owner decision (§10.3 rule 13, D20-33 the worked example) |
+| **M1·U3** | The editor: bilingual, Zod + `UForm` computed schema, 422→locale-tab mapping through `dashboard-translation-errors.ts`, per-module `admin-experience-fields.ts` split (§10.1 — the split is worth 6,211 B and FE-3 must keep it), skill picker, `isCurrent`⇄`endDate`, `order` | §5.3's no-touch save test green; the `.refine()` for `isCurrent` carries an explicit `path: ['endDate']` or its message never reaches the field |
+| **M1·U4** | The extraction verdict, checked against §5.2 | Every prediction marked HELD or WRONG, with the evidence |
+| **M1·U5** | Gates + ledger | typecheck, unit, `size`, `size:routes`, axe in BOTH dashboard languages, the lane. ⚠ **R13 is the binding constraint at ~0.81 KB gz headroom** — and before reading any size number, assert the build exited 0 and the reported size is > 0, because a failed build leaves a stale `.output` and `size-limit` reports `passed: true, size: 0` against a missing one |
 
 ---
 
-### FE-3 · Module 1 · U-1 — the instrument, and the proof it can fail
+### FE-3 · Module 1 · **M1·U1** — the instrument, and the proof it can fail
 
 `scripts/e2e/experiences-server.ts` (680 lines) + `scripts/e2e/experiences-server.spec.ts` (31 tests)
 + the `experiences` entry in `scripts/ci-preview.mjs`.
@@ -1156,24 +1162,23 @@ unaffected — only the casualty claim was withdrawn.
 selects (1 pair, against 10); the full suite still boots all ten, `test:e2e` and the CI YAML are
 untouched, and `npm run test:e2e:sharded` bounds the full suite to 4 pairs as an opt-in.
 
+**`M1·U1` IS ALSO LANDED (`ed4e69e`) — the Experiences instrument exists and has been proven able to
+fail.** Backend, 31-test calibration, four injected defects each caught by its own test, restored by
+file copy to a byte-identical SHA-256, `ci-preview` registered. **No Dashboard code exists yet**, and
+no `lanes.ts` record — see the sequencing finding in §5/M1·U1 for why the record belongs to `M1·U2`.
+
 **Next three actions:**
 
-1. ~~**Answer the delegation question**~~ **— DONE, OD-12.** **Build FE-3 module 1 = `experiences`,
-   in-house.** It is the SECOND CONSUMER — §10.2 declined four extractions for want of one, so
-   `TranslationTabs`, `EntityFormLayout`, `useTranslatableForm` and `usePublicEntityLink` become
-   provable *then*, against two real shapes. Adding its e2e lane is now one record in
-   `scripts/e2e/lanes.ts`. **Why `experiences` and not another of the five:** it is by far the richest
-   AUTHORING shape among experiences / skills / testimonials / categories / tags — four required
-   translation fields plus five article-level fields, three of which exercise patterns Articles never
-   had (a replace-wholesale relation, a manual `order`, and a cross-field `isCurrent`⇄`endDate` rule).
-   ⚠ **A first version of this row also claimed `experiences` has "a real public destination
-   (`/experience`)" and called that one of "the two properties the declined extractions need."
-   That justification is WITHDRAWN as non-discriminating.** The contract sweep found that **none** of
-   the five has a per-entity public destination — `GET /experiences` is a list rendered on one page —
-   so the property could not have selected between candidates, and if anything **categories/tags are
-   the only two carrying per-locale `slug`s**, making them the better exercise of §10.3 rule 10. The
-   choice stands on the authoring-shape criterion alone, which does discriminate. Recorded rather than
-   silently rewritten, because a justification that cannot separate the options is not a reason.
+1. **Build `M1·U2` — the Experiences collection at `/dashboard/experiences`, and the `lanes.ts`
+   record with it.** The two are ONE logical unit: `lane-isolation.spec.mjs` requires a lane to own a
+   directory holding specs, and a mutable lane may hold exactly one spec file, so the record cannot
+   land before the spec that justifies it. Read §5/M1·U1's table first — the collection must NOT
+   re-sort locally (the API's order is current-first, and `EXP.endedLater` will fail a `startDate`
+   sort), and must NOT read a `meta` envelope, because the contract sends none.
+   ⚠ **`M1·U2` is also where BOTH route caps get escalated as ONE owner decision** (§10.3 rule 13,
+   D20-33 the worked example) — batched deliberately, so the module does not stop twice.
+   ⚠ **When `M1·U2` lands, the full suite goes to 11 pairs.** Re-check R14's trigger then.
+
 2. **Carry the two §10.3 rules that bind before any code is written:** keep the per-module
    `*-fields.ts` split (worth 6,211 B on a collection route), and get a **governed cap** for each new
    dashboard route before it ships (D20-33 is the worked example). Watch **R13** — 29.19 / 30.00 KB
