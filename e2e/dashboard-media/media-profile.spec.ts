@@ -496,7 +496,13 @@ test.describe('navigation and RTL', () => {
     await page.goto('/dashboard/profile')
     await settled(page)
 
-    const shell = page.locator('[dir]').first()
+    // `[data-shell="dashboard"]`, NOT `[dir]`. `<html>` always carries a `dir` — @nuxtjs/i18n writes
+    // it under strict SEO — so `[dir]` matches the document element first and this assertion would
+    // read the attribute the dashboard deliberately does NOT own (D11-8). It fails as
+    // "expected rtl, got ltr" on `<html>`, which reads exactly like a missing implementation and
+    // invites re-introducing finding F-3. Measured: both of these tests failed that way before the
+    // locator was corrected.
+    const shell = page.locator('[data-shell="dashboard"]')
     await expect(shell).toHaveAttribute('dir', 'ltr')
     await expect(altInput(page, 'ar')).toHaveAttribute('dir', 'rtl')
     await expect(altInput(page, 'en')).toHaveAttribute('dir', 'ltr')
@@ -529,7 +535,7 @@ test.describe('navigation and RTL', () => {
     await page.goto('/dashboard/media')
     await settled(page)
 
-    await expect(page.locator('[dir]').first()).toHaveAttribute('dir', 'rtl')
+    await expect(page.locator('[data-shell="dashboard"]')).toHaveAttribute('dir', 'rtl')
 
     // Asserted as ABSENCE OF KEY PATHS rather than presence of a translation, so a copy edit cannot
     // turn this red — the failure it guards is `dashboard.media.title` rendering as itself.

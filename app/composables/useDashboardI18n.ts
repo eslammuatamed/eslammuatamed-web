@@ -28,10 +28,6 @@ export interface DashboardI18n {
   readonly dir: ComputedRef<'ltr' | 'rtl'>
   /** Translate against the dashboard locale. Same call shape as vue-i18n's `t(key, named?)`. */
   t: (key: string, named?: Record<string, unknown>) => string
-  /** Format a date in the dashboard locale. Digits stay `latn` in both languages (D03-4). */
-  d: (value: Date | number | string, options?: Intl.DateTimeFormatOptions) => string
-  /** Format a number in the dashboard locale, `latn` digits (D03-4). */
-  n: (value: number, options?: Intl.NumberFormatOptions) => string
   setLocale: (next: DashboardLocale) => Promise<void>
   ensureMessages: (target?: DashboardLocale) => Promise<void>
 }
@@ -48,26 +44,12 @@ export function useDashboardI18n(): DashboardI18n {
   }
 
   /**
-   * `Intl` directly rather than vue-i18n's `d`/`n`, because those need per-locale format definitions
-   * in an i18n config this project does not have — and adding one purely to format a file size would
-   * be a second configuration surface for no gain.
-   *
-   * `numberingSystem: 'latn'` matches `utils/format.ts`: Arabic copy uses Western digits throughout
-   * this product (D03-4), so an Arabic dashboard must not start rendering Arabic-Indic numerals in
-   * its own chrome while the public site shows Western ones.
+   * NO `d()`/`n()` HERE, deliberately. Date and number formatting in the dashboard is genuinely
+   * locale-sensitive, but every existing call site already formats through `utils/format.ts` or its
+   * own `Intl` instance fed the locale this composable returns — so wrappers would have had zero
+   * consumers on the day they were written. Plan §14.6: no abstraction before a second real
+   * consumer. When one appears, add them here rather than per module, and pin
+   * `numberingSystem: 'latn'` as `utils/format.ts` does (D03-4 — Arabic copy uses Western digits).
    */
-  function d(value: Date | number | string, options?: Intl.DateTimeFormatOptions): string {
-    const date = value instanceof Date ? value : new Date(value)
-    return new Intl.DateTimeFormat(locale.value, {
-      dateStyle: 'long',
-      numberingSystem: 'latn',
-      ...options
-    }).format(date)
-  }
-
-  function n(value: number, options?: Intl.NumberFormatOptions): string {
-    return new Intl.NumberFormat(locale.value, { numberingSystem: 'latn', ...options }).format(value)
-  }
-
-  return { locale, dir, t, d, n, setLocale, ensureMessages }
+  return { locale, dir, t, setLocale, ensureMessages }
 }

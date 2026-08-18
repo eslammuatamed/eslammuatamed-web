@@ -33,7 +33,7 @@ git -C /home/eslam-muatamed/worktrees/web-026-phase8 fetch origin && git rev-par
 | Phase | State |
 | --- | --- |
 | **FE-1 — Contract & Integration Foundation** | **COMPLETE** — commit `19e3a05`. Contract adopted + gtm reconciliation; reply flow deliberately moved to FE-2 (see §4). Gates re-verified on the committed tree: typecheck 0, 1501/1501. |
-| **FE-2 — Articles Tracer Bullet + Dashboard Architecture** | **IN PROGRESS — unblocked.** OD-11 resolved (§9, option B). Split into three sub-phases so each ends at a clean, committable boundary: **FE-2a** bilingual Dashboard architecture · **FE-2b** login localization + shell finish · **FE-2c** Articles tracer bullet (TranslationTabs, editor, scheduling). |
+| **FE-2 — Articles Tracer Bullet + Dashboard Architecture** | **IN PROGRESS.** OD-11 resolved (§9, option B). Three sub-phases: **FE-2a COMPLETE** (bilingual Dashboard architecture) · **FE-2b NOT STARTED** (login redesign + shell finish) · **FE-2c NOT STARTED** (Articles tracer bullet). |
 | FE-3 — Content Module Replication | NOT STARTED |
 | FE-4 — System Modules | NOT STARTED |
 | FE-5 — Coherence, D20-32 Review, M4 Closure | NOT STARTED |
@@ -112,7 +112,9 @@ failed (a trailing `echo`/`tee` masked it). Always read the explicit `*_EXIT=` l
 | `npm run check:bundle` | **exit 0** — 100 public chunks, no editor/renderer leakage (D06-5) |
 | `npm run build` | **exit 0** |
 | `npm run size` | **29.09 / 30.00 KB gz** (+9 B — the shell's one new `a11y` string) |
-| `npm run size:routes` | **exit 0** — shared dashboard floor **260,989 / 268,288 B gz** |
+| `npm run size:routes` | **exit 0** — shared dashboard floor **260,888 / 268,288 B gz**; public floor **253,884 / 263,168 B** |
+| `playwright --project=dashboard-media` | **exit 0** — **23 passed** (22 before; the 2 route-based RTL tests became 3) |
+| `playwright --project=contract dashboard-locale-payload` | **exit 0** |
 
 **Three gates, each positive-controlled before it was trusted.** Every one of them guards a failure
 that is SILENT in production — untranslated chrome renders English or a raw key path, and nothing
@@ -168,7 +170,7 @@ invalid — separate installs cascade chunk-hash renames into a false diff):
 | --- | --- | --- |
 | baseline `84f53f6` (pre-FE-2a) | **259,900 B gz** | — |
 | FE-2a as first written | **288,523 B gz** | **+28,623 B** ✗ |
-| FE-2a with the account dropdown replaced | **260,989 B gz** | **+1,089 B** ✓ |
+| FE-2a with the account dropdown replaced | **260,888 B gz** | **+988 B** ✓ |
 
 So the **entire bilingual architecture** — composables, switcher, `dir`/`lang` handling, route
 exclusion and 306 Arabic strings — costs **+1,089 B gz** on the floor. The other **28.0 KB was one
@@ -178,8 +180,49 @@ loads. Rebuilt as plain text + a button; both halves of the owner's "operator id
 actions" survive, and the presentation is a legitimate FE-5 coherence question with this number
 attached to it.
 
-**The public floor went DOWN**, 254,582 → 253,891 B gz (**−691 B**), because the `/ar/dashboard/**`
+**The public floor went DOWN**, 254,582 → 253,884 B gz (**−698 B**), because the `/ar/dashboard/**`
 route records left the public router with the tree that generated them.
+
+### Two defects found in review, after every gate was already green
+
+Both sat in the space the gates could not see. Recorded because each one is a reusable trap, not
+because it was hard to fix.
+
+**1. `page.locator('[dir]').first()` resolves to `<html>`, and the failure message lies.** The two
+new RTL e2e tests selected the shell that way and **both failed** — reported as *"expected rtl, got
+ltr"* on an `html` element, which reads exactly like "the implementation never sets direction". The
+obvious fix from that message is to write `<html dir>` from the dashboard, which is finding F-3 and
+the one thing D11-8 exists to forbid. `<html>` always carries a `dir` — @nuxtjs/i18n writes it — so
+`[dir]` matched the document element first. The shell root now carries `data-shell="dashboard"`
+(same name as the existing `data-shell="public"` convention in `layouts/default.vue`), and the
+assertions select on that. Lane now **23/23**.
+
+**2. A visitor's dashboard-locale cookie was serialized into every PUBLIC page's payload, and `swr`
+caches it.** `app.vue` reads the dashboard locale on every route in order to resolve one Nuxt UI
+locale pack for both worlds; public routes DO server-render, so the value reached `__NUXT_DATA__`,
+`payloadExtraction: 'client'` inlined it into the HTML, and `swr: 60` would then serve one visitor's
+preference to the next. Measured on the built server before the fix: `/about` with
+`Cookie: dashboard_locale=ar` serialized `'ar'` at the state slot; with `en`, `'en'`. Fixed by
+seeding the constant default on the server — `/dashboard/**` is `ssr: false`, so the server never
+legitimately needs the real value, and the client re-seeds after hydration.
+
+Guarded by `e2e/dashboard-locale-payload.spec.ts` and **negative-controlled across a full rebuild**,
+because a payload assertion is easy to write vacuously:
+
+| Tree | Result |
+| --- | --- |
+| fixed | **passed** |
+| server seeding restored to the cookie | **failed** — `Expected: "en" / Received: "ar"` |
+| reverted (`ef63ce8c…` hash-verified identical) | **passed** |
+
+The test sends the cookie rather than relying on the default (a no-cookie request passes against the
+broken build too), reads the RAW server HTML rather than the live page (the client re-seed would mask
+it), and dereferences the payload slot rather than grepping for `"ar"` near the key (Nuxt serializes
+state as a key→index map, so the key's neighbourhood holds only an integer).
+
+**Also dropped in review:** `d()` and `n()` on `useDashboardI18n` had zero consumers on the day they
+were written — every call site already formats through `utils/format.ts` or its own `Intl` fed the
+rebound locale. Plan §14.6: no abstraction before a second real consumer.
 
 **Exit-code note, again.** A backgrounded `npm run build` was reported by the harness as **exit 0**
 while the underlying build had **failed** on a missing `NUXT_PUBLIC_SITE_URL` — a trailing `tee`
@@ -270,7 +313,7 @@ Each boundary is committable and leaves the tree green.
 
 | Sub-phase | Deliverable | Exit |
 | --- | --- | --- |
-| **FE-2a** | **Bilingual Dashboard architecture.** Persisted application locale; one localization mechanism for all dashboard surfaces; `dir`/`lang` on the shell root; dashboard pages excluded from localized route generation (`/ar/dashboard/**` removed); shell header — language switcher, theme, **View site**, session menu; logical drawer side; **the gate that makes untranslated chrome a lint/test failure**; full Arabic chrome for the modules that already exist | Arabic dashboard renders Arabic chrome RTL on a **cold load**; no key paths; gate positive-controlled; CI green |
+| ~~**FE-2a**~~ **DONE** | **Bilingual Dashboard architecture.** Persisted application locale; one localization mechanism for all dashboard surfaces; `dir`/`lang` on the shell root; dashboard pages excluded from localized route generation (`/ar/dashboard/**` removed); shell header — language switcher, theme, **View site**, session menu; logical drawer side; **the gate that makes untranslated chrome a lint/test failure**; full Arabic chrome for the modules that already exist | Arabic dashboard renders Arabic chrome RTL on a **cold load**; no key paths; gate positive-controlled; CI green |
 | **FE-2b** | **Login + shell finish.** `/dashboard/login` bilingual with the same language and appearance controls and a branded route back to the portfolio; localized Zod error presentation | Login usable and correct in both languages at 380px; keyboard + error-focus behaviour asserted |
 | **FE-2c** | **Articles tracer bullet.** The real flow first — list, editor, Tiptap, slug, scheduling, preview wiring — then extract `TranslationTabs` / `useTranslatableForm` / `EntityFormLayout` **only once it demonstrates the boundary** | An article authored in the Dashboard is live on `/blog` in both locales; Tiptap round-trip green; no public bundle regression; axe clean in **both** dashboard languages |
 
@@ -288,6 +331,12 @@ Each boundary is committable and leaves the tree green.
 **Then** the Dashboard reply flow (`POST /admin/messages/{id}/replies`), reusing FE-2's form,
 validation and save-feedback patterns. Contract facts are in `plan.md` §15.4 — note especially that
 **2xx does not mean the mail was sent**; the outcome is in `status`.
+
+**Where FE-2b picks up.** `layouts/auth.vue` already carries the language control, the appearance
+control and the branded route back to the portfolio, and `login.vue` is localized with a
+locale-reactive Zod schema — so the *contract* OD-11 asked for is established. What FE-2b owes is the
+page's product-quality composition: card/layout, password-visibility control, error-focus behaviour,
+380px, and the axe pass in both dashboard languages.
 
 **Push discipline:** nothing is pushed. `origin/dev` and `origin/main` are untouched. No merge to
 `main`, no deploy, no Docs publication.

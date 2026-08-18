@@ -76,7 +76,7 @@ async function signOut(): Promise<void> {
 </script>
 
 <template>
-  <div :dir="dir" :lang="locale" class="min-h-screen bg-default">
+  <div data-shell="dashboard" :dir="dir" :lang="locale" class="min-h-screen bg-default">
     <a
       href="#main-content"
       class="sr-only rounded-control bg-elevated px-4 py-2 text-default ring-2 ring-primary focus:not-sr-only focus:fixed focus:top-3 focus:start-3 focus:z-50"

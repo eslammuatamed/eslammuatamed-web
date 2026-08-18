@@ -1,6 +1,7 @@
 import type { DashboardLocale } from '~/utils/dashboard-locale'
 import {
   DASHBOARD_LOCALE_COOKIE,
+  DASHBOARD_LOCALE_DEFAULT,
   DASHBOARD_LOCALE_MAX_AGE,
   dashboardDir,
   normalizeDashboardLocale
@@ -56,10 +57,23 @@ export function useDashboardLocale() {
   /**
    * `useState`, not a module-scope `ref`: state shared across components must be per-request on the
    * server and per-app on the client, and a module-scope ref is neither (it leaks between requests).
-   * Seeded from the cookie on first access.
+   *
+   * ⚠ THE SERVER DELIBERATELY SEEDS THE CONSTANT DEFAULT, NOT THE COOKIE, and this is a correctness
+   * fix rather than an optimization. `app.vue` resolves the Nuxt UI locale pack for both worlds, so
+   * it calls this composable on EVERY route — including public ones, which DO server-render. Seeding
+   * from the cookie there put the visitor's preference into `__NUXT_DATA__`, and
+   * `payloadExtraction: 'client'` inlines that payload into the HTML, which `swr: 60` (nuxt.config)
+   * then CACHES AND SERVES TO THE NEXT VISITOR. Measured on the built server: `/about` with
+   * `Cookie: dashboard_locale=ar` serialized `'ar'` at the state slot; with `en`, `'en'`. That is a
+   * cross-request state leak, and a client-side navigation into `/dashboard` would read the
+   * hydrated value instead of the visitor's own cookie.
+   *
+   * Nothing is lost by seeding a constant on the server: `/dashboard/**` is `ssr: false` (D06-1), so
+   * the only surface that reads this value never server-renders. The client re-seeds from the real
+   * cookie on the first access after hydration.
    */
   const locale = useState<DashboardLocale>('dashboard:locale', () =>
-    normalizeDashboardLocale(cookie.value)
+    import.meta.server ? DASHBOARD_LOCALE_DEFAULT : normalizeDashboardLocale(cookie.value)
   )
 
   const dir = computed(() => dashboardDir(locale.value))

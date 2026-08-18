@@ -27,7 +27,7 @@ const publicSiteHref = computed(() => localePath('/', locale.value))
 </script>
 
 <template>
-  <div :dir="dir" :lang="locale" class="flex min-h-screen flex-col px-4">
+  <div data-shell="dashboard" :dir="dir" :lang="locale" class="flex min-h-screen flex-col px-4">
     <a
       href="#main-content"
       class="sr-only rounded-control bg-elevated px-4 py-2 text-default ring-2 ring-primary focus:not-sr-only focus:fixed focus:top-3 focus:start-3 focus:z-50"
