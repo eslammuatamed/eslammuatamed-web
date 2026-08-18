@@ -2394,6 +2394,33 @@ full-suite path meanwhile.** The arithmetic is corrected here so the next bounda
 true count; whether "passing 12" means *reaches* or *exceeds* is an owner call the moment it is load-
 bearing, and it is not load-bearing while the sharded path is opt-in.
 
+### PIPELINE STATE — three lanes in flight (OD-16), set 2026-08-19
+
+| Slot | Lane | Mode | Worktree / branch | Status |
+| --- | --- | --- | --- | --- |
+| **A** | `M2·U2` — Skills collection + the **twelfth** e2e lane, incl. the approved `useAdminSkills` absorption | **WRITE** | `/home/eslam-muatamed/worktrees/lane-m2-u2-skills` · `lane/m2-u2-skills` | dispatched |
+| **B** | `T·U1` — Testimonials e2e instrument (module 3), mirroring `M2·U1` | **WRITE** | `/home/eslam-muatamed/worktrees/lane-t-u1-testimonials` · `lane/t-u1-testimonials` | dispatched |
+| **C** | Taxonomy investigation **part 2**, scoped to everything the broken list envelope does NOT touch | read-only | (reads the campaign worktree) | dispatched |
+
+All three branched from `campaign/frontend-v1` at `9a8a673`. Each write lane has `node_modules`
+symlinked to the campaign worktree — **do not reinstall in a lane**, and note the symlink when
+removing a worktree.
+
+⚠ **Lane C is deliberately fenced.** Its brief states the list-multiplicity question is CLOSED, tells
+it not to design around the broken shape, and instructs it to answer **"BLOCKED ON CONTRACT FIX"**
+where an answer genuinely depends on the list response. A report that declines those questions is
+worth more than one that guesses, and the reconciliation after the API fix is the orchestrator's.
+
+**Integration is SERIAL and is Claude's** (OD-16): inspect the full diff, reject architecture forks,
+apply shared/global edits centrally, cherry-pick into the campaign branch, run the authoritative
+gates, measure routes, run discriminating controls. **A lane's "green" is not authoritative.** Both
+write lanes will request **central changes** — e2e lane registration, a nav entry, cap registration —
+and neither may edit `scripts/e2e/lanes.ts` itself.
+
+⚠ **Heavy measurement stays serialized even with three lanes running.** Builds, `size`, `size:routes`,
+bundle analysis and full/sharded e2e run one at a time, from the campaign worktree, never inside a
+lane. R15's two differently-failing full-suite runs are the reason.
+
 ### THE NEXT THREE ACTIONS (set at the FIFTH zero-trust resume, 2026-08-19)
 
 ⚠ **These supersede the fourth-resume block below, all three of whose actions are now DISCHARGED.**
