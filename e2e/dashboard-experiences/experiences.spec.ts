@@ -3,10 +3,12 @@ import {
   API_ORDER,
   EXP,
   NARROW,
+  editorSettled,
   expectNoKeyPaths,
   listSettled,
   resetBackend,
   rows,
+  selectedSkillIds,
   setBackendState,
   shell,
   signIn
@@ -166,6 +168,365 @@ test.describe('bilingual, at the narrowest supported width', () => {
     await signIn(page, 'en', baseURL!)
     await page.goto('/dashboard/experiences')
     await listSettled(page)
+
+    await expect(shell(page)).toHaveAttribute('dir', 'ltr')
+    await expectNoKeyPaths(page)
+  })
+})
+
+/* ══════════════════════════════════════════════════════════════════════════════════════════════
+   THE EDITOR (`M1·U3`)
+
+   ⚠ THESE LIVE IN THIS FILE BY NECESSITY, NOT BY PREFERENCE. This lane is
+   `resetsBackendState: true`, so it owns EXACTLY ONE spec file — a second file would be scheduled
+   on a second worker and the two would reset each other's fixtures mid-assertion.
+   `scripts/e2e/lane-isolation.spec.mjs` asserts that from the lane registry, so appending here is
+   the architecture's answer rather than a judgement call. It is also why `M1·U3` adds NO new lane
+   and NO new server pair: the editor rides the process pair `M1·U2` already booted.
+   ══════════════════════════════════════════════════════════════════════════════════════════════ */
+
+test.describe('the editor — the skill relation, which fails SILENTLY when it fails', () => {
+  /**
+   * ⚠ THE NO-TOUCH INVARIANT, asserted on the REQUEST BODY and not only on the outcome.
+   *
+   * `technologyIds` REPLACES the whole set, and an OMITTED key PRESERVES it. So a payload builder
+   * that omitted the key would pass an outcome-only version of this test — the three skills survive
+   * precisely because nothing was sent — while making "remove every skill" inexpressible. Reading
+   * what was actually on the wire is what separates the two implementations, and the unit suite
+   * proved that separation by injecting the omission and watching ONLY the clear-case test fail.
+   */
+  test('a save that never touches the picker sends the relation back intact', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL!)
+    await page.goto(`/dashboard/experiences/${EXP.current}`)
+    await editorSettled(page)
+
+    // The fixture holds THREE skills, and the form must show them before anything is saved — a form
+    // that rendered before the GET resolved would show none and then destroy them.
+    expect(await selectedSkillIds(page)).toHaveLength(3)
+
+    const sent = page.waitForRequest(req =>
+      req.url().includes(`/admin/experiences/${EXP.current}`) && req.method() === 'PATCH'
+    )
+    await page.locator('[data-editor-save]').click()
+    const body = (await sent).postDataJSON() as { technologyIds?: string[] }
+
+    expect(body.technologyIds, 'the key must be SENT, not omitted').toBeDefined()
+    expect(body.technologyIds).toHaveLength(3)
+
+    await page.reload()
+    await editorSettled(page)
+    expect(await selectedSkillIds(page), 'still three after a round trip').toHaveLength(3)
+  })
+
+  /**
+   * ⚠ THE DISCRIMINATING CASE. Omission preserves, so only clearing proves the key is sent.
+   *
+   * `EXP.noSkills` exists so "cleared to empty" stays distinguishable from "never had any": this
+   * asserts the relation actually went from three to zero, against a fixture that started at zero
+   * and would have looked identical.
+   */
+  test('deselecting every skill actually clears the relation', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL!)
+    await page.goto(`/dashboard/experiences/${EXP.current}`)
+    await editorSettled(page)
+
+    for (const id of await selectedSkillIds(page)) {
+      await page.locator(`[data-technology="${id}"]`).click()
+    }
+    expect(await selectedSkillIds(page)).toHaveLength(0)
+
+    const sent = page.waitForRequest(req =>
+      req.url().includes(`/admin/experiences/${EXP.current}`) && req.method() === 'PATCH'
+    )
+    await page.locator('[data-editor-save]').click()
+    const body = (await sent).postDataJSON() as { technologyIds?: string[] }
+
+    expect(body.technologyIds, 'an empty array, NOT an absent key').toEqual([])
+
+    await page.reload()
+    await editorSettled(page)
+    expect(await selectedSkillIds(page), 'the clear survived the round trip').toHaveLength(0)
+  })
+
+  test('adding a skill to a role that had none links exactly that one', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL!)
+    await page.goto(`/dashboard/experiences/${EXP.noSkills}`)
+    await editorSettled(page)
+    expect(await selectedSkillIds(page)).toHaveLength(0)
+
+    const first = page.locator('[data-technology]').first()
+    const id = await first.getAttribute('data-technology')
+    await first.click()
+    await page.locator('[data-editor-save]').click()
+
+    await page.reload()
+    await editorSettled(page)
+    expect(await selectedSkillIds(page)).toEqual([id])
+  })
+})
+
+test.describe('the editor — isCurrent ⇄ endDate, a rule with NOTHING behind it on the server', () => {
+  /**
+   * The API accepts a current role that also has an end date — the write DTOs carry no cross-field
+   * constraint and this lane's backend deliberately ACCEPTS the contradictory payload. So the
+   * dashboard schema is the only thing enforcing it, and this is the only place it can be caught.
+   */
+  test('marks the END DATE field itself invalid, not merely the form', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL!)
+    await page.goto(`/dashboard/experiences/${EXP.past}`)
+    await editorSettled(page)
+
+    // `past` has an end date. Ticking "current" creates the contradiction without typing a date.
+    await page.locator('[data-editor-is-current]').click()
+    await page.locator('[data-editor-save]').click()
+
+    // ⚠ THE EXIT CRITERION, in a real browser. A `.refine()` at the object level would block the
+    // save with an issue whose path is empty — no `UFormField` renders it, and the operator is
+    // stopped by a message that appears nowhere near the control at fault. `aria-invalid` on the
+    // input is the observable difference.
+    await expect(page.locator('[data-editor-end-date][aria-invalid=true]'))
+      .toBeVisible()
+    await expect(page.locator('[data-editor-error-summary]')).toBeVisible()
+  })
+
+  test('does not silently clear the end date to make the form valid', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL!)
+    await page.goto(`/dashboard/experiences/${EXP.past}`)
+    await editorSettled(page)
+
+    const before = await page.locator('[data-editor-end-date]').inputValue()
+    expect(before).not.toBe('')
+    await page.locator('[data-editor-is-current]').click()
+    await page.locator('[data-editor-save]').click()
+
+    // Blocking is the decision. Repairing the contradiction would destroy a date the operator typed,
+    // invisibly — and there would be nothing left to observe.
+    expect(await page.locator('[data-editor-end-date]').inputValue()).toBe(before)
+  })
+})
+
+test.describe('the editor — a calendar date is not an instant', () => {
+  /**
+   * The stored value is a `date-time` at UTC midnight and the control is a `<input type="date">`.
+   * Reading that through the browser's LOCAL wall-clock walks the date back a day for every
+   * operator at a negative UTC offset, and each save writes the shifted date back.
+   *
+   * `playwright.config.ts` decides this browser's zone; the unit suite pins `America/New_York`
+   * explicitly and asserts the pin, which is where the zone-shift is proven. This test's job is
+   * narrower and still worth having: that the date the operator sees SURVIVES A SAVE unchanged, in
+   * whatever zone this browser is actually running.
+   */
+  test('a save round trip does not move the start date', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL!)
+    await page.goto(`/dashboard/experiences/${EXP.current}`)
+    await editorSettled(page)
+
+    const start = await page.locator('[data-editor-start-date]').inputValue()
+    expect(start, 'a date must actually be rendered, or this asserts nothing').toMatch(/^\d{4}-\d{2}-\d{2}$/)
+
+    await page.locator('[data-editor-save]').click()
+    await page.reload()
+    await editorSettled(page)
+
+    expect(await page.locator('[data-editor-start-date]').inputValue()).toBe(start)
+  })
+})
+
+test.describe('the editor — 422s land on the tab that caused them', () => {
+  /**
+   * Writes send `translations` as an ARRAY, and the 422 indexes THAT array. An Arabic-only payload
+   * sends one entry, so `translations[0]` is Arabic — an implementation resolving against a
+   * canonical `['en','ar']` would pin the error to the English tab, which the operator deliberately
+   * left empty, while the real problem stayed invisible.
+   */
+  test('an over-long Arabic field activates the Arabic tab and marks the field', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL!)
+    await page.goto(`/dashboard/experiences/${EXP.current}`)
+    await editorSettled(page)
+
+    /**
+     * ⚠ THE ARABIC FIELD MUST BE AUTHORED FROM ITS OWN TAB, AND THEN LEFT.
+     *
+     * The panels stay MOUNTED when hidden (`:unmount-on-hide="false"`), so the Arabic input exists
+     * in the DOM from first paint — but it is not VISIBLE, and Playwright will not type into a
+     * hidden control. The first version of this test filled it directly and timed out against an
+     * element it had already resolved, which is what proves the panel is mounted rather than
+     * discarded.
+     *
+     * Returning to the English tab before saving is what makes the assertion discriminating: the
+     * operator is looking at English when the Arabic field is rejected, so an implementation that
+     * did not switch tabs would leave the error invisible — the exact failure §14.1 forbids.
+     */
+    await page.locator('[data-editor-tab-fill^="ar:"]').click()
+    // The client schema has no maximum length, so this reaches the server and comes back as a real
+    // 422 with an array-indexed path — which is the whole point of provoking it this way.
+    await page.locator('[data-editor-role="ar"]').fill('ط'.repeat(400))
+    await page.locator('[data-editor-tab-fill^="en:"]').click()
+    await expect(page.locator('[data-editor-panel="en"]')).toBeVisible()
+    await expect(page.locator('[data-editor-role="ar"]'), 'authoring happens away from the Arabic tab').toBeHidden()
+
+    await page.locator('[data-editor-save]').click()
+
+    // The server's answer pulled the operator back to the tab that caused it.
+    await expect(page.locator('[data-editor-tab-invalid="ar"]')).toBeVisible()
+    await expect(page.locator('[data-editor-role="ar"]')).toBeVisible()
+    await expect(page.locator('[data-editor-role="ar"]')).toHaveAttribute('aria-invalid', 'true')
+    await expect(page.locator('[data-editor-error-summary]')).toBeVisible()
+  })
+
+  /**
+   * A 422 WITHOUT a field array must still reach the operator.
+   *
+   * The service rejects duplicate and unknown skill ids with a MESSAGE and no `errors[]`, unlike the
+   * class-validator failures above. An editor that only rendered `errors[]` would swallow it and
+   * show a save that silently did nothing. `failNextWrite` produces the same shape — a problem
+   * document with a detail and no field array — which is the branch under test.
+   *
+   * ⚠ The unknown-skill 422 SPECIFICALLY cannot be provoked through this UI: the picker only offers
+   * ids the vocabulary contains and de-duplicates its own selection, and no fixture is seeded with
+   * an unlinkable id. The branch is covered; that particular trigger is not. Recorded rather than
+   * papered over.
+   */
+  test('a failure with no field path is surfaced, not swallowed', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL!)
+    await page.goto(`/dashboard/experiences/${EXP.current}`)
+    await editorSettled(page)
+
+    await setBackendState(page, { failNextWrite: true })
+    await page.locator('[data-editor-save]').click()
+
+    await expect(page.locator('[data-editor-save-error]')).toBeVisible()
+  })
+})
+
+test.describe('the editor — the request-state contract, criteria 3, 4 and 5', () => {
+  test.beforeEach(async ({ page }) => {
+    await resetBackend(page)
+  })
+
+  /**
+   * §14.9 CRITERION 3 — no blank editable fields before the entity resolves.
+   *
+   * On THIS module that is not only an interaction rule: a form rendered before the GET resolves
+   * holds an empty `technologyIds`, and submitting it would REPLACE a real relation with nothing,
+   * with a 200 and no error. The skeleton is what makes that state unreachable.
+   */
+  test('shows an editor-shaped skeleton, never an empty form, while the role loads', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL!)
+    await setBackendState(page, { delayMs: 1500 })
+    await page.goto(`/dashboard/experiences/${EXP.current}`)
+
+    await expect(page.locator('[data-editor-loading]')).toBeVisible()
+    await expect(page.locator('[data-editor-save]')).toHaveCount(0)
+    await expect(page.locator('[data-technology]')).toHaveCount(0)
+
+    await setBackendState(page, { delayMs: 0 })
+    await editorSettled(page)
+    await expect(page.locator('[data-editor-save]')).toBeVisible()
+  })
+
+  /** §14.9 CRITERION 4 — the save's loading state belongs to the action, and blocks a second one. */
+  test('disables the save control while the save is in flight', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL!)
+    await page.goto(`/dashboard/experiences/${EXP.current}`)
+    await editorSettled(page)
+
+    await setBackendState(page, { delayMs: 1500 })
+    await page.locator('[data-editor-save]').click()
+
+    await expect(page.locator('[data-editor-save-state="saving"]')).toBeVisible()
+    await expect(page.locator('[data-editor-save]')).toBeDisabled()
+  })
+
+  /** §14.9 CRITERION 5 — a destructive action is two-step, and separated from the primary one. */
+  test('deletes a role only after an explicit confirmation', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL!)
+    await page.goto(`/dashboard/experiences/${EXP.past}`)
+    await editorSettled(page)
+
+    // One click must NOT delete. If it did, the confirm control would never appear.
+    await page.locator('[data-editor-delete]').click()
+    await expect(page.locator('[data-editor-delete-confirm]')).toBeVisible()
+    await expect(page).toHaveURL(new RegExp(EXP.past))
+
+    await page.locator('[data-editor-delete-confirm]').click()
+    await page.waitForURL('**/dashboard/experiences')
+    await listSettled(page)
+    await expect(rows(page).filter({ has: page.locator(`[data-experience-row="${EXP.past}"]`) })).toHaveCount(0)
+    await expect(rows(page)).toHaveCount(API_ORDER.length - 1)
+  })
+
+  test('answers a well-formed id that does not exist as NOT FOUND', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL!)
+    await page.goto(`/dashboard/experiences/${EXP.absent}`)
+    await editorSettled(page)
+
+    // Distinct from forbidden and from a broken request (D11-2) — and the form must not be there.
+    await expect(page.locator('[data-editor-unreadable]')).toBeVisible()
+    await expect(page.locator('[data-editor-save]')).toHaveCount(0)
+  })
+})
+
+test.describe('the editor — creating a role', () => {
+  test('creates from an empty form and lands on the saved role', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL!)
+    await page.goto('/dashboard/experiences/new')
+    await editorSettled(page)
+
+    // A create form starts with NO relation, which is correct here precisely because there is no
+    // stored relation to destroy.
+    expect(await selectedSkillIds(page)).toHaveLength(0)
+
+    await page.locator('[data-editor-start-date]').fill('2020-05-01')
+    await page.locator('[data-editor-role="en"]').fill('Platform Engineer')
+    await page.locator('[data-editor-company="en"]').fill('Northwind Labs')
+    await page.locator('[data-editor-location="en"]').fill('Remote')
+    await page.locator('[data-editor-impact="en"]').fill('- Built the deploy pipeline.')
+    await page.locator('[data-editor-save]').click()
+
+    // `replace`, not `push` — an empty create form is not a place to go Back to.
+    await page.waitForURL(/\/dashboard\/experiences\/[0-9a-f-]{36}$/)
+    await editorSettled(page)
+    expect(await page.locator('[data-editor-start-date]').inputValue()).toBe('2020-05-01')
+  })
+
+  test('refuses to create a role written in no language, and says so per field', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL!)
+    await page.goto('/dashboard/experiences/new')
+    await editorSettled(page)
+
+    await page.locator('[data-editor-start-date]').fill('2020-05-01')
+    await page.locator('[data-editor-save]').click()
+
+    await expect(page.locator('[data-editor-error-summary]')).toBeVisible()
+    // Still on the create route: nothing was written.
+    await expect(page).toHaveURL(/\/dashboard\/experiences\/new$/)
+  })
+})
+
+test.describe('the editor — bilingual, at the narrowest supported width', () => {
+  test('renders Arabic chrome RTL on a COLD load, with the Arabic panel RTL too', async ({ page, baseURL }) => {
+    await page.setViewportSize(NARROW)
+    // COLD, not a post-load toggle: the preference is set before the first paint, so a shell that
+    // ignored the stored preference at boot fails here. A toggle-only test would pass anyway.
+    await signIn(page, 'ar', baseURL!)
+    await page.goto(`/dashboard/experiences/${EXP.current}`)
+    await editorSettled(page)
+
+    await expect(shell(page)).toHaveAttribute('dir', 'rtl')
+    await expectNoKeyPaths(page)
+
+    // Field direction is INDEPENDENT of chrome direction: the English panel stays LTR inside an
+    // Arabic dashboard. Asserting only the chrome would miss a panel that inherited it.
+    await expect(page.locator('[data-editor-panel="ar"]')).toHaveAttribute('dir', 'rtl')
+    await expect(page.locator('[data-editor-panel="en"]')).toHaveAttribute('dir', 'ltr')
+  })
+
+  test('renders English chrome LTR with no raw key paths', async ({ page, baseURL }) => {
+    await page.setViewportSize(NARROW)
+    await signIn(page, 'en', baseURL!)
+    await page.goto(`/dashboard/experiences/${EXP.current}`)
+    await editorSettled(page)
 
     await expect(shell(page)).toHaveAttribute('dir', 'ltr')
     await expectNoKeyPaths(page)

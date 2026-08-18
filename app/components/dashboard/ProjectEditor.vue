@@ -419,9 +419,18 @@ onMounted(() => {
       <!-- ── technologies ─────────────────────────────────────────────────────────────────────── -->
       <section :aria-labelledby="'technologies-heading'" class="flex flex-col gap-3">
         <h2 id="technologies-heading" class="text-h2 text-highlighted">{{ t('dashboard.projects.editor.technologies') }}</h2>
-        <DashboardProjectTechnologyPicker
+        <DashboardSkillPicker
           :model-value="form.technologyIds"
           :disabled="saving"
+          :labels="{
+            legend: t('dashboard.projects.editor.technologies'),
+            help: t('dashboard.projects.editor.technologiesHelp'),
+            filter: t('dashboard.projects.editor.technologyFilter'),
+            empty: t('dashboard.projects.editor.technologiesEmpty'),
+            error: t('dashboard.projects.editor.technologiesError'),
+            unknown: t('dashboard.projects.editor.technologiesUnknown'),
+            selected: t('dashboard.projects.editor.technologiesSelected', { count: form.technologyIds.length })
+          }"
           @update:model-value="patchForm({ technologyIds: $event })"
         />
       </section>

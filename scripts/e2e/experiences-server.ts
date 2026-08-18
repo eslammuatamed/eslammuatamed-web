@@ -487,7 +487,39 @@ function skillEntities() {
   }))
 }
 
-const server = http.createServer(async (req, res) => {
+/**
+ * ⚠ THE HANDLER IS WRAPPED, BECAUSE AN `async` LISTENER'S REJECTION KILLS THE PROCESS.
+ *
+ * `http.createServer(async …)` hands Node a promise nobody awaits. When a client disconnects
+ * mid-request Node aborts the incoming message and the pending handler rejects with
+ * `Error: aborted` (`ECONNRESET`) — an UNHANDLED REJECTION, which Node v24 turns into an uncaught
+ * exception and exits 1 on. The lane then loses its backend and every remaining test fails with
+ * `ECONNREFUSED`, which reads as eleven broken tests rather than one dead server.
+ *
+ * `M1·U3` is what exposed it: the editor's successful DELETE navigates away via `router.replace`
+ * while the shell's reads are still in flight, so the browser really does abort requests. The
+ * collection never did that, which is why ten green runs said nothing about it.
+ *
+ * An aborted request is not a server fault and gets no response — there is no socket left to write
+ * to. Anything else is reported as a 500 so a genuine handler bug stays visible instead of being
+ * swallowed by this guard.
+ *
+ * ⚠ THE OTHER e2e BACKENDS HAVE THE SAME SHAPE and are NOT fixed here — `articles-server.ts` and
+ * its siblings are other lanes' instruments, and changing them without re-running their lanes would
+ * be an unverified edit. Recorded in the ledger as a finding instead.
+ */
+const server = http.createServer((req, res) => {
+  void handleRequest(req, res).catch((error: unknown) => {
+    if (req.destroyed || res.writableEnded || res.destroyed) return
+    try {
+      problem(res, 500, 'Internal Error', error instanceof Error ? error.message : String(error))
+    } catch {
+      // The socket went away between the check above and the write. Nothing to report it on.
+    }
+  })
+})
+
+async function handleRequest(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
   const url = new URL(req.url ?? '/', 'http://127.0.0.1')
   const path = url.pathname
 
@@ -660,7 +692,7 @@ const server = http.createServer(async (req, res) => {
   }
 
   return problem(res, 404, 'Not found')
-})
+}
 
 const isMain = (() => {
   try {

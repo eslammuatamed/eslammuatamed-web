@@ -1,5 +1,9 @@
 import type { Envelope } from '~/types/models'
-import type { AdminExperience } from '~/composables/admin-experience-types'
+import type {
+  AdminExperience,
+  CreateExperiencePayload,
+  UpdateExperiencePayload
+} from '~/composables/admin-experience-types'
 import { ApiError } from '~/utils/api-error'
 
 /**
@@ -98,4 +102,88 @@ export function useAdminExperiences() {
   }
 
   return { items, pending, forbidden, failed, load }
+}
+
+/**
+ * One experience: the editor's read and its three writes (FE-3 module 1, `M1·U3`).
+ *
+ * Lives beside the collection read for the reason `useAdminArticles.ts` gives — one module, one
+ * file, and the editor and the list share the entity type — while staying a SEPARATE composable, so
+ * the collection route never instantiates the write paths it has no use for.
+ *
+ * Every write THROWS on failure rather than swallowing it, so the editor can keep the operator's
+ * unsaved input on screen and render the RFC 7807 problem. Silently discarding edits it cannot
+ * prove were stored is the one outcome a content editor must never produce.
+ *
+ * `locale: false` ON EVERY CALL, as every admin call must be: the admin DTOs are validated with
+ * `forbidNonWhitelisted` and none declares `locale`, so an unsolicited `?locale=` is a 422.
+ */
+export function useAdminExperience() {
+  const api = useApi()
+
+  const experience = ref<AdminExperience | null>(null)
+  const pending = ref(false)
+  const forbidden = ref(false)
+  const notFound = ref(false)
+  const failed = ref(false)
+
+  async function load(id: string): Promise<void> {
+    pending.value = true
+    forbidden.value = false
+    notFound.value = false
+    failed.value = false
+    try {
+      const res = await api<Envelope<AdminExperience>>(`/admin/experiences/${id}`, { locale: false })
+      experience.value = res.data
+    } catch (error) {
+      experience.value = null
+      // A deleted or mistyped id is a different answer from "you may not read this" and from "the
+      // request broke". Each gets its own surface (D11-2).
+      if (error instanceof ApiError && error.status === 403) forbidden.value = true
+      else if (error instanceof ApiError && error.status === 404) notFound.value = true
+      else failed.value = true
+    } finally {
+      pending.value = false
+    }
+  }
+
+  async function create(body: CreateExperiencePayload): Promise<AdminExperience> {
+    const res = await api<Envelope<AdminExperience>>('/admin/experiences', {
+      method: 'POST',
+      locale: false,
+      body
+    })
+    experience.value = res.data
+    return res.data
+  }
+
+  /**
+   * The response is the FULL updated entity and it REPLACES the held one, so what is on screen
+   * after a save is confirmed server state rather than the optimistic echo of what was sent.
+   *
+   * That is load-bearing for the skill relation in particular: `technologyIds` is REPLACED by the
+   * write, so re-seeding from the response is what proves to the operator which skills the role
+   * actually has — rather than showing them the set they believe they sent.
+   */
+  async function update(id: string, body: UpdateExperiencePayload): Promise<AdminExperience> {
+    const res = await api<Envelope<AdminExperience>>(`/admin/experiences/${id}`, {
+      method: 'PATCH',
+      locale: false,
+      body
+    })
+    experience.value = res.data
+    return res.data
+  }
+
+  /**
+   * `204 No Content` — there is no envelope to read back.
+   *
+   * `unknown`, not `void`: the endpoint answers with no body, and `void` as a type ARGUMENT is
+   * rejected by `@typescript-eslint/no-invalid-void-type`. The value is discarded either way.
+   */
+  async function remove(id: string): Promise<void> {
+    await api<unknown>(`/admin/experiences/${id}`, { method: 'DELETE', locale: false })
+  }
+
+  return { experience, pending, forbidden, notFound, failed, load, create, update, remove }
 }

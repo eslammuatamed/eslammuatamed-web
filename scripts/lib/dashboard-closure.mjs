@@ -202,6 +202,17 @@ export const DASHBOARD_ROUTES = [
   // applied in advance: inheriting a collection cap for an editor surface that does not exist yet is
   // exactly what had to be corrected for Articles.
   { route: '/dashboard/experiences', pageModule: 'app/pages/dashboard/experiences/index.vue' },
+  // `M1·U3` — the editor's two routes, joining in the commit that creates them, exactly as the
+  // paragraph above said they would. Their caps are DERIVED FROM THEIR OWN measured baselines under
+  // D20-29's formula; D20-34's standing instruction forbids inheriting the collection's 99,328 B,
+  // and the owner ratified measuring the real editor surfaces first.
+  { route: '/dashboard/experiences/new', pageModule: 'app/pages/dashboard/experiences/new.vue' },
+  // A CONCRETE id, for the reason the two comments above give: the gate FETCHES the route, and
+  // `/dashboard/**` is `ssr: false`, so every id returns the same shell.
+  {
+    route: '/dashboard/experiences/00000000-0000-0000-0000-000000000000',
+    pageModule: 'app/pages/dashboard/experiences/[id].vue'
+  },
   { route: '/dashboard/projects', pageModule: 'app/pages/dashboard/projects/index.vue' },
   { route: '/dashboard/projects/new', pageModule: 'app/pages/dashboard/projects/new.vue' },
   // A CONCRETE id, because the gate fetches each route to read the CSS out of its rendered shell.

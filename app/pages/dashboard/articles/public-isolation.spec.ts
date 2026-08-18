@@ -52,6 +52,7 @@ const OTHER_DASHBOARD_MODULE_FILES = [
   // FE-3 module 1 (Experiences). Registered for the same reason the Projects files above
   // are: `app/composables/` holds dashboard modules too, and the scan's public set is defined by
   // PATH, so an unregistered dashboard composable is treated as public surface.
+  'composables/admin-experience-form.ts',
   'composables/admin-experience-fields.ts',
   'composables/admin-experience-types.ts',
   'composables/useAdminExperiences.ts',

@@ -30,6 +30,7 @@ const APP = resolve(ROOT, 'app')
 
 /** Every file this module owns. They are allowed to name themselves; nothing else is. */
 const MODULE_FILES = [
+  'composables/admin-experience-form.ts',
   'composables/admin-experience-fields.ts',
   'composables/admin-experience-types.ts',
   'composables/useAdminExperiences.ts',
@@ -65,7 +66,15 @@ const FORBIDDEN_REFERENCES = [
   'EXPERIENCE_LOCALES',
   'EXPERIENCE_REQUIRED_TRANSLATION_FIELDS',
   'experienceHasTranslation',
-  'experienceDisplayRole'
+  'experienceDisplayRole',
+  // `M1·U3` — the editor's form model. Auto-imported like everything in `app/composables/`, so a
+  // public page could name any of these with no import statement for a scanner to follow.
+  'admin-experience-form',
+  'initialExperienceForm',
+  'experiencePayload',
+  'experienceFormSchema',
+  'DashboardExperienceEditor',
+  'dashboard-experience-editor'
 ]
 
 function sourceFiles(dir: string): string[] {

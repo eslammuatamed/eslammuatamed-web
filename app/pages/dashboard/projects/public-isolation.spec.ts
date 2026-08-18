@@ -46,7 +46,7 @@ const MODULE_FILES = [
   'composables/useAdminSkills.ts',
   'components/dashboard/ProjectEditor.vue',
   'components/dashboard/ProjectGalleryEditor.vue',
-  'components/dashboard/ProjectTechnologyPicker.vue',
+  'components/dashboard/SkillPicker.vue',
   'components/dashboard/ProjectTranslationFields.vue',
   'pages/dashboard/projects/index.vue',
   'pages/dashboard/projects/new.vue',
@@ -72,11 +72,11 @@ const FORBIDDEN_REFERENCES = [
   'validateProjectForm',
   'DashboardProjectEditor',
   'DashboardProjectGalleryEditor',
-  'DashboardProjectTechnologyPicker',
+  'DashboardSkillPicker',
   'DashboardProjectTranslationFields',
   'dashboard-project-editor',
   'dashboard-project-gallery-editor',
-  'dashboard-project-technology-picker',
+  'dashboard-skill-picker',
   'dashboard-project-translation-fields'
 ]
 
@@ -98,6 +98,7 @@ const OTHER_DASHBOARD_MODULE_FILES = [
   // FE-3 module 1 (Experiences). Registered for the same reason the Projects files above
   // are: `app/composables/` holds dashboard modules too, and the scan's public set is defined by
   // PATH, so an unregistered dashboard composable is treated as public surface.
+  'composables/admin-experience-form.ts',
   'composables/admin-experience-fields.ts',
   'composables/admin-experience-types.ts',
   'composables/useAdminExperiences.ts',

@@ -25,7 +25,9 @@ export const EXP = {
   past: '00000000-0000-4000-e000-000000000002',
   enOnly: '00000000-0000-4000-e000-000000000003',
   endedLater: '00000000-0000-4000-e000-000000000004',
-  noSkills: '00000000-0000-4000-e000-000000000005'
+  noSkills: '00000000-0000-4000-e000-000000000005',
+  /** A well-formed UUID deliberately ABSENT from the fixtures — the editor's 404 case (`M1·U3`). */
+  absent: '00000000-0000-4000-e000-0000000000ff'
 } as const
 
 /**
@@ -101,4 +103,24 @@ export async function listSettled(page: Page): Promise<void> {
 export async function expectNoKeyPaths(page: Page): Promise<void> {
   const text = await page.locator('main').innerText()
   expect(text, 'a raw i18n key path reached the screen').not.toMatch(/\b(dashboard|state|common|a11y)\.[a-zA-Z]/)
+}
+
+/**
+ * Wait until the EDITOR has settled into one of its terminal surfaces (`M1·U3`).
+ *
+ * POSITIVE FIRST, for the reason `listSettled` records at length: waiting only for `aria-busy` to
+ * disappear is vacuous before the request starts, because nothing is busy yet either. So this waits
+ * for the form or an unreadable surface to actually EXIST, and only then requires that nothing is
+ * still busy.
+ */
+export async function editorSettled(page: Page): Promise<void> {
+  await page.locator('[data-editor-actions], [data-editor-unreadable]').first().waitFor({ timeout: 15_000 })
+  await expect(page.locator('[aria-busy=true]')).toHaveCount(0, { timeout: 15_000 })
+}
+
+/** The skill checkboxes currently ticked in the picker — the relation as the operator sees it. */
+export async function selectedSkillIds(page: Page): Promise<string[]> {
+  return page.locator('[data-technology][aria-checked=true]').evaluateAll(els =>
+    els.map(el => el.getAttribute('data-technology') ?? '')
+  )
 }

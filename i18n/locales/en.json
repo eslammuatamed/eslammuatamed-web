@@ -665,6 +665,11 @@
         "ar": "Arabic"
       },
       "field": {
+        "role": "Role",
+        "impact": "Impact",
+        "startDate": "Start date",
+        "endDate": "End date",
+        "isCurrent": "This is my current role",
         "company": "Company",
         "location": "Location",
         "employmentType": "Employment type",
@@ -678,7 +683,55 @@
         "CONTRACT": "Contract",
         "FREELANCE": "Freelance"
       },
-      "skillCount": "{count} linked"
+      "skillCount": "{count} linked",
+      "editor": {
+        "createTitle": "New role",
+        "editTitle": "Edit role",
+        "description": "One role, in both languages. Shared details are set once; the text is written per language.",
+        "back": "Back to experience",
+        "detailsSection": "Role details",
+        "skillsSection": "Skills",
+        "contentSection": "Description",
+        "loadingRole": "Loading the role",
+        "notFoundTitle": "That role does not exist",
+        "notFoundBody": "It may have been deleted. Go back to the list to see what is there.",
+        "loadFailedBody": "The role could not be loaded. Try again, or go back to the list.",
+        "isCurrentHelp": "A current role has no end date.",
+        "endDateHelp": "Leave empty while the role is ongoing.",
+        "orderHelp": "Breaks ties between roles that start in the same month. Lower comes first.",
+        "impactHelp": "Markdown. What changed because you were there.",
+        "skillsHelp": "The set is replaced on save — whatever is ticked here is what the role will have.",
+        "skillsFilter": "Filter skills",
+        "skillsEmpty": "No skills are defined yet, so none can be linked.",
+        "skillsError": "The skill list could not be loaded, so the choices below are incomplete. This role keeps the skills it already has — saving will not clear them.",
+        "skillsUnknown": "Already linked, name unavailable",
+        "skillsSelected": "{count} selected",
+        "errorSummaryTitle": "This role could not be saved",
+        "tabInvalid": "Has errors",
+        "fill": {
+          "empty": "Not written",
+          "partial": "Incomplete",
+          "complete": "Written"
+        },
+        "save": "Save",
+        "saving": "Saving…",
+        "saved": "Saved",
+        "unsaved": "Unsaved changes",
+        "unsavedWarning": "This role has unsaved changes. Leave the page and they are lost.",
+        "delete": "Delete",
+        "deleteConfirm": "Delete this role",
+        "deleteCancel": "Keep it",
+        "deleteFailed": "The role could not be deleted."
+      },
+      "validation": {
+        "startDateRequired": "A start date is required.",
+        "currentHasEndDate": "A current role cannot have an end date. Clear the date, or untick \u201cthis is my current role\u201d.",
+        "endBeforeStart": "The end date cannot be before the start date.",
+        "orderInvalid": "Order must be a whole number, zero or more.",
+        "fieldRequired": "This language is partly written. Fill this in, or clear the language completely.",
+        "atLeastOneLocale": "Write the role in at least one language.",
+        "cannotClearLocale": "This language is already saved and cannot be emptied here. Saving would leave the old text published. Delete the role instead."
+      }
     },
     "projects": {
       "title": "Projects",
