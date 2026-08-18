@@ -1049,20 +1049,28 @@ loading states share names — extract only where responsibility and behaviour a
 
 #### Two findings from the survey that FE-2c must act on
 
-**F-1 — the whole 007 loading system reads its copy from the PUBLIC locale.** `UiContentSkeleton`,
+**F-1 — IN FE-2c SCOPE, not deferred cleanup. The whole 007 loading system reads its copy from the PUBLIC locale.** `UiContentSkeleton`,
 `UiDataLoadingOverlay` and `UiStateError` all call `useI18n()`. Dashboard routes are **unprefixed**
 under D04-7, so `useI18n().locale` on `/dashboard/**` is always the default — an Arabic dashboard
 would render English `Loading` / `Updating` / `Try again`. This is criterion 9, and it is a **wiring**
-defect, not a translation gap: `state.*` and `common.retry` already exist in both locales. Any
-dashboard reuse of these components must route copy through `useDashboardI18n()` first.
+defect, not a translation gap: `state.*` and `common.retry` already exist in both locales and
+**must not be duplicated**. The fix belongs at the correct **ownership boundary** — the components
+must take their copy from whichever locale owns the surface they render on, rather than each caller
+passing strings down. FE-2c fixes this *before* declaring the request-state pattern reusable, because
+the tracer bullet exercises these components inside the bilingual Dashboard.
+
+**The established state semantics are preserved exactly, and are not up for redesign:** initial /
+no data → skeleton · existing data + refresh → updating treatment · no-data error → error + retry ·
+loaded empty → explicit empty state.
 
 **F-2 — one Dashboard module has already invented its own loading behaviour, and it is the
 anti-pattern.** `pages/dashboard/messages.vue` hand-rolls `v-if="pending"` + six `USkeleton` rows
 with its own `aria-busy`. It replaces the **whole surface** with a skeleton on every load, so a
 refresh, a filter change or a pagination step discards content that is still usable — precisely what
 criterion 2 forbids. It is correct about one thing the public components are not: its label comes
-from the dashboard i18n namespace. Reconciling it is FE-3/FE-4 work, not FE-2c's, but it is the
-evidence that this contract is needed rather than speculative.
+from the dashboard i18n namespace. **It may remain as-is** — reconciling it is the later
+existing-module retrofit, after the tracer-bullet architecture is proven, and explicitly NOT FE-2c's.
+It is the evidence that this contract is needed rather than speculative.
 
 #### FE-2c acceptance criteria — added to the tracer bullet
 
