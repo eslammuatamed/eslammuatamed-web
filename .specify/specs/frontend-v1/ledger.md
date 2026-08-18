@@ -36,7 +36,7 @@ git -C /home/eslam-muatamed/worktrees/web-026-phase8 fetch origin && git rev-par
 | Phase | State |
 | --- | --- |
 | **FE-1 — Contract & Integration Foundation** | **COMPLETE** — commit `19e3a05`. Contract adopted + gtm reconciliation; reply flow deliberately moved to FE-2 (see §4). Gates re-verified on the committed tree: typecheck 0, 1501/1501. |
-| **FE-2 — Articles Tracer Bullet + Dashboard Architecture** | **IN PROGRESS.** OD-11 resolved (§9, option B); OD-3 resolved (§9.2, Markdown textarea). Sub-phases: **FE-2a COMPLETE** · **FE-2b COMPLETE** · **FE-2c IN PROGRESS** — F-1 **CLOSED** with browser evidence; the Articles **collection** is complete (§5 FE-2c/U-2); the **editor** (create/edit, translation tabs, validation, mutations, preview) is NOT started. §14.9 criteria 1, 2, 6, 7, 8, 9, 10 are demonstrated for the collection; 3, 4, 5 belong to the editor. |
+| **FE-2 — Articles Tracer Bullet + Dashboard Architecture** | **IN PROGRESS.** OD-11, OD-3 and D20-33 resolved. **FE-2a/2b COMPLETE** · **FE-2c**: F-1 **CLOSED** with browser evidence; **collection COMPLETE** (U-2); **editor COMPLETE** (U-4) — create/edit, translation tabs, Zod validation, 422→locale-tab mapping, mutations, delete, preview/View-on-site, unsaved guard. **All ten §14.9 criteria are now demonstrated.** Remaining in FE-2c: the §14.6 extraction pass, and ONE open owner decision (§9.4) on the editor routes' app-owned cap. |
 | FE-3 — Content Module Replication | NOT STARTED |
 | FE-4 — System Modules | NOT STARTED |
 | FE-5 — Coherence, D20-32 Review, M4 Closure | NOT STARTED |
@@ -489,6 +489,55 @@ an empty `<span role="status" aria-live="polite">` — the overlay is identified
 starting, so a filter assertion must `waitForURL`, not merely settle: the list was correctly
 filtered on screen while `page.url()` still carried no `status`.
 
+### FE-2c · U-3/U-4 — the editor (`46e2f91`)
+
+| Gate | Result |
+| --- | --- |
+| `lint` | 0 problems |
+| `typecheck` / `typecheck:e2e` | exit 0 / exit 0 |
+| `test` (unit) | **1667/1667**, 115 files |
+| `test:e2e --project=dashboard-articles` | **45/45**, exit 0 |
+| `check:bundle` | exit 0 — 112 chunks, no tiptap/prosemirror (OD-3 holds, D06-5 untouched) |
+| `check:logical` | exit 0 |
+| `size` (CSS) | **29.19 / 30.00 KB gz** — R2 headroom now **~0.81 KB** |
+| `size:routes` | **exit 1** — see §9.4 |
+
+| Floor | U-2 | U-4 | Δ |
+| --- | --- | --- | --- |
+| Shared **public** | 253828 B / 36 | 254922 B / 39 | +1094 B |
+| Shared **dashboard** | 260861 B / 46 | 261959 B / 49 | +1098 B |
+
+Both are the shared i18n catalogue again (~45 editor keys × 2 locales); both remain inside cap.
+
+**What the editor establishes.** One component for create and edit (`id: string | null`); the
+shared/translated split taken from the contract's own shape; Zod + `UForm` as the single validation
+architecture, with the schema as a `computed` so a language switch rebuilds its messages;
+conditional per-locale completeness (a locale is unauthored OR complete — never half); emptying a
+server-held locale BLOCKED because the PATCH upserts and never deletes; two-step delete;
+unsaved-changes guard; scroll-and-focus to the first error across tabs; and the §14.2 public action
+gated on a real per-locale destination.
+
+#### Three findings, each measured rather than argued
+
+**1. `UForm.setErrors()` does not survive in a real browser.** It attached correctly under the
+component test's DOM and was gone in Chromium: the tab activation that follows re-renders the panel
+and the schema-backed store reclaims the field. The symptom was an Arabic slug input reading
+`aria-invalid="false"` with no error id in `aria-describedby`, while the tab beside it was correctly
+marked invalid — i.e. the error was in the component's state and had been dropped by the form's.
+Server errors are now presented through `UFormField`'s own `error` prop. Validation is still Zod;
+only the PRESENTATION of a 422 changed.
+
+**2. One of the two 422 tests could not have caught a broken mapping, and the control proved it.**
+`articlePayloadLocales` emits canonical order, so in a both-locales payload `translations[1]` is
+Arabic under a correct implementation AND under one resolving indices against the canonical list.
+Mutating both resolvers to a fixed list: the both-locales browser test **PASSED**, and only the
+**ARABIC-ONLY** test failed. The discriminating shape is a single-locale payload, where index 0 is
+Arabic. Both tests are kept — one proves the wiring, the other the ordering.
+
+**3. Clicking a `UButton type="submit"` does not submit a `UForm` under happy-dom.** Seven component
+tests failed for that reason alone and were misread as product defects for one cycle. The component
+spec submits the FORM; the click path is covered in the browser lane, where the browser does it.
+
 ---
 
 ## 6. Known risks carried
@@ -502,7 +551,8 @@ filtered on screen while `page.url()` still carried no `status`.
 | R9 | `content:sync` never run — one project 404s in Production (content gap, not a defect) |
 | R10 | `D19-11` id collision across Docs branches — blocks any Docs integration |
 | R11 | Issue #30 hydration defect — `test:e2e:repeat` red by design, out of scope |
-| **R12** | **`/dashboard/articles` ships UNMEASURED.** It is absent from `DASHBOARD_ROUTES` and `DASHBOARD_APP_OWNED_CAP_BYTES`, so no route-size budget applies to it. Deliberate, not an omission — registering it requires an owner decision (§9.3). The measurements are already taken and recorded in §5. The editor's two routes will inherit the same debt until that decision lands. |
+| ~~**R12**~~ | ~~`/dashboard/articles` ships UNMEASURED.~~ **CLOSED by D20-33** (`e0128c2`, Docs `3f2626e`). Superseded by the open cap question in §9.4. |
+| **R13** | **CSS budget R2 tightened.** 29.19 / 30.00 KB gz — **~0.81 KB headroom**, down from ~0.91 KB. Two more modules of this size would exhaust it. Watch on every FE-3 module. |
 | — | **About portrait** is an owner content dependency for M4 closure; do not fabricate or substitute owner content |
 
 ---
@@ -591,14 +641,60 @@ it returns as a dedicated owner-decision package at that boundary.
 **Option 3 (a custom Markdown toolbar) was explicitly declined as a compromise:** start with the
 simplest honest surface, and add affordances only if the real implementation demonstrates the need.
 
-### 9.3 OPEN — governing the Articles routes in doc 20 · **OWNER DECISION NEEDED**
+### 9.3 D20-33 — governing the Articles routes · **RESOLVED 2026-08-18**
 
-`/dashboard/articles` currently ships **UNMEASURED** (R12). Registering it was implemented and then
-**deliberately reverted**, because `scripts/lib/route-assets.mjs` states that a new cap "requires an
-owner decision plus a decision-log entry in `eslammuatamed-docs/docs/20-performance.md` — never an
-edit here", and three specs pin the governed set to *exactly* the eight routes doc 20 §1.1
-publishes, as byte literals. Editing those pins would have manufactured the authority the file
-forbids.
+The owner registered all three Articles routes in the existing interim Dashboard model at a frozen
+app-owned cap of **102,400 B (100 KiB)** each, preserving the shared-floor model and the generic
+incremental allowance, and explicitly NOT recalibrating D20-32. Recorded as **D20-33** in doc 20
+v1.25.0 (Docs `3f2626e`, branch `docs/web-modernization-campaign` — that is the lineage carrying
+D20-29/31/32; the branch this campaign uses stops at D20-28) and implemented in Web `e0128c2`.
+
+Two consequences worth carrying:
+
+- The governed inventory (11 routes) and the FROZEN floor-reference set (8 routes) have **diverged**,
+  by design. A spec previously asserted the two lists were identical; its own comment admitted that
+  was true only "at calibration time", so it recorded a coincidence as a contract. It is **inverted**
+  rather than bumped — a new equality would re-arm the same trap for the next module.
+- The editor routes' caps are **INHERITED, not derived** — a third provenance class in doc 20's
+  table, stated in the Provenance column rather than implied by a fabricated baseline.
+
+*(The decision quotes 89,016 B as the collection's baseline; the shipped tree measures 88,344 B,
+taken one revision later after the page dropped its bespoke error block for `UiStateError`. Both
+derive the identical 102,400 B cap, so the difference is provenance only.)*
+
+### 9.4 OPEN — the EDITOR routes exceed the inherited cap · **OWNER DECISION NEEDED**
+
+`size:routes` **exits 1**. This is the case D20-33 anticipated, and the instruction was to attribute
+the cause and escalate rather than raise anything silently.
+
+| Route | app-owned | cap | over by |
+| --- | --- | --- | --- |
+| `/dashboard/articles/new` | **106,095 B** | 102,400 B | 3,695 B |
+| `/dashboard/articles/{id}` | **106,203 B** | 102,400 B | 3,803 B |
+| *(collection, for contrast)* | 96,881 B | 102,400 B | ✓ passes |
+
+**The attributed cause.** 102,400 B was derived from the COLLECTION route. An authoring surface
+carries the media-picking subsystem that a list does not — `MediaBrowser` 10,406 B + `MediaPicker`
+6,940 B + `MediaCard` 3,006 B = **20,352 B**. That is a structural difference between a list and an
+editor, not weight this module added.
+
+**Work done to fit it BEFORE escalating.** Moving that subsystem into its own chunk cut app-owned by
+**24,769 B** (129,555 → 104,786) and moved incremental delivery from a near-cap warning at 90.3 % of
+the allowance to **78.6 %**. It is still ~3.8 KB over a number derived from a different surface.
+
+**Evidence the architecture is not the problem.** This editor is **46,190 B leaner** than the
+governed Projects editor baseline (152,393 B → cap 176,128 B) while doing more: translation tabs, a
+Zod schema, per-locale SEO panels, preview minting.
+
+**The options, with the formula applied honestly:**
+
+| Option | Cap | Note |
+| --- | --- | --- |
+| **A — derive from the editors' own baseline** | **122,880 B (120 KiB)** | D20-29's formula verbatim on 106,203 B. Still **53,248 B below** the Projects editor's cap for a comparable surface. Recommended. |
+| B — hold 102,400 B | — | Requires finding ~3.8 KB in an authoring component, i.e. optimising for a number derived from a list route. Plan §7.3: "file size alone is not a refactor trigger", and marginal bytes rank last in the Dashboard's priority order. |
+| C — a separate authoring-route class | — | Honest but heavier governance: a second incremental tier for editors, which D20-32 deliberately rejected for dashboard routes ("one generic allowance"). |
+
+Nothing else blocks FE-2c. The remaining work — the §14.6 extraction pass — does not depend on it.
 
 **The decision package, measured and ready:**
 
@@ -637,6 +733,8 @@ only the budget governance is deferred.
 | `d5d493b` | **FE-2c · F-1** — the 007 loading system translates through `useSurfaceI18n()` |
 | `0a1b3b8` | **FE-2c · U-1** — the Articles e2e backend, and the hold that makes its states observable |
 | `5be7740` | **FE-2c · U-2** — the Articles collection on the §14.9 request-state contract; **F-1 closed** with browser evidence |
+| `e0128c2` | **D20-33** — govern the Articles routes; the frozen floor set stops tracking the route set |
+| `46e2f91` | **FE-2c · U-4** — the Articles editor: bilingual, Zod + `UForm`, 422→locale-tab mapping, mutations, preview |
 
 *This table lists commits that exist when it is written; the commit carrying this edit is
 deliberately absent rather than stamped as a SHA it cannot know. `git log --oneline c6a5b21..HEAD`
@@ -672,7 +770,28 @@ locale-reactive Zod schema — so the *contract* OD-11 asked for is established.
 page's product-quality composition: card/layout, password-visibility control, error-focus behaviour,
 380px, and the axe pass in both dashboard languages.
 
-### Where FE-2c picks up — the EDITOR
+### Where FE-2c picks up — the §14.6 EXTRACTION PASS
+
+The collection and the editor are both landed and verified, and **all ten §14.9 criteria are
+demonstrated**. What remains is the part the plan deliberately sequenced LAST: deciding which of the
+editor's internals are genuinely reusable, now that a real module has exercised them.
+
+**Next three actions:**
+
+1. **Extract only what the implementation proved.** §14.6 names `TranslationTabs`,
+   `useTranslatableForm` and `EntityFormLayout` as *likely*, and §14.6's own rule is no abstraction
+   before a second real consumer. Articles is one consumer. The honest output of this pass may be a
+   RECORDED JUDGEMENT that extraction waits for the first FE-3 module rather than a set of new files
+   — and if so, say that instead of manufacturing three components.
+2. **Record the reusable architecture** in the ledger and doc 11 so FE-3 inherits it rather than
+   re-deriving it: the shared/translated split, the request-state gating, the conditional per-locale
+   validation, the 422 index→locale rule, and the two-test structure that ordering needs.
+3. **Then FE-3**, one module per lane against the fixed pattern.
+
+*(Superseded — kept because the ledger records what it said it would do next: the editor's own
+opening actions.)*
+
+### Where FE-2c picked up — the EDITOR
 
 U-1 (backend instrument) and U-2 (collection) are landed and verified. The next unit is the
 authoring surface, and it is where §14.9 criteria **3, 4 and 5** live — none of which the collection
