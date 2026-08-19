@@ -758,6 +758,8 @@
       },
       "locale": { "en": "English", "ar": "Arabic" },
       "field": {
+        "slug": "Slug",
+        "label": "Skill name",
         "group": "Group",
         "order": "Order",
         "visibility": "Visibility",
@@ -768,6 +770,49 @@
         "FRONTEND": "Frontend",
         "BACKEND": "Backend",
         "DELIVERY": "Delivery"
+      },
+      "editor": {
+        "createTitle": "New skill",
+        "editTitle": "Edit skill",
+        "description": "One skill, in both languages. The slug is the stable public identity.",
+        "back": "Back to skills",
+        "detailsSection": "Skill details",
+        "contentSection": "Names",
+        "loadingSkill": "Loading the skill",
+        "notFoundTitle": "That skill does not exist",
+        "notFoundBody": "It may have been deleted. Go back to the list to see what is there.",
+        "loadFailedBody": "The skill could not be loaded. Try again, or go back to the list.",
+        "slugHelp": "The slug cannot be changed after creation.",
+        "orderHelp": "The API accepts the Skills order value as authored.",
+        "brandColorHelp": "Optional design token or color value. Clear it to send null.",
+        "clearBrandColor": "Clear",
+        "labelHelp": "Up to 120 characters.",
+        "complete": "Both languages written",
+        "incomplete": "One language written; the other can be added later.",
+        "errorSummaryTitle": "This skill could not be saved",
+        "tabInvalid": "Has errors",
+        "fill": {
+          "empty": "Not written",
+          "partial": "Incomplete",
+          "complete": "Written"
+        },
+        "save": "Save",
+        "saving": "Saving…",
+        "saved": "Saved",
+        "unsaved": "Unsaved changes",
+        "unsavedWarning": "This skill has unsaved changes. Leave the page and they are lost.",
+        "delete": "Delete",
+        "deleteConfirm": "Delete this skill",
+        "deleteCancel": "Keep it",
+        "deleteFailed": "The skill could not be deleted."
+      },
+      "validation": {
+        "slugRequired": "A slug is required.",
+        "slugTooLong": "The slug must be 60 characters or fewer.",
+        "slugInvalid": "Use lowercase letters, numbers, and single hyphens.",
+        "labelRequired": "Write a name in this language.",
+        "labelTooLong": "The name must be 120 characters or fewer.",
+        "atLeastOneLocale": "Write the skill in at least one language."
       }
     },
     "projects": {

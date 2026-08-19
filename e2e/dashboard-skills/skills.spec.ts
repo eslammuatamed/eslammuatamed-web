@@ -98,3 +98,105 @@ test.describe('bilingual narrow viewport', () => {
     })
   }
 })
+
+test.describe('the editor', () => {
+  async function openNew(page: import('@playwright/test').Page, baseURL: string): Promise<void> {
+    await signIn(page, 'en', baseURL)
+    await page.goto('/dashboard/skills/new')
+    await expect(page.locator('[data-skill-editor-ready]')).toBeVisible()
+  }
+
+  async function openEdit(page: import('@playwright/test').Page, baseURL: string): Promise<void> {
+    await signIn(page, 'en', baseURL)
+    await page.goto(`/dashboard/skills/${SKILL.typescript}`)
+    await expect(page.locator('[data-skill-editor-ready]')).toBeVisible()
+  }
+
+  test('creates Arabic-first with English empty', async ({ page, baseURL }) => {
+    await openNew(page, baseURL!)
+    await page.locator('[data-editor-slug]').fill('arabic-first-skill')
+    await page.locator('[data-editor-tabs] button').filter({ hasText: 'Arabic' }).click()
+    await page.locator('[data-editor-label="ar"]').fill('مهارة عربية')
+    await page.locator('[data-editor-save]').click()
+    await expect(page).toHaveURL(/\/dashboard\/skills\/00000000-0000-4000-f100-900000000001$/)
+  })
+
+  test('creates English-first with Arabic empty', async ({ page, baseURL }) => {
+    await openNew(page, baseURL!)
+    await page.locator('[data-editor-slug]').fill('english-first-skill')
+    await page.locator('[data-editor-label="en"]').fill('English-first skill')
+    await page.locator('[data-editor-save]').click()
+    await expect(page).toHaveURL(/\/dashboard\/skills\/00000000-0000-4000-f100-900000000001$/)
+  })
+
+  test('blocks a zero-translation save', async ({ page, baseURL }) => {
+    await openNew(page, baseURL!)
+    await page.locator('[data-editor-slug]').fill('no-translation-skill')
+    await page.locator('[data-editor-save]').click()
+    await expect(page.locator('[data-editor-error-summary]')).toBeVisible()
+    await expect(page).toHaveURL(/\/dashboard\/skills\/new$/)
+  })
+
+  test('loads both existing translations for edit', async ({ page, baseURL }) => {
+    await openEdit(page, baseURL!)
+    await expect(page.locator('[data-editor-slug]')).toHaveValue('typescript')
+    await expect(page.locator('[data-editor-label="en"]')).toHaveValue('TypeScript')
+    await page.locator('[data-editor-tabs] button').filter({ hasText: 'Arabic' }).click()
+    await expect(page.locator('[data-editor-label="ar"]')).toHaveValue('تايب سكربت')
+  })
+
+  test('PATCH never sends slug', async ({ page, baseURL }) => {
+    await openEdit(page, baseURL!)
+    await page.locator('[data-editor-label="en"]').fill('TypeScript edited')
+    const requestPromise = page.waitForRequest(request =>
+      request.method() === 'PATCH' && request.url().includes(`/api/v1/admin/skills/${SKILL.typescript}`)
+    )
+    await page.locator('[data-editor-save]').click()
+    const request = await requestPromise
+    expect(JSON.parse(request.postData() ?? '{}')).not.toHaveProperty('slug')
+  })
+
+  test('brandColor clear sends explicit null', async ({ page, baseURL }) => {
+    await openEdit(page, baseURL!)
+    await page.locator('[data-editor-brand-color-clear]').click()
+    const requestPromise = page.waitForRequest(request =>
+      request.method() === 'PATCH' && request.url().includes(`/api/v1/admin/skills/${SKILL.typescript}`)
+    )
+    await page.locator('[data-editor-save]').click()
+    const request = await requestPromise
+    expect(JSON.parse(request.postData() ?? '{}')).toHaveProperty('brandColor', null)
+  })
+
+  test('maps a translation 422 to the locale in the sent array', async ({ page, baseURL }) => {
+    await openEdit(page, baseURL!)
+    await page.locator('[data-editor-label="en"]').fill('')
+    await page.route(`**/api/v1/admin/skills/${SKILL.typescript}`, async route => {
+      await route.fulfill({
+        status: 422,
+        contentType: 'application/problem+json',
+        body: JSON.stringify({
+          type: '/problems/validation',
+          title: 'Validation failed',
+          status: 422,
+          errors: [{ field: 'translations[0].label', message: 'Arabic label is invalid.' }]
+        })
+      })
+    })
+    await page.locator('[data-editor-save]').click()
+    await expect(page.locator('[data-editor-tab-invalid="ar"]')).toBeVisible()
+    await expect(page.locator('[data-editor-panel="ar"]')).toBeVisible()
+    await page.unroute(`**/api/v1/admin/skills/${SKILL.typescript}`)
+  })
+
+  test('renders the established not-found and failed-load states', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL!)
+    await page.goto('/dashboard/skills/not-a-uuid')
+    await expect(page.locator('[data-editor-unreadable]')).toBeVisible()
+    await expect(page.locator('[data-editor-unreadable]')).toContainText('does not exist')
+
+    await setBackendState(page, { mode: 'error' })
+    await page.goto(`/dashboard/skills/${SKILL.typescript}`)
+    await expect(page.locator('[data-editor-unreadable]')).toBeVisible()
+    await expect(page.locator('[data-editor-unreadable]')).toContainText('could not be loaded')
+  })
+})
