@@ -2780,3 +2780,18 @@ API PR #89 is merged on API `dev` at `0225f76b57c5bb770f06281f1d96dce318c61112`;
 only. Web's vendored contract was intentionally not changed; reconcile it normally after resumption,
 then rerun INV-2's architecture question. Safest resume: inspect and classify the preserved Skills lane
 diff first, then the Testimonials instrument, before any integration or new implementation.
+
+### M2·U2 integration checkpoint — 2026-08-19
+
+Skills M2·U2 commit `85bd8e9e538c97bda3b9bee877a57b8cb0ad6975` was cherry-picked without conflict as
+campaign commit `45485d80f0b0458b7d62e0b98d819c890ee22958`. On the integrated tree, typecheck,
+typecheck:e2e, and lint passed; the Skills focused unit passed 4/4; lane/route registry tests passed
+51/51; Skills E2E passed 9/9 and Experiences E2E passed 36/36. Each focused lane booted one
+preview/backend pair. Skills is the 12th declared lane, and focused selection resolves one lane.
+
+The existing Nuxt/Vitest `useAdminSkills` consumer test executed and passed 3/3. The `/dashboard/skills`
+route cap remains undecided. `size:routes` exited with the authoritative governance/measurement
+divergence because the route has no owner-approved cap; measurement unavailable through the
+authoritative gate until the measurement workflow is resolved. No cap was added. The preserved
+untracked M2·U3 prep files remain in `/home/eslam-muatamed/worktrees/lane-m2-u2-skills` untouched and
+were not integrated. M2·U3 has not started.
