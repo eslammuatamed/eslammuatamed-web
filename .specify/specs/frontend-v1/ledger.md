@@ -2756,3 +2756,27 @@ per-locale and would 404), and only then the §14.6 extraction pass.
 
 **Push discipline:** nothing is pushed. `origin/dev` and `origin/main` are untouched. No merge to
 `main`, no deploy, no Docs publication.
+
+---
+
+### Interrupted-session recovery checkpoint — 2026-08-19
+
+Forensic recovery is recorded in
+[`scratchpad/fe3-recovery/campaign-027-interrupted-session-recovery.md`](../../scratchpad/fe3-recovery/campaign-027-interrupted-session-recovery.md).
+The campaign Web tree was clean before this documentation write at
+`5fe84e49443e1a94f0c6a97a129d3c9b5f71790b`; it remains the exact resume tip after the docs-only commit
+that records this checkpoint. `origin/dev` is `54cea28737c558767ccb24a34e2b437b62f7f058`,
+`origin/main` is `648aa467cd8bc7157cbcad2fd7c0e8981ee1f16c`, and the campaign branch is absent from
+origin.
+
+The recovery found no post-`f6ec825` application commit. It found two dirty isolated write lanes:
+Skills M2·U2 (collection implementation present but not integrated or verified) and Testimonials T·U1
+(instrument only, not a module). Their exact file SHA-256 inventory is in the recovery report and must
+be preserved. M2·U3, Skills route measurement, central lane registration, navigation, caps, and Web
+contract reconciliation did not start.
+
+API PR #89 is merged on API `dev` at `0225f76b57c5bb770f06281f1d96dce318c61112`; API `main` remains
+`9af1aace27289404efa57e8111c5fc3786c65f75`. The taxonomy contract blocker is resolved on API `dev`
+only. Web's vendored contract was intentionally not changed; reconcile it normally after resumption,
+then rerun INV-2's architecture question. Safest resume: inspect and classify the preserved Skills lane
+diff first, then the Testimonials instrument, before any integration or new implementation.
