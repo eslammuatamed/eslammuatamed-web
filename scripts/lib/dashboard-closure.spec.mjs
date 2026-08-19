@@ -278,6 +278,7 @@ describe('dashboard closure — governed routes must always be measurable', () =
       '/dashboard/experiences',
       '/dashboard/experiences/new',
       '/dashboard/experiences/00000000-0000-0000-0000-000000000000',
+      '/dashboard/skills',
       // The Projects module. The editor is registered under a concrete id because the gate fetches
       // the route; `/dashboard/**` is `ssr: false`, so which id is used cannot change the shell.
       '/dashboard/projects', '/dashboard/projects/new',

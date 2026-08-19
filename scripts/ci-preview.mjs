@@ -179,6 +179,13 @@ const BACKENDS = {
     command: process.execPath,
     args: () => ['scripts/e2e/experiences-server.ts']
   },
+  // FE-3 module 2. Skills owns a separate mutable backend so its collection fixtures can be reset
+  // between browser tests without sharing state with Experiences or another future module.
+  skills: {
+    label: 'skills backend (FE-3 module 2, mutable)',
+    command: process.execPath,
+    args: () => ['scripts/e2e/skills-server.ts']
+  },
   // Project-detail freshness. This backend starts with an empty gallery and exposes test-only
   // controls that publish the authored gallery after both localized detail pages have been primed.
   // Its own process is essential: the regression observes mutable upstream state while every other

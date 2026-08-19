@@ -184,6 +184,15 @@ export const LANES: readonly Lane[] = [
     readyPath: '/',
     resetsBackendState: true,
     why: 'FE-3 module 1: mutable, and it is the only lane whose fixtures can prove the API ORDER is honoured — `EXP.endedLater` ranks differently under the contract\'s sort than under the `startDate desc` a client would naturally write, so a re-sorting Dashboard fails HERE instead of in Production'
+  },
+  {
+    project: 'dashboard-skills',
+    dir: 'dashboard-skills',
+    backend: 'skills',
+    ports: { webEnv: 'CI_SKILLS_PORT', apiEnv: 'CI_SKILLS_MOCK_PORT', webDefault: 4200, apiDefault: 4201 },
+    readyPath: '/',
+    resetsBackendState: true,
+    why: 'FE-3 module 2: the Skills collection and its future editor use mutable fixtures, and the lane must own exactly one resettable backend process pair'
   }
 ] as const
 

@@ -343,7 +343,8 @@
       "media": "الوسائط",
       "system": "النظام",
       "profile": "الملف الشخصي",
-      "experiences": "الخبرات"
+      "experiences": "الخبرات",
+      "skills": "المهارات"
     },
     "messages": {
       "title": "الرسائل",
@@ -731,6 +732,42 @@
         "fieldRequired": "هذه اللغة مكتوبة جزئيًّا. أكمل هذا الحقل، أو أفرغ اللغة بالكامل.",
         "atLeastOneLocale": "اكتب الدور بلغة واحدة على الأقل.",
         "cannotClearLocale": "هذه اللغة محفوظة بالفعل ولا يمكن إفراغها من هنا. الحفظ سيُبقي النص القديم منشورًا. احذف الدور بدلًا من ذلك."
+      }
+    },
+    "skills": {
+      "title": "المهارات",
+      "description": "المفردات المستخدمة عبر الموقع ولوحة التحكم.",
+      "retry": "حاول مرة أخرى",
+      "errorTitle": "تعذّر تحميل المهارات",
+      "forbiddenTitle": "لا تملك صلاحية الوصول إلى المهارات",
+      "forbiddenBody": "هذا الحساب غير مصرَّح له بإدارة المهارات.",
+      "emptyTitle": "لا توجد مهارات بعد",
+      "emptyBody": "أنشئ أول مهارة وستظهر هنا.",
+      "listRegionLabel": "المهارات",
+      "resultCount": "{total} مهارات",
+      "create": "مهارة جديدة",
+      "edit": "تحرير",
+      "editFor": "تحرير {label}",
+      "public": "عامة",
+      "hidden": "مخفية",
+      "noBrandColor": "لا يوجد لون للعلامة",
+      "translationState": {
+        "label": "الترجمات",
+        "present": "{locale} مكتوبة",
+        "missing": "{locale} ناقصة"
+      },
+      "locale": { "en": "الإنجليزية", "ar": "العربية" },
+      "field": {
+        "group": "المجموعة",
+        "order": "الترتيب",
+        "visibility": "الظهور",
+        "brandColor": "لون العلامة"
+      },
+      "group": {
+        "LANGUAGE": "اللغة",
+        "FRONTEND": "الواجهة الأمامية",
+        "BACKEND": "الواجهة الخلفية",
+        "DELIVERY": "التسليم"
       }
     },
     "projects": {

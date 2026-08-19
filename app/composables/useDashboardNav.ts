@@ -61,6 +61,7 @@ export function useDashboardNav() {
       items: [
         { key: 'articles', to: '/dashboard/articles', icon: 'i-lucide-newspaper' },
         { key: 'experiences', to: '/dashboard/experiences', icon: 'i-lucide-briefcase' },
+        { key: 'skills', to: '/dashboard/skills', icon: 'i-lucide-brain' },
         { key: 'projects', to: '/dashboard/projects', icon: 'i-lucide-folder-kanban' }
       ]
     },

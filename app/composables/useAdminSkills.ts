@@ -28,19 +28,27 @@ export function useAdminSkills() {
   const forbidden = ref(false)
   const failed = ref(false)
 
+  // Two picker mounts, or a collection retry, can overlap. Only the newest response may own the
+  // shared instance's state; a slower earlier response is stale even though this endpoint has no
+  // query parameters.
+  let loadSeq = 0
+
   async function load(): Promise<void> {
+    const seq = ++loadSeq
     pending.value = true
     forbidden.value = false
     failed.value = false
     try {
       const res = await api<Envelope<AdminSkill[]>>('/admin/skills', { locale: false })
+      if (seq !== loadSeq) return
       skills.value = [...res.data]
     } catch (error) {
+      if (seq !== loadSeq) return
       skills.value = []
       if (error instanceof ApiError && error.status === 403) forbidden.value = true
       else failed.value = true
     } finally {
-      pending.value = false
+      if (seq === loadSeq) pending.value = false
     }
   }
 

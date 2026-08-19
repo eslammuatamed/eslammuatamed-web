@@ -343,7 +343,8 @@
       "media": "Media",
       "system": "System",
       "profile": "Profile",
-      "experiences": "Experience"
+      "experiences": "Experience",
+      "skills": "Skills"
     },
     "messages": {
       "title": "Messages",
@@ -731,6 +732,42 @@
         "fieldRequired": "This language is partly written. Fill this in, or clear the language completely.",
         "atLeastOneLocale": "Write the role in at least one language.",
         "cannotClearLocale": "This language is already saved and cannot be emptied here. Saving would leave the old text published. Delete the role instead."
+      }
+    },
+    "skills": {
+      "title": "Skills",
+      "description": "The vocabulary used across the site and dashboard.",
+      "retry": "Try again",
+      "errorTitle": "Skills could not be loaded",
+      "forbiddenTitle": "You do not have access to skills",
+      "forbiddenBody": "This account is not permitted to manage skills.",
+      "emptyTitle": "No skills yet",
+      "emptyBody": "Create the first skill and it will appear here.",
+      "listRegionLabel": "Skills",
+      "resultCount": "{total} skills",
+      "create": "New skill",
+      "edit": "Edit",
+      "editFor": "Edit {label}",
+      "public": "Public",
+      "hidden": "Hidden",
+      "noBrandColor": "No brand color",
+      "translationState": {
+        "label": "Translations",
+        "present": "{locale} written",
+        "missing": "{locale} missing"
+      },
+      "locale": { "en": "English", "ar": "Arabic" },
+      "field": {
+        "group": "Group",
+        "order": "Order",
+        "visibility": "Visibility",
+        "brandColor": "Brand color"
+      },
+      "group": {
+        "LANGUAGE": "Language",
+        "FRONTEND": "Frontend",
+        "BACKEND": "Backend",
+        "DELIVERY": "Delivery"
       }
     },
     "projects": {

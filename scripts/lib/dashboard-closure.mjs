@@ -213,6 +213,9 @@ export const DASHBOARD_ROUTES = [
     route: '/dashboard/experiences/00000000-0000-0000-0000-000000000000',
     pageModule: 'app/pages/dashboard/experiences/[id].vue'
   },
+  // M2·U2 — register the collection for measurement. Its owner cap is deliberately absent until
+  // the batched Skills collection/editor decision; size:routes must report this as ungoverned.
+  { route: '/dashboard/skills', pageModule: 'app/pages/dashboard/skills/index.vue' },
   { route: '/dashboard/projects', pageModule: 'app/pages/dashboard/projects/index.vue' },
   { route: '/dashboard/projects/new', pageModule: 'app/pages/dashboard/projects/new.vue' },
   // A CONCRETE id, because the gate fetches each route to read the CSS out of its rendered shell.
