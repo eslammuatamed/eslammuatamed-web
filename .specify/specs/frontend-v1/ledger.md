@@ -2795,3 +2795,12 @@ divergence because the route has no owner-approved cap; measurement unavailable 
 authoritative gate until the measurement workflow is resolved. No cap was added. The preserved
 untracked M2·U3 prep files remain in `/home/eslam-muatamed/worktrees/lane-m2-u2-skills` untouched and
 were not integrated. M2·U3 has not started.
+
+### Testimonials T·U1 integration checkpoint — 2026-08-19
+
+Testimonials instrument commit `026cacba6f5755d06604a06f7dde67cae68f2ec3` was cherry-picked
+without conflict as campaign commit `1b70725`. Focused verification on the integrated tree passed:
+Testimonials instrument 28/28, typecheck, typecheck:e2e, and lint. The five negative-control classes
+(order bounds, minimum translations, locale format, non-empty translation text, and omission-preserving
+translation upsert) were already proven in the isolated lane. T·U1 remains instrument-only;
+Testimonials Dashboard collection/editor have not started. No shared frontend architecture changed.
