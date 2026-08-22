@@ -3057,3 +3057,57 @@ the exact deliberate state D20-34/D20-36 resolved for earlier modules. Public CS
 Nothing was pushed or deployed; campaign tree clean after this docs-only commit. FE-3 state:
 modules 1–2 COMPLETE; module 3 collection+editor done pending owner cap approval; modules 4–5 open.
 No next unit was started here.
+
+### FE-3 Module 3 (Testimonials) closure checkpoint — 2026-08-22
+
+**D20-38 REGISTERED AND VERIFIED — Module 3 is COMPLETE.** The owner approved both Testimonials
+editor caps as one batched decision; each is D20-29's formula on its OWN measured baseline, no
+common cap, nothing inherited or rounded toward a sibling:
+
+| Route | Baseline | Cap |
+| --- | --- | --- |
+| `/dashboard/testimonials/new` | 125,465 B | **144,384 B** (141 KiB) |
+| `/dashboard/testimonials/{id}` | 125,573 B | **145,408 B** (142 KiB) |
+
+Registration: Web governance commit **`2309ae2`** (`scripts/lib/route-assets.mjs`
+`DASHBOARD_APP_OWNED_CAP_BYTES` + baseline/provenance records, provenance tree `7f22ce775e4c…`, the
+T·U3 implementation commit). Explicitly NOT a waiver, NOT a shared-floor change, NOT a generic
+incremental-allowance change, NOT a D20-32 recalibration. Doc 20 decision recorded on the private
+Docs campaign branch as **D20-38** (Docs `1bffebe`, local-only).
+
+Step-1 measurement verification BEFORE registration: the recorded T·U3 checkpoint readings
+(125,465 / 125,573 B) were REPRODUCED byte-for-byte — same app-owned figures, same route totals
+(326,821 / 326,866 B gz), zero unclassified bytes — on a fresh clean-tree provenance build at
+`2309ae2` (real build exit **0**, `.output/.provenance.json` stamped `2309ae25…`, `.output`
+verified present). Route-budget focused specs green: route-assets + dashboard-closure +
+check-route-size = **187/187**, including pins that fix the owner's exact bytes, assert the two caps
+DIFFER from each other and from every sibling editor cap, and restore two-way governance coverage
+(twenty governed routes, measured == governed).
+
+Authoritative verification on the stamped build: **`size:routes` exit 0** across all twenty governed
+routes. Testimonials rows: collection 87,774 ≤ 99,328 ✓ · new Δ-floor 64,080 / app 125,465 ≤ 144,384 ✓ ·
+{id} Δ-floor 64,125 / app 125,573 ≤ 145,408 ✓. Both editor routes sit in the same D20-24
+quality-target warning band as every other content-module editor (passing, attribution obliged);
+CSS 28.1 KB gz per route.
+
+Final Module 3 evidence (T·U1 → T·U3): deterministic resettable instrument with calibrated contract
+distinctions; unpaginated `{ data }` collection with zero query/filter state rendering SERVER order
+verbatim (`order` displayed as data only; discriminating control: injected client-side sort fails an
+out-of-sequence-fixture test, restored byte-identically); bilingual EN/AR authoring with Arabic-first
+and English-first create both valid; zero-translation frontend invariant enforced wire-level — no
+request leaves the browser (control: guard removal failed that test after the original assertion was
+proven non-discriminating against the API's 422 backstop); integer ≥ 0 order blocked at control and
+schema; translation omission preserves (in-form cleared locale restored from server); upsert changes
+only supplied locales; avatar via the SHARED MediaPicker with PATCH omission = preserve, explicit
+null = clear, replacement = new id (omission control: always-send mutation failed); 422 field paths
+resolve through the SENT array onto the correct locale tab; DELETE confirm → 204 → collection.
+Official `dashboard-testimonials` E2E lane **33/33, exit 0** on exactly ONE preview/backend pair,
+still ONE spec file; declared lane count **13**. EN/AR axe clean (collection + editor); 380px green.
+Public CSS **28,724 B gz / 30 KB (Δ0)**.
+
+The lane instrument's additive media read surface (three seeded assets for list/resolve/upload)
+is TEST SUPPORT ONLY so the shared picker runs mechanically in the lane — it is not a production
+API change, and the product reuses the existing MediaPicker against the real media endpoints.
+
+Nothing was pushed or deployed. Campaign tree clean after this docs-only commit; Docs campaign
+worktree clean. FE-3 state: modules 1–3 COMPLETE; modules 4–5 open. No next module was started here.
