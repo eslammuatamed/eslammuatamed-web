@@ -8,6 +8,7 @@ const MODULE_FILES = [
   'composables/admin-skill-fields.ts',
   'composables/admin-skill-form.ts',
   'composables/useAdminSkills.ts',
+  'composables/useAdminSkill.ts',
   'pages/dashboard/skills/index.vue'
 ]
 const OTHER_DASHBOARD_FILES = [
