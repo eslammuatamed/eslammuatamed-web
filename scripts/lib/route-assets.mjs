@@ -800,6 +800,11 @@ export const DASHBOARD_APP_OWNED_BASELINE_BYTES = {
   // §1.2 closure workflow and REPRODUCED on a clean, stamped build of the governance commit before
   // registration. One route, one number from one build.
   '/dashboard/testimonials': 86_069,
+  // D20-38 — FE-3 module 3's two Testimonials EDITOR routes, measured at the completed integrated
+  // `T·U3` checkpoint via the §1.2 closure workflow and REPRODUCED on a clean, stamped build of the
+  // governance commit before registration. Two routes, two numbers, one build — one comparable batch.
+  '/dashboard/testimonials/new': 125_465,
+  '/dashboard/testimonials/00000000-0000-0000-0000-000000000000': 125_573,
   '/dashboard/projects': 95_029,
   '/dashboard/projects/new': 152_208,
   '/dashboard/projects/00000000-0000-0000-0000-000000000000': 152_393
@@ -845,7 +850,11 @@ export const DASHBOARD_APP_OWNED_BASELINE_PROVENANCE = {
   '/dashboard/skills/00000000-0000-0000-0000-000000000000': '785d1b83c4f249d3af175bc081b7c2ebda5d97c4',
   // D20-37 — `T·U2`, the commit that created the collection route. The checkpoint build's closure
   // reading was reproduced byte-for-byte on a clean, stamped build of the governance commit.
-  '/dashboard/testimonials': '474b2501dbee7d0999b5e3a6292d2ed7556bd0b9'
+  '/dashboard/testimonials': '474b2501dbee7d0999b5e3a6292d2ed7556bd0b9',
+  // D20-38 — `T·U3`, the commit that created the two editor routes; same reproduction protocol as
+  // D20-37: checkpoint reading confirmed byte-for-byte on the clean, stamped governance build.
+  '/dashboard/testimonials/new': '7f22ce775e4cc96bad3f50fa605398d8ec692fcd',
+  '/dashboard/testimonials/00000000-0000-0000-0000-000000000000': '7f22ce775e4cc96bad3f50fa605398d8ec692fcd'
 }
 
 /**
@@ -950,6 +959,19 @@ export const DASHBOARD_APP_OWNED_CAP_BYTES = {
   // is not inherited from it, not rounded toward it, and carries its own derivation; both numbers
   // are just what the same frozen formula yields from two different measurements.
   '/dashboard/testimonials': 97 * KB,
+  // D20-38 (owner decision, 2026-08-22) — FE-3 module 3's TWO Testimonials editor routes, each
+  // derived INDEPENDENTLY from its OWN measured baseline by D20-29's formula on the completed
+  // integrated T·U3 tree (`7f22ce775e4cc96bad3f50fa605398d8ec692fcd`). Measured FIRST and escalated
+  // as ONE batched decision — the D20-33 amendment's lesson, and the reason `T·U3` registered both
+  // routes as deliberately ungoverned instead of inheriting the collection's cap or a sibling's.
+  //
+  // Explicitly NOT a waiver, NOT a shared-floor change, NOT a generic incremental-allowance change,
+  // and NOT a D20-32 recalibration. The two caps are deliberately NOT one common number: the owner
+  // declined rounding either route toward the other or toward any sibling editor (Articles
+  // 122,880 B, Experiences 120,832/121,856 B, Skills 111,616 B). The collection's governed 99,328 B
+  // (D20-37) is untouched and was NOT re-derived.
+  '/dashboard/testimonials/new': 141 * KB,
+  '/dashboard/testimonials/00000000-0000-0000-0000-000000000000': 142 * KB,
   '/dashboard/media': 108 * KB,
   '/dashboard/profile': 121 * KB,
   '/dashboard/projects': 107 * KB,
