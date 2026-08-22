@@ -2886,3 +2886,63 @@ remains **29.19 / 30 KB** gz; lane count remains **12**. Nothing was pushed or d
 
 FE-3 state after this closure: modules 1–2 COMPLETE; modules 3–5 (Projects extraction verdicts,
 Testimonials, Taxonomy per OD-12/OD-15 sequencing) remain OPEN. No next module was started here.
+
+### FE-3 Module 3 · Testimonials T·U2 checkpoint — 2026-08-22
+
+**The Testimonials Dashboard collection is COMPLETE on the campaign branch.** Starting HEAD
+`5babc37df924f734d261f5cf00d969ac6436ec46` (verified live, clean tree). One logical implementation
+commit: **`474b250`** — "FE-3 module 3 · T·U2 — the Testimonials collection, and the order that must
+not be re-sorted" (19 files, +1,349/−7). Scope held to collection-only: no editor, no Taxonomy, no
+new module, no route caps assigned, no backend/API changes, no shared-architecture forks.
+
+Implemented per the established collection pattern (Skills closest; Experiences' stale-refresh
+notice): `admin-testimonial-types.ts` (read alias over `AdminTestimonialEntity`; write payloads
+deferred to the editor unit), `admin-testimonial-fields.ts` (+spec) with the fields/form boundary
+made BEFORE an editor exists, `useAdminTestimonials.ts` (+spec — unpaginated `{ data }`, zero query
+parameters, `locale: false`, superseded-response token), and `/dashboard/testimonials`
+(+index.spec, +public-isolation gate as module 3's third scan). Rows render the SERVER order verbatim
+— `order` is displayed as data and never becomes a client-side sorting policy — plus `isVisible`,
+nullable `avatarId` presented as linked-id-or-none data, locale-map completeness badges, EN/AR nav
+entry (`i-lucide-message-square-quote`) in the Content group. Create/edit links point at the future
+editor routes exactly as M1·U2/M2·U2 did; those routes are NOT built here.
+
+Lane architecture unchanged in shape: one new registry record (`dashboard-testimonials`, backend
+`testimonials`, ports 4300/4301, `resetsBackendState: true`). **Declared lane count 12 → 13**;
+shard plan/isolation guards derive automatically. The focused selection boots exactly ONE
+preview/backend pair.
+
+Authoritative verification, all exit 0 unless stated: typecheck 0 · typecheck:e2e 0 · lint 0.
+Focused unit/registry selection **276/276** (testimonial-fields 12, useAdminTestimonials 4,
+collection index 9, public-isolation 2, dashboard-nav updated, lane-isolation, testimonials
+instrument calibration 24, dashboard-closure, route-assets incl. the two governance-inventory tests
+updated for the deliberately ungoverned registration — measured set now 18 routes).
+Official `dashboard-testimonials` E2E lane **15/15, exit 0**, twice (initial + post-control rerun),
+on exactly one pair (testimonials backend 4301 + Nitro `.output` 4300): full-sequence server-order
+pin; out-of-sequence fixture order pin; visibility/order/avatar presentation; en-only completeness;
+delayMs loading skeleton; empty; error+retry-recovers; forbidden; no-public-endpoint-request leak;
+EN/AR 380px RTL/LTR cold-boot with no key paths; unfiltered axe EN+AR over settled AND held-loading
+states — all clean.
+
+Order negative control (the module's most important invariant): injected
+`[...items].sort((a, b) => a.order - b.order)` into the page's `v-for`; rebuilt; the discriminating
+E2E test ("keeps the SERVER order when order values run out of sequence", fixture C→A→B at
+order 40/10/30 so a monotonic seed cannot pass by coincidence) FAILED with
+`expect(received).toEqual(expected)` as required. Restored byte-identically — SHA-256 of
+`app/pages/dashboard/testimonials/index.vue` = `f8dbc9610f2f4c4a32cffc01c81a65b51ae84932080b05d20d6a9331ce26e929`
+before mutation, after restore, and as committed. Full lane then re-ran green.
+
+Route measurement (established closure/attribution workflow, ANALYZE_BUNDLE=1 build exit 0,
+preview-gated shell fetch): `/dashboard/testimonials` closure = 53 JS assets, route total
+269,489 B gz (798,939 B raw), **app-owned rendered 86,069 B** (the D20-29 baseline input),
+unclassified 0 B, CSS 28,724 B gz from the route's own shell. Public CSS via `/about`: 28,724 B gz
+≈ 28.05 KB against the 30 KB cap (this tree's factual reading; differs from R14's noted 29.19 kB —
+different tree/build, same gate method). `size:routes` is INTENTIONALLY non-green (exit 2, fast,
+pre-preview): "measured but NOT governed: /dashboard/testimonials" — exactly the deliberate
+M2·U2-style state; **no cap was assigned and none inherited**. The owner derives the Testimonials
+cap from the 86,069 B baseline under D20-29. Provenance caveat recorded honestly: the verification
+build ran on the implementation tree (dirty), so `stamp-build` correctly skipped the governed
+provenance marker; Lighthouse gates were not run and nothing downstream consumed a stamp.
+
+Nothing was pushed or deployed; campaign tree clean after the docs-only ledger commit below.
+FE-3 state: modules 1–2 COMPLETE; module 3 collection done, Testimonials EDITOR (T·U3+) remains
+open, as do modules 4–5. No next unit was started here.
