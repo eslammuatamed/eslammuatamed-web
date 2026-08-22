@@ -231,6 +231,17 @@ export const DASHBOARD_ROUTES = [
   // M2·U2 rule verbatim: measured but deliberately UNGOVERNED until the owner derives its cap from
   // its own measured baseline. No sibling number is inherited.
   { route: '/dashboard/testimonials', pageModule: 'app/pages/dashboard/testimonials/index.vue' },
+  // `T·U3` — the editor's two routes, joining in the commit that creates them, exactly as every
+  // module before them did. They are registered MEASURED but deliberately UNGOVERNED: caps arrive
+  // with the batched owner decision, each derived from its OWN measured baseline — never inherited
+  // from the collection or a sibling module's editors (the D20-33 amendment's standing rule).
+  { route: '/dashboard/testimonials/new', pageModule: 'app/pages/dashboard/testimonials/new.vue' },
+  // A CONCRETE id, for the same reason every editor uses one: the gate FETCHES the route, and
+  // `/dashboard/**` is `ssr: false`, so every id returns the same shell.
+  {
+    route: '/dashboard/testimonials/00000000-0000-0000-0000-000000000000',
+    pageModule: 'app/pages/dashboard/testimonials/[id].vue'
+  },
   { route: '/dashboard/projects', pageModule: 'app/pages/dashboard/projects/index.vue' },
   { route: '/dashboard/projects/new', pageModule: 'app/pages/dashboard/projects/new.vue' },
   // A CONCRETE id, because the gate fetches each route to read the CSS out of its rendered shell.

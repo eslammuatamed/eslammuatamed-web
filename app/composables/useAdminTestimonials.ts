@@ -1,5 +1,9 @@
 import type { Envelope } from '~/types/models'
 import type { AdminTestimonial } from '~/composables/admin-testimonial-types'
+import type {
+  CreateTestimonialPayload,
+  UpdateTestimonialPayload
+} from '~/composables/admin-testimonial-form'
 import { ApiError } from '~/utils/api-error'
 
 /**
@@ -88,4 +92,82 @@ export function useAdminTestimonials() {
   }
 
   return { items, pending, forbidden, failed, load }
+}
+
+/**
+ * One testimonial: the editor's read and its three writes (FE-3 module 3, `T·U3`).
+ *
+ * Lives beside the collection read for the reason `useAdminExperiences.ts` gives — one module, one
+ * file, the editor and the list share the entity type — while staying a SEPARATE composable, so the
+ * collection route never instantiates the write paths it has no use for.
+ *
+ * Every write THROWS on failure rather than swallowing it, so the editor can keep the operator's
+ * unsaved input on screen and render the RFC 7807 problem. Silently discarding edits it cannot
+ * prove were stored is the one outcome a content editor must never produce.
+ *
+ * `locale: false` ON EVERY CALL, as every admin call must be: the admin DTOs are validated with
+ * `forbidNonWhitelisted` and none declares `locale`, so an unsolicited `?locale=` is a 422.
+ */
+export function useAdminTestimonial() {
+  const api = useApi()
+
+  const testimonial = ref<AdminTestimonial | null>(null)
+  const pending = ref(false)
+  const forbidden = ref(false)
+  const notFound = ref(false)
+  const failed = ref(false)
+
+  async function load(id: string): Promise<void> {
+    pending.value = true
+    forbidden.value = false
+    notFound.value = false
+    failed.value = false
+    try {
+      const res = await api<Envelope<AdminTestimonial>>(`/admin/testimonials/${id}`, { locale: false })
+      testimonial.value = res.data
+    } catch (error) {
+      testimonial.value = null
+      // A deleted or mistyped id is a different answer from "you may not read this" and from "the
+      // request broke". Each gets its own surface (D11-2). A malformed id answers 400 upstream;
+      // that is still "this address names nothing readable" to an operator, so it reads as
+      // not-found here rather than as a transport failure.
+      if (error instanceof ApiError && error.status === 403) forbidden.value = true
+      else if (error instanceof ApiError && (error.status === 404 || error.status === 400)) notFound.value = true
+      else failed.value = true
+    } finally {
+      pending.value = false
+    }
+  }
+
+  async function create(body: CreateTestimonialPayload): Promise<AdminTestimonial> {
+    const res = await api<Envelope<AdminTestimonial>>('/admin/testimonials', {
+      method: 'POST',
+      locale: false,
+      body
+    })
+    testimonial.value = res.data
+    return res.data
+  }
+
+  /**
+   * The response is the FULL updated entity and it REPLACES the held one, so what is on screen
+   * after a save is confirmed server state — including translations the upsert preserved but this
+   * client did not send.
+   */
+  async function update(id: string, body: UpdateTestimonialPayload): Promise<AdminTestimonial> {
+    const res = await api<Envelope<AdminTestimonial>>(`/admin/testimonials/${id}`, {
+      method: 'PATCH',
+      locale: false,
+      body
+    })
+    testimonial.value = res.data
+    return res.data
+  }
+
+  /** `204 No Content` — there is no envelope to read back. */
+  async function remove(id: string): Promise<void> {
+    await api<unknown>(`/admin/testimonials/${id}`, { method: 'DELETE', locale: false })
+  }
+
+  return { testimonial, pending, forbidden, notFound, failed, load, create, update, remove }
 }

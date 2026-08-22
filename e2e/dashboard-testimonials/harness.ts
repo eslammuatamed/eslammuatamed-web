@@ -28,6 +28,9 @@ export const TESTIMONIAL = {
   absent: '00000000-0000-4000-a300-0000000000ff'
 } as const
 
+/** The first id the instrument's create path mints (`900000000000 + sequence 1`). */
+export const CREATED_ID = '00000000-0000-4000-a300-900000000001'
+
 /** The seed's avatar references, mirroring the instrument's `AVATAR_IDS`. */
 export const AVATAR = {
   featured: '00000000-0000-4000-b300-000000000001',
@@ -134,4 +137,16 @@ export async function listSettled(page: Page): Promise<void> {
 export async function expectNoKeyPaths(page: Page): Promise<void> {
   const text = await page.locator('main').innerText()
   expect(text, 'a raw i18n key path reached the screen').not.toMatch(/\b(dashboard|state|common|a11y)\.[a-zA-Z]/)
+}
+
+/**
+ * Wait until the EDITOR has settled into one of its terminal surfaces (`T·U3`).
+ *
+ * POSITIVE FIRST, for the reason `listSettled` records: waiting only for `aria-busy` to disappear is
+ * vacuous before the request starts, because nothing is busy yet either. So this waits for the form
+ * or an unreadable surface to actually EXIST, and only then requires that nothing is still busy.
+ */
+export async function editorSettled(page: Page): Promise<void> {
+  await page.locator('[data-testimonial-editor-ready], [data-editor-unreadable]').first().waitFor({ timeout: 15_000 })
+  await expect(page.locator('[aria-busy=true]')).toHaveCount(0, { timeout: 15_000 })
 }

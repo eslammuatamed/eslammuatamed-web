@@ -6,6 +6,7 @@ import process from 'node:process'
 const APP = resolve(process.cwd(), 'app')
 const MODULE_FILES = [
   'composables/admin-testimonial-fields.ts',
+  'composables/admin-testimonial-form.ts',
   'composables/useAdminTestimonials.ts',
   'pages/dashboard/testimonials/index.vue'
 ]

@@ -845,7 +845,53 @@
       "field": {
         "order": "Order",
         "visibility": "Visibility",
-        "avatar": "Avatar"
+        "avatar": "Avatar",
+        "quote": "Quote",
+        "author": "Author name",
+        "role": "Author role"
+      },
+      "editor": {
+        "createTitle": "New testimonial",
+        "editTitle": "Edit testimonial",
+        "description": "One client quote, in both languages. The avatar links an image from the media library.",
+        "back": "Back to testimonials",
+        "detailsSection": "Testimonial details",
+        "contentSection": "The quote",
+        "loadingTestimonial": "Loading the testimonial",
+        "notFoundTitle": "That testimonial does not exist",
+        "notFoundBody": "It may have been deleted. Go back to the list to see what is there.",
+        "loadFailedBody": "The testimonial could not be loaded. Try again, or go back to the list.",
+        "orderHelp": "An integer of zero or more. Display order on the site is decided by the API.",
+        "quoteHelp": "Up to 4000 characters.",
+        "complete": "Both languages written",
+        "incomplete": "One language written; the other can be added later.",
+        "errorSummaryTitle": "This testimonial could not be saved",
+        "tabInvalid": "Has errors",
+        "fill": {
+          "empty": "Not written",
+          "partial": "Incomplete",
+          "complete": "Written"
+        },
+        "save": "Save",
+        "saving": "Saving…",
+        "saved": "Saved",
+        "unsaved": "Unsaved changes",
+        "unsavedWarning": "This testimonial has unsaved changes. Leave the page and they are lost.",
+        "delete": "Delete",
+        "deleteConfirm": "Delete this testimonial",
+        "deleteCancel": "Keep it",
+        "deleteFailed": "The testimonial could not be deleted."
+      },
+      "validation": {
+        "orderInteger": "The order must be a whole number.",
+        "orderNegative": "The order must not be less than 0.",
+        "quoteRequired": "Write the quote in this language.",
+        "quoteTooLong": "The quote must be 4000 characters or fewer.",
+        "authorNameRequired": "Write the author name in this language.",
+        "authorNameTooLong": "The author name must be 160 characters or fewer.",
+        "authorRoleRequired": "Write the author role in this language.",
+        "authorRoleTooLong": "The author role must be 160 characters or fewer.",
+        "atLeastOneLocale": "Write the testimonial in at least one language."
       }
     },
     "projects": {

@@ -4,10 +4,12 @@ import { hydrated } from '../hydration'
 import {
   API_ORDER,
   AVATAR,
+  CREATED_ID,
   NARROW,
   OUT_OF_SEQUENCE_IDS,
   OUT_OF_SEQUENCE_ROWS,
   TESTIMONIAL,
+  editorSettled,
   expectNoKeyPaths,
   listSettled,
   resetBackend,
@@ -223,6 +225,289 @@ for (const locale of ['en', 'ar'] as const) {
       expect(results.violations).toEqual([])
 
       await setBackendState(page, { delayMs: 0 })
+    })
+  })
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════════════════════
+   `T·U3` — THE EDITOR, in the same lane and the SAME SPEC FILE.
+
+   This lane is `resetsBackendState: true`, which serialises it only while it is ONE spec file —
+   so the editor's browser coverage joins this file rather than starting a second one. Selection is
+   by structure (`[data-editor-*]`), never by rendered copy.
+   ══════════════════════════════════════════════════════════════════════════════════════════════ */
+
+test.describe('the editor — create', () => {
+  async function openNew(page: import('@playwright/test').Page, baseURL: string): Promise<void> {
+    await signIn(page, 'en', baseURL)
+    await page.goto('/dashboard/testimonials/new')
+    await editorSettled(page)
+  }
+
+  test('creates Arabic-first', async ({ page, baseURL }) => {
+    await openNew(page, baseURL!)
+    await page.locator('[data-editor-tabs] button').filter({ hasText: 'Arabic' }).click()
+    await page.locator('[data-editor-quote="ar"]').fill('عمل ممتاز من فريق رائع.')
+    await page.locator('[data-editor-author="ar"]').fill('أمينة خالد')
+    await page.locator('[data-editor-role="ar"]').fill('مديرة المنتج')
+    await page.locator('[data-editor-save]').click()
+    await expect(page).toHaveURL(new RegExp(`/dashboard/testimonials/${CREATED_ID}$`))
+  })
+
+  test('creates English-first', async ({ page, baseURL }) => {
+    await openNew(page, baseURL!)
+    await page.locator('[data-editor-quote="en"]').fill('Outstanding delivery under pressure.')
+    await page.locator('[data-editor-author="en"]').fill('Casey Jones')
+    await page.locator('[data-editor-role="en"]').fill('COO, Acme')
+    await page.locator('[data-editor-save]').click()
+    await expect(page).toHaveURL(new RegExp(`/dashboard/testimonials/${CREATED_ID}$`))
+  })
+
+  test('blocks a zero-translation save client-side — nothing reaches the wire', async ({ page, baseURL }) => {
+    await openNew(page, baseURL!)
+    // ⚠ DISCRIMINATING BY CONSTRUCTION. The API also rejects an empty translations array with a
+    // 422, so asserting only "a summary appears" would pass on the server's backstop alone and
+    // prove nothing about the frontend's OD-14 guard. The invariant is that NO request is sent.
+    const createRequests: string[] = []
+    page.on('request', (request) => {
+      if (request.method() === 'POST' && request.url().includes('/api/v1/admin/testimonials')) {
+        createRequests.push(request.url())
+      }
+    })
+
+    await page.locator('[data-editor-save]').click()
+    await expect(page.locator('[data-editor-error-summary]')).toBeVisible()
+    await expect(page).toHaveURL(/\/dashboard\/testimonials\/new$/)
+    expect(createRequests, 'an unguarded save reached the API').toEqual([])
+  })
+
+  for (const attempt of [
+    { label: 'negative', value: '-1' },
+    { label: 'fractional', value: '2.75' }
+  ]) {
+    test(`blocks an ${attempt.label} order from ever reaching the wire`, async ({ page, baseURL }) => {
+      await openNew(page, baseURL!)
+      await page.locator('[data-editor-quote="en"]').fill('Valid quote.')
+      await page.locator('[data-editor-author="en"]').fill('Casey Jones')
+      await page.locator('[data-editor-role="en"]').fill('COO, Acme')
+      await page.locator('[data-editor-order]').fill(attempt.value)
+
+      const sentOrders: number[] = []
+      page.on('request', (request) => {
+        if (request.method() === 'POST' && request.url().includes('/api/v1/admin/testimonials')) {
+          sentOrders.push(JSON.parse(request.postData() ?? '{}').order)
+        }
+      })
+
+      await page.locator('[data-editor-save]').click()
+      // Two defenses stand between the operator and the wire: the control's own floor/step clamps
+      // what the FORM can hold, and the Zod refinement blocks anything else client-side. Which one
+      // fires is irrelevant to the contract — assert the INVARIANT: the save either lands with an
+      // in-contract order, or is blocked outright with nothing sent.
+      const outcome = await Promise.race([
+        page.waitForURL(new RegExp(`/dashboard/testimonials/${CREATED_ID}$`)).then(() => 'saved'),
+        page.locator('[data-editor-error-summary]').waitFor().then(() => 'blocked')
+      ])
+      expect(['saved', 'blocked']).toContain(outcome)
+      for (const order of sentOrders) {
+        expect(Number.isInteger(order), `${attempt.label} order ${order} left the form`).toBe(true)
+        expect(order, `${attempt.label} order ${order} reached the API`).toBeGreaterThanOrEqual(0)
+      }
+    })
+  }
+
+  test('maps an intercepted translations[i].locale 422 onto the SENT array\'s locale tab', async ({ page, baseURL }) => {
+    await openNew(page, baseURL!)
+    // Both locales authored, English sent first: index 1 of the sent array is ARABIC. Inactive
+    // tab panels stay mounted but HIDDEN, so each locale is filled under its own tab.
+    for (const locale of ['en', 'ar'] as const) {
+      if (locale !== 'en') {
+        await page.locator('[data-editor-tabs] button').filter({ hasText: 'Arabic' }).click()
+      }
+      await page.locator(`[data-editor-quote="${locale}"]`).fill(`Quote ${locale}.`)
+      await page.locator(`[data-editor-author="${locale}"]`).fill(`Author ${locale}`)
+      await page.locator(`[data-editor-role="${locale}"]`).fill(`Role ${locale}`)
+    }
+    await page.route('**/api/v1/admin/testimonials', async (route) => {
+      await route.fulfill({
+        status: 422,
+        contentType: 'application/problem+json',
+        body: JSON.stringify({
+          type: '/problems/validation',
+          title: 'Validation failed',
+          status: 422,
+          errors: [{ field: 'translations[1].locale', message: 'locale must be a two-letter lowercase locale.' }]
+        })
+      })
+    })
+    await page.locator('[data-editor-save]').click()
+    await expect(page.locator('[data-editor-tab-invalid="ar"]')).toBeVisible()
+    await expect(page.locator('[data-editor-panel="ar"]')).toBeVisible()
+    await page.unroute('**/api/v1/admin/testimonials')
+  })
+})
+
+test.describe('the editor — edit', () => {
+  async function openEdit(page: import('@playwright/test').Page, baseURL: string): Promise<void> {
+    await signIn(page, 'en', baseURL)
+    await page.goto(`/dashboard/testimonials/${TESTIMONIAL.featured}`)
+    await editorSettled(page)
+  }
+
+  test('loads both existing translations correctly', async ({ page, baseURL }) => {
+    await openEdit(page, baseURL!)
+    await expect(page.locator('[data-editor-quote="en"]')).toHaveValue('The team turned a difficult brief into a dependable product.')
+    await expect(page.locator('[data-editor-author="en"]')).toHaveValue('Alex Morgan')
+    await page.locator('[data-editor-tabs] button').filter({ hasText: 'Arabic' }).click()
+    await expect(page.locator('[data-editor-quote="ar"]')).toHaveValue('حوّل الفريق متطلبات معقدة إلى منتج يمكن الاعتماد عليه.')
+    await expect(page.locator('[data-editor-author="ar"]')).toHaveValue('أليكس مورغان')
+  })
+
+  test('OMITS avatarId from PATCH when untouched — the linked asset is preserved by omission', async ({ page, baseURL }) => {
+    await openEdit(page, baseURL!)
+    // The picker resolved the stored avatar, proving the read side; nothing touches it below.
+    await expect(page.locator('[data-picker-filename]')).toContainText('avatar-alex.webp')
+
+    const patchPromise = page.waitForRequest(
+      request => request.method() === 'PATCH' && request.url().includes(`/api/v1/admin/testimonials/${TESTIMONIAL.featured}`)
+    )
+    await page.locator('[data-editor-order]').fill('7')
+    await page.locator('[data-editor-save]').click()
+    const body = JSON.parse((await patchPromise).postData() ?? '{}')
+    expect(body).not.toHaveProperty('avatarId')
+  })
+
+  test('an explicit clear sends avatarId null; choosing another asset sends its id', async ({ page, baseURL }) => {
+    await openEdit(page, baseURL!)
+
+    let patchPromise = page.waitForRequest(
+      request => request.method() === 'PATCH' && request.url().includes(`/api/v1/admin/testimonials/${TESTIMONIAL.featured}`)
+    )
+    await page.locator('[data-picker-clear]').click()
+    await page.locator('[data-editor-save]').click()
+    expect(JSON.parse((await patchPromise).postData() ?? '{}')).toHaveProperty('avatarId', null)
+
+    // Replace: pick the spare asset from the library dialog and save — the new id travels.
+    await page.locator('[data-picker-open]').click()
+    await page.locator(`[data-media-id="${AVATAR.replacement}"]`).click()
+    patchPromise = page.waitForRequest(
+      request => request.method() === 'PATCH' && request.url().includes(`/api/v1/admin/testimonials/${TESTIMONIAL.featured}`)
+    )
+    await page.locator('[data-editor-save]').click()
+    expect(JSON.parse((await patchPromise).postData() ?? '{}'))
+      .toHaveProperty('avatarId', AVATAR.replacement)
+  })
+
+  test('upsert changes only the supplied locale — the other survives untouched', async ({ page, baseURL }) => {
+    await openEdit(page, baseURL!)
+    const patchPromise = page.waitForRequest(
+      request => request.method() === 'PATCH' && request.url().includes(`/api/v1/admin/testimonials/${TESTIMONIAL.featured}`)
+    )
+    await page.locator('[data-editor-quote="en"]').fill('Edited English quote.')
+    await page.locator('[data-editor-save]').click()
+    const body = JSON.parse((await patchPromise).postData() ?? '{}')
+    expect(body.translations.map((entry: { locale: string }) => entry.locale).sort()).toEqual(['ar', 'en'])
+
+    // Reload through the real backend: the edited English arrived AND the untouched Arabic is
+    // byte-identical to what was loaded.
+    await page.reload()
+    await editorSettled(page)
+    await expect(page.locator('[data-editor-quote="en"]')).toHaveValue('Edited English quote.')
+    await expect(page.locator('[data-editor-author="ar"]')).toHaveValue('أليكس مورغان')
+    await expect(page.locator('[data-editor-quote="ar"]')).toHaveValue('حوّل الفريق متطلبات معقدة إلى منتج يمكن الاعتماد عليه.')
+  })
+
+  test('clearing a locale in the form NEVER clears it server-side — omission is not replace-all', async ({ page, baseURL }) => {
+    await openEdit(page, baseURL!)
+    const patchPromise = page.waitForRequest(
+      request => request.method() === 'PATCH' && request.url().includes(`/api/v1/admin/testimonials/${TESTIMONIAL.featured}`)
+    )
+    // The Arabic panel is hidden until its tab is active.
+    await page.locator('[data-editor-tabs] button').filter({ hasText: 'Arabic' }).click()
+    await page.locator('[data-editor-quote="ar"]').fill('')
+    await page.locator('[data-editor-author="ar"]').fill('')
+    await page.locator('[data-editor-role="ar"]').fill('')
+    await page.locator('[data-editor-save]').click()
+    const body = JSON.parse((await patchPromise).postData() ?? '{}')
+    // Upsert semantics: the incomplete locale drops out of the sent array instead of being wiped.
+    expect(body.translations.map((entry: { locale: string }) => entry.locale)).toEqual(['en'])
+
+    await page.reload()
+    await editorSettled(page)
+    await expect(page.locator('[data-editor-quote="ar"]')).toHaveValue('حوّل الفريق متطلبات معقدة إلى منتج يمكن الاعتماد عليه.')
+  })
+
+  test('deletes with confirmation and lands back on the collection without the row', async ({ page, baseURL }) => {
+    // openEdit loads the FEATURED fixture; that is the row this test deletes.
+    await openEdit(page, baseURL!)
+    await page.locator('[data-editor-delete]').click()
+    await page.locator('[data-editor-delete-confirm]').click()
+    await expect(page).toHaveURL(/\/dashboard\/testimonials$/)
+    await listSettled(page)
+    await expect(rows(page)).toHaveCount(3)
+    await expect(page.locator(`[data-testimonial-row="${TESTIMONIAL.featured}"]`)).toHaveCount(0)
+  })
+
+  test('renders the established not-found and failed-load states', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL!)
+    await page.goto('/dashboard/testimonials/not-a-uuid')
+    await expect(page.locator('[data-editor-unreadable]')).toBeVisible()
+    await expect(page.locator('[data-editor-unreadable]')).toContainText('does not exist')
+
+    await setBackendState(page, { mode: 'error' })
+    await page.goto(`/dashboard/testimonials/${TESTIMONIAL.featured}`)
+    await expect(page.locator('[data-editor-unreadable]')).toBeVisible()
+    await expect(page.locator('[data-editor-unreadable]')).toContainText('could not be loaded')
+  })
+
+  test('shows content-shaped loading while the detail read is held', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL!)
+    await setBackendState(page, { delayMs: 2000 })
+    await page.goto(`/dashboard/testimonials/${TESTIMONIAL.featured}`)
+    await expect(page.locator('[aria-busy=true]').first()).toBeVisible()
+    await setBackendState(page, { delayMs: 0 })
+    await editorSettled(page)
+    await expect(page.locator('[data-testimonial-editor-ready]')).toBeVisible()
+  })
+})
+
+/* ── T·U3 accessibility — focused, per locale, settled AND loading editor states ──────────────── */
+
+for (const locale of ['en', 'ar'] as const) {
+  test.describe(`editor a11y · ${locale}`, () => {
+    test(`${locale}: the EDITOR reports no axe violations`, async ({ page, baseURL }) => {
+      await signIn(page, locale, baseURL as string)
+      await page.goto(`/dashboard/testimonials/${TESTIMONIAL.featured}`)
+      await hydrated(page)
+      await editorSettled(page)
+
+      const results = await new AxeBuilder({ page }).analyze()
+      expect(results.violations).toEqual([])
+    })
+
+    test(`${locale}: the EDITOR does not overflow at 380px`, async ({ page, baseURL }) => {
+      await page.setViewportSize(NARROW)
+      await signIn(page, locale, baseURL as string)
+      // COLD load with the preference planted before first paint, mirroring the bilingual suite.
+      await page.goto(`/dashboard/testimonials/${TESTIMONIAL.featured}`)
+      await hydrated(page)
+      await editorSettled(page)
+
+      expect(await page.evaluate(() => window.innerWidth)).toBe(NARROW.width)
+      await expect(shell(page)).toHaveAttribute('dir', locale === 'ar' ? 'rtl' : 'ltr')
+      await expectNoKeyPaths(page)
+      // Field direction is INDEPENDENT of chrome direction.
+      await expect(page.locator('[data-editor-panel="ar"]')).toHaveAttribute('dir', 'rtl')
+      await expect(page.locator('[data-editor-panel="en"]')).toHaveAttribute('dir', 'ltr')
+
+      const overflow = await page.evaluate(() => ({
+        scrollWidth: document.documentElement.scrollWidth,
+        clientWidth: document.documentElement.clientWidth
+      }))
+      expect(
+        overflow.scrollWidth,
+        `the editor overflows at ${NARROW.width}px in ${locale}`
+      ).toBeLessThanOrEqual(overflow.clientWidth + 1)
     })
   })
 }

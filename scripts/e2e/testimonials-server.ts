@@ -59,6 +59,59 @@ export const AVATAR_IDS = {
   replacement: '00000000-0000-4000-b300-000000000003'
 } as const
 
+interface SeedMediaAsset {
+  id: string
+  kind: 'IMAGE' | 'PDF'
+  mimeType: string
+  sizeBytes: number
+  originalFilename: string
+  width: number | null
+  height: number | null
+}
+
+/**
+ * The minimal media surface the SHARED `MediaPicker` component reads (`T·U3`). ADDITIVE ONLY: no
+ * `/admin/testimonials*` route above changed its contract — these endpoints exist so the established
+ * avatar control can resolve and browse assets inside this lane instead of the editor inventing a
+ * second media architecture. Seeded with exactly the avatars the testimonial fixtures reference,
+ * plus one spare a test can select.
+ */
+const MEDIA_SEEDS: SeedMediaAsset[] = [
+  { id: AVATAR_IDS.featured, kind: 'IMAGE', mimeType: 'image/webp', sizeBytes: 24_500, originalFilename: 'avatar-alex.webp', width: 640, height: 640 },
+  { id: AVATAR_IDS.hidden, kind: 'IMAGE', mimeType: 'image/webp', sizeBytes: 25_100, originalFilename: 'avatar-sam.webp', width: 640, height: 640 },
+  { id: AVATAR_IDS.replacement, kind: 'IMAGE', mimeType: 'image/webp', sizeBytes: 26_400, originalFilename: 'avatar-jordan.webp', width: 640, height: 640 }
+]
+
+let mediaAssets: SeedMediaAsset[] = MEDIA_SEEDS.map(asset => ({ ...asset }))
+let uploadSequence = 0
+
+function mediaVariants(asset: SeedMediaAsset) {
+  if (asset.kind === 'PDF') return []
+  return [
+    { format: 'WEBP', width: 320, height: 320, url: `http://127.0.0.1:0/media/${asset.id}-320.webp` },
+    { format: 'WEBP', width: 640, height: 640, url: `http://127.0.0.1:0/media/${asset.id}-640.webp` }
+  ]
+}
+
+function mediaEntity(asset: SeedMediaAsset) {
+  return {
+    id: asset.id,
+    kind: asset.kind,
+    url: `http://127.0.0.1:0/media/${asset.id}.webp`,
+    mimeType: asset.mimeType,
+    sizeBytes: asset.sizeBytes,
+    originalFilename: asset.originalFilename,
+    width: asset.width,
+    height: asset.height,
+    blurhash: asset.kind === 'IMAGE' ? 'LEHV6nWB2yk8pyo0adR*.7kCMdnj' : null,
+    contentHash: `hash-${asset.id}`,
+    variants: mediaVariants(asset),
+    alts: [],
+    createdAt: '2026-08-01T00:00:00.000Z',
+    updatedAt: '2026-08-01T00:00:00.000Z'
+  }
+}
+
 function seedTestimonials(): SeedAdminTestimonial[] {
   return [
     {
@@ -307,6 +360,8 @@ async function handleRequest(req: http.IncomingMessage, res: http.ServerResponse
     delayMs = 0
     failNextWrite = false
     createdSequence = 0
+    mediaAssets = MEDIA_SEEDS.map(asset => ({ ...asset }))
+    uploadSequence = 0
     return json(res, 200, { ok: true })
   }
   if (path === '/__e2e/state' && req.method === 'POST') {
@@ -445,6 +500,49 @@ async function handleRequest(req: http.IncomingMessage, res: http.ServerResponse
   if (path.startsWith(`${API_PREFIX}/admin/messages`) && req.method === 'GET') {
     if (!authorized(req)) return problem(res, 401, 'Unauthorized')
     return json(res, 200, { data: [], meta: { page: 1, perPage: 12, total: 0, totalPages: 1 } })
+  }
+
+  // The shared MediaPicker's read surface (T·U3). List, resolve and upload — deliberately NOT the
+  // delete/usages half of the media contract, which no Testimonials flow exercises.
+  if (path.startsWith(`${API_PREFIX}/admin/media`)) {
+    if (!authorized(req)) return problem(res, 401, 'Unauthorized')
+    const rest = path.slice(`${API_PREFIX}/admin/media`.length)
+
+    if (rest === '' && req.method === 'GET') {
+      const q = (url.searchParams.get('q') ?? '').trim().toLowerCase()
+      const kind = url.searchParams.get('kind')
+      const page = Math.max(1, Number(url.searchParams.get('page') ?? '1') || 1)
+      const perPage = Math.min(60, Math.max(1, Number(url.searchParams.get('perPage') ?? '12') || 12))
+      let pool = mediaAssets
+      if (q) pool = pool.filter(asset => asset.originalFilename.toLowerCase().includes(q))
+      if (kind === 'IMAGE' || kind === 'PDF') pool = pool.filter(asset => asset.kind === kind)
+      const total = pool.length
+      const totalPages = Math.max(1, Math.ceil(total / perPage))
+      const slice = pool.slice((page - 1) * perPage, page * perPage)
+      return json(res, 200, { data: slice.map(mediaEntity), meta: { page, perPage, total, totalPages } })
+    }
+
+    if (rest === '' && req.method === 'POST') {
+      await readBody(req)
+      uploadSequence += 1
+      const asset: SeedMediaAsset = {
+        id: `00000000-0000-4000-b300-${String(800000000000 + uploadSequence).padStart(12, '0')}`,
+        kind: 'IMAGE',
+        mimeType: 'image/webp',
+        sizeBytes: 20_000 + uploadSequence,
+        originalFilename: `upload-${uploadSequence}.webp`,
+        width: 640,
+        height: 640
+      }
+      mediaAssets.push(asset)
+      return json(res, 201, { data: mediaEntity(asset) })
+    }
+
+    if (rest.startsWith('/') && req.method === 'GET') {
+      const target = mediaAssets.find(asset => asset.id === rest.slice(1))
+      if (!target) return problem(res, 404, 'Not found')
+      return json(res, 200, { data: mediaEntity(target) })
+    }
   }
 
   return problem(res, 404, 'Not found')
