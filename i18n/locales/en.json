@@ -344,7 +344,8 @@
       "system": "System",
       "profile": "Profile",
       "experiences": "Experience",
-      "skills": "Skills"
+      "skills": "Skills",
+      "testimonials": "Testimonials"
     },
     "messages": {
       "title": "Messages",
@@ -813,6 +814,38 @@
         "labelRequired": "Write a name in this language.",
         "labelTooLong": "The name must be 120 characters or fewer.",
         "atLeastOneLocale": "Write the skill in at least one language."
+      }
+    },
+    "testimonials": {
+      "title": "Testimonials",
+      "description": "Client quotes shown on the home page, in both languages.",
+      "retry": "Try again",
+      "staleNotice": "This list may be out of date — the last refresh did not complete.",
+      "errorTitle": "Testimonials could not be loaded",
+      "forbiddenTitle": "You do not have access to testimonials",
+      "forbiddenBody": "This account is not permitted to manage testimonials.",
+      "emptyTitle": "No testimonials yet",
+      "emptyBody": "Add the first testimonial and it will appear here.",
+      "listRegionLabel": "Testimonials",
+      "resultCount": "{total} testimonials",
+      "untitled": "Untitled testimonial",
+      "create": "New testimonial",
+      "edit": "Edit",
+      "editFor": "Edit {author}",
+      "visible": "Visible",
+      "hidden": "Hidden",
+      "avatarLinked": "Avatar linked",
+      "noAvatar": "No avatar",
+      "translationState": {
+        "label": "Translations",
+        "present": "{locale} written",
+        "missing": "{locale} missing"
+      },
+      "locale": { "en": "English", "ar": "Arabic" },
+      "field": {
+        "order": "Order",
+        "visibility": "Visibility",
+        "avatar": "Avatar"
       }
     },
     "projects": {

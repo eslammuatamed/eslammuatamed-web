@@ -193,6 +193,15 @@ export const LANES: readonly Lane[] = [
     readyPath: '/',
     resetsBackendState: true,
     why: 'FE-3 module 2: the Skills collection and its future editor use mutable fixtures, and the lane must own exactly one resettable backend process pair'
+  },
+  {
+    project: 'dashboard-testimonials',
+    dir: 'dashboard-testimonials',
+    backend: 'testimonials',
+    ports: { webEnv: 'CI_TESTIMONIALS_PORT', apiEnv: 'CI_TESTIMONIALS_MOCK_PORT', webDefault: 4300, apiDefault: 4301 },
+    readyPath: '/',
+    resetsBackendState: true,
+    why: 'FE-3 module 3: the Testimonials collection pins the SERVER order against mutable fixtures whose order values run deliberately out of sequence, which requires its own resettable backend process pair'
   }
 ] as const
 

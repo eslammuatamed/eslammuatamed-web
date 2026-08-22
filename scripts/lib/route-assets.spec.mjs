@@ -889,8 +889,20 @@ describe('assertGovernedRouteCoverage — both directions (D20-29)', () => {
     const measured = DASHBOARD_ROUTES.map(r => r.route)
     // 12 -> 14: D20-35 registers the two Experiences editor routes (`M1·U3`).
     // 14 -> 17: D20-36 governs all three Skills routes (`M2·U2` collection + `M2·U3` editors).
-    expect(measured).toHaveLength(17)
-    expect(() => assertGovernedRouteCoverage(measured)).not.toThrow()
+    // 17 -> 18: T·U2 registers the Testimonials collection, deliberately UNGOVERNED until the owner
+    // derives its cap from its own measured baseline — so the coverage assertion here is
+    // temporarily two-sided: the inventory grew, and `assertGovernedRouteCoverage` is expected to
+    // NAME exactly that route as measured-but-not-governed and nothing else.
+    expect(measured).toHaveLength(18)
+    let message = ''
+    try {
+      assertGovernedRouteCoverage(measured)
+    } catch (error) {
+      message = error.message
+    }
+    expect(message).toMatch(/measured but NOT governed/)
+    expect(message).toMatch(/\/dashboard\/testimonials(?!\/)/)
+    expect(message).not.toMatch(/governed but NOT measured/)
   })
 
   it('detects a route added to the gate without a doc 20 cap', () => {
@@ -1200,7 +1212,10 @@ describe('D20-32 — resolveDashboardSharedFloor and its FROZEN reference set', 
       // D20-36 — all three Skills routes, joining under the same shrink-on-add protection.
       '/dashboard/skills',
       '/dashboard/skills/00000000-0000-0000-0000-000000000000',
-      '/dashboard/skills/new'
+      '/dashboard/skills/new',
+      // T·U2 — the Testimonials collection, registered measured-but-ungoverned and, like every
+      // route above, staying OUT of the frozen floor set.
+      '/dashboard/testimonials'
     ])
   })
 

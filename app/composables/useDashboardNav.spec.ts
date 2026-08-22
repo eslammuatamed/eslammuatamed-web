@@ -45,14 +45,24 @@ describe('isNavItemActive', () => {
 describe('the navigation model', () => {
   const items = () => useDashboardNav().groups.value.flatMap(group => group.items)
 
-  it('offers Articles, Experience, Skills and Projects, in the Content group', () => {
+  it('offers Articles, Experience, Skills, Testimonials and Projects, in the Content group', () => {
     const groups = useDashboardNav().groups.value
     const content = groups.find(group => group.key === 'content')
-    expect(content?.items.map(item => item.key)).toEqual(['articles', 'experiences', 'skills', 'projects'])
+    expect(content?.items.map(item => item.key)).toEqual([
+      'articles',
+      'experiences',
+      'skills',
+      'testimonials',
+      'projects'
+    ])
   })
 
   it('points Experience at a route that EXISTS — no placeholder destinations', () => {
     expect(items().find(item => item.key === 'experiences')?.to).toBe('/dashboard/experiences')
+  })
+
+  it('points Testimonials at the collection route that EXISTS — no editor placeholder', () => {
+    expect(items().find(item => item.key === 'testimonials')?.to).toBe('/dashboard/testimonials')
   })
 
   it('points Projects at a route that EXISTS — no placeholder destinations', () => {

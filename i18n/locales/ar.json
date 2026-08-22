@@ -344,7 +344,8 @@
       "system": "النظام",
       "profile": "الملف الشخصي",
       "experiences": "الخبرات",
-      "skills": "المهارات"
+      "skills": "المهارات",
+      "testimonials": "التوصيات"
     },
     "messages": {
       "title": "الرسائل",
@@ -813,6 +814,38 @@
         "labelRequired": "اكتب اسم المهارة بهذه اللغة.",
         "labelTooLong": "يجب ألّا يتجاوز الاسم 120 حرفًا.",
         "atLeastOneLocale": "اكتب المهارة بلغة واحدة على الأقل."
+      }
+    },
+    "testimonials": {
+      "title": "التوصيات",
+      "description": "اقتباسات العملاء المعروضة في الصفحة الرئيسية، باللغتين.",
+      "retry": "حاول مرة أخرى",
+      "staleNotice": "قد تكون هذه القائمة غير محدّثة — لم يكتمل التحديث الأخير.",
+      "errorTitle": "تعذّر تحميل التوصيات",
+      "forbiddenTitle": "لا تملك صلاحية الوصول إلى التوصيات",
+      "forbiddenBody": "هذا الحساب غير مصرَّح له بإدارة التوصيات.",
+      "emptyTitle": "لا توجد توصيات بعد",
+      "emptyBody": "أضِف أول توصية وستظهر هنا.",
+      "listRegionLabel": "التوصيات",
+      "resultCount": "{total} توصيات",
+      "untitled": "توصية بلا اسم",
+      "create": "توصية جديدة",
+      "edit": "تعديل",
+      "editFor": "تعديل توصية {author}",
+      "visible": "ظاهرة",
+      "hidden": "مخفية",
+      "avatarLinked": "صورة مرتبطة",
+      "noAvatar": "بلا صورة",
+      "translationState": {
+        "label": "الترجمات",
+        "present": "{locale} مكتوبة",
+        "missing": "{locale} ناقصة"
+      },
+      "locale": { "en": "الإنجليزية", "ar": "العربية" },
+      "field": {
+        "order": "الترتيب",
+        "visibility": "الظهور",
+        "avatar": "الصورة"
       }
     },
     "projects": {

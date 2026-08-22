@@ -227,6 +227,10 @@ export const DASHBOARD_ROUTES = [
     route: '/dashboard/skills/00000000-0000-0000-0000-000000000000',
     pageModule: 'app/pages/dashboard/skills/[id].vue'
   },
+  // T·U2 (FE-3 module 3) — register the Testimonials collection for measurement, following the
+  // M2·U2 rule verbatim: measured but deliberately UNGOVERNED until the owner derives its cap from
+  // its own measured baseline. No sibling number is inherited.
+  { route: '/dashboard/testimonials', pageModule: 'app/pages/dashboard/testimonials/index.vue' },
   { route: '/dashboard/projects', pageModule: 'app/pages/dashboard/projects/index.vue' },
   { route: '/dashboard/projects/new', pageModule: 'app/pages/dashboard/projects/new.vue' },
   // A CONCRETE id, because the gate fetches each route to read the CSS out of its rendered shell.

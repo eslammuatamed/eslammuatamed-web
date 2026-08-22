@@ -283,6 +283,9 @@ describe('dashboard closure — governed routes must always be measurable', () =
       // `M2·U3` created them — caps derived from their OWN baselines, none inherited.
       '/dashboard/skills', '/dashboard/skills/new',
       '/dashboard/skills/00000000-0000-0000-0000-000000000000',
+      // The Testimonials module (FE-3 module 3). The collection was registered at T·U2 deliberately
+      // ungoverned — measured, awaiting an owner cap derived from its own baseline, none inherited.
+      '/dashboard/testimonials',
       // The Projects module. The editor is registered under a concrete id because the gate fetches
       // the route; `/dashboard/**` is `ssr: false`, so which id is used cannot change the shell.
       '/dashboard/projects', '/dashboard/projects/new',

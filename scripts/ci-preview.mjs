@@ -186,6 +186,17 @@ const BACKENDS = {
     command: process.execPath,
     args: () => ['scripts/e2e/skills-server.ts']
   },
+  // FE-3 module 3. A separate process from `skills` for the same invariant, not for symmetry: a
+  // mutable lane is serial only while it is ONE spec file. What this lane holds that Skills cannot
+  // is fixtures whose `order` values run deliberately OUT of sequence — the discriminating state
+  // that makes a client-side re-sort fail loudly instead of passing by coincidence with a
+  // monotonic seed. Its instrument (`testimonials-server.ts`) and calibration landed in T·U1;
+  // registering the backend belongs to T·U2's browser lane.
+  testimonials: {
+    label: 'testimonials backend (FE-3 module 3, mutable)',
+    command: process.execPath,
+    args: () => ['scripts/e2e/testimonials-server.ts']
+  },
   // Project-detail freshness. This backend starts with an empty gallery and exposes test-only
   // controls that publish the authored gallery after both localized detail pages have been primed.
   // Its own process is essential: the regression observes mutable upstream state while every other

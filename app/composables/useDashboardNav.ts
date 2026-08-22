@@ -51,6 +51,10 @@ export function useDashboardNav() {
     // STILL NO `roles` PREDICATE, for the reason the header gives. Projects are permission-gated on
     // the API like everything else here, and the page answers that with its `forbidden` state
     // (D11-2) — a real answer, rather than an inference from a role name.
+    //
+    // Testimonials joins with FE-3 module 3. `/dashboard/testimonials` EXISTS as of `T·U2`, so it is
+    // not a placeholder destination; its future editor child routes will be covered by the same
+    // prefix match rather than by entries of their own.
     {
       key: 'content',
       // Articles leads the Content group, matching doc 04's ordering rather than the order the
@@ -62,6 +66,7 @@ export function useDashboardNav() {
         { key: 'articles', to: '/dashboard/articles', icon: 'i-lucide-newspaper' },
         { key: 'experiences', to: '/dashboard/experiences', icon: 'i-lucide-briefcase' },
         { key: 'skills', to: '/dashboard/skills', icon: 'i-lucide-brain' },
+        { key: 'testimonials', to: '/dashboard/testimonials', icon: 'i-lucide-message-square-quote' },
         { key: 'projects', to: '/dashboard/projects', icon: 'i-lucide-folder-kanban' }
       ]
     },
