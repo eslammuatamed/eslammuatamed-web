@@ -2848,3 +2848,41 @@ R13 factual state: public CSS 29.19 kB gz / 30 kB cap — Δ0 vs the previous 29
 R14 factual state: 12 declared lanes; Skills focused selection = 17 tests, one lane resolved; one
 preview/backend pair booted. No R14 redesign in this task. M2 remains open only for cap
 governance/final closure.
+
+### FE-3 Module 2 (Skills) closure checkpoint — 2026-08-22
+
+**D20-36 REGISTERED AND VERIFIED — Module 2 is COMPLETE.** The owner approved all three Skills caps
+as one batched decision; each is D20-29's formula on its OWN measured baseline, no sibling number
+inherited or rounded toward:
+
+| Route | Baseline | Cap |
+| --- | --- | --- |
+| `/dashboard/skills` | 83,997 B | **97,280 B** (95 KiB) |
+| `/dashboard/skills/new` | 96,571 B | **111,616 B** (109 KiB) |
+| `/dashboard/skills/{id}` | 96,679 B | **111,616 B** (109 KiB) |
+
+Registration: `scripts/lib/route-assets.mjs` (`DASHBOARD_APP_OWNED_CAP_BYTES` + baseline/provenance
+records, provenance tree `785d1b83c4f249d3af175bc081b7c2ebda5d97c4`) and the two editor routes in
+`DASHBOARD_ROUTES` — the same mechanism Articles and Experiences use; no new budget system. Web
+governance commit `b871e66`; Doc 20 decision recorded on the private Docs campaign branch as
+**D20-36** (Docs `9bbc525`, local-only). Route-budget focused specs updated and green:
+`route-assets` + `dashboard-closure` + `check-route-size` = **184/184**, including the discriminating
+assertions that pin the owner's exact bytes and reject consistency-rounding.
+
+Authoritative verification on a fresh provenance-valid build at `b871e66` (real build exit **0**
+recorded directly): **`size:routes` exit 0** across all seventeen governed routes. Skills rows:
+collection Δ-floor 6,972 B / app 83,997 ≤ 97,280 ✓ · new Δ 72,287 / 96,571 ≤ 111,616 ✓ (D20-24
+quality-target warning, same band as every content-module editor) · {id} Δ 72,331 / 96,679 ≤
+111,616 ✓ (same warning).
+
+**Final evidence for the module:** collection complete (M2·U2 request-state contract + third
+public-isolation gate); editor complete (M2·U3, bilingual Zod + UForm); OD-14 semantics covered —
+zero translations → INVALID/blocked, one → VALID-but-INCOMPLETE, all configured → COMPLETE, with the
+zero-translation client invariant's discriminating control proven in the isolated lane (the test
+fails when the block is removed); Arabic-first and English-first saves covered; PATCH excludes slug;
+`brandColor: null` explicit clear; translation 422 → Arabic locale tab activated. Official
+`dashboard-skills` E2E lane **17/17, exit 0** on exactly one preview/backend pair. Public CSS
+remains **29.19 / 30 KB** gz; lane count remains **12**. Nothing was pushed or deployed.
+
+FE-3 state after this closure: modules 1–2 COMPLETE; modules 3–5 (Projects extraction verdicts,
+Testimonials, Taxonomy per OD-12/OD-15 sequencing) remain OPEN. No next module was started here.
