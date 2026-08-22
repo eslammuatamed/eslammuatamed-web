@@ -642,8 +642,11 @@ describe('dashboard app-owned caps — frozen, per route (D20-29)', () => {
     '/dashboard/testimonials/new',
     '/dashboard/testimonials/00000000-0000-0000-0000-000000000000'
   ]
+  // U2 — ONE destination hosting BOTH the Categories and Tags collections (plan §7.1), so ONE
+  // budget line carries both.
+  const D20_39_ROUTES = ['/dashboard/taxonomy']
 
-  it('governs exactly the twenty routes doc 20 §1.1 names — no more, no fewer', () => {
+  it('governs exactly the twenty-one routes doc 20 §1.1 names — no more, no fewer', () => {
     expect(Object.keys(DASHBOARD_APP_OWNED_CAP_BYTES).sort())
       .toEqual([
         ...D20_23_ROUTES,
@@ -653,7 +656,8 @@ describe('dashboard app-owned caps — frozen, per route (D20-29)', () => {
         ...D20_35_ROUTES,
         ...D20_36_ROUTES,
         ...D20_37_ROUTES,
-        ...D20_38_ROUTES
+        ...D20_38_ROUTES,
+        ...D20_39_ROUTES
       ].sort())
   })
 
@@ -718,6 +722,23 @@ describe('dashboard app-owned caps — frozen, per route (D20-29)', () => {
     // The collection's governed number was NOT re-derived by this decision.
     expect(DASHBOARD_APP_OWNED_BASELINE_BYTES['/dashboard/testimonials']).toBe(86_069)
     expect(DASHBOARD_APP_OWNED_CAP_BYTES['/dashboard/testimonials']).toBe(99_328)
+  })
+
+  it("derives the D20-39 cap from its OWN recorded baseline and pins the owner's exact bytes", () => {
+    for (const route of D20_39_ROUTES) {
+      const baseline = DASHBOARD_APP_OWNED_BASELINE_BYTES[route]
+      expect(baseline, `${route} must record the baseline its cap was derived from`).toBeTypeOf('number')
+      expect(approvedAppLimitBytes(baseline), `${route} cap must equal ceil((baseline x 1.15)/KiB) x KiB`)
+        .toBe(DASHBOARD_APP_OWNED_CAP_BYTES[route])
+    }
+    // The owner's exact numbers, pinned so a later "tidy" cannot drift them silently.
+    expect(DASHBOARD_APP_OWNED_BASELINE_BYTES['/dashboard/taxonomy']).toBe(92_160)
+    expect(DASHBOARD_APP_OWNED_CAP_BYTES['/dashboard/taxonomy']).toBe(106_496)
+    // Route-specific: NOT inherited — no sibling shares this number, and no sibling baseline equals it.
+    for (const [sibling, bytes] of Object.entries(DASHBOARD_APP_OWNED_BASELINE_BYTES)) {
+      if (sibling === '/dashboard/taxonomy') continue
+      expect(bytes, `${sibling} must not share the taxonomy baseline`).not.toBe(92_160)
+    }
   })
 
   it('derives every D20-36 cap from its OWN recorded baseline, not from a sibling', () => {
@@ -870,6 +891,9 @@ describe('dashboard app-owned caps — frozen, per route (D20-29)', () => {
       // deliberately different numbers.
       '/dashboard/testimonials/new': 144_384,
       '/dashboard/testimonials/00000000-0000-0000-0000-000000000000': 145_408,
+      // D20-39 — the Taxonomy destination (Categories + Tags as one route), from its own baseline
+      // (92,160 B). 106,496 B = 104 KiB, exactly what the owner approved; no rounding upward.
+      '/dashboard/taxonomy': 106_496,
       '/dashboard/media': 110_592,
       '/dashboard/profile': 123_904,
       '/dashboard/projects': 109_568,
@@ -988,11 +1012,12 @@ describe('assertGovernedRouteCoverage — both directions (D20-29)', () => {
     // ungoverned; the owner's cap arrived after measurement, as D20-34 prescribed).
     // 18 -> 20: T·U3 creates the Testimonials editor's two routes; D20-38 then governs them from
     // their OWN measured baselines — the same measure-first sequence as every module before.
-    // 20 -> 21: U2 registers /dashboard/taxonomy (ONE destination for Categories + Tags) measured
-    // but deliberately UNGOVERNED — this assertion now EXPECTS the gate to name it, exactly as it
-    // named Skills at M2·U2 and Testimonials at T·U2 before their owners derived caps.
+    // 20 -> 21: U2 registered /dashboard/taxonomy (ONE destination for Categories + Tags) measured
+    // but deliberately UNGOVERNED, and the gate named it exactly as it once named Skills at M2·U2
+    // and Testimonials at T·U2. D20-39 now governs it from its own 92,160 B baseline, so coverage
+    // closes in BOTH directions again — measured == governed at 21.
     expect(measured).toHaveLength(21)
-    expect(() => assertGovernedRouteCoverage(measured)).toThrow(/measured but NOT governed.*taxonomy/s)
+    expect(() => assertGovernedRouteCoverage(measured)).not.toThrow()
   })
 
   it('detects a route added to the gate without a doc 20 cap', () => {

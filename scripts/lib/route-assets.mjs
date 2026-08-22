@@ -805,6 +805,10 @@ export const DASHBOARD_APP_OWNED_BASELINE_BYTES = {
   // governance commit before registration. Two routes, two numbers, one build — one comparable batch.
   '/dashboard/testimonials/new': 125_465,
   '/dashboard/testimonials/00000000-0000-0000-0000-000000000000': 125_573,
+  // D20-39 — FE-3's Taxonomy destination (ONE route hosting the Categories + Tags collections),
+  // measured at the completed `U2` checkpoint via the §1.2 closure workflow on the implementation
+  // commit itself (blob sha256 verified against the registered provenance tree below).
+  '/dashboard/taxonomy': 92_160,
   '/dashboard/projects': 95_029,
   '/dashboard/projects/new': 152_208,
   '/dashboard/projects/00000000-0000-0000-0000-000000000000': 152_393
@@ -854,7 +858,11 @@ export const DASHBOARD_APP_OWNED_BASELINE_PROVENANCE = {
   // D20-38 — `T·U3`, the commit that created the two editor routes; same reproduction protocol as
   // D20-37: checkpoint reading confirmed byte-for-byte on the clean, stamped governance build.
   '/dashboard/testimonials/new': '7f22ce775e4cc96bad3f50fa605398d8ec692fcd',
-  '/dashboard/testimonials/00000000-0000-0000-0000-000000000000': '7f22ce775e4cc96bad3f50fa605398d8ec692fcd'
+  '/dashboard/testimonials/00000000-0000-0000-0000-000000000000': '7f22ce775e4cc96bad3f50fa605398d8ec692fcd',
+  // D20-39 — `U2` (0de9b54), the commit that created the route. The checkpoint measurement ran on
+  // this exact tree: the working tree at measurement time was byte-identical to the committed blob
+  // (page blob sha256 d31f3c89… verified), and the governance build below must reproduce it.
+  '/dashboard/taxonomy': '0de9b54d2efdb28191be7b0e66ae8171e7fd3d2b'
 }
 
 /**
@@ -972,6 +980,16 @@ export const DASHBOARD_APP_OWNED_CAP_BYTES = {
   // (D20-37) is untouched and was NOT re-derived.
   '/dashboard/testimonials/new': 141 * KB,
   '/dashboard/testimonials/00000000-0000-0000-0000-000000000000': 142 * KB,
+  // D20-39 (owner decision, 2026-08-23) — FE-3's Taxonomy destination: ONE route hosting BOTH the
+  // Categories and Tags collections (plan §7.1 groups them as one destination; they share this one
+  // route and therefore one budget line). Derived by D20-29's formula from the route's OWN measured
+  // baseline — `ceil(92,160 × 115 / 102,400) × 1024` = 106,496 B (104 KiB) on the U2 tree
+  // (`0de9b54d2efdb28191be7b0e66ae8171e7fd3d2b`). Route-specific: not inherited from Articles,
+  // Experiences, Skills or Testimonials, and no sibling number was rounded toward.
+  //
+  // Explicitly NOT a waiver, NOT a shared-floor change, NOT a generic incremental-allowance change,
+  // and NOT a D20-32 recalibration. The frozen floor set is untouched.
+  '/dashboard/taxonomy': 104 * KB,
   '/dashboard/media': 108 * KB,
   '/dashboard/profile': 121 * KB,
   '/dashboard/projects': 107 * KB,

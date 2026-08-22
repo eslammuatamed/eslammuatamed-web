@@ -291,8 +291,8 @@ describe('dashboard closure — governed routes must always be measurable', () =
       '/dashboard/testimonials/new',
       '/dashboard/testimonials/00000000-0000-0000-0000-000000000000',
       // The Taxonomy destination (FE-3 Categories + Tags, U2): ONE route for BOTH collections,
-      // registered measured but deliberately ungoverned until the owner derives its cap from its
-      // own baseline — the same rule every FE-3 collection followed.
+      // first registered measured-but-ungoverned like every FE-3 collection, now governed as
+      // D20-39 from its own baseline.
       '/dashboard/taxonomy',
       // The Projects module. The editor is registered under a concrete id because the gate fetches
       // the route; `/dashboard/**` is `ssr: false`, so which id is used cannot change the shell.
