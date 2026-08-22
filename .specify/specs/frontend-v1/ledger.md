@@ -3308,3 +3308,68 @@ remains **intentionally unresolved** until implementation shape is known.
 Next smallest unit (per the established pattern): the Taxonomy collection surface + central lane
 registration, then cap measurement as one batched decision — none of it started here. Nothing pushed
 or deployed; campaign tree clean after this docs-only commit.
+
+### FE-3 Taxonomy · **U2** — the collection surface · checkpoint 2026-08-23
+
+Implementation commit **`0de9b54`** (18 files, +1,566/−4). `/dashboard/taxonomy` is LIVE as the ONE
+Taxonomy destination plan §7.1 prescribes: TWO sections — Categories and Tags — under a single
+Content-group nav entry (`i-lucide-tags`), bilingual EN/AR chrome included.
+
+#### What shipped, and the contract facts each decision encodes
+
+| Surface | Behavior |
+| --- | --- |
+| Request state | Each section owns an INDEPENDENT copy of the §14.9 contract: skeleton → empty / error+retry / forbidden-on-its-own-terms / stale-refresh notice. Two honest instances of the module pattern (`useAdminCategories` / `useAdminTags`) — NO shared list abstraction invented. Browser-proven: Tags failed via browser-level interception while Categories rendered all four rows; recovering Tags through ITS retry issued ZERO Categories re-requests |
+| Order | Both sections render rows in RECEIVED order — no `.sort()` anywhere. Lane pins both sequences against fixtures whose names run C→A→B, so any client-side sort fails loudly |
+| ⚠ No detail read | The page issues EXACTLY two api requests (`/admin/categories`, `/admin/tags`) and NOTHING else under either `{id}` namespace — counted at the BROWSER level per navigation. This is the invariant a later editor must never break |
+| Row presentation | Name with cross-locale recognition + untitled fallback; slug verbatim as data (`dir="ltr"` code chip); category description only when stored; per-locale completeness badges derived from the returned map alone — never substituted |
+| Honest omissions | NO create/edit/delete controls ship: no destination exists for them, and dead buttons are dishonest UI. They join the create/edit unit |
+
+A Vue trap worth recording for every future FE page: refs nested inside plain objects do NOT
+auto-unwrap in templates — `v-if="sections.categories.forbidden"` was an always-true Ref object, not
+a boolean. The fix is structural, not local: destructure composables at TOP LEVEL and wrap derived
+state in `reactive()` so templates read unwrapped booleans.
+
+#### Gates — all on the COMMITTED tree at `0de9b54` (the pre-commit hook's eslint --fix obliged re-running everything after staging)
+
+| Gate | Result |
+| --- | --- |
+| `typecheck` | **exit 0**, 0 error TS |
+| `typecheck:e2e` | **exit 0** |
+| `lint` | **exit 0** |
+| Focused unit+registry (page spec, fields spec, both-composables spec, dashboard-closure, route-assets, lane-isolation) | **243/243, exit 0** |
+| Official `dashboard-taxonomy` lane | **18/18, exit 0**, exactly ONE preview/backend pair (Nitro :4400 + taxonomy backend :4401) |
+| axe EN + AR | clean on the settled page AND on the held-loading state (`delayMs` makes the skeleton scannable) |
+| 380px EN + AR | cold-boot RTL/LTR correct, no raw key paths, no horizontal overflow |
+
+Negative control (collection-specific): injected a client-side alphabetical sort into the categories
+`v-for`, REBUILT, ran the targeted server-order test → **FAILED at the exact assertion**
+(`expect(categoryIds).toEqual([...CATEGORY_API_ORDER])`); restored byte-identically
+(sha256 `d31f3c89…` verified against the snapshot AND against the committed blob — the hook did not
+perturb it), rebuilt, full lane re-ran green.
+
+#### Route measurement — proposed cap ONLY, nothing registered
+
+Registered in `DASHBOARD_ROUTES` measured-but-UNGOVERNED (the M2·U2/T·U2 state verbatim);
+`size:routes` exits **2** naming exactly `measured but NOT governed (no frozen cap in doc 20):
+/dashboard/taxonomy`. Measurement via the established closure/attribution workflow on an
+`ANALYZE_BUNDLE=1` production build (exit 0, `.output` present, stale-meta guard passed,
+unclassified 0 B):
+
+| Figure | Value |
+| --- | --- |
+| App-owned (D20-29 baseline input) | **92,160 B** rendered |
+| JS route total | 269,921 B gz (53 closure assets) |
+| Route-shell CSS | 28,736 B gz ≈ 28.06 KB against the 30 KB cap |
+| PROPOSED D20-29 cap (NOT registered) | **106,496 B** (104 KiB) — `ceil(92,160 × 115 / 102,400) × 1024` |
+| Headroom if approved | 14,336 B |
+
+No provenance marker: `stamp-build` correctly refused on the dirty implementation tree; numbers were
+taken on the exact source this commit contains (blob sha verified above). Lighthouse was not run;
+nothing downstream consumed a stamp.
+
+Not done here, deliberately: no create/edit overlays, no detail routes, no caps registered, no other
+module started, users/roles untouched. The Module 4/5 numbering discrepancy remains intentionally
+unresolved. Nothing pushed or deployed; campaign tree clean after this docs-only commit. Next unit:
+the Taxonomy create/edit surface (overlay-based — no detail read to build an `[id]` route on), then
+the batched cap decision.
