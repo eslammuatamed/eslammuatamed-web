@@ -2804,3 +2804,47 @@ Testimonials instrument 28/28, typecheck, typecheck:e2e, and lint. The five nega
 (order bounds, minimum translations, locale format, non-empty translation text, and omission-preserving
 translation upsert) were already proven in the isolated lane. T·U1 remains instrument-only;
 Testimonials Dashboard collection/editor have not started. No shared frontend architecture changed.
+
+### Skills M2·U3 integration + measurement checkpoint — 2026-08-22
+
+Skills editor commit `3e8bf6911d1979afc3353971eee998d3c1891740` (isolated lane based on `797ab90`)
+was cherry-picked without conflict as campaign commit `5c7db16` — not squashed, not amended. One
+mechanical M2·U3-local defect surfaced on the integrated tree and reproduces identically in the lane
+tree: `skills/public-isolation.spec.ts` had no `MODULE_FILES` entry for the newly added
+`composables/useAdminSkill.ts`, so the scan flagged the admin editor composable as public surface.
+Fixed by listing it alongside its sibling `useAdminSkills.ts` (`785d1b8`); scan scope unchanged,
+nothing weakened. Resulting campaign HEAD: `785d1b83c4f249d3af175bc081b7c2ebda5d97c4`.
+
+Gates on the integrated tree: typecheck 0, typecheck:e2e 0, lint 0; full Skills-focused unit
+selection (admin-skill-form, admin-skill-fields, useAdminSkills, skills index, skills
+public-isolation) 25/25. Production build exit 0 recorded directly in the log (no wrapper masking),
+`.output` verified before any downstream use; a second `ANALYZE_BUNDLE=1` rebuild for measurement is
+bit-for-bit output-neutral per config/bundle-analysis.ts (sidecar only), same tree hash. Official
+`dashboard-skills` E2E lane against the production preview: **17/17, exit 0**, exactly one
+preview/backend pair (skills backend 4201 + Nitro from `.output` 4200), including all six
+discriminating editor cases (Arabic-first save, English-first save, zero-translations blocked, PATCH
+excludes slug, `brandColor: null` clear, 422→Arabic tab).
+
+Route measurements on HEAD `785d1b8` via the established closure/attribution workflow
+(`resolveDashboardClosure` + Rollup `renderedLength` attribution, the exact code path
+`size:routes` uses for governed routes). Instrument control before reading: `/dashboard/experiences`
+read 87,963 B vs its T·U1-era reading of 87,404 B (+559 B, consistent with the documented i18n-key
+drift pattern of prior units — provenance drift, not instrument error); D20-29 formula positively
+controlled against D20-34 (`85,551 → 99,328`) and the D20-33 amendment (`106,095 → 122,880`).
+
+| Route | Raw app-owned measured | D20-29 proposed cap | Headroom |
+| --- | --- | --- | --- |
+| `/dashboard/skills` | **83,997 B** | **97,280 B** | 13,283 B |
+| `/dashboard/skills/new` | **96,571 B** | **111,616 B** | 15,045 B |
+| `/dashboard/skills/{id}` | **96,679 B** | **111,616 B** | 14,937 B |
+
+⚠ **These three caps are PROPOSED ONLY — NOT YET APPROVED, NOT registered** in doc 20 nor mirrored
+in `DASHBOARD_APP_OWNED_CAP_BYTES`. The owner approves all three together. For scale they sit below
+the Experiences editors' measured baselines (105,051/105,159 B) and well below the Articles editor
+cap (122,880 B). `size:routes` therefore remains intentionally non-green solely because the Skills
+routes await owner governance.
+
+R13 factual state: public CSS 29.19 kB gz / 30 kB cap — Δ0 vs the previous 29.19 KB checkpoint.
+R14 factual state: 12 declared lanes; Skills focused selection = 17 tests, one lane resolved; one
+preview/backend pair booted. No R14 redesign in this task. M2 remains open only for cap
+governance/final closure.
