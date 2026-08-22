@@ -345,7 +345,8 @@
       "profile": "Profile",
       "experiences": "Experience",
       "skills": "Skills",
-      "testimonials": "Testimonials"
+      "testimonials": "Testimonials",
+      "taxonomy": "Taxonomy"
     },
     "messages": {
       "title": "Messages",
@@ -892,6 +893,45 @@
         "authorRoleRequired": "Write the author role in this language.",
         "authorRoleTooLong": "The author role must be 160 characters or fewer.",
         "atLeastOneLocale": "Write the testimonial in at least one language."
+      }
+    },
+    "taxonomy": {
+      "title": "Taxonomy",
+      "description": "Categories and tags that organize articles, in both languages.",
+      "retry": "Try again",
+      "staleNotice": "This list may be out of date — the last refresh did not complete.",
+      "translationState": {
+        "label": "Translations",
+        "present": "{locale} written",
+        "missing": "{locale} missing"
+      },
+      "locale": {
+        "en": "English",
+        "ar": "Arabic"
+      },
+      "categories": {
+        "title": "Categories",
+        "description": "Broad topics articles are filed under. Each category carries a name and a slug per language.",
+        "regionLabel": "Categories",
+        "resultCount": "{total} categories",
+        "untitled": "Untitled category",
+        "errorTitle": "Categories could not be loaded",
+        "forbiddenTitle": "You do not have access to categories",
+        "forbiddenBody": "This account is not permitted to manage categories.",
+        "emptyTitle": "No categories yet",
+        "emptyBody": "Categories created for articles will appear here."
+      },
+      "tags": {
+        "title": "Tags",
+        "description": "Smaller labels attached to articles. Each tag carries a name and a slug per language.",
+        "regionLabel": "Tags",
+        "resultCount": "{total} tags",
+        "untitled": "Untitled tag",
+        "errorTitle": "Tags could not be loaded",
+        "forbiddenTitle": "You do not have access to tags",
+        "forbiddenBody": "This account is not permitted to manage tags.",
+        "emptyTitle": "No tags yet",
+        "emptyBody": "Tags attached to articles will appear here."
       }
     },
     "projects": {

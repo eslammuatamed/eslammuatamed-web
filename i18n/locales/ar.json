@@ -345,7 +345,8 @@
       "profile": "الملف الشخصي",
       "experiences": "الخبرات",
       "skills": "المهارات",
-      "testimonials": "التوصيات"
+      "testimonials": "التوصيات",
+      "taxonomy": "التصنيف"
     },
     "messages": {
       "title": "الرسائل",
@@ -892,6 +893,45 @@
         "authorRoleRequired": "اكتب صفة القائل بهذه اللغة.",
         "authorRoleTooLong": "يجب ألّا تتجاوز الصفة 160 حرفًا.",
         "atLeastOneLocale": "اكتب التوصية بلغة واحدة على الأقل."
+      }
+    },
+    "taxonomy": {
+      "title": "التصنيفات",
+      "description": "الفئات والوسوم التي تُنظّم المقالات، باللغتين.",
+      "retry": "أعد المحاولة",
+      "staleNotice": "قد تكون هذه القائمة قديمة — آخر تحديث لم يكتمل.",
+      "translationState": {
+        "label": "الترجمات",
+        "present": "{locale} مكتوبة",
+        "missing": "{locale} ناقصة"
+      },
+      "locale": {
+        "en": "الإنجليزية",
+        "ar": "العربية"
+      },
+      "categories": {
+        "title": "الفئات",
+        "description": "الموضوعات العامة التي تُصنّف تحتها المقالات. لكل فئة اسم ومعرّف لكل لغة.",
+        "regionLabel": "الفئات",
+        "resultCount": "{total} فئات",
+        "untitled": "فئة بلا عنوان",
+        "errorTitle": "تعذّر تحميل الفئات",
+        "forbiddenTitle": "ليست لديك صلاحية الوصول إلى الفئات",
+        "forbiddenBody": "هذا الحساب غير مصرّح له بإدارة الفئات.",
+        "emptyTitle": "لا توجد فئات بعد",
+        "emptyBody": "ستظهر هنا الفئات المنشأة للمقالات."
+      },
+      "tags": {
+        "title": "الوسوم",
+        "description": "عناوين أصغر تُرفق بالمقالات. لكل وسم اسم ومعرّف لكل لغة.",
+        "regionLabel": "الوسوم",
+        "resultCount": "{total} وسوم",
+        "untitled": "وسم بلا عنوان",
+        "errorTitle": "تعذّر تحميل الوسوم",
+        "forbiddenTitle": "ليست لديك صلاحية الوصول إلى الوسوم",
+        "forbiddenBody": "هذا الحساب غير مصرّح له بإدارة الوسوم.",
+        "emptyTitle": "لا توجد وسوم بعد",
+        "emptyBody": "ستظهر هنا الوسوم المرتبطة بالمقالات."
       }
     },
     "projects": {

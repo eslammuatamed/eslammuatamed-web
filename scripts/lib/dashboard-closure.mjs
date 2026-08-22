@@ -242,6 +242,10 @@ export const DASHBOARD_ROUTES = [
     route: '/dashboard/testimonials/00000000-0000-0000-0000-000000000000',
     pageModule: 'app/pages/dashboard/testimonials/[id].vue'
   },
+  // FE-3 Taxonomy (U2) — ONE destination hosting the Categories and Tags collections, following
+  // the M2·U2/T·U2 rule verbatim: registered for measurement but deliberately UNGOVERNED until the
+  // owner derives its cap from its OWN measured baseline. No sibling number is inherited.
+  { route: '/dashboard/taxonomy', pageModule: 'app/pages/dashboard/taxonomy/index.vue' },
   { route: '/dashboard/projects', pageModule: 'app/pages/dashboard/projects/index.vue' },
   { route: '/dashboard/projects/new', pageModule: 'app/pages/dashboard/projects/new.vue' },
   // A CONCRETE id, because the gate fetches each route to read the CSS out of its rendered shell.

@@ -988,8 +988,11 @@ describe('assertGovernedRouteCoverage — both directions (D20-29)', () => {
     // ungoverned; the owner's cap arrived after measurement, as D20-34 prescribed).
     // 18 -> 20: T·U3 creates the Testimonials editor's two routes; D20-38 then governs them from
     // their OWN measured baselines — the same measure-first sequence as every module before.
-    expect(measured).toHaveLength(20)
-    expect(() => assertGovernedRouteCoverage(measured)).not.toThrow()
+    // 20 -> 21: U2 registers /dashboard/taxonomy (ONE destination for Categories + Tags) measured
+    // but deliberately UNGOVERNED — this assertion now EXPECTS the gate to name it, exactly as it
+    // named Skills at M2·U2 and Testimonials at T·U2 before their owners derived caps.
+    expect(measured).toHaveLength(21)
+    expect(() => assertGovernedRouteCoverage(measured)).toThrow(/measured but NOT governed.*taxonomy/s)
   })
 
   it('detects a route added to the gate without a doc 20 cap', () => {
@@ -1300,6 +1303,8 @@ describe('D20-32 — resolveDashboardSharedFloor and its FROZEN reference set', 
       '/dashboard/skills',
       '/dashboard/skills/00000000-0000-0000-0000-000000000000',
       '/dashboard/skills/new',
+      // U2 — the Taxonomy destination, measured-but-ungoverned under the same shrink-on-add rule.
+      '/dashboard/taxonomy',
       // T·U2 — the Testimonials collection, registered measured-but-ungoverned and, like every
       // route above, staying OUT of the frozen floor set.
       '/dashboard/testimonials',

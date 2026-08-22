@@ -67,6 +67,10 @@ export function useDashboardNav() {
         { key: 'experiences', to: '/dashboard/experiences', icon: 'i-lucide-briefcase' },
         { key: 'skills', to: '/dashboard/skills', icon: 'i-lucide-brain' },
         { key: 'testimonials', to: '/dashboard/testimonials', icon: 'i-lucide-message-square-quote' },
+        // Taxonomy joins with FE-3's Categories+Tags unit (`U2`). ONE destination for BOTH entity
+        // types, exactly as plan §7.1 groups them — "Taxonomy is grouped as one destination rather
+        // than two nav entries". Its create/edit surfaces arrive with a later unit.
+        { key: 'taxonomy', to: '/dashboard/taxonomy', icon: 'i-lucide-tags' },
         { key: 'projects', to: '/dashboard/projects', icon: 'i-lucide-folder-kanban' }
       ]
     },

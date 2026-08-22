@@ -197,6 +197,16 @@ const BACKENDS = {
     command: process.execPath,
     args: () => ['scripts/e2e/testimonials-server.ts']
   },
+  // FE-3 Taxonomy (U2). One backend for BOTH collections — the product surface is ONE destination,
+  // and the two stores keep separate slug namespaces inside it exactly like the two database
+  // tables. What this lane holds that Testimonials cannot: TWO server-order pins on one page plus
+  // the no-detail-read request counting, against fixtures whose names run deliberately out of
+  // alphabetical sequence.
+  taxonomy: {
+    label: 'taxonomy backend (FE-3 Categories + Tags, mutable)',
+    command: process.execPath,
+    args: () => ['scripts/e2e/taxonomy-server.ts']
+  },
   // Project-detail freshness. This backend starts with an empty gallery and exposes test-only
   // controls that publish the authored gallery after both localized detail pages have been primed.
   // Its own process is essential: the regression observes mutable upstream state while every other

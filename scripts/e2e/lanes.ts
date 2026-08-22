@@ -202,6 +202,15 @@ export const LANES: readonly Lane[] = [
     readyPath: '/',
     resetsBackendState: true,
     why: 'FE-3 module 3: the Testimonials collection pins the SERVER order against mutable fixtures whose order values run deliberately out of sequence, which requires its own resettable backend process pair'
+  },
+  {
+    project: 'dashboard-taxonomy',
+    dir: 'dashboard-taxonomy',
+    backend: 'taxonomy',
+    ports: { webEnv: 'CI_TAXONOMY_PORT', apiEnv: 'CI_TAXONOMY_MOCK_PORT', webDefault: 4400, apiDefault: 4401 },
+    readyPath: '/',
+    resetsBackendState: true,
+    why: "FE-3 Taxonomy: one destination hosts TWO collections whose server orders must be pinned against mutable fixtures, and whose no-detail-read invariant needs request counting on its own resettable backend process pair"
   }
 ] as const
 
