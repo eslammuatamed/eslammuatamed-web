@@ -616,9 +616,57 @@ describe('dashboard app-owned caps — frozen, per route (D20-29)', () => {
     '/dashboard/experiences/00000000-0000-0000-0000-000000000000'
   ]
 
-  it('governs exactly the fourteen routes doc 20 §1.1 names — no more, no fewer', () => {
+  /**
+   * D20-36 (2026-08-22) — FE-3 module 2's THREE Skills routes, measured then escalated as ONE
+   * batched decision on the completed integrated tree. This is why M2·U2 left the collection
+   * deliberately ungoverned instead of inheriting a sibling's number.
+   */
+  const D20_36_ROUTES = [
+    '/dashboard/skills',
+    '/dashboard/skills/new',
+    '/dashboard/skills/00000000-0000-0000-0000-000000000000'
+  ]
+
+  it('governs exactly the seventeen routes doc 20 §1.1 names — no more, no fewer', () => {
     expect(Object.keys(DASHBOARD_APP_OWNED_CAP_BYTES).sort())
-      .toEqual([...D20_23_ROUTES, ...D20_29_ROUTES, ...D20_33_ROUTES, ...D20_34_ROUTES, ...D20_35_ROUTES].sort())
+      .toEqual([...D20_23_ROUTES, ...D20_29_ROUTES, ...D20_33_ROUTES, ...D20_34_ROUTES, ...D20_35_ROUTES, ...D20_36_ROUTES].sort())
+  })
+
+  it('derives every D20-36 cap from its OWN recorded baseline, not from a sibling', () => {
+    for (const route of D20_36_ROUTES) {
+      const baseline = DASHBOARD_APP_OWNED_BASELINE_BYTES[route]
+      expect(baseline, `${route} must record the baseline its cap was derived from`).toBeTypeOf('number')
+      expect(approvedAppLimitBytes(baseline), `${route} cap must equal ceil((baseline x 1.15)/KiB) x KiB`)
+        .toBe(DASHBOARD_APP_OWNED_CAP_BYTES[route])
+    }
+    // The owner's exact numbers, pinned so a later "tidy" cannot drift them silently.
+    expect(DASHBOARD_APP_OWNED_BASELINE_BYTES['/dashboard/skills']).toBe(83_997)
+    expect(DASHBOARD_APP_OWNED_BASELINE_BYTES['/dashboard/skills/new']).toBe(96_571)
+    expect(DASHBOARD_APP_OWNED_BASELINE_BYTES['/dashboard/skills/00000000-0000-0000-0000-000000000000']).toBe(96_679)
+    expect(DASHBOARD_APP_OWNED_CAP_BYTES['/dashboard/skills']).toBe(97_280)
+    expect(DASHBOARD_APP_OWNED_CAP_BYTES['/dashboard/skills/new']).toBe(111_616)
+    expect(DASHBOARD_APP_OWNED_CAP_BYTES['/dashboard/skills/00000000-0000-0000-0000-000000000000']).toBe(111_616)
+  })
+
+  it('keeps the Skills routes on their OWN caps, not rounded toward a sibling module', () => {
+    // The discriminating half of the decision: the owner declined consistency-rounding, so edits
+    // that "tidied" these to any Articles/Experiences/Projects number would be budget changes made
+    // without a decision.
+    for (const route of D20_36_ROUTES) {
+      expect(DASHBOARD_APP_OWNED_CAP_BYTES[route])
+        .not.toBe(DASHBOARD_APP_OWNED_CAP_BYTES['/dashboard/articles/new'])
+      expect(DASHBOARD_APP_OWNED_CAP_BYTES[route])
+        .not.toBe(DASHBOARD_APP_OWNED_CAP_BYTES['/dashboard/experiences/new'])
+      expect(DASHBOARD_APP_OWNED_CAP_BYTES[route])
+        .not.toBe(DASHBOARD_APP_OWNED_CAP_BYTES['/dashboard/projects/new'])
+      expect(DASHBOARD_APP_OWNED_CAP_BYTES[route])
+        .toBeLessThan(DASHBOARD_APP_OWNED_CAP_BYTES['/dashboard/articles/new'])
+    }
+    // And above the collection they were forbidden to inherit — an editor is a heavier surface.
+    for (const route of D20_36_ROUTES.slice(1)) {
+      expect(DASHBOARD_APP_OWNED_CAP_BYTES[route])
+        .toBeGreaterThan(DASHBOARD_APP_OWNED_CAP_BYTES['/dashboard/skills'])
+    }
   })
 
   it('derives every D20-35 cap from its OWN recorded baseline, not from a sibling', () => {
@@ -723,6 +771,10 @@ describe('dashboard app-owned caps — frozen, per route (D20-29)', () => {
       '/dashboard/experiences': 99_328,
       '/dashboard/experiences/new': 120_832,
       '/dashboard/experiences/00000000-0000-0000-0000-000000000000': 121_856,
+      // D20-36 — the three Skills routes, each from its own baseline (83,997 / 96,571 / 96,679 B).
+      '/dashboard/skills': 97_280,
+      '/dashboard/skills/new': 111_616,
+      '/dashboard/skills/00000000-0000-0000-0000-000000000000': 111_616,
       '/dashboard/media': 110_592,
       '/dashboard/profile': 123_904,
       '/dashboard/projects': 109_568,
@@ -836,7 +888,8 @@ describe('assertGovernedRouteCoverage — both directions (D20-29)', () => {
     // be trivially true and would protect nothing.
     const measured = DASHBOARD_ROUTES.map(r => r.route)
     // 12 -> 14: D20-35 registers the two Experiences editor routes (`M1·U3`).
-    expect(measured).toHaveLength(14)
+    // 14 -> 17: D20-36 governs all three Skills routes (`M2·U2` collection + `M2·U3` editors).
+    expect(measured).toHaveLength(17)
     expect(() => assertGovernedRouteCoverage(measured)).not.toThrow()
   })
 
@@ -1143,7 +1196,11 @@ describe('D20-32 — resolveDashboardSharedFloor and its FROZEN reference set', 
       '/dashboard/experiences',
       // D20-35 — the two editor routes, joining for the same reason and with the same protection.
       '/dashboard/experiences/00000000-0000-0000-0000-000000000000',
-      '/dashboard/experiences/new'
+      '/dashboard/experiences/new',
+      // D20-36 — all three Skills routes, joining under the same shrink-on-add protection.
+      '/dashboard/skills',
+      '/dashboard/skills/00000000-0000-0000-0000-000000000000',
+      '/dashboard/skills/new'
     ])
   })
 

@@ -216,6 +216,17 @@ export const DASHBOARD_ROUTES = [
   // M2·U2 — register the collection for measurement. Its owner cap is deliberately absent until
   // the batched Skills collection/editor decision; size:routes must report this as ungoverned.
   { route: '/dashboard/skills', pageModule: 'app/pages/dashboard/skills/index.vue' },
+  // `M2·U3` — the editor's two routes, joining in the commit that creates them, exactly as every
+  // module before them did. Their caps arrive with the batched owner decision (D20-36), each
+  // derived from its OWN measured baseline rather than inherited from the collection or a sibling
+  // module's editors.
+  { route: '/dashboard/skills/new', pageModule: 'app/pages/dashboard/skills/new.vue' },
+  // A CONCRETE id, for the same reason the Articles/Experiences/Projects editors use one: the gate
+  // FETCHES the route, and `/dashboard/**` is `ssr: false`, so every id returns the same shell.
+  {
+    route: '/dashboard/skills/00000000-0000-0000-0000-000000000000',
+    pageModule: 'app/pages/dashboard/skills/[id].vue'
+  },
   { route: '/dashboard/projects', pageModule: 'app/pages/dashboard/projects/index.vue' },
   { route: '/dashboard/projects/new', pageModule: 'app/pages/dashboard/projects/new.vue' },
   // A CONCRETE id, because the gate fetches each route to read the CSS out of its rendered shell.

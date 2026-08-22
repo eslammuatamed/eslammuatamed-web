@@ -790,6 +790,12 @@ export const DASHBOARD_APP_OWNED_BASELINE_BYTES = {
   // is what D20-34's standing instruction required: the collection's 99,328 B was NOT inherited.
   '/dashboard/experiences/new': 105_051,
   '/dashboard/experiences/00000000-0000-0000-0000-000000000000': 105_159,
+  // D20-36 — FE-3 module 2's three Skills routes, measured on the completed integrated tree
+  // (`M2·U3` cherry-picked as `5c7db16`, isolation fix `785d1b8`) via the §1.2 closure workflow.
+  // All three numbers come from the SAME build, so they form one comparable batch.
+  '/dashboard/skills': 83_997,
+  '/dashboard/skills/new': 96_571,
+  '/dashboard/skills/00000000-0000-0000-0000-000000000000': 96_679,
   '/dashboard/projects': 95_029,
   '/dashboard/projects/new': 152_208,
   '/dashboard/projects/00000000-0000-0000-0000-000000000000': 152_393
@@ -827,7 +833,12 @@ export const DASHBOARD_APP_OWNED_BASELINE_PROVENANCE = {
   '/dashboard/experiences': 'fd4e9df',
   // D20-35 — `M1·U3`, the commit that created the two editor routes.
   '/dashboard/experiences/new': '7e6d11a',
-  '/dashboard/experiences/00000000-0000-0000-0000-000000000000': '7e6d11a'
+  '/dashboard/experiences/00000000-0000-0000-0000-000000000000': '7e6d11a',
+  // D20-36 — `M2·U3` integrated on the campaign branch; the measurement build's stamped HEAD
+  // (the docs-only ledger commit that followed shares this tree for all build inputs).
+  '/dashboard/skills': '785d1b83c4f249d3af175bc081b7c2ebda5d97c4',
+  '/dashboard/skills/new': '785d1b83c4f249d3af175bc081b7c2ebda5d97c4',
+  '/dashboard/skills/00000000-0000-0000-0000-000000000000': '785d1b83c4f249d3af175bc081b7c2ebda5d97c4'
 }
 
 /**
@@ -907,6 +918,19 @@ export const DASHBOARD_APP_OWNED_CAP_BYTES = {
   // routes is not the repeated evidence it asked for.
   '/dashboard/experiences/new': 118 * KB,
   '/dashboard/experiences/00000000-0000-0000-0000-000000000000': 119 * KB,
+  // D20-36 (owner decision, 2026-08-22) — FE-3 module 2's THREE Skills routes, each derived from
+  // its OWN measured baseline by D20-29's formula on the completed integrated Skills tree
+  // (`785d1b83c4f249d3af175bc081b7c2ebda5d97c4`). Measured FIRST and escalated as ONE batched
+  // decision — the D20-33 amendment's lesson, and the reason `M2·U2` registered the collection as
+  // deliberately ungoverned instead of inheriting a sibling's number.
+  //
+  // Explicitly NOT a waiver, NOT a shared-floor change, NOT a generic incremental-allowance change,
+  // and NOT a D20-32 recalibration. The owner declined consistency-rounding toward Articles
+  // (100/120 KiB), Experiences (97/118/119 KiB) or Projects (107/171/172 KiB): each route carries
+  // the cap its own baseline derives.
+  '/dashboard/skills': 95 * KB,
+  '/dashboard/skills/new': 109 * KB,
+  '/dashboard/skills/00000000-0000-0000-0000-000000000000': 109 * KB,
   '/dashboard/media': 108 * KB,
   '/dashboard/profile': 121 * KB,
   '/dashboard/projects': 107 * KB,

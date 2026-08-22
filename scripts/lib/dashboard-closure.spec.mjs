@@ -278,7 +278,11 @@ describe('dashboard closure — governed routes must always be measurable', () =
       '/dashboard/experiences',
       '/dashboard/experiences/new',
       '/dashboard/experiences/00000000-0000-0000-0000-000000000000',
-      '/dashboard/skills',
+      // The Skills module (FE-3 module 2). D20-36 governs all three routes as one batched decision;
+      // the collection was registered at M2·U2 deliberately ungoverned and the editors joined when
+      // `M2·U3` created them — caps derived from their OWN baselines, none inherited.
+      '/dashboard/skills', '/dashboard/skills/new',
+      '/dashboard/skills/00000000-0000-0000-0000-000000000000',
       // The Projects module. The editor is registered under a concrete id because the gate fetches
       // the route; `/dashboard/**` is `ssr: false`, so which id is used cannot change the shell.
       '/dashboard/projects', '/dashboard/projects/new',
