@@ -2946,3 +2946,50 @@ provenance marker; Lighthouse gates were not run and nothing downstream consumed
 Nothing was pushed or deployed; campaign tree clean after the docs-only ledger commit below.
 FE-3 state: modules 1–2 COMPLETE; module 3 collection done, Testimonials EDITOR (T·U3+) remains
 open, as do modules 4–5. No next unit was started here.
+
+### FE-3 Module 3 · Testimonials T·U2 CLOSURE checkpoint — 2026-08-22
+
+**D20-37 REGISTERED AND VERIFIED — T·U2 is COMPLETE.** The owner approved the Testimonials
+collection cap as a route-specific decision derived from its own measured baseline by D20-29's
+formula. Starting HEAD for this closure step: `6f7ce79c1c4da645af67a5edc7cc2d8b1fdadce1` (verified
+live, clean tree).
+
+| Route | Baseline | Cap |
+| --- | --- | --- |
+| `/dashboard/testimonials` | **86,069 B** | **99,328 B** (97 KiB) |
+
+Registration: Web governance commit **`27a12ce`** (`scripts/lib/route-assets.mjs`
+`DASHBOARD_APP_OWNED_CAP_BYTES` + baseline/provenance records; provenance tree `474b2501dbee…`, the
+T·U2 implementation commit). The numeric equality with the Experiences collection's 99,328 B is
+recorded as COINCIDENCE of close baselines under one frozen formula — explicitly NOT inherited,
+NOT rounded toward, and pinned by discriminating spec assertions on both baselines' independence.
+Explicitly not a waiver, not a shared-floor change, not a generic incremental-allowance change, not
+a D20-32 recalibration. Doc 20 decision recorded on the private Docs campaign branch
+(`docs/web-modernization-campaign`) as **D20-37** (Docs `4b55145`, local-only).
+
+Verification before registration: route-budget focused specs (route-assets + dashboard-closure +
+check-route-size) **186/186**, including the new pins that fix the owner's exact bytes (86,069 →
+99,328), reject inheritance-by-coincidence, and restore the two-way governance coverage assertion
+(18 governed routes, measured == governed). Then a fresh clean-tree provenance build at `27a12ce`
+(real build exit **0**; stamp written `.output/.provenance.json` → `27a12ce`): the §1.2 closure
+workflow REPRODUCED the T·U2 checkpoint reading byte-for-byte (app-owned 86,069 B, route total
+269,489 B gz, CSS 28,724 B gz, unclassified 0 B) before `size:routes` was trusted. Authoritative
+**`size:routes` exit 0**: `/dashboard/testimonials` Δ-floor 6,879 / 86,016 ✓ · app 86,069 ≤ 99,328 ✓
+· total JS 263.2 KB gz below the 300 KB quality target (no D20-24 warning) · CSS 28.1 KB / 30 KB ✓.
+Eighteen governed routes, all inside their caps.
+
+Established T·U2 evidence (from the implementation checkpoint at `474b250`, unchanged since):
+unpaginated whole-list read with zero query parameters (`{ data }`, no meta, unsolicited query →
+422 upstream); no URL query/filter/search state; SERVER order preserved verbatim with `order`
+displayed as data only — negative-controlled by injecting a client-side `order` sort and proving the
+out-of-sequence E2E test fails, restored byte-identically (SHA-256 `f8dbc961…e929`); bilingual EN/AR
+chrome with cold-boot RTL/LTR and no raw key paths; locale-map completeness indicators with no
+cross-locale substitution in the badges; full request-state semantics (skeleton/empty/error+retry/
+forbidden/stale-refresh); 380px green both locales; unfiltered axe clean in EN and AR over settled
+AND held-loading states. Official `dashboard-testimonials` E2E lane **15/15, exit 0** (run twice)
+on exactly ONE preview/backend pair (Nitro :4300 + testimonials backend :4301). Declared lane count
+**13**.
+
+Not done here, deliberately: the Testimonials EDITOR (T·U3+) was not started; Taxonomy untouched;
+no other module started; R14 strategy unchanged; nothing pushed or deployed. Campaign tree clean
+after this docs-only ledger commit; Docs campaign worktree clean.
