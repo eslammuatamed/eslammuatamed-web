@@ -3246,3 +3246,65 @@ Gates note: this unit ran only the established contract gates (fixed point, type
 No build, no route-size gate, no browser test — no runtime Dashboard surface changed, so no budget can
 move; CI re-runs the full matrix at the integration boundary. Nothing pushed or deployed. Campaign
 tree clean after this docs-only commit.
+
+### FE-3 Taxonomy · **U1** — the Categories + Tags instrument, and the proof it can fail · checkpoint 2026-08-23
+
+Commit **`6cd4907`**: `scripts/e2e/taxonomy-server.ts` + `taxonomy-server.spec.ts`, exactly two new
+files, nothing else touched. Lane registration, nav, pages, caps all deliberately ABSENT — same shape
+as Skills `M2·U1` and Testimonials `T·U1`; the browser-spec unit registers the lane later. The
+instrument's standalone default port is **4401** (allocated pairs end at 4300/4301); the authoritative
+pair belongs to the lane record when it lands.
+
+**One backend models BOTH entities**, because the approved product surface groups them under one
+Taxonomy destination (plan §7.1) — while the stores keep separate slug namespaces, mirroring the two
+tables' independent `@@unique([locale, slug])` constraints (verified in the Prisma schema at API
+`0225f76b`; category slugs do NOT collide with tag slugs).
+
+Semantics modeled, each from the corrected contract and the API source read, none invented:
+
+| Area | Categories | Tags |
+| --- | --- | --- |
+| List | `{ data: AdminCategoryEntity[] }`, zero query params (unsolicited → 422), createdAt asc | identical |
+| Detail GET | **none exists**; GET under `{id}` falls through to the generic unsupported-route 404 | identical |
+| Edit source | list row `{ id, translations }` is COMPLETE — UpdateDto accepts only `translations` | identical |
+| Create | requires ≥1 translation | identical |
+| PATCH | all-optional; UPSERTS supplied locales; omission preserves; `[]` accepted NO-OP; no replace-all, no delete-locale | identical |
+| Nullable | `description` sole nullable: explicit null CLEARS, omission PRESERVES (D10-23 pair) | none — `description` is a FOREIGN property on tags and is rejected with the indexed path |
+| Slug | mutable via PATCH; conflict → 422 `translations[N].slug`; own-slug resave clean | identical |
+| Delete | 204 / 400 malformed / 404 absent; **documented 409 when article-referenced**, modeled as a control-plane referential set (`articleReferencedCategoryIds`) — NO article endpoints invented | 204/400/404 and **NO relation case modeled or inventable** |
+
+Calibration: **54 tests, exit 0** (`typecheck` 0/0 errors · `typecheck:e2e` 0 · `lint` 0). Includes an
+explicit no-detail-GET pin: GET `/admin/{categories,tags}/{id}` answers the generic 404 for well-formed,
+malformed AND absent ids, so a later UI cannot accidentally depend on an endpoint the real API lacks.
+
+**Negative controls A–G, each proven by execution, never asserted:** one precise mutation → targeted
+suite run FAILS on the intended test(s) → restore → sha256 `1d2df090…` verified identical after EVERY
+control (and the committed tree's server bytes are that exact SHA):
+
+| Control | Injected defect | Test that FAILED |
+| --- | --- | --- |
+| A | scalar list response instead of array | "preserves SERVER order" |
+| B | upsert replaces ALL locales | "never deletes an omitted stored locale" |
+| C | omitted translations key resets the map | "an empty PATCH body changes nothing" |
+| D | `translations: []` clears | "accepted NO-OP" |
+| E | explicit-null description fails to clear | "explicit description null CLEARS" |
+| F | documented 409 removed | "DOCUMENTED 409" |
+| G | fabricated tag relation-409 | "every tag answers 204" |
+
+Two authoring findings kept because they are the lesson, not noise:
+
+1. **The no-detail-read invariant enforced ITSELF.** The calibration's first draft had a `getRow()`
+   helper reading rows via a detail GET — sixteen tests failed against my OWN instrument before any
+   UI exists, precisely because the endpoint does not exist. The helper now reads rows from the LIST,
+   which is also the standing proof that list entities carry every field an edit flow needs.
+2. Seed UUIDs initially used variant nibble `c`, which fails the repo's RFC-4122 `[89ab]` variant
+   check — 34 failures of pure fixture hygiene, fixed in the seeds, not by loosening the pattern.
+
+Not done here, deliberately: no Dashboard Taxonomy UI, no nav entry, no collection page, no editor
+overlay, no lanes.ts record, no route caps, no users/roles work, no build, no browser E2E. The FE-3
+Module 4/5 numbering discrepancy (Categories+Tags as one surface vs recovery doc's 4=Categories/5=Tags)
+remains **intentionally unresolved** until implementation shape is known.
+
+Next smallest unit (per the established pattern): the Taxonomy collection surface + central lane
+registration, then cap measurement as one batched decision — none of it started here. Nothing pushed
+or deployed; campaign tree clean after this docs-only commit.
