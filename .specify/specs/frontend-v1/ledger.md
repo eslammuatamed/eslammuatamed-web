@@ -2993,3 +2993,67 @@ on exactly ONE preview/backend pair (Nitro :4300 + testimonials backend :4301). 
 Not done here, deliberately: the Testimonials EDITOR (T·U3+) was not started; Taxonomy untouched;
 no other module started; R14 strategy unchanged; nothing pushed or deployed. Campaign tree clean
 after this docs-only ledger commit; Docs campaign worktree clean.
+
+### FE-3 Module 3 · Testimonials T·U3 checkpoint — 2026-08-22
+
+**The Testimonials EDITOR is COMPLETE on the campaign branch.** Starting HEAD
+`449cd84d2b3a0f40f697b1484bddfe670136ea3e` (verified live, clean tree). One logical implementation
+commit: **`7f22ce7`** — 15 files, +1,400/−6. Scope held to the editor only: `/dashboard/testimonials/new`
+and `/dashboard/testimonials/[id]` on the established editor architecture (shared
+translation-error machinery, `DashboardTranslationTabs`, `DashboardEntityFormActions`,
+`DashboardEntityEditorSkeleton`, unsaved-changes guard, request-state surfaces; Zod + UForm). No new
+editor abstraction was invented; no Taxonomy work; no other module started.
+
+Contract-faithful specifics: OD-14 adapted to THREE required text fields per locale — any authored
+text makes the locale required-complete before save, zero complete locales blocks client-side with
+NOTHING on the wire, Arabic-first and English-first equally valid, one locale valid-but-incomplete.
+Order is integer ≥ 0 (control floor + schema refinement). The avatar REUSES the shared MediaPicker
+verbatim (its doc comment names testimonial avatars as an intended consumer); PATCH discriminates
+omission from clear exactly as the contract demands — untouched avatarId OMITTED (server preserves),
+explicit `null` only on operator clear, replacement id on re-pick — and translations write as an
+UPSERT of complete locales, so clearing a locale in the form drops it from the array instead of ever
+wiping stored content server-side. 422 field paths resolve through the SENT locale array onto tabs;
+DELETE confirms and returns to the collection.
+
+Instrument note: the lane's backend gained a minimal ADDITIVE media read surface (list / resolve /
+upload of three seeded assets) so the shared picker functions mechanically inside the lane — no
+`/admin/testimonials*` semantics changed, T·U1 calibration untouched and green.
+
+Negative controls (both narrow and reversible, restored byte-identically, SHA-256
+`90d3892d0762e5c5a3d299c777356cdecc783ad66ebafef53ceb1804cd49ea43` verified):
+1. Minimum-translation guard removed → the first control run PASSED, which exposed a weak instrument:
+   the API's own 422 backstop was satisfying the assertion. The test was hardened to demand ZERO
+   create requests leave the browser ("a suite that fails to execute is not a valid control" applied
+   in reverse — a test that cannot fail for the right reason is not discriminating). Under mutation
+   it then FAILED with "an unguarded save reached the API"; after restore it passes.
+2. Avatar always-send mutation (`body.avatarId = form.avatarId` unconditionally) → the
+   "OMITS avatarId when untouched" test FAILED on `not.toHaveProperty`; passes after restore.
+
+Verification, all exit 0 unless stated: typecheck 0 · typecheck:e2e 0 · lint 0 · focused unit/
+registry selection **292/292** (form model incl. modeled translation-DTO schema rejecting `EN`/
+empty/over-length, payload omission/upsert discrimination, composable detail-read 400→not-found,
+collection specs unchanged-green, nav, lane isolation, closure inventory now 20 routes,
+route-assets two-sided governance expectation naming exactly the two ungoverned editor routes).
+Official `dashboard-testimonials` E2E lane **33/33, exit 0** (final run on the restored tree),
+still ONE spec file and ONE preview/backend pair (Nitro :4300 + testimonials backend :4301) — the
+lane was extended, not duplicated. Editor a11y EN+AR clean (unfiltered axe on the settled editor);
+380px cold-boot RTL/LTR correct with panel-level direction independence and no overflow.
+
+Route measurements (§1.2 closure workflow, ANALYZE_BUNDLE build exit 0, unclassified 0 everywhere):
+
+| Route | Raw app-owned measured | D20-29 proposed cap | Headroom |
+| --- | --- | --- | --- |
+| `/dashboard/testimonials/new` | **125,465 B** | **144,384 B** (141 KiB) | 18,919 B |
+| `/dashboard/testimonials/{id}` | **125,573 B** | **145,408 B** (142 KiB) | 19,835 B |
+
+⚠ Both caps are PROPOSED ONLY — NOT registered anywhere. The owner approves them together as one
+batched decision, per the standing rule neither cap inherits the collection's 99,328 B nor any
+sibling number. The collection itself measured 87,774 B on this tree (+1,705 vs its baseline from
+shared i18n-key drift), still ≤ its governed cap. `size:routes` is therefore intentionally non-green
+(exit 2): "measured but NOT governed: /dashboard/testimonials/new, /dashboard/testimonials/{id}" —
+the exact deliberate state D20-34/D20-36 resolved for earlier modules. Public CSS unchanged at
+**28,724 B gz (Δ0)** vs the previous checkpoint, under the 30 KB cap — no byte-chasing warranted.
+
+Nothing was pushed or deployed; campaign tree clean after this docs-only commit. FE-3 state:
+modules 1–2 COMPLETE; module 3 collection+editor done pending owner cap approval; modules 4–5 open.
+No next unit was started here.
