@@ -20,7 +20,8 @@ Verify every line against live state before acting on it. Report drift before do
 | **Remote state** | **NOT PUSHED.** `origin/dev` = `54cea28737c558767ccb24a34e2b437b62f7f058`, `origin/main` = `648aa467cd8bc7157cbcad2fd7c0e8981ee1f16c` — neither moved by this campaign, re-verified after FE-2a |
 | **Docs repo** | ⚠ **TWO branches, and they DIVERGE — neither is an ancestor of the other.** (a) `docs/od-11-dashboard-localization` `3b607af9…` holds OD-11 (D02-15, D04-7, D11-8, doc 18). (b) `docs/web-modernization-campaign` `97efd02` (was `95e9101`, was `565abef8…`) holds doc 20's whole D20-2x/3x sequence and the governed inventory table — **D20-33 is NOT on the od-11 branch**, and **D20-34 landed on (b)** for that reason: writing it against a doc 20 lacking D20-33 would manufacture a conflict in the same table. Both **local-only** (R10); `origin/main` = `1896d8c7…`, untouched |
 | **Production** | Web release `20260817T175534Z-648aa46` — untouched |
-| **API** | `origin/main` = `9af1aace…` — live, deployed, and complete for v1 scope. ⚠ `origin/dev` is **no longer equal to it**: it is `e87f427c…`, the merge of Backend PR #86. That is a **separate workstream**, not Campaign 027 movement — measured, not assumed: `openapi.json` is the **same blob** `7a9e0ba6…` on both `main` and `dev`, so the contract this campaign consumes did not move. Read the API row as `origin/main`; `origin/dev` is informational. |
+| **API** | ⚠ **Re-pointed 2026-08-23 (taxonomy contract unit; see the EOF checkpoint for the full measurement): `origin/main` = `d3eb74cc…` (PR #91 merged `dev` → `main`, carrying PR #89's taxonomy list-schema fix AND PR #90 media hardening), `origin/dev` = `b791c9c6…` (adds PR #97 deploy-summary fixes on top). The row below is the record as it then stood and is kept unedited beneath this correction. Load-bearing today: the contract blob this campaign consumes is now `185f067e…`, byte-identical at BOTH `main` and `dev`; Production serving tree was NOT re-measured in that unit.** |
+| | *(historical, as of the fifth resume)* `origin/main` = `9af1aace…` — live, deployed, and complete for v1 scope. ⚠ `origin/dev` is **no longer equal to it**: it is `e87f427c…`, the merge of Backend PR #86. That is a **separate workstream**, not Campaign 027 movement — measured, not assumed: `openapi.json` is the **same blob** `7a9e0ba6…` on both `main` and `dev`, so the contract this campaign consumes did not move. Read the API row as `origin/main`; `origin/dev` is informational. |
 
 **Re-baselined 2026-08-18 (zero-trust resume, session start).** Every row above was verified live
 and **matched — zero drift**: worktree present, branch `campaign/frontend-v1`, working tree clean, no
@@ -3111,3 +3112,137 @@ API change, and the product reuses the existing MediaPicker against the real med
 
 Nothing was pushed or deployed. Campaign tree clean after this docs-only commit; Docs campaign
 worktree clean. FE-3 state: modules 1–3 COMPLETE; modules 4–5 open. No next module was started here.
+
+### Taxonomy contract prerequisite — RECONCILED, INV-2 reviewed · checkpoint 2026-08-23
+
+Narrow unit authorized by the owner: verify the Backend dev contract delta, reconcile Web's vendored
+contract through the established workflow, and review INV-2 against the corrected contract. **No
+Taxonomy UI, no e2e instrument, no Dashboard routes, no caps, no architecture change, nothing pushed.**
+
+#### ⚠ Live-state drift at session start — refs moved FORWARD, both expected SHAs still resolve
+
+The task brief named API `dev` = `0225f76b…` / `main` = `9af1aace…`. Live after fetch:
+`origin/dev` = `b791c9c6…`, `origin/main` = `d3eb74cc…`. Measured, not assumed: **`0225f76b` IS an
+ancestor of `origin/dev`, and `9af1aace` IS an ancestor of `origin/main`** (`merge-base --is-ancestor`,
+both true). What moved: **PR #91 merged `dev` → `main`**, so the taxonomy list-schema fix is now on API
+**main as well as dev** — plus PR #90 (media upload compensation) which touched only
+`src/modules/media/*`; dev additionally carries PR #97 deploy-summary fixes touching only workflow/
+deploy scripts. **Neither post-fix commit touches any contract surface**: `git rev-parse <ref>:openapi.json`
+= `185f067e…` at ALL THREE of `0225f76b`, `d3eb74cc`, `b791c9c6` (old main `9af1aace` = `7a9e0ba6…`).
+Production serving tree was NOT re-measured in this unit — stated precisely rather than assumed.
+
+**Consequence for the authorization to consume a dev-only contract:** moot in the safest direction.
+The exact SHA the owner authorized (`0225f76b`) carries the same contract blob that is now API
+`main`'s tip blob, so Web's reconciliation restores byte-identity with BOTH branches simultaneously.
+
+#### Step 1 — the exact OpenAPI delta (measured before adopting anything)
+
+Structural walk of old-main blob `7a9e0ba6` → fix blob `185f067e`: path count **52 → 52**, zero paths
+added or removed, **exactly six scalar differences, all inside two endpoints**:
+
+| Endpoint | Before | After |
+| --- | --- | --- |
+| `GET /api/v1/admin/categories` | `data.$ref → AdminCategoryEntity` | `data.{type:"array", items.$ref → AdminCategoryEntity}` |
+| `GET /api/v1/admin/tags` | `data.$ref → AdminTagEntity` | `data.{type:"array", items.$ref → AdminTagEntity}` |
+
+**No other change exists in the document.** Public categories/tags, skills, testimonials re-read from
+the same blob: all already array-shaped, unchanged.
+
+⚠ **OD-17's users/roles claim re-verified FROM THE ARTIFACT, and it is still TRUE there:** in the same
+corrected blob, `/api/v1/admin/users` declares `data.$ref → UserEntity` and `/admin/roles`
+`data.$ref → RoleEntity` — single-entity shapes for list endpoints. **PR #89 fixed only categories and
+tags; the defect class remains armed for FE-4's RBAC module.** Not part of this delta, not fixed here,
+not a Taxonomy blocker — recorded so it is rediscovered by reading, not by a failed module.
+
+#### Step 2 — Web contract reconciled · commit `2263bc7`
+
+One atomic logical commit per doc 16 §3 / FE-1 precedent (`19e3a05`): `openapi/openapi.json` +
+regenerated `app/types/api.d.ts`, nothing else (+10/−4 across exactly those two files).
+
+| Check | Result |
+| --- | --- |
+| Vendored contract byte-identity with authorized SHA | `sha256(openapi/openapi.json)` = `sha256(git show 0225f76b:openapi.json)` = `799d2ed9…` |
+| Generation | `npm run api:types` (openapi-typescript 7.13.0), run twice — **gen2 byte-identical to gen1** |
+| CI fixed-point gate replicated on the COMMITTED tree | `npm run api:types && git diff --exit-code` → **PASS, zero diff** at `2263bc7` (ci.yml:92-100 mechanism) |
+| Generated-type shape | `data: components["schemas"]["AdminCategoryEntity"][]` / `["AdminTagEntity"][]` — generated, not hand-edited |
+| `npm run typecheck` | **exit 0**, 0 `error TS` |
+| Contract gates (`contract-fixtures.spec.ts` + `prism-locale-selection.spec.mjs`) | **37/37, exit 0** |
+
+Recorded explicitly per the owner instruction: Web is intentionally consuming the reviewed API dev
+contract `0225f76b…`; that contract's blob is identical at current API `main` `d3eb74cc…` and `dev`
+`b791c9c6…`; API Production metadata were not re-measured and no promotion occurred; runtime
+compatibility is unaffected because the list handlers always returned arrays — only the emitted schema
+was wrong. **Deliberately NOT touched:** the handwritten array generics at `useAdminArticles.ts:216-217`
+(`Envelope<readonly AdminCategory[]>` / `<readonly AdminTag[]>`). They are Articles-owned, they now
+merely AGREE with the corrected contract instead of masking it, and removing them would broaden this
+unit. Left for the Taxonomy implementation lane (or the eventual Articles refit) to retire.
+
+#### Step 3 — INV-2 reviewed against the corrected contract · both escalations CLOSED
+
+Re-derived independently from `openapi/openapi.json` @ `2263bc7` plus API source read-only at
+`0225f76b` (`taxonomy/categories.service.ts`, `tags.service.ts`). The preserved artifact holds the two
+escalations; every load-bearing claim below was re-verified, not believed. Per-entity facts:
+
+| # | Claim point | Categories | Tags |
+| --- | --- | --- | --- |
+| 1 | List response shape | `{ data: AdminCategoryEntity[] }`, no `meta` ✅ corrected | `{ data: AdminTagEntity[] }`, no `meta` ✅ corrected |
+| 2 | List query parameters | **zero** — unpaginated full list, `orderBy createdAt asc` (source) | **zero**, same ordering |
+| 3 | Translation read shape | locale-keyed map → `CategoryTranslationEntity {name, slug, description?}` | map → `TagTranslationEntity {name, slug}` |
+| 4 | Translation write shape | ARRAY of `CategoryTranslationDto {locale*, name*, slug*, description nullable}` | ARRAY of `TagTranslationDto {locale*, name*, slug*}` |
+| 5 | Create DTO | `CreateCategoryDto`: required `['translations']`, sole property | `CreateTagDto`: required `['translations']`, sole property |
+| 6 | Update DTO | `UpdateCategoryDto`: required **none**; sole property `translations` | `UpdateTagDto`: required **none**; sole property `translations` |
+| 7 | Delete semantics | hard delete, `204`; **409 documented when referenced by articles** (RESTRICT, source-comment D09-3); also 400/401/403/404/429 | hard delete, `204`; **no 409 documented** — model none (M2 ruling #5 stands: document-only behavior) |
+| 8 | Nullable fields | `description` only (entity + DTO, both locales' worth) | **none** |
+| 9 | Omission semantics | PATCH **upserts supplied locales, never deletes** (source: `upsert` loop in `$transaction`; omitted locale preserved; empty array = accepted no-op). Emptying a server-held locale BLOCKED client-side — §10.3 rule 6 verbatim. `description: null` CLEARS, omitted PRESERVES (D10-23 inverse pair, straight Prisma passthrough) | same upsert/never-delete; no nullable field exists, so no clear-case |
+| 10 | Immutable fields | none beyond server-generated `id` — slug IS mutable via PATCH (422 "slug already in use") | same |
+| 11 | Relation semantics | none on the entity (no parent/order/status fields exist at all) | none |
+| 12 | Documented errors | POST/PATCH 422 validation-or-slug-conflict; PATCH/DELETE 400 bad UUID, 404 not-found; DELETE 409 article-referenced | POST/PATCH 422; PATCH/DELETE 400/404; DELETE no 409 |
+| 13 | Detail GET | **NO** — `/admin/categories/{id}` carries only `patch`/`delete` (re-verified in corrected contract) | **NO** — same |
+| 14 | List entity ⊇ editor needs | **YES, mechanically**: UpdateDto accepts ONLY `translations`, and the list entity IS `{id, translations-map}` — every writable field, complete per locale | **YES** — same structure |
+
+**Escalation 1 — CLOSED by reconciliation.** Lists are arrays matching their summaries and siblings;
+nothing left to rule.
+
+**Escalation 2 — premise re-verified, answer is mechanical.** No detail GET exists on either entity,
+so an `[id]` route has no honest single-entity read (reload/deep-link unservable without inventing
+client-side absence semantics). Because claim 14 is YES for both entities, **the Dashboard CAN edit an
+existing Category/Tag using the list entity as the complete edit source.** INV-2's option 1 (inline
+create/edit on each collection page; no detail routes) is therefore mechanically supported, and its
+load-bearing premise is no longer doubtful — it is verified against the corrected contract.
+
+#### Taxonomy surface shape — what the approved plan already governs
+
+- **One Dashboard destination:** plan §7.1 groups "Taxonomy (Categories + Tags)" as ONE nav entry in
+  Content, deliberately not two entries (`plan.md:633-640`). That grouping stands; this unit does not
+  revisit it.
+- **Internally two collections:** Categories and Tags are separate endpoints, entities and DTOs; the
+  destination hosts two collection surfaces however the lane composes them.
+- **Smallest mechanically supported create/edit interaction:** overlay editing on the collection
+  surface (no `[id]` routes, no second fetch), grounded in evidence — no detail GET (claim 13), list
+  completeness (claim 14), and established repo overlays: `USlideover` already in `messages.vue` /
+  `media.vue`, `UModal` in `MediaPicker.vue`. The exact component choice belongs to the module lane;
+  what is ruled out mechanically is any route-based editor requiring data the API cannot fetch. No new
+  generic architecture; shared set extended-or-escalated per OD-12.
+
+#### Module-numbering discrepancy — recorded, deliberately unresolved
+
+Plan inventory = five entities (experiences, skills, testimonials, categories, tags) + the shared
+per-entity SEO panel (`plan.md:556-558`). Campaign execution grouped Categories + Tags as one
+Taxonomy investigation/surface and labelled it "FE-3 module 4" (`ledger.md`, OD-16 dispatch table).
+The interrupted-session recovery separately labels Categories = 4 and Tags = 5 (recovery doc §5).
+**Not settled here** whether Tags counts as a distinct module or half of one surface, and the stray
+"Projects extraction verdicts" phrase in the M2-closure checkpoint remains unsupported by any decision
+record. Bookkeeping settles AFTER the implementation shape is known.
+
+#### Blocker status and smallest next implementation unit
+
+**The original Taxonomy blocker — the broken admin list envelope — is CLOSED** by `2263bc7` against
+the owner-authorized contract. No new blocker was found. What remains before a write lane is ordinary
+sequencing, not blockage: the module's first unit is its **e2e instrument** (categories/tags mock
+backend + calibration + negative controls, mirroring `T·U1`), then the collection surface(s) + central
+lane registration, per the established pattern. **None of it was started here.**
+
+Gates note: this unit ran only the established contract gates (fixed point, typecheck, contract specs).
+No build, no route-size gate, no browser test — no runtime Dashboard surface changed, so no budget can
+move; CI re-runs the full matrix at the integration boundary. Nothing pushed or deployed. Campaign
+tree clean after this docs-only commit.
