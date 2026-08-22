@@ -3373,3 +3373,50 @@ module started, users/roles untouched. The Module 4/5 numbering discrepancy rema
 unresolved. Nothing pushed or deployed; campaign tree clean after this docs-only commit. Next unit:
 the Taxonomy create/edit surface (overlay-based — no detail read to build an `[id]` route on), then
 the batched cap decision.
+
+### FE-3 Taxonomy · **U2 CLOSURE** — D20-39 registered and verified · checkpoint 2026-08-23
+
+**D20-39 GOVERNED AND REPRODUCED — TAXONOMY U2 IS COMPLETE.** The owner approved the collection cap
+as a route-specific decision derived from its own measured baseline by D20-29's frozen formula:
+
+| Route | Baseline | Cap |
+| --- | --- | --- |
+| `/dashboard/taxonomy` (ONE destination: Categories + Tags together) | 92,160 B | **106,496 B** (104 KiB), headroom 14,336 B |
+
+Registration: Web governance commit **`f0ba67c`** — `DASHBOARD_APP_OWNED_CAP_BYTES` +
+baseline/provenance records (provenance tree `0de9b54d2efdb28191be7b0e66ae8171e7fd3d2b`, the U2
+implementation commit whose page blob was byte-verified at measurement time). Explicitly NOT a
+waiver, NOT a shared-floor change, NOT a generic incremental-allowance change, NOT a D20-32
+recalibration; NOT inherited from Articles/Experiences/Skills/Testimonials and NOT rounded toward any
+sibling. Doc 20 decision recorded on the private Docs campaign branch as **D20-39** (Docs `b18b5a2`,
+local-only).
+
+Verification BEFORE registration: governance focused specs (route-assets + dashboard-closure +
+lane-isolation) **217/217**, including the new pins that fix the owner's exact bytes (92,160 →
+106,496), reproduce the formula from the recorded baseline, and assert no sibling shares the taxonomy
+baseline; then a fresh clean-tree `ANALYZE_BUNDLE=1` provenance build at `f0ba67c` (real build exit
+**0**, `.output` present, stamp written with head `f0ba67c`): the authoritative gate **REPRODUCED**
+the U2 checkpoint reading byte-for-byte — app-owned **92,160 B ≤ 106,496 B ✓**, Δ-floor 7,110 /
+86,016 ✓, total JS 263.6 KB gz below the 300 KB quality target (no D20-24 warning), CSS 28.1 KB /
+30 KB ✓. Authoritative **`size:routes` exit 0**: twenty-one governed routes, all inside their caps;
+coverage closed in both directions after U2's deliberate ungoverned window.
+
+#### Final Taxonomy U2 evidence (established at the implementation checkpoint, unchanged)
+
+- ONE `/dashboard/taxonomy` destination hosting Categories + Tags as two sections under one nav entry; bilingual EN/AR chrome.
+- INDEPENDENT section request state — browser-proven: Tags failed via interception while Categories rendered all rows; Tags' retry issued ZERO Categories re-requests.
+- NO detail routes exist; ZERO `{id}` GET requests leave the page — counted at browser level per navigation (exactly two list requests).
+- List rows are the complete future edit source (Update DTOs accept only translations; the row carries every writable field).
+- Both sections render SERVER order verbatim; negative control injected a client-side sort and FAILED the server-order assertion, restored byte-identically (page blob `d31f3c89…`).
+- Official `dashboard-taxonomy` E2E lane **18/18, exit 0** on exactly ONE preview/backend pair (:4400/:4401); declared lane count **14**.
+- axe EN+AR clean on settled AND held-loading states; 380px cold-boot RTL/LTR green, no overflow.
+- Public CSS 28,736 B gz ≈ 28.06 KB against the 30 KB cap.
+- Create/edit UI has NOT started; no overlay, no forms, no delete actions, no dead controls.
+
+The FE-3 Module 4/5 numbering discrepancy (Categories vs Tags as separate module numbers vs one
+taxonomy surface) remains intentionally unresolved — this closure governs what the route IS, not how
+the campaign counts it.
+
+FE-3 state after this closure: modules 1–3 COMPLETE; Taxonomy collection COMPLETE (create/edit open);
+shared SEO panel open. No next unit was started here. Nothing pushed or deployed. Campaign tree clean
+after this docs-only commit; Docs campaign worktree clean.
