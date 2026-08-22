@@ -3979,7 +3979,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        data: components["schemas"]["AdminCategoryEntity"];
+                        data: components["schemas"]["AdminCategoryEntity"][];
                     };
                 };
             };
@@ -4286,7 +4286,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        data: components["schemas"]["AdminTagEntity"];
+                        data: components["schemas"]["AdminTagEntity"][];
                     };
                 };
             };
