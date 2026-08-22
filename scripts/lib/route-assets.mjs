@@ -796,6 +796,10 @@ export const DASHBOARD_APP_OWNED_BASELINE_BYTES = {
   '/dashboard/skills': 83_997,
   '/dashboard/skills/new': 96_571,
   '/dashboard/skills/00000000-0000-0000-0000-000000000000': 96_679,
+  // D20-37 — FE-3 module 3's Testimonials collection, measured at the `T·U2` checkpoint via the
+  // §1.2 closure workflow and REPRODUCED on a clean, stamped build of the governance commit before
+  // registration. One route, one number from one build.
+  '/dashboard/testimonials': 86_069,
   '/dashboard/projects': 95_029,
   '/dashboard/projects/new': 152_208,
   '/dashboard/projects/00000000-0000-0000-0000-000000000000': 152_393
@@ -838,7 +842,10 @@ export const DASHBOARD_APP_OWNED_BASELINE_PROVENANCE = {
   // (the docs-only ledger commit that followed shares this tree for all build inputs).
   '/dashboard/skills': '785d1b83c4f249d3af175bc081b7c2ebda5d97c4',
   '/dashboard/skills/new': '785d1b83c4f249d3af175bc081b7c2ebda5d97c4',
-  '/dashboard/skills/00000000-0000-0000-0000-000000000000': '785d1b83c4f249d3af175bc081b7c2ebda5d97c4'
+  '/dashboard/skills/00000000-0000-0000-0000-000000000000': '785d1b83c4f249d3af175bc081b7c2ebda5d97c4',
+  // D20-37 — `T·U2`, the commit that created the collection route. The checkpoint build's closure
+  // reading was reproduced byte-for-byte on a clean, stamped build of the governance commit.
+  '/dashboard/testimonials': '474b2501dbee7d0999b5e3a6292d2ed7556bd0b9'
 }
 
 /**
@@ -931,6 +938,18 @@ export const DASHBOARD_APP_OWNED_CAP_BYTES = {
   '/dashboard/skills': 95 * KB,
   '/dashboard/skills/new': 109 * KB,
   '/dashboard/skills/00000000-0000-0000-0000-000000000000': 109 * KB,
+  // D20-37 (owner decision, 2026-08-22) — FE-3 module 3's Testimonials COLLECTION, derived from its
+  // OWN measured baseline (86,069 B at `T·U2`, Web `474b2501`) by D20-29's formula, registered after
+  // measurement exactly as D20-34 did for the Experiences collection. Its editor routes are
+  // deliberately NOT registered here — they do not exist yet and will be measured first, per the
+  // standing instruction every module has followed since the D20-33 amendment.
+  //
+  // Explicitly NOT a waiver, NOT a shared-floor change, NOT a generic incremental-allowance change,
+  // and NOT a D20-32 recalibration. The resulting number, 99,328 B (97 KiB), is NUMERICALLY EQUAL to
+  // the Experiences collection's cap by COINCIDENCE of similar baselines (86,069 vs 85,551 B) — it
+  // is not inherited from it, not rounded toward it, and carries its own derivation; both numbers
+  // are just what the same frozen formula yields from two different measurements.
+  '/dashboard/testimonials': 97 * KB,
   '/dashboard/media': 108 * KB,
   '/dashboard/profile': 121 * KB,
   '/dashboard/projects': 107 * KB,

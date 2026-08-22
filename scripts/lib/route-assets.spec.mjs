@@ -627,9 +627,39 @@ describe('dashboard app-owned caps — frozen, per route (D20-29)', () => {
     '/dashboard/skills/00000000-0000-0000-0000-000000000000'
   ]
 
-  it('governs exactly the seventeen routes doc 20 §1.1 names — no more, no fewer', () => {
+  /**
+   * D20-37 (2026-08-22) — FE-3 module 3's Testimonials COLLECTION, registered after measurement
+   * exactly as D20-34 did for Experiences: measured first, then governed from its OWN baseline. Its
+   * editor routes are deliberately absent until they exist and are measured (D20-35's precedent).
+   */
+  const D20_37_ROUTES = ['/dashboard/testimonials']
+
+  it('governs exactly the eighteen routes doc 20 §1.1 names — no more, no fewer', () => {
     expect(Object.keys(DASHBOARD_APP_OWNED_CAP_BYTES).sort())
-      .toEqual([...D20_23_ROUTES, ...D20_29_ROUTES, ...D20_33_ROUTES, ...D20_34_ROUTES, ...D20_35_ROUTES, ...D20_36_ROUTES].sort())
+      .toEqual([...D20_23_ROUTES, ...D20_29_ROUTES, ...D20_33_ROUTES, ...D20_34_ROUTES, ...D20_35_ROUTES, ...D20_36_ROUTES, ...D20_37_ROUTES].sort())
+  })
+
+  it('derives the D20-37 cap from its OWN recorded baseline, not from a sibling', () => {
+    for (const route of D20_37_ROUTES) {
+      const baseline = DASHBOARD_APP_OWNED_BASELINE_BYTES[route]
+      expect(baseline, `${route} must record the baseline its cap was derived from`).toBeTypeOf('number')
+      expect(approvedAppLimitBytes(baseline), `${route} cap must equal ceil((baseline x 1.15)/KiB) x KiB`)
+        .toBe(DASHBOARD_APP_OWNED_CAP_BYTES[route])
+    }
+    // The owner's exact numbers, pinned so a later "tidy" cannot drift them silently.
+    expect(DASHBOARD_APP_OWNED_BASELINE_BYTES['/dashboard/testimonials']).toBe(86_069)
+    expect(DASHBOARD_APP_OWNED_CAP_BYTES['/dashboard/testimonials']).toBe(99_328)
+  })
+
+  it('records the D20-37 equality with the Experiences collection cap as COINCIDENCE, not inheritance', () => {
+    // The two caps are numerically equal because the two BASELINES are close (86,069 vs 85,551 B)
+    // and the formula is frozen — not because one number was copied. The derivation assertion above
+    // is what makes that true; this pins the baselines' independence so a later edit cannot quietly
+    // turn coincidence into coupling.
+    const baseline = DASHBOARD_APP_OWNED_BASELINE_BYTES['/dashboard/testimonials']
+    const experiences = DASHBOARD_APP_OWNED_BASELINE_BYTES['/dashboard/experiences']
+    expect(baseline).not.toBe(experiences)
+    expect(approvedAppLimitBytes(baseline)).toBe(approvedAppLimitBytes(experiences))
   })
 
   it('derives every D20-36 cap from its OWN recorded baseline, not from a sibling', () => {
@@ -775,6 +805,9 @@ describe('dashboard app-owned caps — frozen, per route (D20-29)', () => {
       '/dashboard/skills': 97_280,
       '/dashboard/skills/new': 111_616,
       '/dashboard/skills/00000000-0000-0000-0000-000000000000': 111_616,
+      // D20-37 — the Testimonials collection, from its own baseline (86,069 B). Numerically equal to
+      // the Experiences collection's cap by coincidence of close baselines, not by inheritance.
+      '/dashboard/testimonials': 99_328,
       '/dashboard/media': 110_592,
       '/dashboard/profile': 123_904,
       '/dashboard/projects': 109_568,
@@ -889,20 +922,10 @@ describe('assertGovernedRouteCoverage — both directions (D20-29)', () => {
     const measured = DASHBOARD_ROUTES.map(r => r.route)
     // 12 -> 14: D20-35 registers the two Experiences editor routes (`M1·U3`).
     // 14 -> 17: D20-36 governs all three Skills routes (`M2·U2` collection + `M2·U3` editors).
-    // 17 -> 18: T·U2 registers the Testimonials collection, deliberately UNGOVERNED until the owner
-    // derives its cap from its own measured baseline — so the coverage assertion here is
-    // temporarily two-sided: the inventory grew, and `assertGovernedRouteCoverage` is expected to
-    // NAME exactly that route as measured-but-not-governed and nothing else.
+    // 17 -> 18: D20-37 governs the Testimonials collection (`T·U2` registered it deliberately
+    // ungoverned; the owner's cap arrived after measurement, as D20-34 prescribed).
     expect(measured).toHaveLength(18)
-    let message = ''
-    try {
-      assertGovernedRouteCoverage(measured)
-    } catch (error) {
-      message = error.message
-    }
-    expect(message).toMatch(/measured but NOT governed/)
-    expect(message).toMatch(/\/dashboard\/testimonials(?!\/)/)
-    expect(message).not.toMatch(/governed but NOT measured/)
+    expect(() => assertGovernedRouteCoverage(measured)).not.toThrow()
   })
 
   it('detects a route added to the gate without a doc 20 cap', () => {
