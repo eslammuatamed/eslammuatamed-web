@@ -1125,6 +1125,16 @@
         "deleteErrorTitle": "The project was not deleted",
         "deleteErrorBody": "The request did not complete — try again."
       }
+    },
+    "seo": {
+      "title": "Search and social",
+      "help": "Optional. Left empty, the site falls back to its own defaults.",
+      "field": {
+        "metaTitle": "Meta title",
+        "metaDescription": "Meta description",
+        "canonicalUrl": "Canonical URL",
+        "ogImage": "Social image"
+      }
     }
   },
   "footer": {
