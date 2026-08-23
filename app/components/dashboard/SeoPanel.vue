@@ -18,6 +18,10 @@
  * Clearing follows the contract's own inverse pair (D10-23): the picker's value travels through
  * untouched, so an explicit `null` reaches the caller verbatim and omission-vs-clear remains the
  * caller's payload decision.
+ *
+ * The OG picker is the LAZY variant on purpose: both consuming editors sit on governed routes whose
+ * media subsystem was deliberately moved off the eager closure (a measured 24,769 B), and a static
+ * import here would quietly pull it back onto every caller at once. Same component, same interface.
  */
 const props = defineProps<{
   metaTitle: string
@@ -27,6 +31,13 @@ const props = defineProps<{
   /** Direction of the content being edited; independent of the dashboard chrome direction. */
   contentDir?: 'ltr' | 'rtl'
   disabled?: boolean
+  /**
+   * Renders the four fields BARE — no fieldset, legend or help — for a caller that owns its own
+   * titled container (the editors' disclosure wrapper). Absent/false renders the titled group.
+   * (Named for the OFF state on purpose: Vue casts an absent Boolean prop to `false`, so a
+   * `heading?: boolean` would silently default this component to bare.)
+   */
+  bare?: boolean
   /** Server/validation errors surfaced verbatim by the caller's form context. */
   metaTitleError?: string
   metaDescriptionError?: string
@@ -44,12 +55,20 @@ const emit = defineEmits<{
 const { t } = useDashboardI18n()
 
 const dir = computed(() => props.contentDir ?? 'ltr')
+
+const bare = computed(() => props.bare === true)
 </script>
 
 <template>
-  <fieldset class="mt-2 flex flex-col gap-4 rounded-control border border-default p-4" data-seo-panel>
-    <legend class="px-1 text-sm font-medium text-highlighted">{{ t('dashboard.seo.title') }}</legend>
-    <p class="text-xs text-muted">{{ t('dashboard.seo.help') }}</p>
+  <component
+    :is="bare ? 'div' : 'fieldset'"
+    :class="bare
+      ? 'flex flex-col gap-4'
+      : 'mt-2 flex flex-col gap-4 rounded-control border border-default p-4'"
+    data-seo-panel
+  >
+    <legend v-if="!bare" class="px-1 text-sm font-medium text-highlighted">{{ t('dashboard.seo.title') }}</legend>
+    <p v-if="!bare" class="text-xs text-muted">{{ t('dashboard.seo.help') }}</p>
 
     <UFormField :label="t('dashboard.seo.field.metaTitle')" :error="metaTitleError">
       <UInput
@@ -86,7 +105,7 @@ const dir = computed(() => props.contentDir ?? 'ltr')
     </UFormField>
 
     <UFormField :label="t('dashboard.seo.field.ogImage')" :error="ogImageError">
-      <DashboardMediaPicker
+      <LazyDashboardMediaPicker
         :model-value="ogImageId"
         allowed-kind="IMAGE"
         :field-label="t('dashboard.seo.field.ogImage')"
@@ -95,5 +114,5 @@ const dir = computed(() => props.contentDir ?? 'ltr')
         @update:model-value="emit('update:ogImageId', $event)"
       />
     </UFormField>
-  </fieldset>
+  </component>
 </template>

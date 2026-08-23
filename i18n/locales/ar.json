@@ -587,11 +587,7 @@
         "title": "العنوان",
         "slug": "المُعرِّف",
         "excerpt": "المقتطف",
-        "body": "النص",
-        "metaTitle": "عنوان الميتا",
-        "metaDescription": "وصف الميتا",
-        "canonicalUrl": "الرابط الأساسي",
-        "ogImage": "صورة المشاركة"
+        "body": "النص"
       },
       "validation": {
         "categoryRequired": "اختر تصنيفًا.",

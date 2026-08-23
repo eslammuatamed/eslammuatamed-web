@@ -3,6 +3,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { mockNuxtImport, mountSuspended } from '@nuxt/test-utils/runtime'
 import { flushPromises } from '@vue/test-utils'
 import ArticleEditor from './ArticleEditor.vue'
+import SeoPanel from './SeoPanel.vue'
+import MediaPicker from './MediaPicker.vue'
 import { ApiError } from '~/utils/api-error'
 import type { AdminArticle, AdminArticleTranslation } from '~/composables/admin-article-types'
 
@@ -261,5 +263,125 @@ describe('§14.9 criterion 3 — no blank fields before the entity resolves', ()
       'an editable field here invites overwriting content that has not arrived'
     ).toBe(false)
     expect(wrapper.find('[data-editor-save]').exists()).toBe(false)
+  })
+})
+
+/**
+ * SEO-U3a — the shared panel refit. The four per-locale SEO fields are presented by
+ * `DashboardSeoPanel` now; these tests prove the wiring is mechanical: the SAME form state the
+ * payload builder reads, per-locale isolation intact, server errors still landing on the right
+ * locale, and no duplicate or Project-specific presentation anywhere in the editor.
+ */
+describe('the shared SEO panel is wired to the article form', () => {
+  it('renders one DashboardSeoPanel per mounted locale panel', async () => {
+    const wrapper = await mount()
+    const panels = wrapper.findAll('[data-editor-panel]')
+    expect(wrapper.findAllComponents(SeoPanel).length).toBe(panels.length)
+  })
+
+  it('no longer renders the old duplicated SEO controls', async () => {
+    const wrapper = await mount()
+    expect(wrapper.find('[data-editor-meta-title]').exists()).toBe(false)
+  })
+
+  it('routes an EN meta title edit into the payload the builder produces', async () => {
+    const wrapper = await mount()
+    await wrapper.find('[data-editor-panel="en"] [data-seo-field="metaTitle"]').setValue('New EN title')
+    await submit(wrapper)
+    const write = holder.calls.find(call => call.method === 'PATCH')
+    const en = (write?.body as { translations: Array<{ locale: string, metaTitle: string | null }> })
+      .translations.find(entry => entry.locale === 'en')
+    expect(en?.metaTitle).toBe('New EN title')
+  })
+
+  it('routes EN meta description and canonical URL edits the same way', async () => {
+    const wrapper = await mount()
+    await wrapper.find('[data-editor-panel="en"] [data-seo-field="metaDescription"]').setValue('New EN description')
+    await wrapper.find('[data-editor-panel="en"] [data-seo-field="canonicalUrl"]').setValue('https://example.com/canonical-en')
+    await submit(wrapper)
+    const write = holder.calls.find(call => call.method === 'PATCH')
+    const en = (write?.body as { translations: Array<{ locale: string, metaDescription: string | null, canonicalUrl: string | null }> })
+      .translations.find(entry => entry.locale === 'en')
+    expect(en?.metaDescription).toBe('New EN description')
+    expect(en?.canonicalUrl).toBe('https://example.com/canonical-en')
+  })
+
+  it('sends a picked OG image id and a CLEARED one as explicit null (D10-23)', async () => {
+    const wrapper = await mount()
+    const picker = wrapper.find('[data-editor-panel="en"] [data-seo-picker]').findComponent(MediaPicker)
+    expect(picker.exists()).toBe(true)
+
+    picker.vm.$emit('update:modelValue', 'asset-en-1')
+    await flushPromises()
+    holder.calls = []
+    await submit(wrapper)
+    const picked = holder.calls.find(call => call.method === 'PATCH')
+    const pickedBody = (picked?.body as { translations: Array<{ locale: string, ogImageId: string | null }> })
+      .translations.find(entry => entry.locale === 'en')
+    expect(pickedBody?.ogImageId).toBe('asset-en-1')
+
+    // The clear path: the picker emits null through the panel untouched.
+    const wrapper2 = await mount()
+    const picker2 = wrapper2.find('[data-editor-panel="en"] [data-seo-picker]').findComponent(MediaPicker)
+    picker2.vm.$emit('update:modelValue', 'asset-temp')
+    await flushPromises()
+    picker2.vm.$emit('update:modelValue', null)
+    await flushPromises()
+    holder.calls = []
+    await submit(wrapper2)
+    const cleared = holder.calls.find(call => call.method === 'PATCH')
+    const clearedBody = (cleared?.body as { translations: Array<{ locale: string, ogImageId: string | null }> })
+      .translations.find(entry => entry.locale === 'en')
+    expect(clearedBody?.ogImageId).toBeNull()
+  })
+
+  it('keeps EN and AR SEO state independent — editing one leaves the other stored value alone', async () => {
+    const wrapper = await mount(article({
+      translations: {
+        en: translation({ metaTitle: 'English held title' }),
+        ar: translation({ metaTitle: 'عنوان محفوظ' })
+      }
+    }))
+    await wrapper.find('[data-editor-panel="en"] [data-seo-field="metaTitle"]').setValue('Only English changed')
+    await submit(wrapper)
+
+    const write = holder.calls.find(call => call.method === 'PATCH')
+    const body = write?.body as { translations: Array<{ locale: string, metaTitle: string | null }> }
+    expect(body.translations.find(entry => entry.locale === 'en')?.metaTitle).toBe('Only English changed')
+    expect(body.translations.find(entry => entry.locale === 'ar')?.metaTitle).toBe('عنوان محفوظ')
+  })
+
+  it('lands an indexed canonicalUrl 422 on the ARABIC panel input and marks that tab invalid', async () => {
+    const wrapper = await mount()
+    holder.writeError = new ApiError({
+      type: '/problems/validation',
+      title: 'Validation failed',
+      status: 422,
+      detail: '1 field failed validation.',
+      errors: [{ field: 'translations[1].canonicalUrl', message: 'Must be a valid URI.' }]
+    })
+
+    await submit(wrapper)
+    await flushPromises()
+
+    const arInput = wrapper.find('[data-editor-panel="ar"] [data-seo-field="canonicalUrl"]')
+    expect(arInput.attributes('aria-invalid'), 'the Arabic canonical input carries the error').toBe('true')
+    expect(
+      wrapper.find('[data-editor-panel="en"] [data-seo-field="canonicalUrl"]').attributes('aria-invalid')
+    ).not.toBe('true')
+    expect(wrapper.find('[data-editor-tab-invalid="ar"]').exists()).toBe(true)
+  })
+
+  it('marks the form unsaved after an SEO edit', async () => {
+    const wrapper = await mount()
+    await wrapper.find('[data-editor-panel="en"] [data-seo-field="metaTitle"]').setValue('Dirtying the form')
+    await flushPromises()
+    expect(wrapper.find('[data-editor-save-state="unsaved"]').exists()).toBe(true)
+  })
+
+  it('carries no Projects presentation anywhere in the rendered editor', async () => {
+    const wrapper = await mount()
+    expect(wrapper.find('[data-project-field]').exists()).toBe(false)
+    expect(wrapper.html()).not.toContain('dashboard.projects.')
   })
 })

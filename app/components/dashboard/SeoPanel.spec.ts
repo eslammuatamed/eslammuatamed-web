@@ -201,4 +201,12 @@ describe('the panel is entity-blind by source, not by convention', () => {
     expect(source).not.toMatch(/\buseApi\b/)
     expect(source).not.toMatch(/dashboard-translation-errors/)
   })
+
+  it('keeps the media picker on the LAZY boundary the editors' + "'" + ' governed routes rely on', () => {
+    // Both consuming editors sit on routes whose media subsystem was deliberately moved off the
+    // eager closure (a measured 24,769 B). A static <DashboardMediaPicker> here would quietly
+    // pull it back onto every caller at once — this pin makes that regression a test failure.
+    expect(source).toMatch(/<LazyDashboardMediaPicker/)
+    expect(source).not.toMatch(/<DashboardMediaPicker[ /\n]/)
+  })
 })

@@ -548,30 +548,23 @@ const saveState = computed<'saving' | 'unsaved' | 'saved' | 'idle'>(() => {
               <summary class="cursor-pointer font-medium text-highlighted">
                 {{ t('dashboard.articles.editor.seoSection') }}
               </summary>
-              <div class="mt-4 flex flex-col gap-4">
-                <UFormField
-:name="`translations.${fieldLocale}.metaTitle`"
-              :error="serverFieldErrors[`translations.${fieldLocale}.metaTitle`]" :label="t('dashboard.articles.field.metaTitle')">
-                  <UInput v-model="form.translations[fieldLocale].metaTitle" class="w-full" :data-editor-meta-title="fieldLocale" />
-                </UFormField>
-                <UFormField
-:name="`translations.${fieldLocale}.metaDescription`"
-              :error="serverFieldErrors[`translations.${fieldLocale}.metaDescription`]" :label="t('dashboard.articles.field.metaDescription')">
-                  <UTextarea v-model="form.translations[fieldLocale].metaDescription" :rows="2" class="w-full" />
-                </UFormField>
-                <UFormField
-:name="`translations.${fieldLocale}.canonicalUrl`"
-              :error="serverFieldErrors[`translations.${fieldLocale}.canonicalUrl`]" :label="t('dashboard.articles.field.canonicalUrl')">
-                  <UInput v-model="form.translations[fieldLocale].canonicalUrl" dir="ltr" class="w-full" />
-                </UFormField>
-                <UFormField :label="t('dashboard.articles.field.ogImage')">
-                  <LazyDashboardMediaPicker
-                    v-model="form.translations[fieldLocale].ogImageId"
-                    allowed-kind="IMAGE"
-                    :field-label="t('dashboard.articles.field.ogImage')"
-                  />
-                </UFormField>
-              </div>
+              <!-- The shared per-entity SEO panel (SEO-U1), bound straight to this locale's
+                   translation form state — the exact fields the payload builder already reads.
+                   Bare mode: THIS editor owns the disclosure wrapper; the panel renders fields
+                   only. The picker stays lazy through the panel, preserving the measured media-
+                   subsystem boundary on these governed routes. -->
+              <DashboardSeoPanel
+                v-model:meta-title="form.translations[fieldLocale].metaTitle"
+                v-model:meta-description="form.translations[fieldLocale].metaDescription"
+                v-model:canonical-url="form.translations[fieldLocale].canonicalUrl"
+                v-model:og-image-id="form.translations[fieldLocale].ogImageId"
+                :content-dir="fieldLocale === 'ar' ? 'rtl' : 'ltr'"
+                bare
+                class="mt-4"
+                :meta-title-error="serverFieldErrors[`translations.${fieldLocale}.metaTitle`]"
+                :meta-description-error="serverFieldErrors[`translations.${fieldLocale}.metaDescription`]"
+                :canonical-url-error="serverFieldErrors[`translations.${fieldLocale}.canonicalUrl`]"
+              />
             </details>
             </template>
           </DashboardTranslationTabs>

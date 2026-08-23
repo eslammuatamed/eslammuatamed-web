@@ -587,11 +587,7 @@
         "title": "Title",
         "slug": "Slug",
         "excerpt": "Excerpt",
-        "body": "Body",
-        "metaTitle": "Meta title",
-        "metaDescription": "Meta description",
-        "canonicalUrl": "Canonical URL",
-        "ogImage": "Social image"
+        "body": "Body"
       },
       "validation": {
         "categoryRequired": "Choose a category.",
