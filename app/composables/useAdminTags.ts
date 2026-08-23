@@ -1,4 +1,5 @@
 import type { Envelope } from '~/types/models'
+import type { components } from '~/types/api'
 import type { AdminTag } from '~/composables/admin-article-types'
 import { ApiError } from '~/utils/api-error'
 
@@ -18,6 +19,8 @@ import { ApiError } from '~/utils/api-error'
  * - ⚠ NO detail read exists — `/admin/tags/{id}` answers PATCH and DELETE only, so this composable
  *   deliberately offers no `load(id)`.
  */
+type Schemas = components['schemas']
+
 export function useAdminTags() {
   const api = useApi()
 
@@ -51,4 +54,39 @@ export function useAdminTags() {
   }
 
   return { items, pending, forbidden, failed, load }
+}
+
+/**
+ * The three writes (`U3b`), throwing on failure for the same reason as every editor write. Tags
+ * document NO relation conflict — `remove` models only the 204/400/404 contract, and no 409 branch
+ * exists here to invent one.
+ *
+ * ⚠ Still NO detail read: `update` PATCHes the id straight from the clicked collection row.
+ */
+export function useAdminTagWrites() {
+  const api = useApi()
+
+  async function create(body: Schemas['CreateTagDto']): Promise<Schemas['AdminTagEntity']> {
+    const res = await api<Envelope<Schemas['AdminTagEntity']>>('/admin/tags', {
+      method: 'POST',
+      locale: false,
+      body
+    })
+    return res.data
+  }
+
+  async function update(id: string, body: Schemas['UpdateTagDto']): Promise<Schemas['AdminTagEntity']> {
+    const res = await api<Envelope<Schemas['AdminTagEntity']>>(`/admin/tags/${id}`, {
+      method: 'PATCH',
+      locale: false,
+      body
+    })
+    return res.data
+  }
+
+  async function remove(id: string): Promise<void> {
+    await api<unknown>(`/admin/tags/${id}`, { method: 'DELETE', locale: false })
+  }
+
+  return { create, update, remove }
 }

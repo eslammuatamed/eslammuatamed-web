@@ -140,18 +140,23 @@ describe('the Taxonomy page — one destination, two independent collections', (
     expect(missingCount).toBe(2)
   })
 
-  it('ships NO create or edit controls while no destination exists for them', async () => {
+  it('ships create/edit/delete controls that operate IN PLACE — never a route to a detail editor', async () => {
     const wrapper = await mount({
       '/admin/categories': [category('c1', 'Systems')],
       '/admin/tags': [tag('t1', 'NestJS')]
     })
     const html = wrapper.html()
-    for (const forbidden of ['data-taxonomy-create', 'data-category-edit', 'data-tag-edit', '/dashboard/taxonomy/new']) {
-      expect(html, `${forbidden} would be a dead control`).not.toContain(forbidden)
-    }
-    // No link of any kind may point at a taxonomy sub-route that does not exist.
+    // Create buttons per section; edit + delete per rendered row.
+    expect(html).toContain('data-taxonomy-create="categories"')
+    expect(html).toContain('data-taxonomy-create="tags"')
+    expect(html).toContain('data-taxonomy-edit="c1"')
+    expect(html).toContain('data-taxonomy-delete="c1"')
+    expect(html).toContain('data-taxonomy-edit="t1"')
+    expect(html).toContain('data-taxonomy-delete="t1"')
+    // No LINK of any kind may point at a taxonomy sub-route: editing lives on THIS route.
     for (const link of wrapper.findAll('a')) {
       expect(link.attributes('href'), link.attributes('href')).not.toMatch(/^\/dashboard\/taxonomy\//)
+      expect(link.attributes('href'), link.attributes('href')).not.toMatch(/\/dashboard\/(categories|tags)\//)
     }
   })
 

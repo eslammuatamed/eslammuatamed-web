@@ -2,6 +2,11 @@ import AxeBuilder from '@axe-core/playwright'
 import { expect, test } from '@playwright/test'
 import { hydrated } from '../hydration'
 import {
+  CREATED_CATEGORY_ID,
+  CREATED_TAG_ID,
+  fillField,
+  overlay,
+  overlaySettled,
   CATEGORY,
   CATEGORY_API_ORDER,
   NARROW,
@@ -20,6 +25,7 @@ import {
   shell,
   signIn,
   tagRows
+
 } from './harness'
 
 /**
@@ -261,3 +267,442 @@ for (const locale of ['en', 'ar'] as const) {
     })
   })
 }
+
+/* ══════════════════════════════════════════════════════════════════════════════════════════════
+   `U3b` — CREATE / EDIT / DELETE OVERLAYS, on this route. No detail read exists; every edit starts
+   from the clicked row. Still ONE spec file, because the lane stays `resetsBackendState: true`.
+   ══════════════════════════════════════════════════════════════════════════════════════════════ */
+
+test.describe('U3b · the category overlay', () => {
+  test('create opens empty; an ARABIC-FIRST create succeeds end-to-end', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL!)
+    await page.goto('/dashboard/taxonomy')
+    await listSettled(page)
+
+    const writes: string[] = []
+    page.on('request', (request) => {
+      if (/\/api\/v1\/admin\/categories/.test(request.url()) && request.method() !== 'GET') {
+        writes.push(request.method())
+      }
+    })
+
+    await page.locator('[data-taxonomy-create="categories"]').click()
+    await overlaySettled(page, 'categories')
+    await page.locator('[data-editor-tabs] button').nth(1).click() // Arabic tab
+    await fillField(page, 'name', 'ar', 'واجهات')
+    await fillField(page, 'slug', 'ar', 'interfaces-ar')
+    await page.locator(overlay.save).click()
+
+    await expect(page.locator(overlay.root('categories'))).toBeHidden()
+    await listSettled(page)
+    const ids = await categoryRows(page).evaluateAll(els => els.map(el => el.getAttribute('data-category-row')))
+    expect(ids).toHaveLength(5)
+    expect(ids.at(-1)).toBe(CREATED_CATEGORY_ID) // server order: appended last
+    expect(writes).toEqual(['POST'])
+  })
+
+  test('an ENGLISH-FIRST create succeeds symmetrically', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL!)
+    await page.goto('/dashboard/taxonomy')
+    await listSettled(page)
+    await page.locator('[data-taxonomy-create="categories"]').click()
+    await overlaySettled(page, 'categories')
+    await page.locator(overlay.field('name', 'en')).fill('Craft')
+    await page.locator(overlay.field('slug', 'en')).fill('craft')
+    await page.locator(overlay.save).click()
+    await expect(page.locator(overlay.root('categories'))).toBeHidden()
+    await listSettled(page)
+    await expect(page.locator(`[data-category-row="${CREATED_CATEGORY_ID}"]`)).toBeVisible()
+  })
+
+  test('zero usable translations -> save blocked client-side with ZERO write requests', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL!)
+    await page.goto('/dashboard/taxonomy')
+    await listSettled(page)
+    const writes: string[] = []
+    page.on('request', (request) => {
+      if (/\/api\/v1\/admin\/categories/.test(request.url()) && request.method() !== 'GET') writes.push(request.url())
+    })
+    await page.locator('[data-taxonomy-create="categories"]').click()
+    await overlaySettled(page, 'categories')
+    await page.locator(overlay.save).click()
+    await expect(page.locator('[data-taxonomy-overlay-error-summary]')).toBeVisible()
+    await expect(page.locator(`${overlay.root('categories')} ${overlay.title}`)).toBeVisible()
+    expect(writes, 'an unguarded save reached the API').toEqual([])
+  })
+
+  test('EDIT opens from the clicked row with ZERO detail GETs and PATCHes only what changed', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL!)
+    await page.goto('/dashboard/taxonomy')
+    await listSettled(page)
+
+    const apiRequests: string[] = []
+    const listener = (request: import('@playwright/test').Request): void => {
+      if (/\/api\/v1\/admin\/(categories|tags)/.test(request.url())) {
+        apiRequests.push(`${request.method()} ${new URL(request.url()).pathname}`)
+      }
+    }
+
+    // ⚠ THE INVARIANT: opening EDIT must issue ZERO detail GETs.
+    page.on('request', listener)
+    await page.locator(`[data-taxonomy-edit="${CATEGORY.oldest}"]`).click()
+    await overlaySettled(page, 'categories')
+
+    await expect(page.locator(overlay.field('name', 'en'))).toHaveValue('Systems')
+    await expect(page.locator(overlay.field('name', 'ar'))).toHaveValue('أنظمة')
+
+    await page.locator(overlay.field('name', 'en')).fill('Systems rewritten')
+    const patchPromise = page.waitForRequest(
+      (request) => request.method() === 'PATCH' && request.url().includes(`/api/v1/admin/categories/${CATEGORY.oldest}`)
+    )
+    await page.locator(overlay.save).click()
+    const body = JSON.parse((await patchPromise).postData() ?? '{}')
+    page.off('request', listener)
+
+    // ⚠ UPSERT ON THE WIRE: only the changed locale; untouched Arabic omitted entirely;
+    // unchanged description key omitted within the emitted item.
+    expect(body.translations).toHaveLength(1)
+    expect(body.translations[0]).toEqual({ locale: 'en', name: 'Systems rewritten', slug: 'systems' })
+    expect(JSON.stringify(body)).not.toContain('أنظمة')
+
+    await listSettled(page)
+    expect(apiRequests.filter((line) => line.startsWith('GET ') && /\/(categories|tags)\//.test(line))).toEqual([])
+  })
+
+  test('untouched locale PRESERVES after refresh while the edited locale shows new content', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL!)
+    await page.goto('/dashboard/taxonomy')
+    await listSettled(page)
+    await page.locator(`[data-taxonomy-edit="${CATEGORY.oldest}"]`).click()
+    await overlaySettled(page, 'categories')
+    await page.locator(overlay.field('name', 'en')).fill('Systems rewritten')
+    await page.locator(overlay.save).click()
+    await expect(page.locator(overlay.root('categories'))).toBeHidden()
+    await listSettled(page)
+
+    const row = page.locator(`[data-category-row="${CATEGORY.oldest}"]`)
+    await expect(row.locator('[data-taxonomy-name]')).toContainText('Systems rewritten')
+    // Arabic badge still PRESENT — omission preserved it.
+    await expect(row.locator('[data-taxonomy-translation="ar:present"]')).toBeVisible()
+  })
+
+  test('description: explicit clear sends null on PATCH; an untouched description is omitted', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL!)
+    await page.goto('/dashboard/taxonomy')
+    await listSettled(page)
+
+    // CLEAR: empty the stored English description and save — `null` must travel.
+    await page.locator(`[data-taxonomy-edit="${CATEGORY.oldest}"]`).click()
+    await overlaySettled(page, 'categories')
+    await page.locator(overlay.field('description', 'en')).fill('')
+    const clearPatch = page.waitForRequest(
+      (request) => request.method() === 'PATCH' && request.url().includes(`/api/v1/admin/categories/${CATEGORY.oldest}`)
+    )
+    await page.locator(overlay.save).click()
+    const cleared = JSON.parse((await clearPatch).postData() ?? '{}')
+    expect(cleared.translations[0]).toHaveProperty('description', null)
+
+    await listSettled(page)
+
+    // UNTOUCHED description: renaming Arabic emits the ar locale WITHOUT any description key,
+    // because the value did not change from the initialized row.
+    await page.locator(`[data-taxonomy-edit="${CATEGORY.oldest}"]`).click()
+    await overlaySettled(page, 'categories')
+    await fillField(page, 'name', 'ar', 'أنظمة جديدة')
+    const touchPatch = page.waitForRequest(
+      (request) => request.method() === 'PATCH' && request.url().includes(`/api/v1/admin/categories/${CATEGORY.oldest}`)
+    )
+    await page.locator(overlay.save).click()
+    const touched = JSON.parse((await touchPatch).postData() ?? '{}')
+    expect(touched.translations[0].locale).toBe('ar')
+    expect(touched.translations[0]).not.toHaveProperty('description')
+  })
+
+  test('a slug conflict 422 activates the ARABIC tab of the sent order', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL!)
+    await page.goto('/dashboard/taxonomy')
+    await listSettled(page)
+
+    // Author ONLY Arabic on the oldest category, colliding with another row's Arabic slug.
+    await page.locator(`[data-taxonomy-edit="${CATEGORY.oldest}"]`).click()
+    await overlaySettled(page, 'categories')
+    await fillField(page, 'slug', 'ar', 'interface-ar') // held by CATEGORY.described
+
+    const responsePromise = page.waitForResponse(
+      (response) => response.request().method() === 'PATCH' && response.url().includes(`/api/v1/admin/categories/${CATEGORY.oldest}`)
+    )
+    await page.locator(overlay.save).click()
+    expect((await responsePromise).status()).toBe(422)
+
+    // The SENT array was Arabic-only, so index 0 IS Arabic — the overlay must show THAT tab.
+    await expect(page.locator('[data-editor-tab-invalid="ar"]')).toBeVisible()
+    await expect(page.locator(`${overlay.root('categories')} ${overlay.title}`)).toBeVisible()
+  })
+
+  test('delete succeeds for an unreferenced category and removes the row after confirmation', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL!)
+    await page.goto('/dashboard/taxonomy')
+    await listSettled(page)
+
+    await page.locator(`[data-taxonomy-delete="${CATEGORY.enOnly}"]`).click()
+    await overlaySettled(page, 'categories')
+    await page.locator(overlay.delete).click()
+    await page.locator(overlay.deleteConfirm).click()
+
+    await expect(page.locator(overlay.root('categories'))).toBeHidden()
+    await listSettled(page)
+    await expect(categoryRows(page)).toHaveCount(3)
+  })
+
+  test('the DOCUMENTED article-reference 409 surfaces localized and the entity remains', async ({ page, baseURL }) => {
+    await setBackendState(page, { articleReferencedCategoryIds: [CATEGORY.oldest] })
+    await signIn(page, 'en', baseURL!)
+    await page.goto('/dashboard/taxonomy')
+    await listSettled(page)
+
+    await page.locator(`[data-taxonomy-delete="${CATEGORY.oldest}"]`).click()
+    await overlaySettled(page, 'categories')
+    await page.locator(overlay.delete).click()
+    await page.locator(overlay.deleteConfirm).click()
+
+    await expect(page.locator('[data-taxonomy-overlay-delete-error]')).toBeVisible()
+    await listSettled(page)
+    await expect(categoryRows(page)).toHaveCount(4) // NOT deleted
+  })
+})
+
+test.describe('U3b · the tag overlay', () => {
+  test('create opens; ARABIC-FIRST then ENGLISH-FIRST creates both succeed', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL!)
+    await page.goto('/dashboard/taxonomy')
+    await listSettled(page)
+
+    await page.locator('[data-taxonomy-create="tags"]').click()
+    await overlaySettled(page, 'tags')
+    await page.locator('[data-editor-tabs] button').nth(1).click()
+    await fillField(page, 'name', 'ar', 'اختبار-جديد')
+    await fillField(page, 'slug', 'ar', 'new-tag-ar')
+    await page.locator(overlay.save).click()
+    await expect(page.locator(overlay.root('tags'))).toBeHidden()
+    await listSettled(page)
+    await expect(page.locator(`[data-tag-row="${CREATED_TAG_ID}"]`)).toBeVisible()
+
+    // Second create (sequence 2), English-first.
+    await page.locator('[data-taxonomy-create="tags"]').click()
+    await overlaySettled(page, 'tags')
+    await page.locator(overlay.field('name', 'en')).fill('Fresh')
+    await page.locator(overlay.field('slug', 'en')).fill('fresh')
+    await page.locator(overlay.save).click()
+    await expect(page.locator(overlay.root('tags'))).toBeHidden()
+    await listSettled(page)
+    await expect(tagRows(page)).toHaveCount(5)
+  })
+
+  test('zero usable translations -> blocked with zero write requests', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL!)
+    await page.goto('/dashboard/taxonomy')
+    await listSettled(page)
+    const writes: string[] = []
+    page.on('request', (request) => {
+      if (/\/api\/v1\/admin\/tags/.test(request.url()) && request.method() !== 'GET') writes.push(request.url())
+    })
+    await page.locator('[data-taxonomy-create="tags"]').click()
+    await overlaySettled(page, 'tags')
+    await page.locator(overlay.save).click()
+    await expect(page.locator('[data-taxonomy-overlay-error-summary]')).toBeVisible()
+    expect(writes).toEqual([])
+  })
+
+  test('EDIT initializes from the row with ZERO detail GETs; one-locale PATCH upserts correctly', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL!)
+    await page.goto('/dashboard/taxonomy')
+    await listSettled(page)
+
+    const detailGets: string[] = []
+    page.on('request', (request) => {
+      if (request.method() === 'GET' && /\/api\/v1\/admin\/tags\/.+/.test(request.url())) detailGets.push(request.url())
+    })
+
+    await page.locator(`[data-taxonomy-edit="${TAG.oldest}"]`).click()
+    await overlaySettled(page, 'tags')
+    await expect(page.locator(overlay.field('name', 'en'))).toHaveValue('NestJS')
+    await expect(page.locator(overlay.field('name', 'ar'))).toHaveValue('نيست')
+
+    await page.locator(overlay.field('name', 'en')).fill('NestJS rewritten')
+    const patchPromise = page.waitForRequest(
+      (request) => request.method() === 'PATCH' && request.url().includes(`/api/v1/admin/tags/${TAG.oldest}`)
+    )
+    await page.locator(overlay.save).click()
+    const body = JSON.parse((await patchPromise).postData() ?? '{}')
+    expect(body.translations).toEqual([{ locale: 'en', name: 'NestJS rewritten', slug: 'nestjs' }])
+    await listSettled(page)
+    expect(detailGets, 'a detail GET fired during tag editing').toEqual([])
+
+    // Untouched Arabic preserved after refresh.
+    const row = page.locator(`[data-tag-row="${TAG.oldest}"]`)
+    await expect(row.locator('[data-taxonomy-name]')).toContainText('NestJS rewritten')
+    await expect(row.locator('[data-taxonomy-translation="ar:present"]')).toBeVisible()
+  })
+
+  test('a slug-conflict 422 resolves to the correct tab; NO fabricated relation-409 exists for tags', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL!)
+    await page.goto('/dashboard/taxonomy')
+    await listSettled(page)
+
+    await page.locator(`[data-taxonomy-edit="${TAG.oldest}"]`).click()
+    await overlaySettled(page, 'tags')
+    await page.locator(overlay.field('slug', 'en')).fill('vue') // held by TAG.enOnly
+
+    const responsePromise = page.waitForResponse(
+      (response) => response.request().method() === 'PATCH' && response.url().includes(`/api/v1/admin/tags/${TAG.oldest}`)
+    )
+    await page.locator(overlay.save).click()
+    expect((await responsePromise).status()).toBe(422)
+    await expect(page.locator('[data-editor-tab-invalid="en"]')).toBeVisible()
+
+    // The overlay stays open on the 422 (dirty form); discard it before the delete sweep.
+    page.once('dialog', (dialog) => void dialog.accept())
+    await page.locator(overlay.close).click()
+    await expect(page.locator(overlay.root('tags'))).toBeHidden()
+    await listSettled(page)
+
+    // Delete EVERY seeded tag: all answer 204. No 409 branch may exist to fall into.
+    const expectedCounts = [2, 1, 0]
+    for (const [index, id] of [TAG.oldest, TAG.enOnly, TAG.middle].entries()) {
+      await page.locator(`[data-taxonomy-delete="${id}"]`).click()
+      await overlaySettled(page, 'tags')
+      await page.locator(overlay.delete).click()
+      await page.locator(overlay.deleteConfirm).click()
+      await expect(page.locator(overlay.root('tags'))).toBeHidden()
+      await listSettled(page)
+      await expect(tagRows(page)).toHaveCount(expectedCounts[index]!)
+      if (index < 2) {
+        // Let the slideover's exit transition finish so it cannot intercept the next row's click.
+        await page.waitForTimeout(250)
+      }
+    }
+    await expect(page.locator('[data-tags-empty]')).toBeVisible()
+  })
+})
+
+test.describe('U3b · shared overlay behavior', () => {
+  test('closing a DIRTY overlay asks; closing a CLEAN one does not; collection stays usable either way', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL!)
+    await page.goto('/dashboard/taxonomy')
+    await listSettled(page)
+
+    await page.locator('[data-taxonomy-create="categories"]').click()
+    await overlaySettled(page, 'categories')
+    await page.locator(overlay.field('name', 'en')).fill('Unsaved work')
+
+    let asked = false
+    page.once('dialog', (dialog) => { asked = true; void dialog.dismiss() }) // stay open
+    await page.locator(overlay.close).click()
+    await expect(page.locator(`${overlay.root('categories')} ${overlay.title}`)).toBeVisible()
+    expect(asked, 'a dirty overlay closed without asking').toBe(true)
+
+    // Discard this time: confirm, overlay closes, collection intact underneath.
+    page.once('dialog', (dialog) => void dialog.accept())
+    await page.locator(overlay.close).click()
+    await expect(page.locator(overlay.root('categories'))).toBeHidden()
+    await expect(categoryRows(page)).toHaveCount(4)
+  })
+
+  test('after a mutation refresh BOTH sections still render SERVER order — no local re-sort', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL!)
+    await page.goto('/dashboard/taxonomy')
+    await listSettled(page)
+
+    // Create via the UI, forcing a section refresh.
+    await page.locator('[data-taxonomy-create="categories"]').click()
+    await overlaySettled(page, 'categories')
+    await page.locator(overlay.field('name', 'en')).fill('Aaa-first-alphabetically')
+    await page.locator(overlay.field('slug', 'en')).fill('aaa')
+    await page.locator(overlay.save).click()
+    await listSettled(page)
+
+    // The created row sits LAST (createdAt asc), even though its name sorts FIRST alphabetically.
+    const ids = await categoryRows(page).evaluateAll(els => els.map(el => el.getAttribute('data-category-row')))
+    expect(ids.at(-1)).toBe(CREATED_CATEGORY_ID)
+    expect(ids.slice(0, 4)).toEqual([...CATEGORY_API_ORDER])
+  })
+
+  test('no PUBLIC taxonomy endpoint leaks during create/edit/delete flows', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL!)
+    await page.goto('/dashboard/taxonomy')
+    await listSettled(page)
+    const leaks: string[] = []
+    page.on('request', (request) => {
+      if (/\/api\/v1\/(categories|tags)\b/.test(request.url())) leaks.push(request.url())
+    })
+    await page.locator('[data-taxonomy-create="categories"]').click()
+    await overlaySettled(page, 'categories')
+    await page.locator(overlay.field('name', 'en')).fill('Leak probe')
+    await page.locator(overlay.field('slug', 'en')).fill('leak-probe')
+    await page.locator(overlay.save).click()
+    await listSettled(page)
+    expect(leaks).toEqual([])
+  })
+
+  for (const locale of ['en', 'ar'] as const) {
+    test(`${locale}: overlays are usable at 380px with correct field direction`, async ({ page, baseURL }) => {
+      await page.setViewportSize(NARROW)
+      await signIn(page, locale, baseURL!)
+      await page.goto('/dashboard/taxonomy')
+      await listSettled(page)
+
+      await page.locator('[data-taxonomy-create="categories"]').click()
+      await overlaySettled(page, 'categories')
+
+      expect(await page.evaluate(() => window.innerWidth)).toBe(NARROW.width)
+      await expect(shell(page)).toHaveAttribute('dir', locale === 'ar' ? 'rtl' : 'ltr')
+      await expectNoKeyPaths(page)
+
+      // Field direction is independent of chrome direction.
+      await fillField(page, 'name', 'ar', 'اتجاه')
+      await expect(page.locator('[data-editor-panel="ar"]')).toHaveAttribute('dir', 'rtl')
+      await expect(page.locator('[data-editor-panel="en"]')).toHaveAttribute('dir', 'ltr')
+
+      const overflow = await page.evaluate(() => ({
+        scrollWidth: document.documentElement.scrollWidth,
+        clientWidth: document.documentElement.clientWidth
+      }))
+      expect(overflow.scrollWidth, `taxonomy overlay overflows at 380px in ${locale}`)
+        .toBeLessThanOrEqual(overflow.clientWidth + 1)
+
+      // Actions reachable inside the narrow slideover.
+      await expect(page.locator(overlay.save)).toBeVisible()
+      await page.locator(overlay.close).click()
+    })
+  }
+
+  for (const locale of ['en', 'ar'] as const) {
+    test(`${locale}: the OPEN overlay is axe-clean (create and edit states)`, async ({ page, baseURL }) => {
+      await signIn(page, locale, baseURL as string)
+      await page.goto('/dashboard/taxonomy')
+      await hydrated(page)
+      await listSettled(page)
+
+      // CREATE state.
+      await page.locator('[data-taxonomy-create="categories"]').click()
+      await overlaySettled(page, 'categories')
+      await hydrated(page)
+      let results = await new AxeBuilder({ page }).analyze()
+      expect(results.violations, `${locale} create overlay`).toEqual([])
+
+      // EDIT state (same overlay, populated).
+      await page.locator(overlay.close).click()
+      await page.locator(`[data-taxonomy-edit="${CATEGORY.oldest}"]`).click()
+      await overlaySettled(page, 'categories')
+      results = await new AxeBuilder({ page }).analyze()
+      expect(results.violations, `${locale} edit overlay`).toEqual([])
+
+      // TAG create state.
+      await page.locator(overlay.close).click()
+      await page.locator('[data-taxonomy-create="tags"]').click()
+      await overlaySettled(page, 'tags')
+      results = await new AxeBuilder({ page }).analyze()
+      expect(results.violations, `${locale} tag overlay`).toEqual([])
+    })
+  }
+})

@@ -6,6 +6,8 @@ import process from 'node:process'
 const APP = resolve(process.cwd(), 'app')
 const MODULE_FILES = [
   'composables/admin-taxonomy-fields.ts',
+  'composables/admin-category-form.ts',
+  'composables/admin-tag-form.ts',
   'composables/useAdminCategories.ts',
   'composables/useAdminTags.ts',
   'pages/dashboard/taxonomy/index.vue'
@@ -25,6 +27,7 @@ const OTHER_DASHBOARD_FILES = [
   'composables/useAdminSkills.ts',
   'composables/useAdminSkill.ts',
   'composables/admin-testimonial-fields.ts',
+  'composables/admin-testimonial-form.ts',
   'composables/admin-testimonial-form.ts',
   'composables/useAdminTestimonials.ts',
   'composables/admin-project-form.ts',

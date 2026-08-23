@@ -1,4 +1,5 @@
 import type { Envelope } from '~/types/models'
+import type { components } from '~/types/api'
 import type { AdminCategory } from '~/composables/admin-article-types'
 import { ApiError } from '~/utils/api-error'
 
@@ -26,6 +27,8 @@ import { ApiError } from '~/utils/api-error'
  * section of the Taxonomy page owns independent request state with zero new shared abstraction:
  * two honest instances of the established module pattern, one per endpoint.
  */
+type Schemas = components['schemas']
+
 export function useAdminCategories() {
   const api = useApi()
 
@@ -66,4 +69,42 @@ export function useAdminCategories() {
   }
 
   return { items, pending, forbidden, failed, load }
+}
+
+/**
+ * The three writes (`U3b`). Each THROWS on failure so the overlay can keep the operator's unsaved
+ * input on screen and render the RFC 7807 problem — including the DOCUMENTED article-reference 409
+ * on delete, which the overlay surfaces as a localized message. Silently discarding an edit it
+ * cannot prove was stored is the one outcome an editor must never produce.
+ *
+ * ⚠ Still NO detail read: `update` PATCHes the id straight from the clicked collection row, and no
+ * function here fetches `/admin/categories/{id}` with GET.
+ */
+export function useAdminCategoryWrites() {
+  const api = useApi()
+
+  async function create(body: Schemas['CreateCategoryDto']): Promise<Schemas['AdminCategoryEntity']> {
+    const res = await api<Envelope<Schemas['AdminCategoryEntity']>>('/admin/categories', {
+      method: 'POST',
+      locale: false,
+      body
+    })
+    return res.data
+  }
+
+  async function update(id: string, body: Schemas['UpdateCategoryDto']): Promise<Schemas['AdminCategoryEntity']> {
+    const res = await api<Envelope<Schemas['AdminCategoryEntity']>>(`/admin/categories/${id}`, {
+      method: 'PATCH',
+      locale: false,
+      body
+    })
+    return res.data
+  }
+
+  /** `204 No Content`; a documented 409 (article-referenced) throws as ApiError. */
+  async function remove(id: string): Promise<void> {
+    await api<unknown>(`/admin/categories/${id}`, { method: 'DELETE', locale: false })
+  }
+
+  return { create, update, remove }
 }

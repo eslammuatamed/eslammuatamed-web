@@ -7,6 +7,27 @@ import {
   taxonomyHasTranslation,
   type TaxonomyRowLike
 } from '~/composables/admin-taxonomy-fields'
+import type { components } from '~/types/api'
+
+type Schemas = components['schemas']
+
+/**
+ * The overlay editor targets (`U3b`). `null` means CREATE; a row means EDIT, held BY IDENTITY from
+ * the collection list — there is no detail read to fetch a fresher copy with, and none is attempted.
+ */
+const categoryOverlayOpen = ref(false)
+const tagOverlayOpen = ref(false)
+const editingCategory = ref<Schemas['AdminCategoryEntity'] | null>(null)
+const editingTag = ref<Schemas['AdminTagEntity'] | null>(null)
+
+function openCategoryEditor(row: Schemas['AdminCategoryEntity'] | null): void {
+  editingCategory.value = row
+  categoryOverlayOpen.value = true
+}
+function openTagEditor(row: Schemas['AdminTagEntity'] | null): void {
+  editingTag.value = row
+  tagOverlayOpen.value = true
+}
 
 /**
  * Dashboard Taxonomy — ONE destination hosting TWO collections (FE-3 Taxonomy, `U2`).
@@ -21,9 +42,9 @@ import {
  * a control for any of them would build a URL contract the API does not honour.
  *
  * ⚠ NEITHER ENTITY HAS A DETAIL READ — `/admin/categories/{id}` and `/admin/tags/{id}` answer PATCH
- * and DELETE only. So this page renders every row entirely from its LIST response, issues no
- * `{id}` GET, and offers NO row action: there is no editor route to link to yet, and a button whose
- * destination does not exist is a dead control, which this unit ships instead of pretending.
+ * and DELETE only. So this page renders every row entirely from its LIST response and issues no
+ * `{id}` GET; editing opens the USlideover ON THIS ROUTE (`U3b`), initialized from the clicked row —
+ * there is no editor route to navigate to, by contract.
  *
  * ── ⚠ THE ROWS ARE NOT SORTED HERE, AND THAT IS THE POINT ───────────────────────────────────────
  * The endpoints take no sort parameter, so the server's order IS the contract (`createdAt`
@@ -125,8 +146,17 @@ void loadTags()
 
     <!-- ═══ Categories ═══ -->
     <section :aria-label="t('dashboard.taxonomy.categories.regionLabel')" data-taxonomy-section="categories" class="mb-10">
-      <h2 class="text-lg font-medium text-highlighted">{{ t('dashboard.taxonomy.categories.title') }}</h2>
-      <p class="mb-4 mt-1 text-sm text-muted">{{ t('dashboard.taxonomy.categories.description') }}</p>
+      <div class="flex flex-wrap items-start justify-between gap-3">
+        <div class="min-w-0">
+          <h2 class="text-lg font-medium text-highlighted">{{ t('dashboard.taxonomy.categories.title') }}</h2>
+          <p class="mb-4 mt-1 text-sm text-muted">{{ t('dashboard.taxonomy.categories.description') }}</p>
+        </div>
+        <UButton
+size="sm" icon="i-lucide-plus" data-taxonomy-create="categories"
+                 @click="openCategoryEditor(null)">
+          {{ t('dashboard.taxonomy.overlay.createCategory') }}
+        </UButton>
+      </div>
 
       <!-- 403 answered on its own terms: not retryable, not empty (D11-2). -->
       <UAlert
@@ -186,7 +216,8 @@ void loadTags()
             <ul class="flex flex-col gap-2">
               <li v-for="category in categoryItems" :key="category.id">
                 <UCard as="article" :data-category-row="category.id">
-                  <div class="min-w-0">
+                  <div class="flex flex-wrap items-start justify-between gap-3">
+                    <div class="min-w-0 flex-1">
                     <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
                       <h3 dir="auto" class="truncate font-medium text-highlighted" :data-taxonomy-name="category.id">
                         {{ rowName(category, 'dashboard.taxonomy.categories.untitled') }}
@@ -209,6 +240,22 @@ void loadTags()
                     >
                       {{ category.translations[locale]?.description }}
                     </p>
+                    </div>
+
+                    <div class="flex shrink-0 items-center gap-1.5">
+                      <UButton
+color="neutral" variant="ghost" size="xs" icon="i-lucide-pencil"
+                               :data-taxonomy-edit="category.id"
+                               :aria-label="t('dashboard.taxonomy.overlay.edit')"
+                               @click="openCategoryEditor(category)">
+                        {{ t('dashboard.taxonomy.overlay.edit') }}
+                      </UButton>
+                      <UButton
+color="neutral" variant="ghost" size="xs" icon="i-lucide-trash-2"
+                               :data-taxonomy-delete="category.id"
+                               :aria-label="t('dashboard.taxonomy.overlay.delete')"
+                               @click="openCategoryEditor(category)" />
+                    </div>
                   </div>
 
                   <dl class="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs">
@@ -244,8 +291,17 @@ void loadTags()
 
     <!-- ═══ Tags ═══ -->
     <section :aria-label="t('dashboard.taxonomy.tags.regionLabel')" data-taxonomy-section="tags">
-      <h2 class="text-lg font-medium text-highlighted">{{ t('dashboard.taxonomy.tags.title') }}</h2>
-      <p class="mb-4 mt-1 text-sm text-muted">{{ t('dashboard.taxonomy.tags.description') }}</p>
+      <div class="flex flex-wrap items-start justify-between gap-3">
+        <div class="min-w-0">
+          <h2 class="text-lg font-medium text-highlighted">{{ t('dashboard.taxonomy.tags.title') }}</h2>
+          <p class="mb-4 mt-1 text-sm text-muted">{{ t('dashboard.taxonomy.tags.description') }}</p>
+        </div>
+        <UButton
+size="sm" icon="i-lucide-plus" data-taxonomy-create="tags"
+                 @click="openTagEditor(null)">
+          {{ t('dashboard.taxonomy.overlay.createTag') }}
+        </UButton>
+      </div>
 
       <UAlert
         v-if="tagsForbidden"
@@ -304,7 +360,8 @@ void loadTags()
             <ul class="flex flex-col gap-2">
               <li v-for="tag in tagItems" :key="tag.id">
                 <UCard as="article" :data-tag-row="tag.id">
-                  <div class="min-w-0">
+                  <div class="flex flex-wrap items-start justify-between gap-3">
+                    <div class="min-w-0 flex-1">
                     <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
                       <h3 dir="auto" class="truncate font-medium text-highlighted" :data-taxonomy-name="tag.id">
                         {{ rowName(tag, 'dashboard.taxonomy.tags.untitled') }}
@@ -317,6 +374,22 @@ void loadTags()
                       >
                         /{{ rowSlug(tag) }}
                       </code>
+                    </div>
+                    </div>
+
+                    <div class="flex shrink-0 items-center gap-1.5">
+                      <UButton
+color="neutral" variant="ghost" size="xs" icon="i-lucide-pencil"
+                               :data-taxonomy-edit="tag.id"
+                               :aria-label="t('dashboard.taxonomy.overlay.edit')"
+                               @click="openTagEditor(tag)">
+                        {{ t('dashboard.taxonomy.overlay.edit') }}
+                      </UButton>
+                      <UButton
+color="neutral" variant="ghost" size="xs" icon="i-lucide-trash-2"
+                               :data-taxonomy-delete="tag.id"
+                               :aria-label="t('dashboard.taxonomy.overlay.delete')"
+                               @click="openTagEditor(tag)" />
                     </div>
                   </div>
 
@@ -350,5 +423,13 @@ void loadTags()
         </UiRequestState>
       </template>
     </section>
+
+    <!-- ═══ Overlays (`U3b`) — one per entity type, editing IN PLACE on this route ═══ -->
+    <DashboardTaxonomyCategoryOverlay
+v-model:open="categoryOverlayOpen" kind="categories" :row="editingCategory"
+                             @saved="loadCategories()" />
+    <DashboardTaxonomyTagOverlay
+v-model:open="tagOverlayOpen" kind="tags" :row="editingTag"
+                        @saved="loadTags()" />
   </UContainer>
 </template>

@@ -91,10 +91,80 @@ export async function setBackendState(
     delayMs?: number
     categories?: OutOfSequenceRow[]
     tags?: OutOfSequenceRow[]
+    articleReferencedCategoryIds?: string[]
   }
 ): Promise<void> {
   const res = await page.request.post(`${CONTROL_BASE}/__e2e/state`, { data: state })
   expect(res.ok(), 'backend state change must succeed').toBe(true)
+}
+
+/** The first ids the instrument's create path mints per kind (`100000000000 + sequence 1`). */
+export const CREATED_CATEGORY_ID = '00000000-0000-4000-a900-100000000001'
+export const CREATED_TAG_ID = '00000000-0000-4000-a910-100000000001'
+
+export const overlay = {
+  root: (kind: 'categories' | 'tags') => `[data-taxonomy-overlay-kind="${kind}"]`,
+  title: '[data-taxonomy-overlay-title]',
+  close: '[data-taxonomy-overlay-close]',
+  save: '[data-editor-save]',
+  delete: '[data-editor-delete]',
+  deleteConfirm: '[data-editor-delete-confirm]',
+  errorSummary: '[data-taxonomy-overlay-error-summary]',
+  saveError: '[data-taxonomy-overlay-error]',
+  deleteError: '[data-taxonomy-overlay-delete-error]',
+  tab: (locale: 'en' | 'ar') => `${'[data-editor-tabs] button'}[data-value=${locale}], [data-editor-tabs] button:has-text("${locale === 'ar' ? 'العربية' : 'English'}")`,
+  // UInput/UTextarea forward fall-through attrs ONTO the control element itself.
+  field: (name: string, locale: string) => `[data-taxonomy-field="${name}:${locale}"]`
+}
+
+/** Wait until the overlay is OPEN and interactive. */
+/**
+ * Switch the overlay to a locale tab. Tab labels are bilingual, so select by POSITION.
+ *
+ * Retried because the click can land while the slideover's open transition / focus scope is still
+ * settling and get swallowed — a silent no-op that leaves the previous tab selected.
+ */
+export async function clickTab(page: Page, locale: 'en' | 'ar'): Promise<void> {
+  const index = locale === 'ar' ? 1 : 0
+  const tab = page.locator('[data-editor-tabs] button').nth(index)
+  await expect(async () => {
+    await tab.click()
+    await expect(tab).toHaveAttribute('aria-selected', 'true')
+  }).toPass({ timeout: 15_000 })
+}
+
+/**
+ * Activate the field's locale TAB, then fill the field VISIBLY.
+ *
+ * A non-active panel stays MOUNTED but hidden (`unmount-on-hide=false`), and a forced fill on a
+ * hidden input mutates nothing in the form state — so activation is not optional, it is the only
+ * way a fill reaches Vue. Tab-switching realism is preserved because this goes through the real
+ * tab control (with its retry), never around it.
+ */
+export async function fillField(
+  page: Page,
+  name: string,
+  locale: 'en' | 'ar',
+  value: string
+): Promise<void> {
+  await clickTab(page, locale)
+  const locator = page.locator(`[data-taxonomy-field="${name}:${locale}"]`)
+  await expect(locator).toBeVisible({ timeout: 15_000 })
+  await locator.fill(value)
+}
+
+export async function overlaySettled(page: Page, kind: 'categories' | 'tags'): Promise<void> {
+  // The slideover CONTENT carries role=dialog + data-state; our kind marker sits on the header
+  // inside it, so the dialog is located by containment.
+  const dialog = page.locator('[role="dialog"][data-state="open"]', {
+    has: page.locator(`[data-taxonomy-overlay-kind="${kind}"]`)
+  })
+  await dialog.locator(overlay.title).waitFor({ timeout: 15_000 })
+  // data-state flips before Reka's entrance transition + initial focus pass finish; a tab click
+  // landing in that window gets swallowed when focus re-selects the first tab afterwards.
+  await expect(dialog).toBeVisible()
+  await page.waitForTimeout(250)
+  await expect(page.locator('[aria-busy=true]')).toHaveCount(0, { timeout: 15_000 })
 }
 
 export async function signIn(page: Page, locale: 'en' | 'ar', baseURL: string): Promise<void> {

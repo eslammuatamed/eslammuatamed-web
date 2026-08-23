@@ -919,7 +919,8 @@
         "forbiddenTitle": "You do not have access to categories",
         "forbiddenBody": "This account is not permitted to manage categories.",
         "emptyTitle": "No categories yet",
-        "emptyBody": "Categories created for articles will appear here."
+        "emptyBody": "Categories created for articles will appear here.",
+        "deleteConflict": "This category is still used by articles. Re-file those articles, then delete it."
       },
       "tags": {
         "title": "Tags",
@@ -936,7 +937,36 @@
       "validation": {
         "atLeastOneLocale": "Write the name and slug in at least one language before saving."
       }
-    },
+    ,
+      "overlay": {
+            "createCategory": "New category",
+            "editCategory": "Edit category",
+            "createTag": "New tag",
+            "edit": "Edit",
+            "editTag": "Edit tag",
+            "close": "Close",
+            "create": "Create",
+            "save": "Save",
+            "saving": "Saving…",
+            "saved": "Saved",
+            "unsaved": "Unsaved changes",
+            "unsavedConfirm": "Discard unsaved changes?",
+            "cancel": "Cancel",
+            "delete": "Delete",
+            "confirmDelete": "Yes, delete",
+            "invalid": "Invalid",
+            "fill": {
+                  "empty": "Empty",
+                  "partial": "Partial",
+                  "complete": "Complete"
+            },
+            "field": {
+                  "name": "Name",
+                  "slug": "Slug",
+                  "description": "Description",
+                  "descriptionHelp": "Optional. Clearing it and saving removes the stored description."
+            }
+      }},
     "projects": {
       "title": "Projects",
       "description": "Case studies, in both languages.",
