@@ -645,6 +645,9 @@ describe('dashboard app-owned caps — frozen, per route (D20-29)', () => {
   // U2 — ONE destination hosting BOTH the Categories and Tags collections (plan §7.1), so ONE
   // budget line carries both.
   const D20_39_ROUTES = ['/dashboard/taxonomy']
+  /** Historical D20-39 inputs, kept as evidence of the supersession chain (D20-40). */
+  const D20_39_HISTORICAL_BASELINE = 92_160
+  const D20_39_HISTORICAL_CAP = 106_496
 
   it('governs exactly the twenty-one routes doc 20 §1.1 names — no more, no fewer', () => {
     expect(Object.keys(DASHBOARD_APP_OWNED_CAP_BYTES).sort())
@@ -732,8 +735,13 @@ describe('dashboard app-owned caps — frozen, per route (D20-29)', () => {
         .toBe(DASHBOARD_APP_OWNED_CAP_BYTES[route])
     }
     // The owner's exact numbers, pinned so a later "tidy" cannot drift them silently.
-    expect(DASHBOARD_APP_OWNED_BASELINE_BYTES['/dashboard/taxonomy']).toBe(92_160)
-    expect(DASHBOARD_APP_OWNED_CAP_BYTES['/dashboard/taxonomy']).toBe(106_496)
+    // ⚠ HISTORY: D20-39 pinned the PRE-overlay pair 92,160 -> 106,496. D20-40 supersedes it after
+    // U3b landed the overlays on this same route; the historical bytes are preserved here so the
+    // supersession chain stays auditable.
+    expect(D20_39_HISTORICAL_BASELINE).toBe(92_160)
+    expect(D20_39_HISTORICAL_CAP).toBe(106_496)
+    expect(DASHBOARD_APP_OWNED_BASELINE_BYTES['/dashboard/taxonomy']).toBe(135_345)
+    expect(DASHBOARD_APP_OWNED_CAP_BYTES['/dashboard/taxonomy']).toBe(155_648)
     // Route-specific: NOT inherited — no sibling shares this number, and no sibling baseline equals it.
     for (const [sibling, bytes] of Object.entries(DASHBOARD_APP_OWNED_BASELINE_BYTES)) {
       if (sibling === '/dashboard/taxonomy') continue
@@ -891,9 +899,9 @@ describe('dashboard app-owned caps — frozen, per route (D20-29)', () => {
       // deliberately different numbers.
       '/dashboard/testimonials/new': 144_384,
       '/dashboard/testimonials/00000000-0000-0000-0000-000000000000': 145_408,
-      // D20-39 — the Taxonomy destination (Categories + Tags as one route), from its own baseline
-      // (92,160 B). 106,496 B = 104 KiB, exactly what the owner approved; no rounding upward.
-      '/dashboard/taxonomy': 106_496,
+      // D20-40 — the Taxonomy destination re-baselined after U3b's overlays joined the SAME route:
+      // own baseline 135,345 B -> 155,648 B (152 KiB), owner-exact, no rounding upward.
+      '/dashboard/taxonomy': 155_648,
       '/dashboard/media': 110_592,
       '/dashboard/profile': 123_904,
       '/dashboard/projects': 109_568,

@@ -242,9 +242,10 @@ export const DASHBOARD_ROUTES = [
     route: '/dashboard/testimonials/00000000-0000-0000-0000-000000000000',
     pageModule: 'app/pages/dashboard/testimonials/[id].vue'
   },
-  // FE-3 Taxonomy (U2) — ONE destination hosting the Categories and Tags collections. Registered
-  // measured-but-ungoverned per the M2·U2/T·U2 rule; D20-39 has since GOVERNED it from its own
-  // 92,160 B baseline (106,496 B cap), derived by the frozen formula on this route alone.
+  // FE-3 Taxonomy — ONE destination hosting the Categories and Tags collections. Registered
+  // measured-but-ungoverned per the M2·U2/T·U2 rule; D20-39 governed the pre-overlay collection,
+  // and D20-40 RE-BASELINED the same route to 135,345 B / 155,648 B once U3b's approved overlays
+  // landed on it. No editor route exists or is planned.
   { route: '/dashboard/taxonomy', pageModule: 'app/pages/dashboard/taxonomy/index.vue' },
   { route: '/dashboard/projects', pageModule: 'app/pages/dashboard/projects/index.vue' },
   { route: '/dashboard/projects/new', pageModule: 'app/pages/dashboard/projects/new.vue' },

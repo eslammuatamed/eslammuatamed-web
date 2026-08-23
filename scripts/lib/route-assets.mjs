@@ -808,7 +808,10 @@ export const DASHBOARD_APP_OWNED_BASELINE_BYTES = {
   // D20-39 — FE-3's Taxonomy destination (ONE route hosting the Categories + Tags collections),
   // measured at the completed `U2` checkpoint via the §1.2 closure workflow on the implementation
   // commit itself (blob sha256 verified against the registered provenance tree below).
-  '/dashboard/taxonomy': 92_160,
+  // ⚠ SUPERSEDED by D20-40: U3b added the approved create/edit/delete overlays to this SAME route,
+  // so the completed surface re-measured at 135,345 B. The 92,160 B pre-overlay reading is kept as
+  // historical evidence of the D20-39 decision chain, not as a live derivation input.
+  '/dashboard/taxonomy': 135_345,
   '/dashboard/projects': 95_029,
   '/dashboard/projects/new': 152_208,
   '/dashboard/projects/00000000-0000-0000-0000-000000000000': 152_393
@@ -859,10 +862,8 @@ export const DASHBOARD_APP_OWNED_BASELINE_PROVENANCE = {
   // D20-37: checkpoint reading confirmed byte-for-byte on the clean, stamped governance build.
   '/dashboard/testimonials/new': '7f22ce775e4cc96bad3f50fa605398d8ec692fcd',
   '/dashboard/testimonials/00000000-0000-0000-0000-000000000000': '7f22ce775e4cc96bad3f50fa605398d8ec692fcd',
-  // D20-39 — `U2` (0de9b54), the commit that created the route. The checkpoint measurement ran on
-  // this exact tree: the working tree at measurement time was byte-identical to the committed blob
-  // (page blob sha256 d31f3c89… verified), and the governance build below must reproduce it.
-  '/dashboard/taxonomy': '0de9b54d2efdb28191be7b0e66ae8171e7fd3d2b'
+  // D20-39 — `U2` (0de9b54), the commit that created the route. Superseded by D20-40.
+  '/dashboard/taxonomy': '4fe9cfe7086260411854cbb8789f8d223a6eeb14'
 }
 
 /**
@@ -987,9 +988,14 @@ export const DASHBOARD_APP_OWNED_CAP_BYTES = {
   // (`0de9b54d2efdb28191be7b0e66ae8171e7fd3d2b`). Route-specific: not inherited from Articles,
   // Experiences, Skills or Testimonials, and no sibling number was rounded toward.
   //
-  // Explicitly NOT a waiver, NOT a shared-floor change, NOT a generic incremental-allowance change,
-  // and NOT a D20-32 recalibration. The frozen floor set is untouched.
-  '/dashboard/taxonomy': 104 * KB,
+  // ⚠ SUPERSEDED by D20-40 (owner decision, 2026-08-23) — U3b landed the approved create/edit/
+  // delete overlays ON this same route (no editor route exists), so the completed surface
+  // re-measured at 135,345 B and the owner re-derived the cap by the same frozen formula:
+  // ceil((135,345 × 115) / 102,400) × 1024 = 155,648 B (152 KiB), headroom 20,303 B. Route-specific,
+  // not inherited from any sibling, not rounded upward. Still explicitly NOT a waiver, NOT a
+  // shared-floor change, NOT an incremental-allowance change, and NOT a D20-32 recalibration; the
+  // frozen floor set is untouched.
+  '/dashboard/taxonomy': 152 * KB,
   '/dashboard/media': 108 * KB,
   '/dashboard/profile': 121 * KB,
   '/dashboard/projects': 107 * KB,
