@@ -932,6 +932,9 @@
         "forbiddenBody": "This account is not permitted to manage tags.",
         "emptyTitle": "No tags yet",
         "emptyBody": "Tags attached to articles will appear here."
+      },
+      "validation": {
+        "atLeastOneLocale": "Write the name and slug in at least one language before saving."
       }
     },
     "projects": {
