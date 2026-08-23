@@ -2,7 +2,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { mockNuxtImport, mountSuspended } from '@nuxt/test-utils/runtime'
 import { flushPromises } from '@vue/test-utils'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import ProjectEditor from './ProjectEditor.vue'
+import SeoPanel from './SeoPanel.vue'
+import MediaPicker from './MediaPicker.vue'
 import { ApiError } from '~/utils/api-error'
 import { REQUIRED_TRANSLATION_FIELDS } from '~/composables/admin-project-form'
 import type { AdminProject, AdminProjectTranslation } from '~/composables/admin-project-types'
@@ -503,5 +507,154 @@ describe('the API\'s own answer reaches the screen (RFC 7807)', () => {
   it('says a project does not exist rather than offering a blank editor', async () => {
     const wrapper = await mount('p1', { readStatus: 404 })
     expect(wrapper.find('[data-project-not-found]').exists()).toBe(true)
+  })
+})
+
+/**
+ * SEO-U3b — the shared panel refit. The four per-locale SEO fields are presented by
+ * `DashboardSeoPanel` (titled mode — the panel owns the fieldset/legend this file used to
+ * duplicate). These tests prove the wiring is mechanical: edits land in the SAME form state the
+ * SEO-U2 payload builder reads, locales stay isolated, and a cleared value travels as explicit
+ * `null` while an untouched one is omitted.
+ */
+describe('the shared SEO panel is wired to the project form', () => {
+  const seoInput = (wrapper: Wrapper, locale: 'en' | 'ar', field: string) =>
+    wrapper.find(`[data-locale-section="${locale}"] [data-seo-field="${field}"]`)
+
+  const enTranslationWith = (over: Partial<AdminProjectTranslation>): AdminProject => project({
+    translations: {
+      en: translation({
+        metaTitle: 'Held EN title',
+        metaDescription: 'Held EN description',
+        canonicalUrl: 'https://held.example.com/en',
+        ogImageId: 'asset-held-en',
+        ...over
+      }),
+      ar: translation({ title: 'منصة المحتوى', slug: 'mnsah' })
+    }
+  })
+
+  it('renders one DashboardSeoPanel per locale section, titled by the shared keys', async () => {
+    const wrapper = await mount('p1', { project: project({ translations: { en: translation(), ar: translation({ title: 'منصة', slug: 'mnsah' }) } }) })
+    expect(wrapper.findAllComponents(SeoPanel).length).toBe(2)
+  })
+
+  it('no longer renders the old duplicated Projects SEO controls or picker path', async () => {
+    const wrapper = await mount('p1')
+    expect(field(wrapper, 'en.metaTitle').exists()).toBe(false)
+    expect(field(wrapper, 'en.canonicalUrl').exists()).toBe(false)
+
+    // The ONLY media-picker path for SEO is through the shared panel now; the translation
+    // component itself imports no picker at all.
+    const source = readFileSync(resolve(process.cwd(), 'app/components/dashboard/ProjectTranslationFields.vue'), 'utf8')
+    expect(source).not.toMatch(/DashboardMediaPicker|LazyDashboardMediaPicker/)
+  })
+
+  it('routes text SEO edits into the payload the builder produces', async () => {
+    const wrapper = await mount('p1', { project: enTranslationWith({}) })
+    await seoInput(wrapper, 'en', 'metaTitle').setValue('Next EN title')
+    await seoInput(wrapper, 'en', 'metaDescription').setValue('Next EN description')
+    await seoInput(wrapper, 'en', 'canonicalUrl').setValue('https://next.example.com/en')
+    await save(wrapper)
+
+    const entry = (lastWrite()?.body.translations as Array<Record<string, unknown>>)
+      .find(item => item.locale === 'en')
+    expect(entry).toMatchObject({
+      metaTitle: 'Next EN title',
+      metaDescription: 'Next EN description',
+      canonicalUrl: 'https://next.example.com/en'
+    })
+  })
+
+  it('sends explicit NULL for a cleared text field and a cleared OG image (D10-23)', async () => {
+    const wrapper = await mount('p1', { project: enTranslationWith({}) })
+    await seoInput(wrapper, 'en', 'metaTitle').setValue('')
+    const picker = wrapper.find('[data-locale-section="en"] [data-seo-picker]').findComponent(MediaPicker)
+    picker.vm.$emit('update:modelValue', null)
+    await flushPromises()
+    await save(wrapper)
+
+    const entry = (lastWrite()?.body.translations as Array<Record<string, unknown>>)
+      .find(item => item.locale === 'en')
+    expect(entry).toHaveProperty('metaTitle', null)
+    expect(entry).toHaveProperty('ogImageId', null)
+  })
+
+  it('sends a REPLACED OG image id through the shared picker', async () => {
+    const wrapper = await mount('p1', { project: enTranslationWith({}) })
+    const picker = wrapper.find('[data-locale-section="en"] [data-seo-picker]').findComponent(MediaPicker)
+    expect(picker.exists()).toBe(true)
+    picker.vm.$emit('update:modelValue', 'asset-next-en')
+    await flushPromises()
+    await save(wrapper)
+
+    const entry = (lastWrite()?.body.translations as Array<Record<string, unknown>>)
+      .find(item => item.locale === 'en')
+    expect(entry).toHaveProperty('ogImageId', 'asset-next-en')
+  })
+
+  it('omits UNTOUCHED SEO values from the PATCH — preservation needs no wire presence', async () => {
+    const wrapper = await mount('p1', { project: enTranslationWith({}) })
+    await field(wrapper, 'en.summary').setValue('Only the summary moved')
+    await save(wrapper)
+
+    const entry = (lastWrite()?.body.translations as Array<Record<string, unknown>>)
+      .find(item => item.locale === 'en')
+    expect(entry).not.toHaveProperty('metaTitle')
+    expect(entry).not.toHaveProperty('metaDescription')
+    expect(entry).not.toHaveProperty('canonicalUrl')
+    expect(entry).not.toHaveProperty('ogImageId')
+  })
+
+  it('keeps EN and AR SEO isolated — editing either leaves the other stored value alone', async () => {
+    const wrapper = await mount('p1', {
+      project: project({
+        translations: {
+          en: translation({ metaTitle: 'Held EN title' }),
+          ar: translation({ title: 'منصة المحتوى', slug: 'mnsah', metaTitle: 'عنوان محفوظ' })
+        }
+      })
+    })
+    await seoInput(wrapper, 'ar', 'metaTitle').setValue('عنوان جديد')
+    await save(wrapper)
+    let body = lastWrite()?.body.translations as Array<{ locale: string, metaTitle?: string }>
+    expect(body.find(item => item.locale === 'ar')?.metaTitle).toBe('عنوان جديد')
+
+    // Mirror direction: an ENGLISH edit must not disturb the held Arabic title.
+    const wrapper2 = await mount('p1', {
+      project: project({
+        translations: {
+          en: translation({ metaTitle: 'Held EN title' }),
+          ar: translation({ title: 'منصة المحتوى', slug: 'mnsah', metaTitle: 'عنوان محفوظ' })
+        }
+      })
+    })
+    await seoInput(wrapper2, 'en', 'metaTitle').setValue('New English title')
+    await save(wrapper2)
+    body = lastWrite()?.body.translations as Array<{ locale: string, metaTitle?: string }>
+    expect(body.find(item => item.locale === 'en')?.metaTitle).toBe('New English title')
+    expect(body.find(item => item.locale === 'ar')?.metaTitle).toBeUndefined()
+  })
+
+  it('keeps canonicalUrl LTR inside the RTL Arabic section', async () => {
+    const wrapper = await mount('p1', {
+      project: project({ translations: { en: translation(), ar: translation({ title: 'منصة', slug: 'mnsah' }) } })
+    })
+    expect(seoInput(wrapper, 'ar', 'canonicalUrl').attributes('dir')).toBe('ltr')
+    expect(seoInput(wrapper, 'en', 'canonicalUrl').attributes('dir')).toBe('ltr')
+  })
+
+  it('an SEO edit opens the save affordance — the form registers as changed', async () => {
+    const wrapper = await mount('p1', { project: enTranslationWith({}) })
+    expect(wrapper.find('[data-project-save]').attributes('disabled')).toBeDefined()
+    await seoInput(wrapper, 'en', 'metaTitle').setValue('Dirtying the form')
+    await flushPromises()
+    expect(wrapper.find('[data-project-save]').attributes('disabled')).toBeUndefined()
+  })
+
+  it('carries no Articles presentation anywhere in the rendered editor', async () => {
+    const wrapper = await mount('p1')
+    expect(wrapper.find('[data-editor-meta-title], [data-editor-slug], [data-editor-tabs]').exists()).toBe(false)
+    expect(wrapper.html()).not.toContain('dashboard.articles.')
   })
 })

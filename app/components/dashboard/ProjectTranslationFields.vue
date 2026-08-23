@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import {
-  OPTIONAL_TRANSLATION_FIELDS,
   REQUIRED_TRANSLATION_FIELDS,
   type ProjectLocale,
   type ProjectTranslationForm,
@@ -100,39 +99,22 @@ const fieldId = (field: string): string => `project-${props.locale}-${field}`
     </UFormField>
 
     <!-- ── search and social ────────────────────────────────────────────────────────────────────
-         Optional, and per locale: the two languages are two pages with two addresses, so they get
-         two descriptions rather than one shared one. -->
-    <fieldset class="mt-2 flex flex-col gap-4 rounded-control border border-default p-4">
-      <legend class="px-1 text-sm font-medium text-highlighted">{{ t('dashboard.projects.editor.seo') }}</legend>
-      <p class="text-xs text-muted">{{ t('dashboard.projects.editor.seoHelp') }}</p>
-
-      <UFormField
-        v-for="field in OPTIONAL_TRANSLATION_FIELDS"
-        :key="field"
-        :label="t(`dashboard.projects.field.${field}`)"
-      >
-        <UInput
-          :id="fieldId(field)"
-          :model-value="modelValue[field]"
-          :dir="field === 'canonicalUrl' ? 'ltr' : dir"
-          :disabled="disabled"
-          class="w-full"
-          :data-project-field="`${locale}.${field}`"
-          @update:model-value="setField(field, String($event))"
-        />
-      </UFormField>
-
-      <!-- The picker is CONSUMED, not reimplemented: selection, inline upload, search, pagination
-           and preview all live in that one component. -->
-      <UFormField :label="t('dashboard.projects.field.ogImage')">
-        <DashboardMediaPicker
-          :model-value="modelValue.ogImageId"
-          allowed-kind="IMAGE"
-          :field-label="`${t('dashboard.projects.field.ogImage')} (${t(`dashboard.projects.locale.${locale}`)})`"
-          :disabled="disabled"
-          @update:model-value="setField('ogImageId', $event)"
-        />
-      </UFormField>
-    </fieldset>
+         The shared per-entity SEO panel (SEO-U1) in its TITLED mode — it renders exactly the
+         fieldset/legend/help this file used to duplicate. Bound straight to THIS locale's
+         translation form state, whose original-vs-current conversion to omission/null is owned
+         by the payload builder (D10-23, corrected at SEO-U2); presentation never decides that. -->
+    <DashboardSeoPanel
+      :meta-title="modelValue.metaTitle"
+      :meta-description="modelValue.metaDescription"
+      :canonical-url="modelValue.canonicalUrl"
+      :og-image-id="modelValue.ogImageId"
+      :content-dir="locale === 'ar' ? 'rtl' : 'ltr'"
+      :disabled="disabled"
+      class="mt-2"
+      @update:meta-title="setField('metaTitle', $event)"
+      @update:meta-description="setField('metaDescription', $event)"
+      @update:canonical-url="setField('canonicalUrl', $event)"
+      @update:og-image-id="setField('ogImageId', $event)"
+    />
   </div>
 </template>

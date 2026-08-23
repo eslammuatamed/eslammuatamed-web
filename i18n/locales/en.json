@@ -1029,10 +1029,6 @@
         "challenges": "Challenges",
         "features": "Features",
         "lessonsLearned": "Lessons learned",
-        "metaTitle": "Meta title",
-        "metaDescription": "Meta description",
-        "canonicalUrl": "Canonical URL",
-        "ogImage": "Social image",
         "caption": "Caption"
       },
       "state": {
@@ -1096,8 +1092,6 @@
         "galleryImageMissing": "Choose an image for this row, or remove the row.",
         "content": "Case study",
         "contentHelp": "Each language is written on its own. Nothing is copied between them, so a language you leave empty stays visibly empty.",
-        "seo": "Search and social",
-        "seoHelp": "Optional. Left empty, the site falls back to its own defaults.",
         "localeComplete": "Complete",
         "localeEmpty": "Not written",
         "localePartial": "Partly written",
