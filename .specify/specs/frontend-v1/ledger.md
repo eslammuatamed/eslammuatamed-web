@@ -469,7 +469,7 @@ shared abstraction: the shared set is now `useTranslatableForm`, `DashboardTrans
 | --- | --- |
 | **FE-1 — Contract & Integration Foundation** | **COMPLETE** — commit `19e3a05`. Contract adopted + gtm reconciliation; reply flow deliberately moved to FE-2 (see §4). Gates re-verified on the committed tree: typecheck 0, 1501/1501. |
 | **FE-2 — Articles Tracer Bullet + Dashboard Architecture** | **COMPLETE.** OD-11, OD-3, D20-33 and its amendment all resolved. FE-2a/2b/2c done: F-1 **CLOSED** with browser evidence · collection · editor · §14.6 extraction pass · **all ten §14.9 criteria demonstrated** · every gate green including `size:routes`. The reusable architecture is recorded in **§10**. |
-| **FE-3 — Content Module Replication** | **OPEN — MODULE 1 (`experiences`) IS COMPLETE through `M1·U5`.** Delegation settled as **OD-12** (hybrid: module 1 in-house, modules 2–5 delegable once the pattern holds). `M1·U1` landed the instrument; **`M1·U2` landed the collection at `/dashboard/experiences`, its `lanes.ts` record, and a third public-isolation gate** — every gate green, the lane 10/10 booting 1 pair, and the route measured at 85,551 B against its own D20-34 cap of 99,328 B. The new route cost **zero CSS**. Four unpredicted findings are in §5/M1·U2, including a gate (`typecheck:e2e`) that had been RED since `M1·U1` because that unit's exit row never listed it. **`M1·U3` landed the editor** (`7e6d11a`): bilingual, Zod + `UForm`, 422→locale-tab mapping, the shared skill picker, `isCurrent`⇄`endDate` on a field-owned error path, and the calendar-date read that Articles' instant-shaped converter would have got wrong. Three rules were each proven able to fail; the `technologyIds` omission control failed **only** the clear-case test, which is the empirical reason both tests exist. Four more unpredicted findings are in §5/M1·U3, including a backend crash that reported itself as eight failing tests. Its route caps were **measured and escalated, never inherited** — the batched decision is **§9.5**, which the owner then **RESOLVED as D20-35** (caps stamped: Web `6b59261`, Docs `97efd02`), clearing the transient `size:routes` exit 2 that this row previously described as current. ⚠ That exit 2 was a MEASUREMENT FAILURE, never a budget breach — the distinction is kept because it is the reason no cap was invented to silence the gate. **`M1·U4b` performed the three HELD extractions** (`fd11c7b`) and **`M1·U5` closed the gates** (`328bf9c`): every authoritative gate green, axe unfiltered in BOTH dashboard languages across four surfaces, 380px verified, `size:routes` 0 on fourteen governed routes, CSS unchanged at 29.19 KB gz. Two findings kept out of the green claim: the full suite is flaky at 507 tests (**R15**, not attributable — shard 3 passed 93/93 twice) and **there is no Projects browser lane to re-run** (**R16**, measured at 0 matches). Module 1 is otherwise CLOSED; modules 2–5 are delegable under OD-12 now that the pattern holds.<br>**`M1·U4` rendered the verdicts**: **five of five §5.2 predictions HELD**, plus a sixth candidate (`DashboardSkillPicker`) discovered and already extracted — measured on 56 byte-identical code lines, 34% of the Experiences editor. The three HELD extractions are **queued, not performed**: acting on them refactors the shipped `ArticleEditor` and needs both lanes re-run, so it is its own unit — **`M1·U4b`, the extraction pass, is next**, then `M1·U5` (gates + axe).<br>**Lane-strategy unit (R14):** A run now boots only the lanes it selected: measured 1 preview pair for `--project=dashboard-articles`, against 10 before, same command. The full suite still boots all ten by design, so R14 is **NARROWED, NOT CLOSED** — see §6 and §5/FE-3/U-1. ⚠ This row previously said the full suite "loses exactly one test per run"; the pre-change control run **did not reproduce that** (471 passed, exit 0) and the claim is corrected here rather than carried forward. |
+| **FE-3 — Content Module Replication** | **COMPLETE — CLOSED at SEO-U4 (2026-08-23).** All five content modules + the shared per-entity SEO panel implemented, verified and inside governance: Experiences, Skills, Testimonials, Taxonomy, plus `DashboardSeoPanel` serving Articles + Projects (the only entities the contract gives SEO fields), Projects null-clear fixed and browser-proven on the wire, R16 closed by the official `dashboard-projects` lane. Final evidence (§5/SEO-U4): clean provenance-stamped build (`632b160…`), all 21 governed routes inside frozen caps (`size:routes` exit 0, zero unclassified), CSS 28.1 KB gz / 30 PASS, typecheck/typecheck:e2e/lint exit 0, unit 144 files / **2102 tests exit 0**, Articles lane 48/48, Projects lane 21/21 (unfiltered axe EN+AR+loading, 380px both locales), full suite 614/616 with both casualties classified as the R15 load class (did not reproduce sharded), sharded suite **616/616 exit 0**, R14 conclusion (B) recorded as recommendation-only, R15 remains OPEN precisely stated. No FE-3 product scope remains open. **FE-4 is next.**<br>**Historical module record (superseded in verdict by the closure above, preserved for the record):** Delegation settled as **OD-12** (hybrid: module 1 in-house, modules 2–5 delegable once the pattern holds). `M1·U1` landed the instrument; **`M1·U2` landed the collection at `/dashboard/experiences`, its `lanes.ts` record, and a third public-isolation gate** — every gate green, the lane 10/10 booting 1 pair, and the route measured at 85,551 B against its own D20-34 cap of 99,328 B. The new route cost **zero CSS**. Four unpredicted findings are in §5/M1·U2, including a gate (`typecheck:e2e`) that had been RED since `M1·U1` because that unit's exit row never listed it. **`M1·U3` landed the editor** (`7e6d11a`): bilingual, Zod + `UForm`, 422→locale-tab mapping, the shared skill picker, `isCurrent`⇄`endDate` on a field-owned error path, and the calendar-date read that Articles' instant-shaped converter would have got wrong. Three rules were each proven able to fail; the `technologyIds` omission control failed **only** the clear-case test, which is the empirical reason both tests exist. Four more unpredicted findings are in §5/M1·U3, including a backend crash that reported itself as eight failing tests. Its route caps were **measured and escalated, never inherited** — the batched decision is **§9.5**, which the owner then **RESOLVED as D20-35** (caps stamped: Web `6b59261`, Docs `97efd02`), clearing the transient `size:routes` exit 2 that this row previously described as current. ⚠ That exit 2 was a MEASUREMENT FAILURE, never a budget breach — the distinction is kept because it is the reason no cap was invented to silence the gate. **`M1·U4b` performed the three HELD extractions** (`fd11c7b`) and **`M1·U5` closed the gates** (`328bf9c`): every authoritative gate green, axe unfiltered in BOTH dashboard languages across four surfaces, 380px verified, `size:routes` 0 on fourteen governed routes, CSS unchanged at 29.19 KB gz. Two findings kept out of the green claim: the full suite is flaky at 507 tests (**R15**, not attributable — shard 3 passed 93/93 twice) and **there is no Projects browser lane to re-run** (**R16**, measured at 0 matches). Module 1 is otherwise CLOSED; modules 2–5 are delegable under OD-12 now that the pattern holds.<br>**`M1·U4` rendered the verdicts**: **five of five §5.2 predictions HELD**, plus a sixth candidate (`DashboardSkillPicker`) discovered and already extracted — measured on 56 byte-identical code lines, 34% of the Experiences editor. The three HELD extractions are **queued, not performed**: acting on them refactors the shipped `ArticleEditor` and needs both lanes re-run, so it is its own unit — **`M1·U4b`, the extraction pass, is next**, then `M1·U5` (gates + axe).<br>**Lane-strategy unit (R14):** A run now boots only the lanes it selected: measured 1 preview pair for `--project=dashboard-articles`, against 10 before, same command. The full suite still boots all ten by design, so R14 is **NARROWED, NOT CLOSED** — see §6 and §5/FE-3/U-1. ⚠ This row previously said the full suite "loses exactly one test per run"; the pre-change control run **did not reproduce that** (471 passed, exit 0) and the claim is corrected here rather than carried forward. |
 | FE-4 — System Modules | NOT STARTED |
 | FE-5 — Coherence, D20-32 Review, M4 Closure | NOT STARTED |
 
@@ -3755,3 +3755,111 @@ No route cap changed and none measured BY SCOPE (`/dashboard/projects/new` 175,1
 `/dashboard/projects/{id}` 176,128 B frozen); SEO-U4 owns the clean-tree batched build and final
 FE-3 gates. Articles, SeoPanel.vue and admin-article-form.ts byte-unchanged. Nothing pushed or
 deployed; campaign tree clean after this docs-only commit.
+
+---
+
+## FE-3 CLOSED — final integration, measurements and closure gates · checkpoint 2026-08-23
+
+Gate-sync commit **`96ea5b6`** (7 test files, no product change — see below) + this docs-only
+closure commit. **FE-3 IS COMPLETE: every approved product surface is implemented, verified, and
+inside its governance. FE-4 is next.**
+
+### Final FE-3 product inventory
+
+| Surface | State |
+| --- | --- |
+| Experiences CRUD (module 1, M1·U1–U5) | COMPLETE |
+| Skills CRUD (module 2, D20-36) | COMPLETE |
+| Testimonials CRUD (module 3, D20-37/38) | COMPLETE |
+| Categories + Tags Taxonomy (D20-39/40) | COMPLETE |
+| Shared per-entity SEO panel (SEO-U1–U3c) | COMPLETE |
+
+The historical Module 4/5 numbering discrepancy remains bookkeeping-only; Tags was never a separate
+unfinished product surface.
+
+### The shared per-entity SEO panel — what closure means
+
+One `DashboardSeoPanel` (four contract fields, presentation only, entity-blind by pinned source
+scan) now serves the ONLY two entities the contract gives SEO fields to: **Articles** (bare mode,
+caller owns disclosure) and **Projects** (titled mode), through the single Lazy media-picker path.
+**Projects' null-clear defect is fixed and browser-proven on the wire**: cleared `metaTitle`/
+`ogImageId` reach PATCH as explicit `null`; untouched values are omitted; EN/AR isolated;
+canonical LTR under RTL chrome. R16 CLOSED via the official `dashboard-projects` lane (21 tests).
+
+### Clean authoritative build
+
+`ANALYZE_BUNDLE=1 NUXT_PUBLIC_SITE_URL=https://example.com npm run build` → **exit 0**, `.output`
+present, provenance stamped ON THE CLEAN TREE: head `632b160…`, tree `ff263e2b…`, output
+`6f1a7d81…` (1653 files). No wrapper masking (explicit exit read).
+
+### Final route measurements (frozen caps, all PASS — `size:routes` exit 0, zero unclassified bytes)
+
+| Route | App-owned | Cap | Headroom | Verdict |
+| --- | --- | --- | --- | --- |
+| `/dashboard/articles/new` | **116,683 B** | 122,880 B | 6,197 B | ✓ |
+| `/dashboard/articles/{id}` | **116,791 B** | 122,880 B | 6,089 B | ✓ |
+| `/dashboard/projects/new` | **152,710 B** | 175,104 B | 22,394 B | ✓ |
+| `/dashboard/projects/{id}` | **152,888 B** | 176,128 B | 23,240 B | ✓ |
+
+No breach → no cap escalation, no new D20 decision required. All four sit in the D20-24 warning
+band on route TOTAL (>300 KB gz quality target) with attribution unchanged from their registration
+readings (entry+page composition); warnings oblige attribution, not failure.
+
+### Global performance gates
+
+`size` exit 0 · `size:routes` exit 0 · `check:bundle` exit 0 (138 public chunks, no forbidden
+modules) · `check:logical` exit 0. **Public CSS: gate reads 28.1 KB gz / 30.0 KB — PASS on every
+route**; independent byte cross-check of the entry stylesheet reads 28,983 B gz (+247 B vs the
+28,736 B Taxonomy-closure figure, within method variance; no new utilities were introduced by any
+SEO unit — the panels compose existing classes). Cap untouched; no recovery needed.
+
+### Static/unit gates (serial)
+
+`typecheck` exit 0 · `typecheck:e2e` exit 0 · `lint` exit 0 · **unit suite: 144 files / 2102 tests,
+exit 0, 0 failures, 0 skips**.
+
+⚠ **The full-suite run earned its keep before it went green.** The first reading failed 6 tests —
+all deterministic expectation drift the focused-suite era had accumulated, none product regressions:
+the nav Content-group assertion predated Taxonomy's entry, five per-module public-isolation gates
+each treated later siblings' composables as "public surface" (PATH-defined scan), and ArticleEditor's
+API mock answered `/admin/media/*` with an article so the OG picker threw unhandled errors after
+green tests. Fixed as `96ea5b6`: every isolation gate now registers the COMPLETE sibling module set,
+which retires this drift class for future modules rather than patching one offender.
+
+### Affected browser lanes (final clean build)
+
+`dashboard-articles`: **48/48, exit 0**, ONE pair, 1.8 min — includes unfiltered axe EN+AR and
+380px EN/AR over the refitted editor. `dashboard-projects`: **21/21, exit 0**, ONE pair, 49 s —
+includes unfiltered axe EN, AR AND held-loading state plus 380px EN/AR. Step-6 a11y evidence is
+therefore cited from these lanes, not duplicated.
+
+### Full suite vs sharded suite (R14/R15 evidence)
+
+| Run | Command | Result | Duration |
+| --- | --- | --- | --- |
+| Normal full | `npx playwright test` | **614 passed / 2 failed**, exit 1, 0 skipped, 616 discovered | 5.9 min |
+| Sharded (opt-in) | `npm run test:e2e:sharded` | **616 passed / 0 failed**, exit 0 — 4 shards (329+85+110+92), ≤4 concurrent pairs | ~5–8 min wall |
+
+The two full-run casualties, classified: (1) `[contract] locale-head-contract "Home EN→AR"` —
+`window.__chrome` undefined at evaluate, i.e. the page raced its own hydration-injected observer:
+NOT an affected FE-3 lane; resource-contention/hydration-race class. (2)
+`[dashboard-articles] F-1 "UPDATING overlay is Arabic while a refresh is in flight"` — the
+milliseconds-wide updating window closed before sampling under 15-pair load: affected FE-3 lane,
+but the SAME spec passed 48/48 in isolation this session. Both match R15's recorded signature
+(load-dependent transport/timing, never content assertions). Neither reproduced under sharding.
+
+**R14 conclusion: (B) — evidence now supports making sharding the default.** The old
+`11 < 12` guard is dead: the count trigger is exceeded (15 lanes) and the casualty trigger fired in
+this very measurement (2 casualties at full concurrency, zero at ≤4 pairs). Recorded as a
+RECOMMENDATION ONLY — changing the default command is a separate central decision for FE-4/FE-5
+planning, deliberately not made here.
+
+**R15 status: remains OPEN, stated precisely — the known flaky class REPRODUCED today under full
+concurrency (2 casualties) and did NOT reproduce under sharded execution. Nothing is claimed fixed.**
+
+### Deterministic blockers
+
+None. No approved FE-3 product surface remains open. **FE-3 is officially COMPLETE. FE-4 is next**
+(static-page SEO module, global head/tags, settings completion, RBAC owner decision, overview).
+
+Nothing pushed or deployed. Campaign tree clean after this docs-only commit.
