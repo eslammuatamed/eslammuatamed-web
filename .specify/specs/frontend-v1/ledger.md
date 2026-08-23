@@ -3541,3 +3541,44 @@ green; controls A–F each caught their defect with byte-identical restores.
 
 FE-3 open items: the shared per-entity SEO panel only. Module 4/5 numbering remains intentionally
 unresolved. Nothing pushed or deployed; campaign tree clean; Docs campaign worktree clean.
+
+### FE-3 · **SEO-U1** — the shared presentational SEO panel · checkpoint 2026-08-23
+
+Implementation commit **`2456e96`** (4 files, +323): `app/components/dashboard/SeoPanel.vue` +
+`SeoPanel.spec.ts`, plus one additive `dashboard.seo.*` label group in BOTH catalogues. Grounded in
+the read-only SEO investigation: per-entity SEO exists ONLY on Articles and Projects (FR-CNT-010/020;
+D09-4 embeds it in translation rows; the contract gives Experience/Skill/Testimonial/Category/Tag
+DTOs zero SEO fields), so those two editors are the only intended FE-3 consumers, and the remaining
+FE-3 surface is extracting their duplicated inline SEO sections — not adding SEO anywhere else.
+
+**The panel is PRESENTATIONAL ONLY, and the boundary is pinned by a test, not a convention:** four
+bound fields (`metaTitle`, `metaDescription`, `canonicalUrl`, `ogImageId`) with verbatim emit-through
+(so the picker's null-on-clear survives untouched), optional per-field error props for the caller's
+form context, `contentDir` applied to natural-language fields while canonical URL stays LTR under
+every direction, `DashboardMediaPicker` reused (`allowed-kind="IMAGE"`) rather than a second picker.
+No persistence, no payload building, no API access, no form state, no tab ownership, no status/slug
+logic; the source-scan spec rejects any mention of a consuming module by name.
+
+**No runtime caller exists yet — deliberate.** `ArticleEditor.vue` and `ProjectTranslationFields.vue`
+are byte-unchanged (verified via `git diff` empty), zero call sites exist (grep), and therefore no
+governed route closure moved. No build, size or route gates were run BY SCOPE: an uncalled component
+cannot change any route budget. Old per-module SEO label keys stay — they are still live until the
+wiring units replace them.
+
+Gates on the committed tree: focused component spec **15/15 exit 0** · `typecheck` **exit 0** ·
+`lint` **0 errors** · `locale-parity` **5/5** · `check-logical-properties` **exit 0** · sibling editor
+specs re-run green (**44/44**) to prove no incidental disturbance. The pre-commit hook's
+`eslint --fix` was verified NOT to perturb the component (post-commit sha256 equals the pre-mutation
+pristine capture) — the D20-40 drift lesson applied.
+
+Negative controls A–D, each executed against the component, each failing exactly its targeted test,
+each restored and SHA-256-verified byte-identical (`6800752d…` after every restore):
+A removed `dir="ltr"` from canonical URL → both direction tests FAILED · B coerced picker clear to
+`''` → verbatim-null forwarding test FAILED (`expected [ '' ] to deeply equal [ null ]`) · C removed
+`allowed-kind="IMAGE"` → picker-kind test FAILED (`undefined ≠ 'IMAGE'`) · D injected entity-specific
+wording → entity-blind source scan FAILED naming the line.
+
+Next unit is **SEO-U2**: reconcile the Projects payload's null-clearing semantics
+(`admin-project-form.ts` currently omits blank SEO fields — its justifying comment is falsified by
+the adopted contract, which declares all four nullable with "null clears it"; Articles already sends
+explicit `null`). Nothing pushed or deployed; campaign tree clean after this docs-only commit.
