@@ -3509,3 +3509,35 @@ nothing in Vue state).
 
 Module 4/5 numbering remains intentionally unresolved. Nothing pushed or deployed. Campaign tree
 clean after this docs-only commit.
+
+### FE-3 Taxonomy · **IMPLEMENTATION COMPLETE** — D20-40 registered · closure checkpoint 2026-08-23
+
+Governance commit **`b820825`**: `/dashboard/taxonomy` re-baselined to **135,345 B** with cap
+**155,648 B (152 KiB)** (D20-29 on the completed U3b route; headroom 20,303 B), provenance
+`4fe9cfe…`. Doc 20 decision **D20-40** (Docs `c180132` + reproduction-delta correction `074494f…`
+`07449f4`, local-only). Route-budget focused specs **217/217** including pins for BOTH generations
+(D20-39 historical pair kept as evidence) and no-sibling-baseline independence.
+
+**Reproduction honesty:** the stamped governance build (`b820825`) measures **135,496 B** — +151 B
+(+0.11 %) over the checkpoint's 135,345 — attributed to the pre-commit hook's eslint --fix
+reformatting two overlay files after measurement; zero unclassified bytes both readings; owner pair
+registered exactly as decided; `size:routes` **exit 0** (135,496 ≤ 155,648 ✓).
+
+**D20-24 warning band acknowledged with attribution:** total JS 301.0 KB gz (~1 KB over target);
+attribution names the page module script (~20.3 KB) — the justified weight of one route owning two
+collections plus both overlays. Not chased; no other budget moved; CSS 28,736 B gz / 30 KB Δ0.
+
+#### FINAL TAXONOMY EVIDENCE (complete product surface)
+
+One `/dashboard/taxonomy` destination hosting Categories + Tags; independent section request states;
+NO detail routes and NO detail-GET dependency (browser-counted); list rows are the complete edit
+sources; U3a form semantics proven; overlay create/edit/delete complete; Arabic-first AND
+English-first authoring valid; zero-translation wire-level guards; upsert/omission-preserves;
+Category description null-clear; documented Category article-reference 409 localized with entity
+intact; Tags carry no fabricated 409; 422 → correct locale tab; unsaved-change confirm on dirty
+close; server order preserved after every refresh; official lane **38/38 exit 0** on ONE
+preview/backend pair (:4400/:4401); unfiltered axe EN+AR settled page and open overlays; 380px EN/AR
+green; controls A–F each caught their defect with byte-identical restores.
+
+FE-3 open items: the shared per-entity SEO panel only. Module 4/5 numbering remains intentionally
+unresolved. Nothing pushed or deployed; campaign tree clean; Docs campaign worktree clean.
