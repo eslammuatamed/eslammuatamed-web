@@ -3462,7 +3462,50 @@ failed).
 
 Gates on the committed tree: typecheck **exit 0** · lint **exit 0** · focused specs **29/29 exit 0**.
 Not run by scope: production build, browser E2E, size/route gates, axe, full suites.
+⚠ **CORRECTED at U3b:** this section's earlier phrasing pointed at "future editor routes" —
+Taxonomy has NO editor routes. Create/edit lives ON `/dashboard/taxonomy` as overlays; that same
+route is what U3b remeasured, and any cap change applies to that one route.
 
 Not done here: no overlay UI (that is U3b's unit), no navigation/routes/caps changes, no SEO panel,
 Module 4/5 numbering still intentionally unresolved. Nothing pushed or deployed; campaign tree clean
 after this docs-only commit.
+
+
+### FE-3 Taxonomy · **U3b** — create/edit/delete overlays ON the route · checkpoint 2026-08-23
+
+Implementation commit **`4fe9cfe`** (11 files, +1,323/−18): `TaxonomyCategoryOverlay.vue` +
+`TaxonomyTagOverlay.vue` mounted on `/dashboard/taxonomy`, write methods added to the two collection
+composables (`useAdminCategoryWrites`/`useAdminTagWrites` — throwing; still NO detail read), page
+buttons/row actions wired, bilingual overlay copy added.
+
+**Invariants browser-proven (38/38 lane, ONE preview/backend pair :4400/:4401):**
+edit opens from the clicked row with ZERO `{id}` GETs (counted per navigation); zero usable
+translations blocked client-side with ZERO writes; PATCH carries only changed locales — untouched
+locale omitted AND preserved after refresh, `[]` never emitted destructively; slug mutable;
+description explicit clear sends `null`, untouched key omitted, empty-input normalized to `null` at
+the binding only; tag items carry exactly `[locale,name,slug]` and delete models no relation case
+while the category article-reference 409 surfaces localized with the entity intact; dirty close asks
+confirm(); collection refreshes via composable `load()` only and BOTH sections keep SERVER order
+after mutations; unfiltered axe clean EN+AR on settled page AND open create/edit overlays; 380px
+EN/AR green with per-field direction independent of chrome.
+
+**Controls A–F**, each mutating app source → REBUILD → targeted browser test FAILS naming its test →
+byte-identical restore SHA-verified: A planted detail fetch on edit-open · B minimum-translation
+guard removed · C changed→authored replace-all · D explicit-null suppression · E fabricated tag 409 ·
+F post-refresh client-side sort.
+
+**Route budget HONESTLY BREACHED — returned to the owner, cap untouched:** the overlay lives on the
+governed route, so `/dashboard/taxonomy` re-measured at **135,345 B app-owned** vs the D20-39 cap
+**106,496 B** — `size:routes` **exit 1** (135,345 > 106,496 ✗), total JS 301.0 KB gz enters the
+D20-24 warning band, CSS unchanged 28,736 B gz / 30 KB ✓. D20-29 formula on the completed-route
+baseline yields a PROPOSED-ONLY replacement of **155,648 B (152 KiB)** — NOT registered, NOT applied.
+No provenance stamp: implementation-tree builds correctly refuse; gates were run on real exit codes.
+
+Two reusable findings recorded: (1) refs nested in slot-scope objects need renaming (`locale:` →
+`fieldLocale`) or templates silently bind undefined; (2) Reka's slideover entrance + initial-focus
+pass swallows early tab clicks — `overlaySettled` now waits for `data-state="open"` plus a transition
+guard, and `fillField` ACTIVATES the tab then fills visibly (a forced fill on a hidden panel mutates
+nothing in Vue state).
+
+Module 4/5 numbering remains intentionally unresolved. Nothing pushed or deployed. Campaign tree
+clean after this docs-only commit.
