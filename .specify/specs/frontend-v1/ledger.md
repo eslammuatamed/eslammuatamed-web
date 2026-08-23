@@ -3620,3 +3620,55 @@ amended UNPUSHED within the minute — same tree, same diff, no history rewritte
 
 Next unit: **SEO-U3a — wire DashboardSeoPanel into Articles**, then U3b (Projects), then the batched
 gate pass. Nothing pushed or deployed; campaign tree clean after this docs-only commit.
+
+### FE-3 · **SEO-U3a** — Articles consume the shared SEO panel · checkpoint 2026-08-23
+
+Implementation commit **`0466c94`** (6 files, +173/−39). The duplicated four-field SEO block inside
+`ArticleEditor.vue` is replaced by `<DashboardSeoPanel>` bound directly to the existing per-locale
+translation form state with per-field server-error props — payload ownership, save behavior and the
+`useTranslatableForm`/`dashboard-translation-errors` 422 flow are untouched. The editor keeps owning
+its disclosure `<details>` wrapper; the panel gained a `bare` prop that drops its own fieldset/
+legend/help there (named for the OFF state because Vue casts an absent Boolean prop to `false` —
+the first draft's `heading?: boolean` silently defaulted every consumer to bare and was caught by
+the panel spec before any wiring).
+
+**Media lazy boundary PRESERVED, and now pinned:** the panel's OG picker is `LazyDashboardMediaPicker`
+(same interface Articles already used), and a source-scan test in the panel spec makes a static
+`<DashboardMediaPicker>` regression a failure — control D proved the pin fires.
+
+**Old Article SEO presentation removed; i18n reconciled.** `[data-editor-meta-title]` and siblings
+are gone from the editor DOM (asserted), and the four `dashboard.articles.field.{metaTitle,
+metaDescription,canonicalUrl,ogImage}` keys became provably dead repo-wide after wiring — removed
+from BOTH catalogues, parity gate green. Projects' duplicate keys stay: Projects is not wired yet.
+One deliberate presentation normalization recorded honestly: panel fields carry explicit per-content
+`dir` (Articles' old SEO inputs inherited chrome direction); this matches ProjectTranslationFields'
+documented doc 11 §6 pattern.
+
+Gates on the committed tree: focused specs **67/67** (panel 16 · editor 17 — binding, EN/AR
+isolation, picker select/clear→null through the panel, indexed canonicalUrl 422 → ARABIC input +
+tab, unsaved-state, no-`[data-project-field]`/no-Projects-keys pins · article-form 19+... · parity)
+· `typecheck` exit 0 · `lint` 0 errors · post-commit re-run 33/33 + lint 0 (hook's eslint --fix did
+not perturb bytes).
+
+**Route measurement** (`ANALYZE_BUNDLE=1 NUXT_PUBLIC_SITE_URL=… npm run build` exit 0 on the
+implementation tree — stamp correctly refused on the dirty tree, so these readings carry no
+provenance marker): `/dashboard/articles/new` **116,693 B** app-owned and `/dashboard/articles/{id}`
+**116,801 B** against their frozen **122,880 B** caps — **both PASS**, headroom ≈6.2/6.1 KB;
+`size:routes` **exit 0** across all governed routes. ⚠ Attribution honesty: the recorded D20-33
+baselines (106,095/106,203) predate many campaign units and their provenance tree is UNRESOLVED in
+`route-assets.mjs`, so the ~10.6 KB delta must NOT be attributed to this unit alone without a
+pre-unit rebuild — which was deliberately not run (no byte-chasing; caps pass either way).
+CSS reads **29.2 KB gz / 30** on this build — inside the ledger's recorded tree-to-tree variance
+band (28.05–29.19), to be re-measured on a clean stamped tree at SEO-U4's batched gates.
+
+Negative controls A–D, each failing exactly its targeted tests, each restored sha256-verified:
+**A** `v-model:meta-title` demoted to one-way `:meta-title` → 3 FAILED (binding, independence,
+unsaved) · **B** canonicalUrl error routed to literal `en` → indexed-422 test FAILED · **C** panel
+clear coerced to `''` → clear test FAILED · **D** Lazy prefix removed → lazy-boundary pin FAILED.
+
+Official `dashboard-articles` lane **48/48, exit 0** on ONE preview/backend pair, including
+unfiltered axe EN+AR over the refitted editor. Full e2e, other lanes and Projects work untouched.
+
+Next unit: **SEO-U3b — wire DashboardSeoPanel into Projects** (replacing ProjectTranslationFields'
+fieldset; Projects payload semantics already corrected at SEO-U2), then SEO-U4 batched gates.
+Nothing pushed or deployed; campaign tree clean after this docs-only commit.
