@@ -252,6 +252,10 @@ onMounted(() => {
     </UButton>
 
     <div v-if="id !== null && pending" class="flex flex-col gap-3" aria-busy="true" :aria-label="t('dashboard.projects.editor.loading')">
+      <!-- The settled form's <h1> lives below the loading branch, and axe's page-has-heading-one
+           is right to demand one here too: a headingless page is headingless for screen readers
+           for as long as it loads. Pixels stay identical — the visible bar stays decorative. -->
+      <h1 class="sr-only">{{ t('dashboard.projects.title') }}</h1>
       <USkeleton class="h-10 w-64" />
       <USkeleton class="h-40 w-full" />
     </div>

@@ -207,6 +207,15 @@ const BACKENDS = {
     command: process.execPath,
     args: () => ['scripts/e2e/taxonomy-server.ts']
   },
+  // R16 closure (SEO-U3c). Projects predates the lane architecture and never had a browser pair.
+  // This one models the paginated collection envelope the other FE-3 backends deliberately lack,
+  // and the D10-23 SEO pair on the wire — omitted key preserves, explicit null clears — so the
+  // browser can prove a cleared meta title reaches the PATCH as `null`, not an omission.
+  projects: {
+    label: 'projects backend (R16, mutable, SEO null-clear on the wire)',
+    command: process.execPath,
+    args: () => ['scripts/e2e/projects-server.ts']
+  },
   // Project-detail freshness. This backend starts with an empty gallery and exposes test-only
   // controls that publish the authored gallery after both localized detail pages have been primed.
   // Its own process is essential: the regression observes mutable upstream state while every other

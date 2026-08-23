@@ -211,6 +211,15 @@ export const LANES: readonly Lane[] = [
     readyPath: '/',
     resetsBackendState: true,
     why: "FE-3 Taxonomy: one destination hosts TWO collections whose server orders must be pinned against mutable fixtures, and whose no-detail-read invariant needs request counting on its own resettable backend process pair"
+  },
+  {
+    project: 'dashboard-projects',
+    dir: 'dashboard-projects',
+    backend: 'projects',
+    ports: { webEnv: 'CI_PROJECTS_PORT', apiEnv: 'CI_PROJECTS_MOCK_PORT', webDefault: 4500, apiDefault: 4501 },
+    readyPath: '/',
+    resetsBackendState: true,
+    why: 'R16 closure (SEO-U3c): the Projects editor predates the lanes and never had browser proof; its fixtures hold POPULATED SEO values so a cleared field can be proven to reach the PATCH as explicit null (D10-23) on its own resettable process pair'
   }
 ] as const
 
