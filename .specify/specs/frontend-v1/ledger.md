@@ -3672,3 +3672,43 @@ unfiltered axe EN+AR over the refitted editor. Full e2e, other lanes and Project
 Next unit: **SEO-U3b — wire DashboardSeoPanel into Projects** (replacing ProjectTranslationFields'
 fieldset; Projects payload semantics already corrected at SEO-U2), then SEO-U4 batched gates.
 Nothing pushed or deployed; campaign tree clean after this docs-only commit.
+
+### FE-3 · **SEO-U3b** — Projects consume the shared SEO panel · checkpoint 2026-08-23
+
+Implementation commit **`ef92d8e`** (4 files, +170/−47). The duplicated SEO fieldset inside
+`ProjectTranslationFields.vue` (legend, help, three inputs, STATIC `DashboardMediaPicker`) is
+replaced by `<DashboardSeoPanel>` in its TITLED mode — the panel owns exactly the fieldset/legend/
+help this file used to duplicate. Bound per locale through the component's own `setField` emit path
+into the existing translation form state; no shadow SEO state, no baseline duplication. Content
+direction stays per locale; canonicalUrl stays LTR through the panel.
+
+**Payload semantics remain owned by SEO-U2, unchanged here** — and proven through the REAL editor:
+text edits → new strings; held-then-blanked text and a cleared OG image → explicit `null`; replaced
+image → new id; untouched values → keys ABSENT from the PATCH entry (server preserves); EN↔AR edits
+mutually isolated; canonical LTR under the RTL section; an SEO edit opens the save affordance.
+`admin-project-form.ts` is byte-untouched by this unit.
+
+**One shared picker path for both entities now:** the translation component imports NO picker; the
+panel's Lazy variant is the only SEO media-picker route, pinned by a source-scan test (control E
+proved it fires). After wiring, six duplicated Projects SEO label keys (`projects.field.{metaTitle,
+metaDescription,canonicalUrl,ogImage}`, `projects.editor.{seo,seoHelp}`) became provably dead and
+were removed from both catalogues; parity gate green. Articles (`ArticleEditor.vue`,
+`admin-article-form.ts`) and `SeoPanel.vue` are byte-unchanged in commit and tree.
+
+Gates on the committed tree: focused specs **109/109** (ProjectEditor **46** = 36 existing + 10 new
+refit proofs · panel 16 · project-form 42 incl. the full SEO-U2 suite · parity 5) · `typecheck`
+exit 0 · `lint` 0 errors · post-commit re-run 46/46. Negative controls A–E, each failing its
+targeted tests, each restored sha256-verified byte-identical: **A** disconnected metaTitle binding
+→ 4 FAILED · **B** cross-locale write rerouting at the editor level → isolation test FAILED (among
+10 — the mutation reroutes all translation writes, recorded honestly) · **C** clear-to-empty
+coercion → 1 FAILED · **D** omission-on-clear restored in the payload layer → the 5-test SEO-U2
+control set FAILED (live-defect discrimination still holds) · **E** old static picker path
+restored → source pin FAILED.
+
+No route measurement BY SCOPE — `/dashboard/projects/new` (175,104 B) and `/dashboard/projects/{id}`
+(176,128 B) caps untouched; SEO-U4 owns the clean-tree batched build/measurement. **R16 remains
+OPEN**: Projects still has no real browser lane; per-unit verification stayed at component level.
+
+Next unit: **SEO-U3c — focused Projects browser lane / R16 closure**, then **SEO-U4** as the final
+batched measurement/gates unit. Nothing pushed or deployed; campaign tree clean after this
+docs-only commit.
