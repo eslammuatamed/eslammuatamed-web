@@ -3582,3 +3582,41 @@ Next unit is **SEO-U2**: reconcile the Projects payload's null-clearing semantic
 (`admin-project-form.ts` currently omits blank SEO fields — its justifying comment is falsified by
 the adopted contract, which declares all four nullable with "null clears it"; Articles already sends
 explicit `null`). Nothing pushed or deployed; campaign tree clean after this docs-only commit.
+
+### FE-3 · **SEO-U2** — Projects SEO null-clearing corrected · checkpoint 2026-08-23
+
+Implementation commit **`37443be`** (3 files, +238/−19): `admin-project-form.ts`,
+`admin-project-form.spec.ts`, and the ONE line in `ProjectEditor.vue` that passes the seeded
+baseline to update saves. The pre-campaign defect is closed: blank SEO values were omitted from
+every PATCH, so a stored `metaTitle` / `metaDescription` / `canonicalUrl` / `ogImageId` could never
+be cleared — the save reported success while the server kept everything. The builder's old
+justification ("DTO types these `string`, never `null`") was factually false against the adopted
+contract (`ProjectTranslationDto` declares all four `?: string | null`, "null clears it", D10-23).
+
+**The three-state rule, decided by ORIGINAL-vs-CURRENT** — the seeded form (the SAME baseline the
+unsaved-changes guard already holds; no second dirty-tracking system) is now a second parameter of
+`buildProjectPayload`: unchanged since load → key omitted → server preserves · held-then-blanked →
+explicit `null` → server clears · changed → new trimmed value. `ogImageId` follows the identical
+pair (same id → omitted; held → null cleared; replaced → new id; never-held → omitted). CREATE
+passes no baseline and keeps its omission-on-blank shape byte-for-byte — nothing stored to clear.
+Required translation fields still travel verbatim in both modes; per-locale upsert preservation is
+untouched, and an untouched locale's SEO keys stay absent from its entry (verified cross-locale).
+
+Focused gates on the committed tree: `admin-project-form.spec.ts` **42/42 exit 0** (33 before;
++9 PATCH-semantics tests covering every field × untouched/cleared/changed, both locales,
+already-empty preservation, and create-mode pins) · `typecheck` **exit 0** · `lint` **0 errors**.
+
+Negative controls against the OLD behavior, each failing exactly its targeted tests, each restored
+sha256-verified byte-identical: **A** omission-on-clear restored → 5 clear-case tests FAILED ·
+**B** og-image clear-as-omission → 2 FAILED · **C** unconditional emission (no baseline comparison)
+→ 6 untouched-preservation tests FAILED. Control A is the live-defect proof: the suite discriminates
+the real shipped bug, not just the new implementation.
+
+No UI wiring changed: `SeoPanel.vue`, `ArticleEditor.vue`, `ProjectTranslationFields.vue` are
+byte-unchanged in the commit and the tree; the panel still has zero callers; no route budget moved;
+no build/size/browser gates run BY SCOPE. One commit-message repair worth noting for honesty: the
+first implementation commit's message lost two backquoted words to shell substitution and was
+amended UNPUSHED within the minute — same tree, same diff, no history rewritten beyond itself.
+
+Next unit: **SEO-U3a — wire DashboardSeoPanel into Articles**, then U3b (Projects), then the batched
+gate pass. Nothing pushed or deployed; campaign tree clean after this docs-only commit.
