@@ -3420,3 +3420,49 @@ the campaign counts it.
 FE-3 state after this closure: modules 1–3 COMPLETE; Taxonomy collection COMPLETE (create/edit open);
 shared SEO panel open. No next unit was started here. Nothing pushed or deployed. Campaign tree clean
 after this docs-only commit; Docs campaign worktree clean.
+
+### FE-3 Taxonomy · **U3a** — the form/payload layer · checkpoint 2026-08-23
+
+Implementation commit **`1917a15`** (6 files, +685): `admin-category-form.ts` + `admin-tag-form.ts`
+and their specs, plus one i18n key per locale (`dashboard.taxonomy.validation.atLeastOneLocale`). NO
+Dashboard UI changed — no modal/sloverer/buttons/nav/routes/caps; `/dashboard/taxonomy/index.vue` is
+byte-untouched.
+
+**The binding invariant is structural, not aspirational: NEITHER module exports a fetcher.** There is
+no detail GET on either entity, so editing initializes via `initialCategoryForm(row)` /
+`initialTagForm(row)` straight from collection-list entities, and a spec guard pins that get-prefixed
+exports cannot exist in these modules. A function that cannot be called cannot build a request the
+API cannot answer.
+
+Semantics implemented and pinned (29 focused tests):
+
+| Rule | Category | Tag |
+| --- | --- | --- |
+| PATCH builder | emits ONLY locales whose content differs from the initialized row — omission IS preservation under upsert | identical |
+| Untouched locale | omitted → server preserves verbatim | identical |
+| Edited / newly authored locale | supplied as an indexed upsert | identical |
+| Nothing changed | `{}` — an empty body; a wholesale array is never produced | identical |
+| `translations: []` | can never be emitted destructively (pinned by serialized-output assertion) | identical |
+| Slug | per-locale, MUTABLE — edited locales carry current slug; conflicts arrive later as indexed 422s | identical |
+| Nullable | `description` sole nullable: within an emitted locale the key travels ONLY on change — omission preserves, explicit `null` clears; empty text is NEVER converted to null | NONE — spec pins exact item keys `[locale,name,slug]` so the category clear-case cannot leak |
+| Authoring invariant | OD-14 applied: schema superRefine requires ≥1 usable locale (non-blank name AND slug); Arabic-first and English-first equally valid; half-filled locales valid-but-unemitted (Skills precedent) | identical |
+| 422 mapping | reuses `dashboard-translation-errors`; sent order = `categoryChangedLocales` — Arabic-first single-locale payloads resolve index 0 onto the ARABIC tab (canonical-list trap stays closed) | identical |
+
+Deliberate divergence recorded: this builder does NOT follow Testimonials' send-every-in-use-locale
+rule. There the endpoint replaced wholesale, so sending everything was the only safe shape; here
+replacement does not exist and re-sending an untouched locale would claim authority over stored data
+the operator never exercised.
+
+Negative controls A–E, each executed, each failing exactly its intended test, both files restored and
+SHA-verified byte-identical (`40cdbb95…` / `1b1e0286…` — the committed bytes ARE those restored
+bytes): A changed-locales→authored-all (omission test failed) · B empty body→`[]` emission (empty-body
+pin failed) · C explicit-null suppression (clear test failed) · D fabricated tag `description:null`
+(exact-keys isolation test failed) · E minimum-translation guard disabled (zero-translations rejection
+failed).
+
+Gates on the committed tree: typecheck **exit 0** · lint **exit 0** · focused specs **29/29 exit 0**.
+Not run by scope: production build, browser E2E, size/route gates, axe, full suites.
+
+Not done here: no overlay UI (that is U3b's unit), no navigation/routes/caps changes, no SEO panel,
+Module 4/5 numbering still intentionally unresolved. Nothing pushed or deployed; campaign tree clean
+after this docs-only commit.
