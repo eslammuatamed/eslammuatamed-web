@@ -167,7 +167,13 @@ async function save(): Promise<void> {
   saveError.value = null
   saved.value = false
   try {
-    const payload = buildProjectPayload(form.value)
+    // The seeded form is the baseline the payload measures SEO changes against: a field held then
+    // blanked must travel as an explicit `null` (D10-23), which only an original-vs-current
+    // comparison can distinguish from "never had one". Create has no stored values, so it passes
+    // no baseline and keeps its omission-on-blank shape.
+    const payload = props.id === null
+      ? buildProjectPayload(form.value)
+      : buildProjectPayload(form.value, initial.value)
     if (props.id === null) {
       const created = await editor.create(payload)
       // Land on the created project's own address, so a reload shows the saved project rather than

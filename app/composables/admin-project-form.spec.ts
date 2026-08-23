@@ -14,7 +14,7 @@ import {
   type ProjectFormState,
   type ProjectTranslationForm
 } from './admin-project-form'
-import type { AdminProject, AdminProjectTranslation } from './admin-project-types'
+import type { AdminProject, AdminProjectTranslation, CreateProjectPayload } from './admin-project-types'
 
 /**
  * The editor's rules, proved without a runtime.
@@ -270,15 +270,16 @@ describe('the payload — publication is always stated, never inferred', () => {
     expect(one.translations.map(t => t.locale)).toEqual(['en'])
   })
 
-  it('omits blank optional SEO fields rather than sending empty strings', () => {
-    // They are typed `string`, never `string | null`, so an empty value has no representation.
+  it('omits blank optional SEO fields on a CREATE, where there is nothing stored to clear', () => {
+    // No baseline → create semantics: an absent field starts unset either way, so omission and
+    // explicit `null` are indistinguishable to the API here.
     const payload = buildProjectPayload(base())
     expect(payload.translations[0]).not.toHaveProperty('metaTitle')
     expect(payload.translations[0]).not.toHaveProperty('canonicalUrl')
     expect(payload.translations[0]).not.toHaveProperty('ogImageId')
   })
 
-  it('sends the optional SEO fields when they are filled', () => {
+  it('sends the optional SEO fields on a CREATE when they are filled', () => {
     const payload = buildProjectPayload(base({
       translations: {
         en: completeForm({ metaTitle: 'Meta', canonicalUrl: 'https://example.com/x', ogImageId: 'asset-9' }),
@@ -308,6 +309,149 @@ describe('the payload — publication is always stated, never inferred', () => {
   it('sends the technology set as the form holds it — the API replaces the relation with it', () => {
     expect(buildProjectPayload(base({ technologyIds: ['s1', 's2'] })).technologyIds).toEqual(['s1', 's2'])
     expect(buildProjectPayload(base({ technologyIds: [] })).technologyIds).toEqual([])
+  })
+})
+
+/**
+ * The D10-23 three-state rule over the four optional SEO fields, decided by ORIGINAL-vs-CURRENT.
+ *
+ * This is the suite that pins the defect the SEO investigation found: the pre-campaign builder
+ * omitted blank values unconditionally, so an operator could never clear a stored SEO value —
+ * the PATCH reported success while the server kept everything. Each clear-case here fails against
+ * that omission-on-clear behavior (proven by negative controls A/B below in the ledger record).
+ */
+describe('PATCH SEO fields — omitted when untouched, null when cleared', () => {
+  const saved = project({
+    translations: {
+      en: translation({
+        metaTitle: 'Held title',
+        metaDescription: 'Held description',
+        canonicalUrl: 'https://held.example.com/en',
+        ogImageId: 'asset-held-en'
+      }),
+      ar: translation({
+        title: 'منصة المحتوى',
+        slug: 'mnst-almhtwa',
+        metaTitle: 'عنوان محفوظ',
+        // Arabic holds NO meta description and NO OG image server-side — the already-empty case.
+        metaDescription: null,
+        canonicalUrl: 'https://held.example.com/ar',
+        ogImageId: null
+      })
+    }
+  })
+
+  const patch = (mutate: (form: ProjectFormState) => void): CreateProjectPayload => {
+    const form = initialProjectForm(saved)
+    mutate(form)
+    return buildProjectPayload(form, initialProjectForm(saved))
+  }
+
+  const entryFor = (payload: CreateProjectPayload, locale: string) =>
+    payload.translations.find(item => item.locale === locale)
+
+  it('omits an UNTOUCHED populated SEO set — preservation needs no wire presence', () => {
+    const en = entryFor(patch((form) => { form.translations.en.summary = 'Edited summary.' }), 'en')
+    expect(en).not.toHaveProperty('metaTitle')
+    expect(en).not.toHaveProperty('metaDescription')
+    expect(en).not.toHaveProperty('canonicalUrl')
+    expect(en).not.toHaveProperty('ogImageId')
+  })
+
+  it('sends explicit NULL for a meta title the operator cleared, and the new string for a changed one', () => {
+    const cleared = patch((form) => { form.translations.en.metaTitle = '' })
+    expect(entryFor(cleared, 'en')).toHaveProperty('metaTitle', null)
+
+    const whitespace = patch((form) => { form.translations.en.metaTitle = '   ' })
+    expect(entryFor(whitespace, 'en')).toHaveProperty('metaTitle', null)
+
+    const changed = patch((form) => { form.translations.en.metaTitle = 'Next title' })
+    expect(entryFor(changed, 'en')).toHaveProperty('metaTitle', 'Next title')
+  })
+
+  it('sends explicit NULL for a cleared meta description, and the new string for a changed one', () => {
+    const cleared = patch((form) => { form.translations.en.metaDescription = '' })
+    expect(entryFor(cleared, 'en')).toHaveProperty('metaDescription', null)
+
+    const changed = patch((form) => { form.translations.en.metaDescription = 'Next description' })
+    expect(entryFor(changed, 'en')).toHaveProperty('metaDescription', 'Next description')
+  })
+
+  it('sends explicit NULL for a cleared canonical URL, and the new string for a changed one', () => {
+    const cleared = patch((form) => { form.translations.en.canonicalUrl = '' })
+    expect(entryFor(cleared, 'en')).toHaveProperty('canonicalUrl', null)
+
+    const changed = patch((form) => { form.translations.en.canonicalUrl = 'https://next.example.com' })
+    expect(entryFor(changed, 'en')).toHaveProperty('canonicalUrl', 'https://next.example.com')
+  })
+
+  it('omits an untouched held OG image, sends NULL for a cleared one, and the NEW id for a replaced one', () => {
+    const untouched = patch(() => {})
+    expect(entryFor(untouched, 'en')).not.toHaveProperty('ogImageId')
+
+    const cleared = patch((form) => { form.translations.en.ogImageId = null })
+    expect(entryFor(cleared, 'en')).toHaveProperty('ogImageId', null)
+
+    const replaced = patch((form) => { form.translations.en.ogImageId = 'asset-next' })
+    expect(entryFor(replaced, 'en')).toHaveProperty('ogImageId', 'asset-next')
+  })
+
+  it('omits an ALREADY-EMPTY field left alone, without inventing a null for it', () => {
+    // Arabic holds no meta description and no OG image server-side; leaving them alone must not
+    // manufacture clears for values that do not exist.
+    const ar = entryFor(patch((form) => { form.translations.ar.summary = 'ملخص معدّل.' }), 'ar')
+    expect(ar).not.toHaveProperty('metaDescription')
+    expect(ar).not.toHaveProperty('ogImageId')
+  })
+
+  it('clearing ENGLISH SEO leaves the untouched ARABIC SEO out of the payload entirely', () => {
+    const payload = patch((form) => {
+      form.translations.en.metaTitle = ''
+      form.translations.en.metaDescription = ''
+      form.translations.en.canonicalUrl = ''
+      form.translations.en.ogImageId = null
+    })
+    // Both locales are complete so both entries travel; only their SEO keys differ.
+    expect(payload.translations.map(item => item.locale)).toEqual(['en', 'ar'])
+
+    const en = entryFor(payload, 'en')
+    expect(en).toHaveProperty('metaTitle', null)
+    expect(en).toHaveProperty('metaDescription', null)
+    expect(en).toHaveProperty('canonicalUrl', null)
+    expect(en).toHaveProperty('ogImageId', null)
+
+    // Arabic's HELD meta title and canonical URL are untouched → omitted → server preserves them.
+    const ar = entryFor(payload, 'ar')
+    expect(ar).not.toHaveProperty('metaTitle')
+    expect(ar).not.toHaveProperty('canonicalUrl')
+    expect(ar?.title).toBe('منصة المحتوى')
+    expect(ar?.slug).toBe('mnst-almhtwa')
+  })
+
+  it('clearing ARABIC SEO produces the correct Arabic entry while English stays omission-clean', () => {
+    const payload = patch((form) => {
+      form.translations.ar.canonicalUrl = ''
+      form.translations.ar.metaTitle = 'عنوان جديد'
+    })
+    const ar = entryFor(payload, 'ar')
+    expect(ar).toHaveProperty('canonicalUrl', null)
+    expect(ar).toHaveProperty('metaTitle', 'عنوان جديد')
+
+    const en = entryFor(payload, 'en')
+    expect(en).not.toHaveProperty('metaTitle')
+    expect(en).not.toHaveProperty('canonicalUrl')
+    expect(en).not.toHaveProperty('ogImageId')
+  })
+
+  it('a locale with no SEO edits keeps every SEO key absent — nothing is resent or nulled wholesale', () => {
+    const payload = patch((form) => { form.order = 9 })
+    for (const locale of ['en', 'ar']) {
+      const entry = entryFor(payload, locale)
+      expect(entry).not.toHaveProperty('metaTitle')
+      expect(entry).not.toHaveProperty('metaDescription')
+      expect(entry).not.toHaveProperty('canonicalUrl')
+      expect(entry).not.toHaveProperty('ogImageId')
+    }
   })
 })
 
