@@ -3712,3 +3712,46 @@ OPEN**: Projects still has no real browser lane; per-unit verification stayed at
 Next unit: **SEO-U3c — focused Projects browser lane / R16 closure**, then **SEO-U4** as the final
 batched measurement/gates unit. Nothing pushed or deployed; campaign tree clean after this
 docs-only commit.
+
+### FE-3 · **SEO-U3c** — the Projects browser lane lands; R16 CLOSED · checkpoint 2026-08-23
+
+Implementation commit **`7ea02fe`** (6 files, +926). `dashboard-projects` is now an official lane:
+ONE mutable spec file (`e2e/dashboard-projects/projects.spec.ts`) owning its own resettable backend
+process pair (4500/4501), registered in `scripts/e2e/lanes.ts` (**lane count 14 → 15**) and in
+`ci-preview.mjs`; config, shard plan and the isolation guard all derive, unchanged. A focused run
+boots exactly ONE production preview + ONE projects backend, measured.
+
+The backend (`scripts/e2e/projects-server.ts`) models what this surface needs and no FE-3 sibling
+has: the PAGINATED collection envelope (`data`+`meta.total`), auth with the rotating-refresh
+handshake its siblings answer, media resolution for the OG picker's stored reference, latency
+control for the request states, and the D10-23 SEO pair ON THE WIRE — omitted key preserves,
+explicit null clears.
+
+**21/21 browser tests, exit 0**, over real Nitro + real HTTP: collection/editor/create entry; held
+read → skeleton → settled (collection AND editor); error/retry recovery and forbidden-as-its-own-
+state; picker vocabulary/search/held-selection/no-touch-save intactness; shared SEO panel EN+AR —
+per-locale isolation both directions, cleared `metaTitle` reaching the PATCH as `"metaTitle": null`
+(**the SEO-U2 live defect, asserted on the wire plus round trip**), cleared `ogImageId` → null via
+the picker's OWN clear control, untouched values omitted; dirty→save→rest cycle; 380px EN/AR
+overflow; RTL chrome cold boot; **unfiltered axe EN, AR and the held-loading state**; browser-level
+public-isolation request capture across load + save.
+
+**R16 is CLOSED.** The gap was real and it bit immediately: pointing a browser at this surface for
+the first time found a genuine accessibility defect — the editor loading state rendered NO level-one
+heading (`axe page-has-heading-one`), fixed inside Projects with an `sr-only` h1 mirroring the
+settled heading, pixels identical, axe clean without disabling any rule. Two test-harness races were
+also fixed before they could lie: the PATCH listener registered after the click, and a clean form
+(a disabled save) mistaken for a save target. Fixture lesson recorded: the seed initially omitted
+required `createdAt`/`updatedAt`, and every row card threw `Invalid time value` to an empty vnode —
+a contract violation by the FIXTURE, not the surface.
+
+Negative controls A–E, each requiring a real rebuild, each failing exactly its targeted browser
+assertion, each restored sha256-verified byte-identical: **A** omission-on-clear restored → wire
+null assertion FAILED · **B** cross-locale write rerouting → isolation FAILED · **C** held
+technology seeding dropped → picker preservation FAILED · **D** loading-state ownership removed →
+skeleton assertions FAILED · **E** canonical forced-LTR removed → LTR-under-RTL FAILED.
+
+No route cap changed and none measured BY SCOPE (`/dashboard/projects/new` 175,104 B,
+`/dashboard/projects/{id}` 176,128 B frozen); SEO-U4 owns the clean-tree batched build and final
+FE-3 gates. Articles, SeoPanel.vue and admin-article-form.ts byte-unchanged. Nothing pushed or
+deployed; campaign tree clean after this docs-only commit.
