@@ -24,7 +24,18 @@ const OTHER_DASHBOARD_FILES = [
   'composables/admin-project-form.ts',
   'composables/admin-project-types.ts',
   'composables/admin-projects-query.ts',
-  'composables/useAdminProjects.ts'
+  'composables/useAdminProjects.ts',
+  // FE-3 module 3 and Taxonomy — registered for the same reason as every sibling above.
+  'composables/admin-testimonial-fields.ts',
+  'composables/admin-testimonial-form.ts',
+  'composables/admin-testimonial-types.ts',
+  'composables/useAdminTestimonials.ts',
+  'composables/admin-category-form.ts',
+  'composables/admin-tag-form.ts',
+  'composables/admin-taxonomy-fields.ts',
+  'composables/useAdminCategories.ts',
+  'composables/useAdminTags.ts',
+  'composables/useAdminTaxonomy.ts'
 ]
 const FORBIDDEN = ['admin-skill-fields', 'admin-skill-form', 'useAdminSkills', 'ADMIN_SKILL_GROUPS']
 

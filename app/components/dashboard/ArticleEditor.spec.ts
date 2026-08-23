@@ -43,6 +43,16 @@ mockNuxtImport('useApi', () => () => async (path: string, options: Record<string
       return { data: [{ id: 'cat-1', translations: { en: { name: 'Engineering', slug: 'engineering' } } }] }
     }
     if (path === '/admin/tags') return { data: [] }
+    // The OG picker resolves every stored reference through `GET /admin/media/:id`. Without this
+    // branch the generic fallback below would hand the picker an ARTICLE, and `thumbnailFor`
+    // would throw `variants is not iterable` while rendering.
+    if (path.startsWith('/admin/media')) {
+      return { data: {
+        id: path.split('/').pop(), kind: 'IMAGE', url: 'u', mimeType: 'image/png', sizeBytes: 10,
+        originalFilename: 'og.png', width: 1, height: 1, blurhash: null, contentHash: 'h',
+        variants: [], alts: [], createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z'
+      } }
+    }
     if (path.startsWith('/admin/articles/')) return { data: holder.article }
     return { data: [], meta: { page: 1, perPage: 12, total: 0, totalPages: 1 } }
   }

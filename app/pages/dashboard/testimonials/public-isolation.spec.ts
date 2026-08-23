@@ -30,7 +30,14 @@ const OTHER_DASHBOARD_FILES = [
   'composables/useAdminProjects.ts',
   // The admin TYPE alias, so the public barrel's `Testimonial` and this module's shape can never
   // meet through an accidental import either.
-  'composables/admin-testimonial-types.ts'
+  'composables/admin-testimonial-types.ts',
+  // FE-3 Taxonomy — registered for the same reason as every sibling above.
+  'composables/admin-category-form.ts',
+  'composables/admin-tag-form.ts',
+  'composables/admin-taxonomy-fields.ts',
+  'composables/useAdminCategories.ts',
+  'composables/useAdminTags.ts',
+  'composables/useAdminTaxonomy.ts'
 ]
 const FORBIDDEN = [
   'admin-testimonial-fields',

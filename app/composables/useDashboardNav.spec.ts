@@ -45,7 +45,7 @@ describe('isNavItemActive', () => {
 describe('the navigation model', () => {
   const items = () => useDashboardNav().groups.value.flatMap(group => group.items)
 
-  it('offers Articles, Experience, Skills, Testimonials and Projects, in the Content group', () => {
+  it('offers Articles, Experience, Skills, Testimonials, Taxonomy and Projects, in the Content group', () => {
     const groups = useDashboardNav().groups.value
     const content = groups.find(group => group.key === 'content')
     expect(content?.items.map(item => item.key)).toEqual([
@@ -53,6 +53,7 @@ describe('the navigation model', () => {
       'experiences',
       'skills',
       'testimonials',
+      'taxonomy',
       'projects'
     ])
   })
