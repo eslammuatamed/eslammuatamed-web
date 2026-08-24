@@ -4398,3 +4398,46 @@ No public page modified; no head wiring created; budgets untouched; no new brows
 
 **Next unit: FE4-U2c2 — wire PageSeo effective metadata into the seven static public pages.**
 Nothing pushed or deployed; campaign tree clean after this docs-only commit.
+
+## FE4-U2c2a — reference Static Page SEO consumers COMPLETE (Home + About) — 2026-08-25
+
+Implementation commit `4e37fc1`: `app/pages/index.vue` (key `home`) and `app/pages/about.vue`
+(key `about`) now await `usePublicPageSeo(...)` during setup and resolve effective metadata through
+`resolvePageSeoMetadata` before registering their own `useSeoMeta` — the proven three-layer boundary
+(network = U2c1 composable, resolution = U2b resolver, rendering = the page).
+
+- **Precedence live**: authored override → page i18n → Settings defaults → committed floor; title
+  and description independent; blank/null fall through by resolver semantics (no duplicate logic in
+  pages).
+- **Home**: `titleTemplate: null` preserved exactly; the authored title arrives verbatim, never
+  brand-suffixed; twitter/og pairs travel with the same effective values.
+- **About**: the old local `${title} — brand` OG composition is REPLACED by the single effective
+  pair — normal/OG/Twitter can no longer disagree (the coherence rule this unit pins).
+- **Social image**: an accepted descriptor becomes a page-level override through the existing
+  compatibility helper (absolute URL, width/height/alt together); null/unsupported registers NO
+  image keys so `app.vue`'s committed card floor stays effective; OG/Twitter image never diverge.
+- **Canonical**: storage-only ruling upheld at the consumer level — neither page reads canonicalUrl;
+  structural scans + runtime captures prove no canonical link writer exists; strictSeo remains sole
+  owner.
+- **Structured data**: Home Site-schema and About Profile-schema calls keep their original input
+  handles (asserted by identity), unaffected by overrides.
+- **Request model**: `/settings/site` still ONE shared read across layout+pages (About now consumes
+  the shared state instead of adding a request — asserted: two page mounts, exactly one settings
+  call); each page adds exactly its own `/seo/pages/{key}` read. No admin endpoints.
+- **Failure/all-null**: 404/500/network leave baseline metadata intact and the page rendered;
+  all-null behaves identically to no override.
+
+Focused suite `page-seo-wiring.spec.ts` **27/27**; combined relevant sweep **118/118** (resolver,
+read composable, about page matrix, metadata utils); `typecheck` exit **0**; eslint exit **0**.
+Negative controls A–F executed targeted, failed for the intended reason, restored byte-identically
+(SHA-256 before=after: index `848c606e…`, about `f6b04a1a…`): A wrong key → t1; B un-awaited read →
+t2; C override ignored → t12; D PageSeo canonical link writer → t18; E Twitter title divergence →
+t12; F failure blanks description → t17.
+
+**Still unwired (FE4-U2c2b)**: experience · projects · blog · resume · contact — mechanical
+repetition of this exact pattern. Verification/customMetas deferred to U2d; GTM script/noscript +
+CSP(D19-4) decisions pending before U2e; Dynamic RBAC UI deferred (OD-2); OD-7 unresolved.
+No route-budget changes; no new browser lane; nothing pushed or deployed.
+
+**Next unit: FE4-U2c2b — wire the remaining five static pages mechanically using the proven pattern.**
+Campaign tree clean after this docs-only commit.
