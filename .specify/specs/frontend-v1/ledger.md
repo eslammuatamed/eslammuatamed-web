@@ -4046,3 +4046,28 @@ any control ran.
 seven pages + per-page editor consuming this module and the U1a instrument; new lane registration;
 route measurement → batched cap decision at closure). Nothing pushed or deployed; campaign tree
 clean after each docs-only commit.
+
+### FE4-U1b.1 — canonicalUrl client validation parity correction · checkpoint 2026-08-24
+
+Implementation commit **`8a48709`**: U1b had narrowed client-side canonicalUrl validation to
+HTTP(S)-only **without contract evidence — corrected (CASE B)**. Evidence, all read live:
+
+| Source | Finding |
+| --- | --- |
+| `openapi/openapi.json` | every `canonicalUrl` (Page SEO, Article, Project) is plain `format: uri`, nullable — NO scheme restriction, no pattern, no scheme enum anywhere |
+| API repo source (`src/modules/seo/dto/page-seo.dto.ts`) | runtime validation is class-validator `@IsUrl({ require_protocol: true })` |
+| API's own pinned dependency (`validator@13.15.35`, executed) | ACCEPTS absolute `http/https/ftp` URLs with a host (`ftp://eslammuatamed.com/resource` → true); REJECTS relative refs, protocol-relative forms and non-hierarchical schemes (`mailto:`, `urn:` → false); TLD-bearing host required |
+
+So an HTTP/HTTPS-only check narrowed the contract without evidence AND diverged from the real
+acceptance set. Correction: `isValidCanonicalUrl` now accepts absolute http/https/ftp URLs with a
+host via WHATWG parse; residual server strictness (`require_tld`: `http://localhost/...` is 422)
+is documented as deliberately LENIENT-side divergence — the form never blocks a value the API would
+accept. Discriminating non-HTTP fixture added (`ftp://…` accepted end-to-end through schema +
+payload layer); mailto/urn pinned rejected; i18n message updated in BOTH locales.
+
+All other U1b semantics byte-unchanged: nullable/clear/no-op payload behavior, no OD-14 guard,
+sent-order error mapping, pageKey-as-path-identity. Gates on the committed tree: focused suite
+**41/41 exit 0** (+ translation-errors compatibility 6/6), full `typecheck` exit 0, lint exit 0.
+Negative control: temporarily restoring the http/s-only narrowing FAILED both ftp-parity tests;
+restored byte-identically (post-commit sha256 `2abad834…` verified). Nothing pushed or deployed.
+**FE4-U1c remains next.**
