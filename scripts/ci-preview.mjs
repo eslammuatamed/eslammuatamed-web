@@ -216,6 +216,15 @@ const BACKENDS = {
     command: process.execPath,
     args: () => ['scripts/e2e/projects-server.ts']
   },
+  // FE4-U1e. The U1a Static Page SEO instrument, now serving its browser lane: one list read is
+  // the whole surface's edit source (zero detail GETs), PATCH upserts per locale with explicit
+  // null clears, and admin/public share ONE in-process SEO state. Mutable + resettable like every
+  // sibling; the additive /admin/media reads exist only so the shared OG picker functions.
+  'page-seo': {
+    label: 'page-seo backend (FE4-U1e Static Page SEO, mutable)',
+    command: process.execPath,
+    args: () => ['scripts/e2e/page-seo-server.ts']
+  },
   // Project-detail freshness. This backend starts with an empty gallery and exposes test-only
   // controls that publish the authored gallery after both localized detail pages have been primed.
   // Its own process is essential: the regression observes mutable upstream state while every other

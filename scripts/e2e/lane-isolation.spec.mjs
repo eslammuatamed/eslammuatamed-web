@@ -219,7 +219,8 @@ describe('the default full-E2E command graph (R14 closure)', () => {
   })
 
   it('still declares every lane record, with no duplicate server ownership', () => {
-    expect(LANES.length).toBe(15)
+    // 15 through FE-3/R16; 16 since FE4-U1e added dashboard-seo (Static Page SEO editor proof).
+    expect(LANES.length).toBe(16)
     const ports = LANES.flatMap(lane => [lane.ports.webDefault, lane.ports.apiDefault])
     expect(new Set(ports).size).toBe(ports.length)
   })

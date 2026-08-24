@@ -81,6 +81,11 @@ export interface SeedMediaAsset {
   kind: 'IMAGE' | 'PDF'
   /** Asset-level alt per locale; absent locale = untranslated (public `alt: null`). */
   alts: Partial<Record<EnabledLocale, string>>
+  readonly originalFilename: string
+  readonly mimeType: string
+  readonly sizeBytes: number
+  readonly width: number | null
+  readonly height: number | null
 }
 
 export const OG_ASSET = {
@@ -95,10 +100,33 @@ function seedAssets(): SeedMediaAsset[] {
     {
       id: OG_ASSET.hero,
       kind: 'IMAGE',
-      alts: { en: 'About page social card', ar: 'بطاقة صفحة نبذة' }
+      alts: { en: 'About page social card', ar: 'بطاقة صفحة نبذة' },
+      originalFilename: 'about-social-card.png',
+      mimeType: 'image/png',
+      sizeBytes: 120_000,
+      width: 1200,
+      height: 630
     },
-    { id: OG_ASSET.spare, kind: 'IMAGE', alts: {} },
-    { id: OG_ASSET.pdf, kind: 'PDF', alts: {} }
+    {
+      id: OG_ASSET.spare,
+      kind: 'IMAGE',
+      alts: {},
+      originalFilename: 'spare-social-card.webp',
+      mimeType: 'image/webp',
+      sizeBytes: 90_000,
+      width: 1600,
+      height: 900
+    },
+    {
+      id: OG_ASSET.pdf,
+      kind: 'PDF',
+      alts: {},
+      originalFilename: 'eslam-cv.pdf',
+      mimeType: 'application/pdf',
+      sizeBytes: 97_805,
+      width: null,
+      height: null
+    }
   ]
 }
 
@@ -145,6 +173,11 @@ let assets = seedAssets()
 let mode: PageSeoBackendMode = 'ok'
 let delayMs = 0
 let failNextWrite = false
+/**
+ * ONE-SHOT deterministic 422 for the NEXT admin PATCH (FE4-U1e browser control). Cleared by reset.
+ * Test-control only — it never alters the endpoint's contract semantics.
+ */
+let nextPatch422: Array<{ field: string, message: string }> | null = null
 
 const OWNER = {
   id: '018f9d3c-1a2b-7c3d-8e4f-5a6b7c8d9e0f',
@@ -232,6 +265,36 @@ function resolveOgImage(ogImageId: string, locale: EnabledLocale) {
     variants: [
       { url: `http://127.0.0.1:0/media/${asset.id}/1200-webp.webp`, width: 1200, height: 630, format: 'webp' }
     ]
+  }
+}
+
+/**
+ * The full MediaAsset descriptor the shared MediaPicker needs (thumbnailFor walks `variants`;
+ * alt text renders from `alts`). ADDITIVE read surface for the FE4-U1e browser lane — the same
+ * minimal accommodation the Testimonials lane made — with NO upload/delete/list-mutation
+ * semantics beyond what the picker's browse dialog issues.
+ */
+function toMediaAsset(asset: SeedMediaAsset) {
+  return {
+    id: asset.id,
+    kind: asset.kind,
+    url: `http://127.0.0.1:0/media/${asset.id}/master`,
+    originalFilename: asset.originalFilename,
+    mimeType: asset.mimeType,
+    sizeBytes: asset.sizeBytes,
+    width: asset.width,
+    height: asset.height,
+    blurhash: asset.kind === 'IMAGE' ? 'LEHV6nWB2yk8pyo0adR*.7kCMdnj' : null,
+    contentHash: `sha256-${asset.id.slice(-12)}`,
+    variants: (asset.kind === 'IMAGE'
+      ? [
+          { url: `http://127.0.0.1:0/media/${asset.id}/640-webp.webp`, width: 640, height: Math.round((asset.height ?? 630) * 640 / (asset.width ?? 1200)), format: 'webp' },
+          { url: `http://127.0.0.1:0/media/${asset.id}/1200-webp.webp`, width: 1200, height: asset.height ?? 630, format: 'webp' }
+        ]
+      : []),
+    alts: Object.entries(asset.alts).map(([altLocale, alt]) => ({ locale: altLocale, alt })),
+    createdAt: '2026-08-24T00:00:00.000Z',
+    updatedAt: '2026-08-24T00:00:00.000Z'
   }
 }
 
@@ -395,6 +458,7 @@ async function handleRequest(req: http.IncomingMessage, res: http.ServerResponse
     mode = 'ok'
     delayMs = 0
     failNextWrite = false
+    nextPatch422 = null
     return json(res, 200, { ok: true })
   }
   if (path === '/__e2e/state' && req.method === 'POST') {
@@ -402,13 +466,45 @@ async function handleRequest(req: http.IncomingMessage, res: http.ServerResponse
       mode?: PageSeoBackendMode
       delayMs?: number
       failNextWrite?: boolean
+      nextPatch422?: Array<{ field: string, message: string }> | null
       pages?: Record<PageKey, SeoLocaleState>
     }
     if (body.mode) mode = body.mode
     if (typeof body.delayMs === 'number') delayMs = Math.max(0, body.delayMs)
     if (typeof body.failNextWrite === 'boolean') failNextWrite = body.failNextWrite
+    // ONE-SHOT: the NEXT admin PATCH answers this validation failure, then the control clears.
+    nextPatch422 = body.nextPatch422 === undefined ? nextPatch422 : body.nextPatch422
     if (body.pages) pages = body.pages
     return json(res, 200, { ok: true, mode, delayMs })
+  }
+
+  // ── MEDIA READS — additive picker support only (FE4-U1e); no upload/delete semantics. ────
+  const mediaRoot = `${API_PREFIX}/admin/media`
+  if (path === mediaRoot && req.method === 'GET') {
+    if (!authorized(req)) return problem(res, 401, 'Unauthorized')
+    const kind = url.searchParams.get('kind')
+    const q = (url.searchParams.get('q') ?? '').toLowerCase()
+    let pool = assets.filter((asset) => {
+      if (kind && asset.kind !== kind) return false
+      if (!q) return true
+      const altText = Object.values(asset.alts).join(' ').toLowerCase()
+      return asset.originalFilename.toLowerCase().includes(q) || altText.includes(q)
+    })
+    const total = pool.length
+    const page = Number(url.searchParams.get('page') ?? 1)
+    const perPage = Number(url.searchParams.get('perPage') ?? 12)
+    pool = pool.slice((page - 1) * perPage, page * perPage)
+    return json(res, 200, {
+      data: pool.map(toMediaAsset),
+      meta: { page, perPage, total, totalPages: Math.max(1, Math.ceil(total / perPage)) }
+    })
+  }
+  if (path.startsWith(`${mediaRoot}/`) && req.method === 'GET') {
+    if (!authorized(req)) return problem(res, 401, 'Unauthorized')
+    const id = path.slice(mediaRoot.length + 1)
+    const asset = assets.find(candidate => candidate.id === id)
+    if (!asset) return problem(res, 404, 'Not found')
+    return json(res, 200, { data: toMediaAsset(asset) })
   }
 
   if (path === `${API_PREFIX}/auth/login` && req.method === 'POST') {
@@ -470,6 +566,11 @@ async function handleRequest(req: http.IncomingMessage, res: http.ServerResponse
         if (failNextWrite) {
           failNextWrite = false
           return problem(res, 500, 'Save failed')
+        }
+        if (nextPatch422) {
+          const errors = nextPatch422
+          nextPatch422 = null
+          return problem(res, 422, 'Validation failed', `${errors.length} field(s) failed validation.`, errors)
         }
         const body = JSON.parse((await readBody(req)) || '{}') as WriteBody
         const outcome = validatePatch(body)

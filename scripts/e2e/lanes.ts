@@ -220,6 +220,15 @@ export const LANES: readonly Lane[] = [
     readyPath: '/',
     resetsBackendState: true,
     why: 'R16 closure (SEO-U3c): the Projects editor predates the lanes and never had browser proof; its fixtures hold POPULATED SEO values so a cleared field can be proven to reach the PATCH as explicit null (D10-23) on its own resettable process pair'
+  },
+  {
+    project: 'dashboard-seo',
+    dir: 'dashboard-seo',
+    backend: 'page-seo',
+    ports: { webEnv: 'CI_SEO_PORT', apiEnv: 'CI_SEO_MOCK_PORT', webDefault: 4600, apiDefault: 4601 },
+    readyPath: '/',
+    resetsBackendState: true,
+    why: "FE4-U1e: the Static Page SEO editor's completed operator flow — one-list/zero-detail reads, per-locale upsert with explicit null clears on the wire, sent-order 422 mapping, dirty-switch/refresh protection — against the U1a instrument's resettable process pair"
   }
 ] as const
 
