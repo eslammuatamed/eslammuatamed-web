@@ -4356,3 +4356,45 @@ No public page modified; no fetch/head wiring created; budgets untouched.
 
 **Next unit: FE4-U2c — per-route PageSeo fetch + static-page SSR head wiring.**
 Nothing pushed or deployed; campaign tree clean after this docs-only commit.
+
+## FE4-U2c1 — public PageSeo READ layer COMPLETE — 2026-08-25
+
+Implementation commit `a9aaefb`: `app/composables/usePublicPageSeo.ts` (+ spec, 25 tests) — the
+smallest reusable public read the seven static pages will `await` during SSR (U2c2 wires pages).
+
+- **Public endpoint only**: `GET /seo/pages/{pageKey}` through the existing `useApi()` door; admin
+  SEO surfaces unreachable and asserted absent. **Closed vocabulary** derived from the generated
+  contract (`PublicPageSeoEntity['pageKey']` — exactly home/about/experience/projects/blog/resume/
+  contact); arbitrary keys are unrepresentable at the type level (pinned by a two-sided
+  `@ts-expect-error` under `typecheck`).
+- **Locale**: route-resolved (D06-6 `useRouteLocale()`), passed EXPLICITLY so `useApi` injects
+  exactly one `?locale=` — no browser detection, no EN↔AR fallback; the requested locale's response
+  is authoritative.
+- **SSR-awaited**: caller pattern `await usePublicPageSeo(key)`; no `lazy`, no `server: false`, no
+  client-only first read (Settings-read convention).
+- **Identity = page key + locale**: reactive key `seo:page:{pageKey}:{locale}`. MEASURED finding:
+  Nuxt renames the payload entry on reactive-key change (`…:en` → `…:ar`) and refetches WITHOUT an
+  explicit `watch: [locale]`; adding watch on top caused TWO identical requests per switch.
+  Deliberately watch-free — unlike the persistent layout's WD-6 footer case, page-scoped reads
+  remount on the `/en ↔ /ar` navigation anyway.
+- **Success/failure**: known all-null page stays a successful entity (falls through field-by-field
+  in U2b); unexpected 404/5xx/network land in `error` with `data === null` — silent fall-through to
+  baseline metadata; `retry: 0` (zero retries, no retry UX); never `createError`/`showError`.
+- **Isolation/boundary**: no Settings read (`/settings/site` untouched); NO head ownership of any
+  kind — no useHead/useSeoMeta/canonical/OG/Twitter/verification/GTM/JSON-LD tokens in executable
+  source (comment-stripped scans). canonicalUrl may arrive as contract payload; storage-only per
+  the standing owner ruling — never validated/filtered/published here.
+
+Verification: focused suite **25/25**; neighbor suites green (31/31 across useSiteSettings +
+settings-request); `typecheck` exit **0**; eslint exit **0**. Negative controls A–F each executed,
+failed for the intended reason, restored byte-identically (SHA-256 `0d35ed35…` before = after):
+A locale dropped from identity → t11; B pageKey dropped → t10; C locale frozen at setup → t14;
+D admin endpoint → t4; E raw-promise exposure making failure fatal through the awaited setup →
+t19 ×3; F default retry restored → t22 ×3.
+
+Still open: U2d verification/customMetas rendering (+ meta-name pin); GTM script/noscript/placement
++ CSP(D19-4) decisions pending before U2e; Dynamic RBAC UI deferred (OD-2); OD-7 unresolved.
+No public page modified; no head wiring created; budgets untouched; no new browser lane registered.
+
+**Next unit: FE4-U2c2 — wire PageSeo effective metadata into the seven static public pages.**
+Nothing pushed or deployed; campaign tree clean after this docs-only commit.
