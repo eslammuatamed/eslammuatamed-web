@@ -297,7 +297,10 @@ describe('dashboard closure — governed routes must always be measurable', () =
       // The Projects module. The editor is registered under a concrete id because the gate fetches
       // the route; `/dashboard/**` is `ssr: false`, so which id is used cannot change the shell.
       '/dashboard/projects', '/dashboard/projects/new',
-      '/dashboard/projects/00000000-0000-0000-0000-000000000000'
+      '/dashboard/projects/00000000-0000-0000-0000-000000000000',
+      // FE-4 Static Page SEO (U1c/U1d): ONE destination editing the seven static pages' SEO.
+      // Governed by D20-41 from its own U1f-measured baseline; measured-first like every module.
+      '/dashboard/seo'
     ])
   })
 

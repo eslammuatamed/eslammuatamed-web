@@ -814,7 +814,11 @@ export const DASHBOARD_APP_OWNED_BASELINE_BYTES = {
   '/dashboard/taxonomy': 135_345,
   '/dashboard/projects': 95_029,
   '/dashboard/projects/new': 152_208,
-  '/dashboard/projects/00000000-0000-0000-0000-000000000000': 152_393
+  '/dashboard/projects/00000000-0000-0000-0000-000000000000': 152_393,
+  // D20-41 — FE-4 Static Page SEO's ONE editing destination, measured at the completed U1f
+  // checkpoint via the §1.2 closure workflow on the clean, stamped U1f analysis build. One route,
+  // one number from one build; the same measurement the owner approved the cap from.
+  '/dashboard/seo': 109_003
 }
 
 /**
@@ -863,7 +867,12 @@ export const DASHBOARD_APP_OWNED_BASELINE_PROVENANCE = {
   '/dashboard/testimonials/new': '7f22ce775e4cc96bad3f50fa605398d8ec692fcd',
   '/dashboard/testimonials/00000000-0000-0000-0000-000000000000': '7f22ce775e4cc96bad3f50fa605398d8ec692fcd',
   // D20-39 — `U2` (0de9b54), the commit that created the route. Superseded by D20-40.
-  '/dashboard/taxonomy': '4fe9cfe7086260411854cbb8789f8d223a6eeb14'
+  '/dashboard/taxonomy': '4fe9cfe7086260411854cbb8789f8d223a6eeb14',
+  // D20-41 — the U1f measurement tree: HEAD of the clean, provenance-stamped analysis build the
+  // authoritative completed-route reading (109,003 B) was taken on. The governance commit that
+  // registers this route changes no client-bundle input, and the post-registration reproduction
+  // build re-measured the SAME figure on that tree.
+  '/dashboard/seo': 'a38a70c7f63db6002a9244ddfedda8926e4362f6'
 }
 
 /**
@@ -1000,7 +1009,15 @@ export const DASHBOARD_APP_OWNED_CAP_BYTES = {
   '/dashboard/profile': 121 * KB,
   '/dashboard/projects': 107 * KB,
   '/dashboard/projects/new': 171 * KB,
-  '/dashboard/projects/00000000-0000-0000-0000-000000000000': 172 * KB
+  '/dashboard/projects/00000000-0000-0000-0000-000000000000': 172 * KB,
+  // D20-41 (owner decision) — FE-4 Static Page SEO's ONE route: the Dashboard destination AND its
+  // editing surface are the same page (no editor route exists, so no separate editor cap is
+  // created). Derived by D20-29's formula from THIS route's own measured U1f baseline:
+  // ceil((109,003 × 115) / 102,400) × 1024 = 125,952 B (123 KiB), headroom 16,949 B.
+  // Route-specific: not inherited from any sibling, not rounded upward or toward one. Explicitly
+  // NOT a waiver, NOT a shared-floor change, NOT an incremental-allowance change, and NOT a D20-32
+  // recalibration; the frozen floor reference sets are untouched.
+  '/dashboard/seo': 123 * KB
 }
 
 /**

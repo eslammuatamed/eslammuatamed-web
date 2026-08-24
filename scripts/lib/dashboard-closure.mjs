@@ -255,5 +255,10 @@ export const DASHBOARD_ROUTES = [
   {
     route: '/dashboard/projects/00000000-0000-0000-0000-000000000000',
     pageModule: 'app/pages/dashboard/projects/[id].vue'
-  }
+  },
+  // FE-4 Static Page SEO (U1c destination + U1d editor) — ONE route editing the SEO of the seven
+  // static pages (`PAGE_SEO_PAGE_ORDER`). Measured at the completed U1f checkpoint via the §1.2
+  // closure workflow and governed from that OWN baseline by D20-41 — no sibling number inherited,
+  // no separate editor cap (there is no editor route; this IS the editing surface).
+  { route: '/dashboard/seo', pageModule: 'app/pages/dashboard/seo/index.vue' }
 ]

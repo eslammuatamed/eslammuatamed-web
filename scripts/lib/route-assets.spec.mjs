@@ -649,7 +649,14 @@ describe('dashboard app-owned caps — frozen, per route (D20-29)', () => {
   const D20_39_HISTORICAL_BASELINE = 92_160
   const D20_39_HISTORICAL_CAP = 106_496
 
-  it('governs exactly the twenty-one routes doc 20 §1.1 names — no more, no fewer', () => {
+  /**
+   * D20-41 — FE-4 Static Page SEO's ONE editing destination. The Dashboard read surface (U1c) and
+   * its editor (U1d) are the SAME route, so one budget line carries the whole product surface and
+   * NO separate editor cap exists or is created.
+   */
+  const D20_41_ROUTES = ['/dashboard/seo']
+
+  it('governs exactly the twenty-two routes doc 20 §1.1 names — no more, no fewer', () => {
     expect(Object.keys(DASHBOARD_APP_OWNED_CAP_BYTES).sort())
       .toEqual([
         ...D20_23_ROUTES,
@@ -660,8 +667,44 @@ describe('dashboard app-owned caps — frozen, per route (D20-29)', () => {
         ...D20_36_ROUTES,
         ...D20_37_ROUTES,
         ...D20_38_ROUTES,
-        ...D20_39_ROUTES
+        ...D20_39_ROUTES,
+        ...D20_41_ROUTES
       ].sort())
+  })
+
+  it('derives the D20-41 cap from its OWN recorded baseline and pins the owner-approved bytes', () => {
+    for (const route of D20_41_ROUTES) {
+      const baseline = DASHBOARD_APP_OWNED_BASELINE_BYTES[route]
+      expect(baseline, `${route} must record the baseline its cap was derived from`).toBeTypeOf('number')
+      expect(approvedAppLimitBytes(baseline), `${route} cap must equal ceil((baseline x 1.15)/KiB) x KiB`)
+        .toBe(DASHBOARD_APP_OWNED_CAP_BYTES[route])
+    }
+    // The owner's exact numbers, pinned so a later "tidy" cannot drift them silently.
+    expect(DASHBOARD_APP_OWNED_BASELINE_BYTES['/dashboard/seo']).toBe(109_003)
+    expect(DASHBOARD_APP_OWNED_CAP_BYTES['/dashboard/seo']).toBe(125_952) // 123 KiB — not rounded upward
+    // Headroom exactly as approved: 125,952 − 109,003.
+    expect(DASHBOARD_APP_OWNED_CAP_BYTES['/dashboard/seo'] - DASHBOARD_APP_OWNED_BASELINE_BYTES['/dashboard/seo'])
+      .toBe(16_949)
+    // Route-specific: NOT inherited — no sibling shares this baseline, and this is ONE route with
+    // ONE cap (no separate editor cap exists for Static Page SEO).
+    for (const [sibling, bytes] of Object.entries(DASHBOARD_APP_OWNED_BASELINE_BYTES)) {
+      if (sibling === '/dashboard/seo') continue
+      expect(bytes, `${sibling} must not share the seo baseline`).not.toBe(109_003)
+    }
+  })
+
+  it('fails coverage in BOTH directions if /dashboard/seo leaves either inventory side', () => {
+    // The U1f finding, pinned as a test: before registration the route was absent from the measured
+    // inventory while carrying no cap, so `size:routes` exited 0 without ever seeing it. Now that
+    // it is governed, dropping it from EITHER side must diverge coverage loudly rather than
+    // silently un-govern the route.
+    const withoutSeo = DASHBOARD_ROUTES.filter(r => r.route !== '/dashboard/seo').map(r => r.route)
+    expect(() => assertGovernedRouteCoverage(withoutSeo)).toThrow(/governed but NOT measured.*\/dashboard\/seo/s)
+
+    const capsWithoutSeo = { ...DASHBOARD_APP_OWNED_CAP_BYTES }
+    delete capsWithoutSeo['/dashboard/seo']
+    expect(() => assertGovernedRouteCoverage(DASHBOARD_ROUTES.map(r => r.route), capsWithoutSeo))
+      .toThrow(/measured but NOT governed.*\/dashboard\/seo/s)
   })
 
   it('derives the D20-37 cap from its OWN recorded baseline, not from a sibling', () => {
@@ -906,7 +949,10 @@ describe('dashboard app-owned caps — frozen, per route (D20-29)', () => {
       '/dashboard/profile': 123_904,
       '/dashboard/projects': 109_568,
       '/dashboard/projects/new': 175_104,
-      '/dashboard/projects/00000000-0000-0000-0000-000000000000': 176_128
+      '/dashboard/projects/00000000-0000-0000-0000-000000000000': 176_128,
+      // D20-41 — Static Page SEO's ONE editing destination: own U1f baseline 109,003 B -> 125,952 B
+      // (123 KiB), owner-exact, no rounding upward, no separate editor cap.
+      '/dashboard/seo': 125_952
     })
   })
 
@@ -1024,7 +1070,13 @@ describe('assertGovernedRouteCoverage — both directions (D20-29)', () => {
     // but deliberately UNGOVERNED, and the gate named it exactly as it once named Skills at M2·U2
     // and Testimonials at T·U2. D20-39 now governs it from its own 92,160 B baseline, so coverage
     // closes in BOTH directions again — measured == governed at 21.
-    expect(measured).toHaveLength(21)
+    // 21 -> 22: D20-41 governs /dashboard/seo (FE-4 Static Page SEO's ONE editing destination) from
+    // its own 109,003 B U1f baseline. Unlike Skills/Testimonials/Taxonomy, this route was measured
+    // BEFORE any registration at all — U1f proved `size:routes` exited 0 while the route was absent
+    // from the inventory entirely (invisible, not reported ungoverned). The focused D20-41 tests
+    // pin that lesson; a general filesystem-vs-inventory completeness assertion remains a recorded
+    // future governance finding, deliberately not built here.
+    expect(measured).toHaveLength(22)
     expect(() => assertGovernedRouteCoverage(measured)).not.toThrow()
   })
 
@@ -1332,6 +1384,9 @@ describe('D20-32 — resolveDashboardSharedFloor and its FROZEN reference set', 
       // D20-35 — the two editor routes, joining for the same reason and with the same protection.
       '/dashboard/experiences/00000000-0000-0000-0000-000000000000',
       '/dashboard/experiences/new',
+      // D20-41 — FE-4 Static Page SEO's ONE editing destination joins the governed set under the
+      // same shrink-on-add protection: measured against the floor, never defining it.
+      '/dashboard/seo',
       // D20-36 — all three Skills routes, joining under the same shrink-on-add protection.
       '/dashboard/skills',
       '/dashboard/skills/00000000-0000-0000-0000-000000000000',
