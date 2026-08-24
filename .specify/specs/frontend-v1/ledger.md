@@ -470,7 +470,7 @@ shared abstraction: the shared set is now `useTranslatableForm`, `DashboardTrans
 | **FE-1 — Contract & Integration Foundation** | **COMPLETE** — commit `19e3a05`. Contract adopted + gtm reconciliation; reply flow deliberately moved to FE-2 (see §4). Gates re-verified on the committed tree: typecheck 0, 1501/1501. |
 | **FE-2 — Articles Tracer Bullet + Dashboard Architecture** | **COMPLETE.** OD-11, OD-3, D20-33 and its amendment all resolved. FE-2a/2b/2c done: F-1 **CLOSED** with browser evidence · collection · editor · §14.6 extraction pass · **all ten §14.9 criteria demonstrated** · every gate green including `size:routes`. The reusable architecture is recorded in **§10**. |
 | **FE-3 — Content Module Replication** | **COMPLETE — CLOSED at SEO-U4 (2026-08-23).** All five content modules + the shared per-entity SEO panel implemented, verified and inside governance: Experiences, Skills, Testimonials, Taxonomy, plus `DashboardSeoPanel` serving Articles + Projects (the only entities the contract gives SEO fields), Projects null-clear fixed and browser-proven on the wire, R16 closed by the official `dashboard-projects` lane. Final evidence (§5/SEO-U4): clean provenance-stamped build (`632b160…`), all 21 governed routes inside frozen caps (`size:routes` exit 0, zero unclassified), CSS 28.1 KB gz / 30 PASS, typecheck/typecheck:e2e/lint exit 0, unit 144 files / **2102 tests exit 0**, Articles lane 48/48, Projects lane 21/21 (unfiltered axe EN+AR+loading, 380px both locales), full suite 614/616 with both casualties classified as the R15 load class (did not reproduce sharded), sharded suite **616/616 exit 0**, R14 conclusion (B) recorded as recommendation-only, R15 remains OPEN precisely stated. No FE-3 product scope remains open. **FE-4 is next.**<br>**Historical module record (superseded in verdict by the closure above, preserved for the record):** Delegation settled as **OD-12** (hybrid: module 1 in-house, modules 2–5 delegable once the pattern holds). `M1·U1` landed the instrument; **`M1·U2` landed the collection at `/dashboard/experiences`, its `lanes.ts` record, and a third public-isolation gate** — every gate green, the lane 10/10 booting 1 pair, and the route measured at 85,551 B against its own D20-34 cap of 99,328 B. The new route cost **zero CSS**. Four unpredicted findings are in §5/M1·U2, including a gate (`typecheck:e2e`) that had been RED since `M1·U1` because that unit's exit row never listed it. **`M1·U3` landed the editor** (`7e6d11a`): bilingual, Zod + `UForm`, 422→locale-tab mapping, the shared skill picker, `isCurrent`⇄`endDate` on a field-owned error path, and the calendar-date read that Articles' instant-shaped converter would have got wrong. Three rules were each proven able to fail; the `technologyIds` omission control failed **only** the clear-case test, which is the empirical reason both tests exist. Four more unpredicted findings are in §5/M1·U3, including a backend crash that reported itself as eight failing tests. Its route caps were **measured and escalated, never inherited** — the batched decision is **§9.5**, which the owner then **RESOLVED as D20-35** (caps stamped: Web `6b59261`, Docs `97efd02`), clearing the transient `size:routes` exit 2 that this row previously described as current. ⚠ That exit 2 was a MEASUREMENT FAILURE, never a budget breach — the distinction is kept because it is the reason no cap was invented to silence the gate. **`M1·U4b` performed the three HELD extractions** (`fd11c7b`) and **`M1·U5` closed the gates** (`328bf9c`): every authoritative gate green, axe unfiltered in BOTH dashboard languages across four surfaces, 380px verified, `size:routes` 0 on fourteen governed routes, CSS unchanged at 29.19 KB gz. Two findings kept out of the green claim: the full suite is flaky at 507 tests (**R15**, not attributable — shard 3 passed 93/93 twice) and **there is no Projects browser lane to re-run** (**R16**, measured at 0 matches). Module 1 is otherwise CLOSED; modules 2–5 are delegable under OD-12 now that the pattern holds.<br>**`M1·U4` rendered the verdicts**: **five of five §5.2 predictions HELD**, plus a sixth candidate (`DashboardSkillPicker`) discovered and already extracted — measured on 56 byte-identical code lines, 34% of the Experiences editor. The three HELD extractions are **queued, not performed**: acting on them refactors the shipped `ArticleEditor` and needs both lanes re-run, so it is its own unit — **`M1·U4b`, the extraction pass, is next**, then `M1·U5` (gates + axe).<br>**Lane-strategy unit (R14):** A run now boots only the lanes it selected: measured 1 preview pair for `--project=dashboard-articles`, against 10 before, same command. The full suite still boots all ten by design, so R14 is **NARROWED, NOT CLOSED** — see §6 and §5/FE-3/U-1. ⚠ This row previously said the full suite "loses exactly one test per run"; the pre-change control run **did not reproduce that** (471 passed, exit 0) and the claim is corrected here rather than carried forward. |
-| FE-4 — System Modules | NOT STARTED |
+| FE-4 — System Modules | **IN PROGRESS — U1a landed** (Static Page SEO CONTRACT INSTRUMENT ONLY, `68a02ce`; zero Dashboard UI). Product surfaces not started. |
 | FE-5 — Coherence, D20-32 Review, M4 Closure | NOT STARTED |
 
 ---
@@ -3917,3 +3917,72 @@ the new default avoids the high-contention execution condition that reproduced t
 prove the assertions themselves fixed. FE-3 remains COMPLETE; no product behavior changed; no budget
 touched; FE-4 remains next. Nothing pushed or deployed; campaign tree clean after this docs-only
 commit.
+
+---
+
+## FE4-U1a — the Static Page SEO CONTRACT INSTRUMENT · checkpoint 2026-08-24
+
+Implementation commit **`68a02ce`**: `scripts/e2e/page-seo-server.ts` +
+`page-seo-server.spec.ts`, exactly two new files, nothing else touched — the Skills M2·U1 /
+Testimonials T·U1 / Taxonomy U1 instrument shape. **No Dashboard UI, no route, no lane record, no
+public `<head>` wiring, no FR-DSH-052 modeling, no Settings/Messages/Overview work.** Every modeled
+behavior was re-derived from the adopted contract (`openapi/openapi.json`, blob `185f067e…`) before
+being written.
+
+### The contract facts the instrument pins
+
+| Area | Modeled behavior |
+| --- | --- |
+| Page-key vocabulary | CLOSED seven-key set (D09-24): `home, about, experience, projects, blog, resume, contact`. Page KEYS, never ids/slugs — a UUID path is outside the vocabulary (admin 422 / public 404). |
+| Admin list | `{ data: AdminPageSeoEntity[] }` — one entry per known key, EVERY enabled locale present, all-null when unauthored. ZERO query parameters (unsolicited → 422), no pagination/filter/sort/meta. **Order is NOT documented in the contract**, so completeness is asserted by SET and entries are looked up BY KEY; no semantic ordering assumption is encoded. |
+| Admin detail | Whole per-locale map for one page; unknown key → **422** ("Unknown static page key"), never 404. |
+| PATCH upsert | Supplied locales UPSERT; omitted locales untouched (no replace-all, no delete-locale). Within a locale: omitted field PRESERVES, explicit null CLEARS, non-null REPLACES. Validation before write; all locales apply in one pass. Unknown/disabled LOCALE → the dedicated **400** class; unknown key / malformed fields → **422**. Foreign top-level keys REJECTED — including every FR-DSH-052 field (`googleSiteVerification`, `gtmContainerId`, …), proving the DTO boundary excludes global tags. |
+| ogImageId | Must reference an EXISTING IMAGE asset: malformed UUID 422 · missing id 422 · PDF id 422 · valid IMAGE accepted · null clears · omission preserves. Minimal embedded media registry is fixture vocabulary only — no upload/picker/media endpoints. |
+| Public read | Override layer, not content record (D10-24): known-but-unauthored → **200 all-null** (both locales), 404 RESERVED for unknown keys. NO cross-locale fallback (D10-6). Disabled locale → 400, malformed locale → 422, default `en`. `ogImage` resolved from the SAME registry with the ASSET-LEVEL localized alt for the requested locale. |
+| Coherence | Admin routes and the public route read ONE in-process state — an admin PATCH is immediately observable publicly (the property FE4-U2's head rendering will depend on), proven directly including an OG set→descriptor→clear→null round-trip. |
+
+Seeds: `about` fully authored both locales, `blog` AR-only, five pages unauthored — every proof
+starts from discriminating data without setup. Operational controls follow the established
+instrument set: resettable fixtures, forbidden/error modes, delayMs hold, one-shot write failure.
+
+### Gates (committed tree at `68a02ce`; hook's eslint --fix verified NOT to perturb bytes)
+
+| Gate | Result |
+| --- | --- |
+| Focused instrument | **56/56 passed, exit 0** |
+| `npm run typecheck:e2e` | **exit 0** |
+| `npm run typecheck` (full) | **exit 0** |
+| `eslint` on both files | **exit 0** |
+
+Negative controls A–F, each ONE behavioral mutation → targeted vitest run FAILS naming its test →
+byte-identical restore, sha256 `d691a317…` verified after EVERY restore (and equals the committed
+blob):
+
+| Control | Injected defect | Test that FAILED |
+| --- | --- | --- |
+| A | locale upsert → replace-all map wipe | "PATCH EN UPSERTS EN and preserves the stored AR row verbatim" |
+| B | omitted nullable field → implicit null | all FOUR "OMITTED field PRESERVES" tests (per-field discrimination held) |
+| C | explicit null → omission (preserves) | all FOUR "explicit null CLEARS" tests |
+| D | public reads on a disconnected shadow state | "an admin PATCH is immediately observable from the public endpoint" |
+| E | IMAGE-kind restriction removed | "rejects a NON-IMAGE (PDF) asset id with 422" |
+| F | known-unauthored page answered 404 publicly | "a KNOWN page with NOTHING AUTHORED returns 200 with every field null" |
+
+Two authoring findings kept because they are the lesson: (1) the first draft FORGOT to wire the
+foreign-property rejection into PATCH validation — the FR-DSH-052 boundary test caught a real
+instrument bug before any negative control ran; (2) TypeScript narrowing does not cross sibling
+method branches — the closed-set guard was hoisted above GET/PATCH rather than duplicated.
+
+### Standing state carried forward
+
+- **Users/Roles list-schema contract defect** (scalar `$ref` vs array runtime): still armed in blob
+  `185f067e…`, covered by the existing backend handoff, **non-blocking** — OD-2 defers its only
+  consumer.
+- **Dynamic RBAC management UI remains POST-V1** (OD-2); permission-aware Dashboard behavior stays
+  D11-2 as implemented.
+- **Related-articles OD-7 remains UNRESOLVED** — plan §6 lists it under FE-4, the FE-3-closure FE-4
+  naming omits it; do not start it without an owner ruling.
+
+**Next unit: FE4-U1b — the Static Page SEO form/payload semantics** (pure form model + payload
+builder + specs, no UI), then the collection/editor surfaces. No browser lane registered in U1a by
+design; standalone server default port 4601, authoritative pair belongs to the later lane record.
+Nothing pushed or deployed; campaign tree clean after each docs-only commit.
