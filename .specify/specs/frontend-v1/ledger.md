@@ -4315,3 +4315,44 @@ public `<head>`; FR-DSH-052 (`googleSiteVerification`, `bingSiteVerification`, `
 `gtmContainerId`, `customMetas`) and corresponding public head/tag rendering.
 
 Declared lane count: **16** (unchanged). Nothing pushed or deployed.
+
+## FE4-U2b — effective Static Page SEO metadata resolver COMPLETE — 2026-08-25
+
+Implementation commit `b070bcc`: `app/utils/page-seo-metadata.ts` (+ spec), the smallest PURE layer
+between the public `GET /seo/pages/{pageKey}` payload and the later U2c route wiring. No fetching, no
+route knowledge, no `useHead`/`useSeoMeta`, no locale logic, no structured data — boundary tests scan
+comment-stripped source for banned identifiers.
+
+**OWNER RULING (recorded verbatim):** `PageSeo.canonicalUrl remains storage/editing-only in Frontend
+v1. @nuxtjs/i18n strictSeo remains the sole rendered canonical/hreflang owner.` The resolver never
+reads the field; the structural input type omits it yet admits the whole generated entity, and tests
+prove null vs `https://example.com/custom` vs `ftp://example.com/resource` produce byte-identical
+output with no canonical key of any name. No second canonical writer exists; D22-7/D22-8 untouched.
+
+- **Precedence** (doc 22 §3 F-D4 over current tiers): authored Page SEO → page-localized i18n →
+  localized Settings default → committed floor; title/description resolved independently;
+  blank/whitespace overrides never mask a lower tier (`isBlank`/`pickMeta` semantics reused).
+- **Page SEO absent/fetch-failed** → identical to no override; complete chain intact (models U2c's
+  silent-failure policy; HTTP concerns live in U2c).
+- **OG/Twitter**: one text pair by design — contract has no og/twitter copy fields; output exposes
+  exactly `title` + `description` (+ optional image) for the wiring to fan out.
+- **Image**: override produced ONLY through the existing `entitySocialImage` helper (format gate +
+  absolute-URL + all-or-nothing tags); null/unsupported/unusable descriptors yield NO override so
+  `app.vue`'s committed card floor keeps ownership; WebP gate behavior unchanged.
+- **Home/D22-4**: title returns verbatim — `titleTemplate: null` stays the Home caller's job.
+- **Structured data**: unaffected; no JSON-LD surface.
+
+Verification: focused suite **29/29** (title/description chains 1–12, absence 13, single-source 14–15,
+image 16–19, canonical storage-only 20–23, Home 24, locale isolation 25, boundary 26–28+); neighbor
+reuse suites green (metadata/entity-social-image area — 56/56 across the three files); `typecheck`
+exit **0**; eslint exit **0**. Negative controls A–F each executed, failed for the intended reason,
+and were restored byte-identically (SHA-256 `27a4f87b…` before = after): A precedence swap → test 1;
+B blank-as-override → test 3; C Settings-over-page reorder → test 4; D null-wipes-metadata → test 13;
+E canonical leak into output → tests 20–22/23; F format-gate bypass → test 18.
+
+Still open: GTM script/noscript/placement + CSP(D19-4) posture decisions (U2e); verification meta
+`name=` pin (U2d); Dynamic RBAC UI deferred post-v1 (OD-2); OD-7 Related Articles unresolved.
+No public page modified; no fetch/head wiring created; budgets untouched.
+
+**Next unit: FE4-U2c — per-route PageSeo fetch + static-page SSR head wiring.**
+Nothing pushed or deployed; campaign tree clean after this docs-only commit.
