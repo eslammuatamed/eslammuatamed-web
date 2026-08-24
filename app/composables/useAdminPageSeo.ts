@@ -1,8 +1,8 @@
 import type { components } from '~/types/api'
+import type { AdminPageSeo } from '~/composables/admin-page-seo-form'
 import { ApiError } from '~/utils/api-error'
 
 type Schemas = components['schemas']
-export type AdminPageSeo = Schemas['AdminPageSeoEntity']
 
 /**
  * The CLOSED static-page vocabulary (D09-24), in the Dashboard's PRODUCT PRESENTATION ORDER.
@@ -42,7 +42,8 @@ export function orderedPageSeoPages(items: readonly AdminPageSeo[]): Array<{ key
 }
 
 /**
- * `GET /admin/seo/pages` — the Static Page SEO collection read (FE4-U1c). READ ONLY.
+ * `GET /admin/seo/pages` + `PATCH /admin/seo/pages/{pageKey}` — the Static Page SEO admin surface
+ * (FE4-U1c read, FE4-U1d mutation).
  *
  * The contract facts that shape this file are the Taxonomy/Categories ones verbatim, restated here
  * because each is a place a "shared" list composable silently diverges:
@@ -53,9 +54,13 @@ export function orderedPageSeoPages(items: readonly AdminPageSeo[]): Array<{ key
  * - the server's array order carries NO meaning (see `PAGE_SEO_PAGE_ORDER` above);
  * - `locale: false`, like every admin call (`forbidNonWhitelisted`).
  *
- * ⚠ READ ONLY IN U1c — there is deliberately NO write method here yet, and no detail GET either:
- * the list rows are complete edit sources when U1d needs them. A function that cannot be called
- * cannot build a request the surface must not send.
+ * ⚠ THE LIST ROWS REMAIN THE EDIT SOURCE. Nothing here ever issues
+ * `GET /admin/seo/pages/{pageKey}`: editors initialize from the clicked collection row, and the
+ * AUTHORITATIVE PATCH RESPONSE replaces that row in place (`replaceRow`) so a saved record is
+ * confirmed server state without a second request.
+ *
+ * Mutation surface is exactly what FR-DSH-051 offers: one PATCH per singleton page keyed in the
+ * REQUEST PATH. No create, no delete, no detail read — the static-page set is closed (D09-24).
  */
 export function useAdminPageSeo() {
   const api = useApi()
@@ -93,5 +98,27 @@ export function useAdminPageSeo() {
     }
   }
 
-  return { items, pending, forbidden, failed, load }
+  /**
+   * `PATCH /admin/seo/pages/{pageKey}` — the ONLY write. The page key travels in the path and
+   * nowhere else; the body is the U1b builder's per-locale upsert payload (never
+   * `translations: []`, which the contract rejects). Resolves with the updated FULL entity.
+   */
+  async function update(pageKey: PageSeoPageKey, body: Schemas['UpdatePageSeoDto']): Promise<AdminPageSeo> {
+    const res = await api<{ data: AdminPageSeo }>(`/admin/seo/pages/${pageKey}`, {
+      method: 'PATCH',
+      locale: false,
+      body
+    })
+    return res.data
+  }
+
+  /**
+   * Swap one row in place from its authoritative PATCH response — confirmed server state without
+   * a refetch, and without disturbing any other row's identity.
+   */
+  function replaceRow(updated: AdminPageSeo): void {
+    items.value = items.value.map(row => (row.pageKey === updated.pageKey ? updated : row))
+  }
+
+  return { items, pending, forbidden, failed, load, update, replaceRow }
 }

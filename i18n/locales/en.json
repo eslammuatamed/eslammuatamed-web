@@ -1143,8 +1143,25 @@
         "en": "English",
         "ar": "Arabic"
       },
-      "notSet": "Not set — the site default applies",
-      "readonlyNote": "Editing arrives with the next release of this surface; values shown are exactly what is stored.",
+      "editor": {
+        "save": "Save",
+        "saving": "Saving…",
+        "saved": "Saved",
+        "unsaved": "Unsaved changes",
+        "tabInvalid": "Error",
+        "fill": {
+          "empty": "No overrides",
+          "partial": "Partially set",
+          "complete": "Set"
+        },
+        "unsavedWarning": "This page has unsaved SEO changes. Leave without saving?",
+        "discardConfirm": "Discard the unsaved SEO changes for this page and switch?",
+        "saveFailedTitle": "The changes were not saved.",
+        "orphanNotice": "The page being edited is no longer in the loaded collection — your unsaved edits are kept on screen.",
+        "delete": "Delete",
+        "deleteConfirm": "Delete",
+        "deleteCancel": "Cancel"
+      },
       "selected": {
         "regionLabel": "SEO overrides for {page}"
       },
