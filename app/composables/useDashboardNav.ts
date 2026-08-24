@@ -92,7 +92,13 @@ export function useDashboardNav() {
     },
     {
       key: 'system',
-      items: [{ key: 'profile', to: '/dashboard/profile', icon: 'i-lucide-user-round' }]
+      items: [
+        { key: 'profile', to: '/dashboard/profile', icon: 'i-lucide-user-round' },
+        // Static Page SEO joins with FE4-U1c. `/dashboard/seo` EXISTS as of that unit, so it is not
+        // a placeholder destination. STILL no roles predicate — the API's `forbidden` state (D11-2)
+        // answers authorization, exactly as for every sibling here.
+        { key: 'seo', to: '/dashboard/seo', icon: 'i-lucide-search' }
+      ]
     }
   ])
 

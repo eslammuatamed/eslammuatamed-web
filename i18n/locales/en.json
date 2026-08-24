@@ -343,6 +343,7 @@
       "media": "Media",
       "system": "System",
       "profile": "Profile",
+      "seo": "Static page SEO",
       "experiences": "Experience",
       "skills": "Skills",
       "testimonials": "Testimonials",
@@ -1122,6 +1123,37 @@
       "validation": {
         "canonicalUrl": "Enter a full absolute URL (for example https:// or ftp://)."
       },
+      "refresh": "Refresh",
+      "page": {
+        "title": "Static page SEO",
+        "description": "Per-page search and social overrides for the seven static pages. Values left unset fall back to the site defaults."
+      },
+      "pages": {
+        "regionLabel": "Static pages",
+        "home": "Home",
+        "about": "About",
+        "experience": "Experience",
+        "projects": "Projects",
+        "blog": "Blog",
+        "resume": "Résumé",
+        "contact": "Contact"
+      },
+      "localeHeading": "{locale}",
+      "locale": {
+        "en": "English",
+        "ar": "Arabic"
+      },
+      "notSet": "Not set — the site default applies",
+      "readonlyNote": "Editing arrives with the next release of this surface; values shown are exactly what is stored.",
+      "selected": {
+        "regionLabel": "SEO overrides for {page}"
+      },
+      "staleNotice": "The page could not be refreshed — showing the last loaded values.",
+      "errorTitle": "Static page SEO could not be loaded.",
+      "emptyTitle": "No static pages returned.",
+      "emptyBody": "The service responded without any static page records. Retry, or check back later.",
+      "forbiddenTitle": "Access denied",
+      "forbiddenBody": "This account does not have permission to view static page SEO.",
       "field": {
         "metaTitle": "Meta title",
         "metaDescription": "Meta description",

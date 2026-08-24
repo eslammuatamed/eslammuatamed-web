@@ -1,5 +1,6 @@
 // @vitest-environment nuxt
 import { describe, expect, it } from 'vitest'
+import { readFileSync } from 'node:fs'
 import { isNavItemActive, useDashboardNav } from './useDashboardNav'
 import type { DashboardNavItem } from './useDashboardNav'
 
@@ -72,6 +73,31 @@ describe('the navigation model', () => {
 
   it('points Skills at the collection route that EXISTS — no editor placeholder', () => {
     expect(items().find(item => item.key === 'skills')?.to).toBe('/dashboard/skills')
+  })
+
+  it('offers Static Page SEO in the SYSTEM group at the route that EXISTS', () => {
+    const groups = useDashboardNav().groups.value
+    const system = groups.find(group => group.key === 'system')
+    expect(system?.items.map(item => item.key)).toContain('seo')
+    expect(items().find(item => item.key === 'seo')?.to).toBe('/dashboard/seo')
+  })
+
+  it('resolves the SEO label in BOTH dashboard catalogues', () => {
+    const en = JSON.parse(readFileSync('i18n/locales/en.json', 'utf8'))
+    const ar = JSON.parse(readFileSync('i18n/locales/ar.json', 'utf8'))
+    expect(en.dashboard.nav.seo).toBeTruthy()
+    expect(ar.dashboard.nav.seo).toBeTruthy()
+  })
+
+  it('adds NO Users, Roles or Permissions destination — dynamic RBAC UI stays deferred post-v1', () => {
+    const keys = items().map(item => item.key)
+    for (const key of keys) {
+      expect(key.toLowerCase()).not.toMatch(/user|role|permission/)
+      expect(key).not.toBe('settings')
+    }
+    for (const item of items()) {
+      expect(item.to).not.toMatch(/users|roles|permissions/i)
+    }
   })
 
   /**
