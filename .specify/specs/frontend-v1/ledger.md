@@ -470,7 +470,7 @@ shared abstraction: the shared set is now `useTranslatableForm`, `DashboardTrans
 | **FE-1 — Contract & Integration Foundation** | **COMPLETE** — commit `19e3a05`. Contract adopted + gtm reconciliation; reply flow deliberately moved to FE-2 (see §4). Gates re-verified on the committed tree: typecheck 0, 1501/1501. |
 | **FE-2 — Articles Tracer Bullet + Dashboard Architecture** | **COMPLETE.** OD-11, OD-3, D20-33 and its amendment all resolved. FE-2a/2b/2c done: F-1 **CLOSED** with browser evidence · collection · editor · §14.6 extraction pass · **all ten §14.9 criteria demonstrated** · every gate green including `size:routes`. The reusable architecture is recorded in **§10**. |
 | **FE-3 — Content Module Replication** | **COMPLETE — CLOSED at SEO-U4 (2026-08-23).** All five content modules + the shared per-entity SEO panel implemented, verified and inside governance: Experiences, Skills, Testimonials, Taxonomy, plus `DashboardSeoPanel` serving Articles + Projects (the only entities the contract gives SEO fields), Projects null-clear fixed and browser-proven on the wire, R16 closed by the official `dashboard-projects` lane. Final evidence (§5/SEO-U4): clean provenance-stamped build (`632b160…`), all 21 governed routes inside frozen caps (`size:routes` exit 0, zero unclassified), CSS 28.1 KB gz / 30 PASS, typecheck/typecheck:e2e/lint exit 0, unit 144 files / **2102 tests exit 0**, Articles lane 48/48, Projects lane 21/21 (unfiltered axe EN+AR+loading, 380px both locales), full suite 614/616 with both casualties classified as the R15 load class (did not reproduce sharded), sharded suite **616/616 exit 0**, R14 conclusion (B) recorded as recommendation-only, R15 remains OPEN precisely stated. No FE-3 product scope remains open. **FE-4 is next.**<br>**Historical module record (superseded in verdict by the closure above, preserved for the record):** Delegation settled as **OD-12** (hybrid: module 1 in-house, modules 2–5 delegable once the pattern holds). `M1·U1` landed the instrument; **`M1·U2` landed the collection at `/dashboard/experiences`, its `lanes.ts` record, and a third public-isolation gate** — every gate green, the lane 10/10 booting 1 pair, and the route measured at 85,551 B against its own D20-34 cap of 99,328 B. The new route cost **zero CSS**. Four unpredicted findings are in §5/M1·U2, including a gate (`typecheck:e2e`) that had been RED since `M1·U1` because that unit's exit row never listed it. **`M1·U3` landed the editor** (`7e6d11a`): bilingual, Zod + `UForm`, 422→locale-tab mapping, the shared skill picker, `isCurrent`⇄`endDate` on a field-owned error path, and the calendar-date read that Articles' instant-shaped converter would have got wrong. Three rules were each proven able to fail; the `technologyIds` omission control failed **only** the clear-case test, which is the empirical reason both tests exist. Four more unpredicted findings are in §5/M1·U3, including a backend crash that reported itself as eight failing tests. Its route caps were **measured and escalated, never inherited** — the batched decision is **§9.5**, which the owner then **RESOLVED as D20-35** (caps stamped: Web `6b59261`, Docs `97efd02`), clearing the transient `size:routes` exit 2 that this row previously described as current. ⚠ That exit 2 was a MEASUREMENT FAILURE, never a budget breach — the distinction is kept because it is the reason no cap was invented to silence the gate. **`M1·U4b` performed the three HELD extractions** (`fd11c7b`) and **`M1·U5` closed the gates** (`328bf9c`): every authoritative gate green, axe unfiltered in BOTH dashboard languages across four surfaces, 380px verified, `size:routes` 0 on fourteen governed routes, CSS unchanged at 29.19 KB gz. Two findings kept out of the green claim: the full suite is flaky at 507 tests (**R15**, not attributable — shard 3 passed 93/93 twice) and **there is no Projects browser lane to re-run** (**R16**, measured at 0 matches). Module 1 is otherwise CLOSED; modules 2–5 are delegable under OD-12 now that the pattern holds.<br>**`M1·U4` rendered the verdicts**: **five of five §5.2 predictions HELD**, plus a sixth candidate (`DashboardSkillPicker`) discovered and already extracted — measured on 56 byte-identical code lines, 34% of the Experiences editor. The three HELD extractions are **queued, not performed**: acting on them refactors the shipped `ArticleEditor` and needs both lanes re-run, so it is its own unit — **`M1·U4b`, the extraction pass, is next**, then `M1·U5` (gates + axe).<br>**Lane-strategy unit (R14):** A run now boots only the lanes it selected: measured 1 preview pair for `--project=dashboard-articles`, against 10 before, same command. The full suite still boots all ten by design, so R14 is **NARROWED, NOT CLOSED** — see §6 and §5/FE-3/U-1. ⚠ This row previously said the full suite "loses exactly one test per run"; the pre-change control run **did not reproduce that** (471 passed, exit 0) and the claim is corrected here rather than carried forward. |
-| FE-4 — System Modules | **IN PROGRESS — U1a–U1d landed** (Static Page SEO instrument `68a02ce`, form/payload semantics `0f013d4` + parity fix `8a48709`, read-only destination `ff74a98`, editable editor `6f3b4c5`). Browser lane + runtime proof arrive in U1e. |
+| FE-4 — System Modules | **IN PROGRESS — U1a–U1e landed** (instrument `68a02ce`, form/payload `0f013d4`+`8a48709`, destination `ff74a98`, editor `6f3b4c5`, browser lane `2262125`). Route measurement/governance (U1f) remains. |
 | FE-5 — Coherence, D20-32 Review, M4 Closure | NOT STARTED |
 
 ---
@@ -4172,3 +4172,79 @@ tested, not serialization assumptions.
 U1a server; real Nitro/HTTP save round-trip, 422 locale mapping, dirty switching, IMAGE picker,
 380px, axe, request states), then route measurement + batched cap decision at closure. Nothing
 pushed or deployed; campaign tree clean after each docs-only commit.
+
+---
+
+## FE4-U1e — the `dashboard-seo` BROWSER LANE · checkpoint 2026-08-24
+
+Implementation commit **`2262125`**: `e2e/dashboard-seo/{harness.ts, page-seo.spec.ts}` (ONE spec
+file — mutable-lane invariant), `lanes.ts` record **#16** (`CI_SEO_PORT 4600 / CI_SEO_MOCK_PORT
+4601`, resetsBackendState), `ci-preview.mjs` backend entry, isolation-spec pin updated 15→16 with
+the reason recorded. Server extensions are NARROW and ADDITIVE; every U1a contract behavior
+untouched and **U1a instrument re-run green (56/56)** after modification:
+
+| Server addition | Purpose |
+| --- | --- |
+| Minimal `/admin/media` list+resolve reads | the shared OG picker's browse/resolve vocabulary so it functions in the lane (same accommodation as Testimonials); NO upload/delete |
+| ONE-SHOT `nextPatch422` control | deterministic Arabic-first 422 at `translations[0].canonicalUrl`; cleared by reset |
+
+### Runtime proof — official lane: **38 passed / 0 failed, exit 0**, exactly ONE preview/backend pair
+
+Real Nitro preview + real browser + real HTTP to the fixture backend. Highlights of what only this
+lane could prove:
+
+- **One-list architecture on the wire**: initial load = exactly one `GET /admin/seo/pages`; ZERO
+  detail-shaped requests across selection, editing, saving, refreshing; selection costs zero
+  API calls; zero public-endpoint (`/api/v1/seo/pages/*`) requests across the whole flow.
+- **D10-23 ON THE WIRE** (captured PATCH bodies): unchanged save → ZERO PATCH; EN-only /
+  AR-only entries (Arabic at sent index 0); held-clear → explicit `"metaDescription": null`;
+  initially-null untouched keys ABSENT; ogImage pick → id, clear → null; `translations: []`
+  never serialized; pageKey never in a body.
+- **Sent-order 422**: injected `translations[0].canonicalUrl` against an AR-only payload lands
+  on the ARABIC field + Arabic tab-invalid badge with edits intact; general failure (500 via
+  `failNextWrite`) shows the action-level error without replacing the editor.
+- **Dirty protection in both directions**: cancel keeps page+edits; confirm discards into the
+  destination row; background refresh never overwrites a dirty editor while a CLEAN editor
+  rehydrates from a server-side mutated row (control-plane `pages` override).
+- **OG picker**: dialog opens, PDF fixture absent from IMAGE-restricted grid, picked id reaches
+  PATCH, stored reference resolves through `/admin/media/:id`, clear emits null.
+- **Unfiltered axe** (no rules disabled): settled EN, settled AR cold boot, held loading, error
+  state, open OG-picker dialog — all clean.
+- **380px EN+AR**: horizontal overflow ≤1px, selector/tabs/save/picker usable, canonical input
+  pinned LTR under RTL chrome. Cold boot: EN `dir=ltr`, AR `dir=rtl` on the unprefixed route.
+
+Negative controls A–G, each REBUILT (`npm run build` freshness verified against source mtime)
+then targeted browser run FAILED for the intended reason, then restored byte-identically:
+
+| Control | Mutation | Failing test |
+| --- | --- | --- |
+| A | detail GET on selection | "selecting another page renders its values and issues ZERO additional requests" |
+| B | held clear → omission (U1b builder) | "a HELD text field cleared reaches the wire as explicit null" |
+| C | 422 indexes vs canonical [en, ar] | "an ARABIC-ONLY sent payload maps translations[0] onto the ARABIC field" |
+| D | dirty-switch protection removed | "cancel keeps the current page" |
+| E | refresh reinitializes dirty form | "a background refresh does NOT overwrite a dirty form" |
+| F | canonical dir=ltr removed (SeoPanel) | both "canonical input stays LTR" tests |
+| G | no-op save → `{ translations: [] }` | "an UNCHANGED form produces ZERO PATCH requests" |
+
+Restorations verified: editor/page/form blobs equal their HEAD SHAs (`0342e0eb…`, `4cf3a8b6…`,
+`2abad834…`); SeoPanel byte-identical to HEAD (git diff empty). Post-commit, the tree was REBUILT
+from the committed state and the focused lane re-run green (38/38 exit 0) per the D20-40
+committed-tree lesson.
+
+Two authoring findings kept: (1) the harness initially demanded an `input` DESCENDANT of
+`[data-seo-field]` — the attr lands directly ON the control element (UInput→input,
+UTextarea→textarea), which is why every input-touching test failed until fixed; (2) mid-test
+`clearCookies()` kills the auth session — locale cold-boot tests must re-sign-in after planting
+the cookie.
+
+### Deliberate governance/lane state
+
+- **`/dashboard/seo` remains intentionally UNGOVERNED** — no measurement, no baseline, no cap;
+  governance files untouched. Measurement belongs to **FE4-U1f** (route measurement/governance +
+  Static Page SEO Dashboard closure).
+- **Declared lane count: 16.** Default 4-shard strategy, R14 closure, R15 status and CI untouched.
+- Standing: Dynamic RBAC UI deferred post-v1 (OD-2); Users/Roles envelope handoff non-blocking;
+  OD-7 related-articles unresolved. **Public SEO consumption NOT started — that is FE4-U2.**
+
+**Next unit: FE4-U1f — route measurement/governance + Static Page SEO Dashboard closure.**
+Nothing pushed or deployed; campaign tree clean after each docs-only commit.
