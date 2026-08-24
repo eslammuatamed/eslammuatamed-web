@@ -470,7 +470,7 @@ shared abstraction: the shared set is now `useTranslatableForm`, `DashboardTrans
 | **FE-1 — Contract & Integration Foundation** | **COMPLETE** — commit `19e3a05`. Contract adopted + gtm reconciliation; reply flow deliberately moved to FE-2 (see §4). Gates re-verified on the committed tree: typecheck 0, 1501/1501. |
 | **FE-2 — Articles Tracer Bullet + Dashboard Architecture** | **COMPLETE.** OD-11, OD-3, D20-33 and its amendment all resolved. FE-2a/2b/2c done: F-1 **CLOSED** with browser evidence · collection · editor · §14.6 extraction pass · **all ten §14.9 criteria demonstrated** · every gate green including `size:routes`. The reusable architecture is recorded in **§10**. |
 | **FE-3 — Content Module Replication** | **COMPLETE — CLOSED at SEO-U4 (2026-08-23).** All five content modules + the shared per-entity SEO panel implemented, verified and inside governance: Experiences, Skills, Testimonials, Taxonomy, plus `DashboardSeoPanel` serving Articles + Projects (the only entities the contract gives SEO fields), Projects null-clear fixed and browser-proven on the wire, R16 closed by the official `dashboard-projects` lane. Final evidence (§5/SEO-U4): clean provenance-stamped build (`632b160…`), all 21 governed routes inside frozen caps (`size:routes` exit 0, zero unclassified), CSS 28.1 KB gz / 30 PASS, typecheck/typecheck:e2e/lint exit 0, unit 144 files / **2102 tests exit 0**, Articles lane 48/48, Projects lane 21/21 (unfiltered axe EN+AR+loading, 380px both locales), full suite 614/616 with both casualties classified as the R15 load class (did not reproduce sharded), sharded suite **616/616 exit 0**, R14 conclusion (B) recorded as recommendation-only, R15 remains OPEN precisely stated. No FE-3 product scope remains open. **FE-4 is next.**<br>**Historical module record (superseded in verdict by the closure above, preserved for the record):** Delegation settled as **OD-12** (hybrid: module 1 in-house, modules 2–5 delegable once the pattern holds). `M1·U1` landed the instrument; **`M1·U2` landed the collection at `/dashboard/experiences`, its `lanes.ts` record, and a third public-isolation gate** — every gate green, the lane 10/10 booting 1 pair, and the route measured at 85,551 B against its own D20-34 cap of 99,328 B. The new route cost **zero CSS**. Four unpredicted findings are in §5/M1·U2, including a gate (`typecheck:e2e`) that had been RED since `M1·U1` because that unit's exit row never listed it. **`M1·U3` landed the editor** (`7e6d11a`): bilingual, Zod + `UForm`, 422→locale-tab mapping, the shared skill picker, `isCurrent`⇄`endDate` on a field-owned error path, and the calendar-date read that Articles' instant-shaped converter would have got wrong. Three rules were each proven able to fail; the `technologyIds` omission control failed **only** the clear-case test, which is the empirical reason both tests exist. Four more unpredicted findings are in §5/M1·U3, including a backend crash that reported itself as eight failing tests. Its route caps were **measured and escalated, never inherited** — the batched decision is **§9.5**, which the owner then **RESOLVED as D20-35** (caps stamped: Web `6b59261`, Docs `97efd02`), clearing the transient `size:routes` exit 2 that this row previously described as current. ⚠ That exit 2 was a MEASUREMENT FAILURE, never a budget breach — the distinction is kept because it is the reason no cap was invented to silence the gate. **`M1·U4b` performed the three HELD extractions** (`fd11c7b`) and **`M1·U5` closed the gates** (`328bf9c`): every authoritative gate green, axe unfiltered in BOTH dashboard languages across four surfaces, 380px verified, `size:routes` 0 on fourteen governed routes, CSS unchanged at 29.19 KB gz. Two findings kept out of the green claim: the full suite is flaky at 507 tests (**R15**, not attributable — shard 3 passed 93/93 twice) and **there is no Projects browser lane to re-run** (**R16**, measured at 0 matches). Module 1 is otherwise CLOSED; modules 2–5 are delegable under OD-12 now that the pattern holds.<br>**`M1·U4` rendered the verdicts**: **five of five §5.2 predictions HELD**, plus a sixth candidate (`DashboardSkillPicker`) discovered and already extracted — measured on 56 byte-identical code lines, 34% of the Experiences editor. The three HELD extractions are **queued, not performed**: acting on them refactors the shipped `ArticleEditor` and needs both lanes re-run, so it is its own unit — **`M1·U4b`, the extraction pass, is next**, then `M1·U5` (gates + axe).<br>**Lane-strategy unit (R14):** A run now boots only the lanes it selected: measured 1 preview pair for `--project=dashboard-articles`, against 10 before, same command. The full suite still boots all ten by design, so R14 is **NARROWED, NOT CLOSED** — see §6 and §5/FE-3/U-1. ⚠ This row previously said the full suite "loses exactly one test per run"; the pre-change control run **did not reproduce that** (471 passed, exit 0) and the claim is corrected here rather than carried forward. |
-| FE-4 — System Modules | **IN PROGRESS — U1a + U1b + U1c landed** (Static Page SEO instrument `68a02ce`, form/payload semantics `0f013d4` (+ parity fix `8a48709`), read-only destination `ff74a98`). Editing arrives in U1d. |
+| FE-4 — System Modules | **IN PROGRESS — U1a–U1d landed** (Static Page SEO instrument `68a02ce`, form/payload semantics `0f013d4` + parity fix `8a48709`, read-only destination `ff74a98`, editable editor `6f3b4c5`). Browser lane + runtime proof arrive in U1e. |
 | FE-5 — Coherence, D20-32 Review, M4 Closure | NOT STARTED |
 
 ---
@@ -4114,3 +4114,61 @@ after every restore and equal to the committed blobs.
 **Next unit: FE4-U1d — the editable Static Page SEO form + PATCH wiring**, consuming U1b's
 form/payload module and the U1a instrument, then lane registration + measurement at closure.
 Nothing pushed or deployed; campaign tree clean after each docs-only commit.
+
+---
+
+## FE4-U1d — the Static Page SEO EDITOR · checkpoint 2026-08-24
+
+Implementation commit **`6f3b4c5`**: NEW `app/components/dashboard/PageSeoEditor.vue` (the
+thin-wrapper pattern — pages route, editors own their UForm), `useAdminPageSeo.ts` gains exactly
+ONE mutation, the page slims to collection + request-state + selection/protection, EN/AR editor
+copy added. **FR-DSH-051's Dashboard editing behavior is COMPLETE.**
+
+| Fact | State |
+| --- | --- |
+| Edit source | The LIST ROW, exclusively. Zero detail GETs on any path (request-level + structural pins); switching pages costs ZERO requests |
+| Mutation | ONE PATCH per singleton page via the composable; pageKey in the REQUEST PATH only — never in a body; no create/delete/detail |
+| Re-seed | The AUTHORITATIVE PATCH response replaces the row (`replaceRow`) and re-seeds the editor clean — no refetch; selected page AND active locale survive a save |
+| Payloads | U1b builder unchanged: changed locales only (Arabic may be index 0), omission preserves, held-clear sends explicit null, ogImage pick/clear per D10-23, `null` sentinel → ZERO requests, `translations: []` unreachable |
+| Optional data | NO OD-14 rule anywhere: all-null valid, single-field valid, final-override clear PATCHes nulls |
+| 422 mapping | Indexed paths resolve against the ACTUAL SENT order onto field + tab; dirty edits survive; client Zod failures re-enter the SAME machinery through indexed canonical paths (SeoPanel fields carry no UForm names by design — entity-blind panel) |
+| Non-validation failures | Action-level localized error, focus-managed, usable editor intact — never the full-page state |
+| Unsaved protection | Dirty page-switch asks (cancel keeps edits / confirm discards); route-leave via shared guard inside the editor; background refresh NEVER overwrites a dirty/saving editor while clean ones rehydrate from refreshed rows |
+| U1c regression | Skeleton/error+retry/forbidden/empty/stale-refresh/product-order/selection-by-key all re-pinned in the refit spec |
+
+Gates on the committed tree (hook's eslint --fix reformatted the two new files at commit time —
+gates RE-RUN on the committed tree rather than assumed): page/editor suite **37/37 exit 0**;
+combined focused run with form suite + nav + SeoPanel + parity **114/114** pre-commit;
+`typecheck` exit 0; lint exit 0.
+
+Negative controls A–F, each ONE behavioral mutation → targeted test FAILS → byte-identical
+restore (pre-commit working-tree SHAs verified: editor `9ca273fc…`, page `77fcd37c…`, form
+`2abad834…`; post-commit reformatted blobs are the hook's eslint --fix output and pass every gate):
+
+| Control | Injected defect | Test that FAILED |
+| --- | --- | --- |
+| A | unchanged save emits `{ translations: [] }` | "an UNCHANGED form produces ZERO PATCH requests" |
+| B | 422 indexes resolved against canonical [en, ar] | "an ARABIC-ONLY sent payload maps translations[0] onto the ARABIC field" |
+| C | dirty page-switch protection removed | "DIRTY + CANCEL stays on the current page" |
+| D | dirty-editor guard dropped from row watcher | "a DIRTY selected page is NOT overwritten" |
+| E | held clear → omission (U1b builder) | "a HELD nullable TEXT field cleared travels as explicit null" |
+| F | selection-triggered detail GET | clean-switch test strengthened with zero-detail assertion, then FAILED |
+
+Two authoring findings recorded: (1) mounting UForm directly inside the PAGE broke submit wiring
+mysteriously — extracting the editor component per the established thin-wrapper pattern fixed it,
+which is the architecture precedent confirming itself; (2) the mock initially parsed `init.body`
+before recording, crashing on object bodies — mocks must accept both shapes so caller honesty is
+tested, not serialization assumptions.
+
+### Deliberate governance/lane state
+
+- **`/dashboard/seo` remains intentionally UNGOVERNED** — measured + batched cap AFTER browser
+  proof (U1e); governance files untouched this unit.
+- **No browser lane registered**; U1a server remains contract infrastructure. **Lane count: 15.**
+- Standing: Dynamic RBAC UI deferred post-v1 (OD-2); Users/Roles envelope handoff non-blocking;
+  OD-7 related-articles unresolved.
+
+**Next unit: FE4-U1e — the Page SEO browser lane + runtime proof** (register the lane against the
+U1a server; real Nitro/HTTP save round-trip, 422 locale mapping, dirty switching, IMAGE picker,
+380px, axe, request states), then route measurement + batched cap decision at closure. Nothing
+pushed or deployed; campaign tree clean after each docs-only commit.
