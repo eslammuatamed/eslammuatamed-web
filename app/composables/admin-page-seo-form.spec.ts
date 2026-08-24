@@ -260,14 +260,32 @@ describe('canonicalUrl — three wire states plus client-side URI validation', (
     expect(buildPageSeoPatch(form, initial)!.translations[0]?.canonicalUrl).toBe('not-a-uri')
   })
 
-  it('blank canonical is VALID (the cleared state), and absolute http(s) URIs pass', () => {
+  it('blank canonical is VALID (the cleared state), and contract-compliant absolute URLs pass', () => {
     const { form } = fresh()
     form.translations.en.canonicalUrl = ''
     expect(pageSeoFormSchema(t).safeParse(form).success).toBe(true)
+    // The API's @IsUrl({ require_protocol: true }) (validator@13.15.35 defaults) accepts
+    // http/https/FTP absolute URLs with a host — measured against the API repo's own dependency.
     expect(isValidCanonicalUrl('https://eslammuatamed.com/x')).toBe(true)
-    expect(isValidCanonicalUrl('http://localhost:3000/dev')).toBe(true)
-    expect(isValidCanonicalUrl('ftp://eslammuatamed.com/x')).toBe(false)
+    expect(isValidCanonicalUrl('http://example.com/x')).toBe(true)
+    // THE DISCRIMINATING NON-HTTP FIXTURE: an http/s-only check would wrongly reject this.
+    expect(isValidCanonicalUrl('ftp://eslammuatamed.com/resource')).toBe(true)
+  })
+
+  it('non-hierarchical schemes and malformed input stay REJECTED, matching the API', () => {
+    // validator.js isURL defaults carry a fixed protocol set: these are absolute URIs per RFC 3986
+    // but NOT accepted by the adopted endpoint, so accepting them would over-broaden.
+    expect(isValidCanonicalUrl('mailto:owner@example.com')).toBe(false)
+    expect(isValidCanonicalUrl('urn:isbn:0451450523')).toBe(false)
+    expect(isValidCanonicalUrl('not-a-uri')).toBe(false)
     expect(isValidCanonicalUrl('//protocol-relative')).toBe(false)
+  })
+
+  it('an FTP canonical passes client validation end-to-end (schema + payload layer)', () => {
+    const { form } = fresh()
+    form.translations.en.canonicalUrl = 'ftp://eslammuatamed.com/case-study'
+    expect(pageSeoFormSchema(t).safeParse(form).success).toBe(true)
+    expect(pageSeoFormSchema(t).parse(form)).toBeTruthy()
   })
 
   it('Arabic and English canonical values are independent', () => {

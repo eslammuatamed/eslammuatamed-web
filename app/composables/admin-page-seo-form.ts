@@ -122,10 +122,26 @@ function seoTextPatchValue(before: string, after: string): string | null | undef
   return blank(after) ? null : after.trim()
 }
 
+/**
+ * Canonical-override parity with the ADOPTED contract as actually enforced. The OpenAPI document
+ * declares plain `format: uri` with NO scheme restriction anywhere (verified across every
+ * canonicalUrl in openapi.json), and the API source pins runtime validation to class-validator's
+ * `@IsUrl({ require_protocol: true })` on `PageSeoTranslationDto` — whose library default accepts
+ * absolute URLs with protocol http, https OR ftp and a real host, and rejects relative references,
+ * protocol-relative forms and non-hierarchical schemes (measured against the API repo's own pinned
+ * validator@13.15.35: `mailto:` and `urn:` false, `ftp://host/resource` true). So an HTTP(S)-only
+ * client check would narrow the contract without evidence — this check mirrors the acceptance set.
+ *
+ * Residual divergence is deliberately on the LENIENT side only: the server's library defaults also
+ * demand a TLD-bearing hostname (it answers 422 for `http://localhost/...`), which this client-side
+ * check does not reproduce — the form never blocks a value the API would accept.
+ */
+const CANONICAL_URL_PROTOCOLS = ['http:', 'https:', 'ftp:'] as const
+
 export function isValidCanonicalUrl(value: string): boolean {
   try {
     const url = new URL(value)
-    return url.protocol === 'http:' || url.protocol === 'https:'
+    return (CANONICAL_URL_PROTOCOLS as readonly string[]).includes(url.protocol) && url.hostname !== ''
   } catch {
     return false
   }
