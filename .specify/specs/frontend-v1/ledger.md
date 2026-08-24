@@ -4248,3 +4248,70 @@ the cookie.
 
 **Next unit: FE4-U1f — route measurement/governance + Static Page SEO Dashboard closure.**
 Nothing pushed or deployed; campaign tree clean after each docs-only commit.
+
+## FE4-U1g — Static Page SEO DASHBOARD EDITING CLOSED — 2026-08-25
+
+### Route governance: `/dashboard/seo` registered under D20-41
+
+The owner approved ONE route-specific budget for the ONE Static Page SEO route, derived by D20-29's
+formula from the authoritative U1f completed-route baseline on the clean stamped analysis build at
+Web `a38a70c7f63db6002a9244ddfedda8926e4362f6`:
+
+| Input | Value |
+| --- | --- |
+| app-owned baseline | **109,003 B** (65 closure assets, unclassified 0 B) |
+| cap | ceil((109,003 × 115) ÷ 102,400) × 1024 = **125,952 B (123 KiB)** |
+| headroom | **16,949 B** |
+| total route JS | 307,806 B gz (300.6 KB) — **D20-24 WARN**, warn-only |
+| public CSS | 28,736 B gz (28.1 KB) vs 30 KB hard cap — **PASS** |
+
+Registration touched exactly the four established governance locations:
+`DASHBOARD_ROUTES` (+ page module `app/pages/dashboard/seo/index.vue`),
+`DASHBOARD_APP_OWNED_BASELINE_BYTES`, `DASHBOARD_APP_OWNED_BASELINE_PROVENANCE`
+(→ `a38a70c7…`), `DASHBOARD_APP_OWNED_CAP_BYTES`. Web governance commit `a02c7c1`;
+Doc 20 decision recorded as **D20-41** on the local Docs campaign branch (`a412f36`), local-only.
+
+**Governance-invisibility finding (U1f), disposition:** before registration `size:routes` exited 0
+while the completed route existed but was absent from the registered inventory — invisible rather
+than reported ungoverned (unlike Skills M2·U2 / Testimonials T·U2 / Taxonomy U2, which registered
+measured-but-ungoverned first and failed loudly). U1g adds focused tests pinning `/dashboard/seo`
+into BOTH inventory sides with exact baseline/cap bytes and proving removal from either side fails;
+a general filesystem-vs-governance completeness assertion over `app/pages/dashboard/**` is RECORDED
+as a future governance finding and deliberately not built in this unit.
+
+### Authoritative verify (reproduced on the governance build)
+
+Fresh clean `ANALYZE_BUNDLE=1 NUXT_PUBLIC_SITE_URL=https://example.com npm run build` at governance
+HEAD `a02c7c1`: exit 0 (direct-captured, no wrapper masking), `.output` present (1,667 files),
+provenance stamp = exact HEAD. `size:routes` exit **0**: `/dashboard/seo` measured **109,003 B ≤
+125,952 B PASS** — byte-identical to the approved baseline (zero drift); incremental Δ floor
+44,309 B of 86,016 B (51.5 %); floors unchanged and inside caps (public 256,378/263,168; dashboard
+263,497/268,288). The gate now prints the route's own D20-24 attribution block (route-owned product
+code + shared framework/chrome; zod is dashboard-only; isolation INTACT across 14 dashboard-owned
+modules) among **15** warn-only warnings. Focused governance suites: route-assets +
+dashboard-closure specs **181/181 pass**.
+
+### Completed evidence chain (Static Page SEO Dashboard editing)
+
+Seven static page keys exactly — `home, about, experience, projects, blog, resume, contact`
+(`PAGE_SEO_PAGE_ORDER`, explicit frontend presentation order). ONE `/dashboard/seo` route; ONE
+admin-list read source (`GET /admin/seo/pages`); ZERO detail GET dependency — selection costs no
+request. Request-state contract per U1b/U1b.1: optional/all-null SEO valid; omission preserves;
+held-clear sends explicit null; `translations: []` never serialized; pageKey never in a body; FTP
+canonical parity between editor validation and API contract; sent-order 422 mapping against the real
+payload order; dirty page-switch protection and dirty-refresh protection; OG picker restricted to
+IMAGE media with clear-to-null. Shared `TranslationTabs` + `DashboardSeoPanel` reused. Runtime proof
+from U1e stands: one official `dashboard-seo` browser lane, 38/38 exit 0, one focused preview/backend
+pair, unfiltered axe clean across EN/AR/loading/error/picker, 380px EN/AR within 1px overflow,
+public-endpoint isolation (zero `/api/v1/seo/pages/*` requests).
+
+**Static Page SEO DASHBOARD EDITING: COMPLETE.**
+
+### Deliberate boundary — FE4-U2 remains OPEN
+
+Completed here: FR-DSH-051 operator editing/persistence surface (plus its governance). Still open,
+NOT started: public consumption of `/seo/pages/{pageKey}`; static SEO override rendered into the
+public `<head>`; FR-DSH-052 (`googleSiteVerification`, `bingSiteVerification`, `analyticsEnabled`,
+`gtmContainerId`, `customMetas`) and corresponding public head/tag rendering.
+
+Declared lane count: **16** (unchanged). Nothing pushed or deployed.
