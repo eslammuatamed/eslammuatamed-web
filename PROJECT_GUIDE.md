@@ -178,7 +178,8 @@ npm run check:logical                    # يمنع الأنماط الفيزي�
 ANALYZE_BUNDLE=1 npm run build   # مطلوب قبل size:routes وإلّا خرج بالرمز 2 — فشل قياس، لا تجاوز ميزانية
 npm run size                      # ميزانية الـ CSS العامّة (السقف 30,000 B gz، غير مرفوع)
 npm run size:routes               # ميزانيات الـ JS لكل مسار (D20-31 عام · D20-32 للوحة التحكّم)
-npm run test:e2e                  # Playwright + axe (a11y بلا ترشيح، en/ar/RTL، SSR)
+npm run test:e2e                  # Playwright + axe عبر 4 شظايا متتالية (≤4 أزواج معاينة/خلفية) — الافتراضي منذ إغلاق R14
+npm run test:e2e:unsharded        # التشغيل القديم عالي التزامن (15 زوجًا دفعة واحدة) — للتشخيص وإعادة إنتاج R15 فقط، ليس المسار الموصى به
 npm run typecheck:e2e             # أنواع مجموعة e2e
 ```
 

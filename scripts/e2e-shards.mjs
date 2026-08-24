@@ -13,8 +13,13 @@
  * invocations of at most `E2E_MAX_LANES` (default 4) lanes each, so the concurrent process count is
  * bounded by a governed constant rather than by the number of modules the campaign has shipped.
  * Sequential shards are strictly slower than one parallel run — the `contract` lane dominates and no
- * longer overlaps the rest — which is exactly why this is a SEPARATE script and not a redefinition of
- * `npm run test:e2e`. `test:e2e` remains `playwright test`, unchanged, and is still what CI runs.
+ * longer overlaps the rest — which is exactly why this was a SEPARATE script before R14 closed.
+ *
+ * SINCE R14 CLOSED, THIS RUNNER IS THE DEFAULT: `npm run test:e2e` delegates here (measured at
+ * SEO-U4 — 15 pairs of full concurrency reproduced the R15 race class twice while 4-shard execution
+ * ran 616/616 green), and CI runs the default script unchanged. The old high-concurrency behaviour
+ * is preserved deliberately as `npm run test:e2e:unsharded` for reproducing R15 and infrastructure
+ * diagnosis — it is NOT the recommended path and must not grow retries.
  *
  * WHAT IT IS NOT EVIDENCE FOR. The intermittent casualty that raised R14 — one test lost per full run
  * to `ECONNRESET` or a 30 s navigation timeout, a different test each time — did NOT reproduce on the
