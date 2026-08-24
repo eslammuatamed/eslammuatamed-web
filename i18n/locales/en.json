@@ -1119,6 +1119,9 @@
     "seo": {
       "title": "Search and social",
       "help": "Optional. Left empty, the site falls back to its own defaults.",
+      "validation": {
+        "canonicalUrl": "Enter a full URL starting with http:// or https://."
+      },
       "field": {
         "metaTitle": "Meta title",
         "metaDescription": "Meta description",
