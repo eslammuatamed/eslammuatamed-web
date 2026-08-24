@@ -1699,7 +1699,7 @@ design.
 | R10 | `D19-11` id collision across Docs branches — blocks any Docs integration. **Live handle recorded 2026-08-18:** Docs **PR #54** (`docs/api-frontend-v1-completion` `2345a7a0…`, *"govern temporary scoped overrides for unfixed transitive advisories (D19-11)"*) is OPEN against this exact id. The risk is unchanged; it now names where it is being worked. |
 | R11 | Issue #30 hydration defect — `test:e2e:repeat` red by design, out of scope |
 | ~~**R12**~~ | ~~`/dashboard/articles` ships UNMEASURED.~~ **CLOSED by D20-33** (`e0128c2`, Docs `3f2626e`). Superseded by the cap question in §9.4, itself **RESOLVED 2026-08-18** (`a0d4dd0`, 122,880 B). |
-| **R14** | **NARROWED 2026-08-18 (FE-3/U-1), not closed.** The e2e suite's FIXED COST exceeds this machine — deterministic and re-measured: a full run peaks at load **17.4** on 12 cores, drives available memory to **5.9 GB** and adds **~1 GB of swap**, for ten Nitro servers at 140–290 MB RSS each plus ten backends. What is FIXED: a run now boots only the lanes it selects (**1 pair** for a one-lane run, against 10, same command — §5 FE-3/U-1), so per-module development runs and the `test:e2e:repeat` sweeps no longer pay for the whole farm. What is NOT: `npm run test:e2e` still selects nothing and therefore still boots all ten, so **FE-3's five modules still take it to 15 pairs on the default path**. `npm run test:e2e:sharded` bounds it to 4 concurrent pairs and is available but is NOT the default, because the intermittent casualty did not reproduce (see the amendment in §5 FE-2c/U-5) and a governed CI gate must not be re-pointed on unreproduced evidence. **Trigger to make it the default:** either a full-suite casualty reproduced on demand, or the lane count passing **12**. ⚠ **RE-CHECKED 2026-08-18 when `M1·U2` landed the eleventh lane: the trigger is NOT tripped.** 11 < 12, and no casualty has been reproduced — the last full-suite control run was 471 passed / exit 0. Recorded explicitly rather than passed over in silence, because the check was owed at this exact point and a silent non-event is indistinguishable from a forgotten one. The **third** FE-3 module reaches 12 and trips it on lane count alone. Also confirmed live: a one-lane run still boots exactly **1 pair** (4100/4101), so U-1's narrowing holds with a lane added. ⚠ **RE-CHECKED AGAIN at `M1·U3`, because the check was owed at that boundary too: still NOT tripped.** The editor added **no lane and no server pair** — a mutable lane owns exactly one spec file, so its tests joined the existing one and rode the pair `M1·U2` had already booted. Measured live at **1 pair** across a 26-test run; lane count **11 < 12**; no casualty reproduced. CI's behaviour stays UNVERIFIED — fewer cores, and nothing is pushed. |
+| **R14** | **CLOSED 2026-08-24 — sharded execution is the default full-suite strategy (see §5/R14-closure checkpoint).** Historical narrowing record: **NARROWED 2026-08-18 (FE-3/U-1), not closed.** The e2e suite's FIXED COST exceeds this machine — deterministic and re-measured: a full run peaks at load **17.4** on 12 cores, drives available memory to **5.9 GB** and adds **~1 GB of swap**, for ten Nitro servers at 140–290 MB RSS each plus ten backends. What is FIXED: a run now boots only the lanes it selects (**1 pair** for a one-lane run, against 10, same command — §5 FE-3/U-1), so per-module development runs and the `test:e2e:repeat` sweeps no longer pay for the whole farm. What is NOT: `npm run test:e2e` still selects nothing and therefore still boots all ten, so **FE-3's five modules still take it to 15 pairs on the default path**. `npm run test:e2e:sharded` bounds it to 4 concurrent pairs and is available but is NOT the default, because the intermittent casualty did not reproduce (see the amendment in §5 FE-2c/U-5) and a governed CI gate must not be re-pointed on unreproduced evidence. **Trigger to make it the default:** either a full-suite casualty reproduced on demand, or the lane count passing **12**. ⚠ **RE-CHECKED 2026-08-18 when `M1·U2` landed the eleventh lane: the trigger is NOT tripped.** 11 < 12, and no casualty has been reproduced — the last full-suite control run was 471 passed / exit 0. Recorded explicitly rather than passed over in silence, because the check was owed at this exact point and a silent non-event is indistinguishable from a forgotten one. The **third** FE-3 module reaches 12 and trips it on lane count alone. Also confirmed live: a one-lane run still boots exactly **1 pair** (4100/4101), so U-1's narrowing holds with a lane added. ⚠ **RE-CHECKED AGAIN at `M1·U3`, because the check was owed at that boundary too: still NOT tripped.** The editor added **no lane and no server pair** — a mutable lane owns exactly one spec file, so its tests joined the existing one and rode the pair `M1·U2` had already booted. Measured live at **1 pair** across a 26-test run; lane count **11 < 12**; no casualty reproduced. CI's behaviour stays UNVERIFIED — fewer cores, and nothing is pushed. |
 | **R15** | **The full e2e suite is not reliably green on this machine.** Two `test:e2e:sharded` runs over 507 tests each produced exactly ONE failure, a DIFFERENT one each time, and both passed on isolated re-run — `contract › Home EN → AR switched head state`, and `settings-dedupe › / costs one request` (*"expected one live render, got 2"*). The latter is the known request-count class: `/` is `swr:60`, so a cached render can satisfy a navigation the test expects to cost one live read; that lane's `readyPath: '/about'` mitigation exists and is incomplete. **Not attributable to FE-3** — the change set is dashboard-only, and shard 3 (all three affected lanes) passed 93/93 in BOTH runs. ⚠ Do NOT "fix" these by re-running until green; the correct repair is to make the count-based assertions robust to SWR, on a non-SWR route or behind a count guard. Related: running a full unit suite CONCURRENTLY with the sharded e2e run reproduces R14's resource ceiling and manufactures unrelated failures — run them one at a time. |
 | **R16** | **There is NO Projects browser/e2e lane, and the shared `DashboardSkillPicker` now has two consumers.** Measured, not assumed: `grep -rn "dashboard/projects" e2e/` returns **0**. The picker's browser coverage comes entirely from the Experiences lane. Projects is covered at component level by `ProjectEditor.spec.ts` (`mountSuspended`, real child resolution, no stubs, 36/36) plus a new copy-regression guard that was negative-controlled. NOT covered for Projects: real Nitro render, real HTTP, layout/CSS, the picker's filter interaction, its pending state, and axe. The owner deferred a Projects retrofit; this row exists so the gap is a decision rather than an oversight. |
 | **R13** | **CSS budget R2 tightened.** 29.19 / 30.00 KB gz — **~0.81 KB headroom**, down from ~0.91 KB. Two more modules of this size would exhaust it. Watch on every FE-3 module. |
@@ -3863,3 +3863,57 @@ None. No approved FE-3 product surface remains open. **FE-3 is officially COMPLE
 (static-page SEO module, global head/tags, settings completion, RBAC owner decision, overview).
 
 Nothing pushed or deployed. Campaign tree clean after this docs-only commit.
+
+---
+
+## R14 CLOSED — sharded execution is now the DEFAULT full-suite strategy · checkpoint 2026-08-24
+
+Implementation commit **`af26998`** (4 files, +89/−6): `package.json` command graph,
+`scripts/e2e-shards.mjs` header record, seven structural pins in the lane-infrastructure spec,
+PROJECT_GUIDE developer documentation. Orchestration ONLY — no test assertion changed, no timeout
+raised, no retry added, no worker/shard count tuned.
+
+**The measured reason, preserved verbatim from SEO-U4 (not rewritten):** the final FE-3 gate ran
+the normal full suite ONCE at 15-lane full concurrency → **614/616, exit 1**, both casualties
+matching the R15 resource/race class (`contract` hydration-observer race; Articles updating-window
+missed under load) — and then the existing opt-in runner → **616/616, exit 0** across 4 shards at
+≤4 concurrent pairs. Both trigger conditions of the old `11 < 12` guard were therefore live at
+once: lane count exceeded AND a casualty class reproduced on the default path.
+
+**What changed:**
+
+| Command | Before | After |
+| --- | --- | --- |
+| `npm run test:e2e` | bare `playwright test` — ALL 15 pairs at once | **delegates to the existing 4-shard runner** |
+| `npm run test:e2e:sharded` | the authoritative runner | unchanged — still the ONE implementation |
+| `npm run test:e2e:unsharded` | did not exist | **explicit diagnostic**: bare `playwright test`, for reproducing R15 and infrastructure diagnosis; documented as NOT the recommended path; no retries |
+
+CI needed NO edit: `.github/workflows/ci.yml` already invokes `npm run test:e2e`, which now
+delegates. Focused lanes are untouched by construction AND by pin: single `--project` selection
+still resolves to exactly ONE pair through plain Playwright, and the shard runner's refusal of
+`--project` has its GUARD CONDITION pinned (see control D below).
+
+**Seven structural pins** in `lane-isolation.spec.mjs`: default delegates to the one sharded runner
+(no second implementation anywhere in the script graph) · shard count pinned to the MEASURED 4 ·
+unsharded diagnostic exists and never recurses into sharding · focused lanes bypass the runner with
+a live guard · all **15** lane records with unique port pairs · CI rides the default script · no
+retries in any command or the config (`retries: 0`).
+
+**Negative controls A–D**, each executed against this spec and restored sha256-verified:
+A default re-pointed to unsharded → 1 FAILED · B concurrency raised 4→6 → exact-measured pin FAILED ·
+C unsharded command deleted → 2 FAILED · D shard guard disabled → initially **PASSED against its
+mutation** because the pin matched only the refusal message — the assertion was strengthened to bind
+the guard condition itself and control D re-run: FAILED. The lesson is recorded: a string-presence
+pin on an error MESSAGE does not pin behaviour; bind the condition.
+
+**Authoritative run of the NEW default from the committed tree:** `[e2e-shards] 15 lanes in 4
+shard(s), at most 4 concurrent preview pairs` → **616/616 passed, exit 0**, shards 329/85/110/92
+(~7 min wall). The old unsharded full suite was NOT re-run — its failure evidence is the recorded
+justification for this change.
+
+**R14: CLOSED** — the measured sharded orchestration is now the default full-suite strategy.
+**R15: remains OPEN** — known intermittent hydration/loading-window races remain diagnostic defects;
+the new default avoids the high-contention execution condition that reproduced them but does not
+prove the assertions themselves fixed. FE-3 remains COMPLETE; no product behavior changed; no budget
+touched; FE-4 remains next. Nothing pushed or deployed; campaign tree clean after this docs-only
+commit.
