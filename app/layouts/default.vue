@@ -88,6 +88,38 @@ useSeoMeta({
   twitterDescription: () => metaDescription.value
 })
 
+// FR-DSH-052 rendering side (FE4-U2d2): the SAME awaited Settings read above, projected by
+// `projectPublicSettingsMetas` (U2d1 — the sole owner of the Google/Bing vendor names and the
+// verbatim customMetas pass-through; none of that logic is repeated here), rendered through the
+// normal head API. This PUBLIC layout is the only registration site: app.vue wraps the dashboard
+// and auth shells too, and those surfaces must not inherit these tags. A null/failed read projects
+// to an empty list — no verification/custom tags, and every baseline tag above is untouched.
+//
+// UNHEAD IDENTITY, measured against the installed unhead@3.3.2 (`dedupeKey()` in
+// unhead/dist/shared): a `<meta>` is deduped under `meta:<name>` unless a per-tag `key` extends it
+// — so plain `{ name, content }` entries COLLAPSE same-name metas to the last one. U2d1's contract
+// keeps duplicate custom names and forbids an application dedupe policy, therefore each descriptor
+// gets `key` derived deterministically from its projection position: duplicates and collisions
+// survive as independent elements in API order (proven against final SSR output, not helper
+// output, in layouts/default.spec.ts).
+//
+// `tagPriority: 200` closes the one gap `key` cannot: upstream deliberately ignores `key` for
+// names matching /^(?:viewport|description|keywords|robots)$/ and names containing ":" (their
+// identity stays `meta:<name>`). Under this renderer the LOWEST weight wins such same-key
+// collisions, and a numeric priority REPLACES the computed weight outright — so 200 ranks these
+// descriptors below every app-owned writer (default ≈100, title 10, viewport −15). An operator
+// custom meta reusing an owned name therefore yields to the existing owner instead of hijacking
+// it, regardless of registration order; uncontested names render exactly as projected. The
+// upstream policy makes independent coexistence of BOTH entries impossible there without raw-head
+// bypasses — recorded as a known limitation, not silently chosen.
+useHead(() => ({
+  meta: projectPublicSettingsMetas(settings.value).map((descriptor, index) => ({
+    ...descriptor,
+    key: `public-settings-${index}`,
+    tagPriority: 200
+  }))
+}))
+
 if (import.meta.client) {
   const initialPath = router.currentRoute.value.fullPath
   let initialPageFinished = false
