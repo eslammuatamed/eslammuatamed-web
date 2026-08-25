@@ -4539,3 +4539,71 @@ head wiring created; route budgets untouched; no new browser lane; nothing pushe
 **Next unit: FE4-U2d2 — render verification + customMetas from the existing public-layout Settings
 state and prove SSR/public-only behavior.**
 Campaign tree clean after this docs-only commit.
+
+## FE4-U2d2 — public verification/customMetas RENDERING from the public layout COMPLETE — 2026-08-25
+
+Implementation commit `eff3e57`: `app/layouts/default.vue` (+32 lines) + three focused suites
+(`default.spec.ts` 15, `default.outage.spec.ts` 3, `layout-isolation.spec.ts` 5 — **23 focused
+tests**). Ownership: the PUBLIC default layout ONLY, reading the SAME awaited `useSiteSettings()`
+state it already holds — zero additional `/settings/site` requests (proven at unit level: one
+shared read serves layout + footer per mount).
+
+- **Rendered names**: Google `google-site-verification`, Bing `msvalidate.01` verbatim from U2d1's
+  projection; customMetas name/content only, exact API order, no dedupe/sort/filter/reserved-name
+  policy in application code.
+- **INSTALLED HEAD MANAGER BEHAVIOR (measured, not assumed)**: unhead@3.3.2 (`dedupeKey()` in
+  `unhead/dist/shared`) keys `<meta>` under `meta:<name>` unless a per-tag `key` extends it — plain
+  `{name, content}` same-name entries COLLAPSE to the last writer (probe-proven). `key` is a
+  recognized TagConfigKeys entry: lifted off props (never rendered as an attribute) and appended to
+  the dedupe key.
+- **Identity mechanism used**: per-descriptor `key: public-settings-${index}` — deterministic,
+  derived from projection position, preserves duplicates rather than deriving identity from name
+  alone. Verified against FINAL SSR output (`renderSSRHead` from the installed renderer on the real
+  Nuxt head instance), not helper output and not a useHead mock.
+- **Upstream-unkeyable names recorded honestly**: upstream deliberately ignores `key` for names
+  matching /^(?:viewport|description|keywords|robots)$/ and any name containing ":" (identity stays
+  `meta:<name>`), so independent coexistence of BOTH entries is impossible there without raw-head
+  bypasses — NOT silently resolved by this unit. Mitigation: numeric `tagPriority: 200` REPLACES
+  the computed weight outright under capoTagWeight, and the LOWEST weight wins same-key collisions,
+  so such descriptors rank below every app-owned writer (default ≈100, title 10, viewport −15) and
+  YIELD instead of hijacking, regardless of registration order; uncontested names render exactly as
+  projected. OWNER DECISION queued if operator-grade preservation of owned-name customs is ever
+  required.
+- **SSR-first**: tags resolve in initial head state via the awaited read — getter-driven
+  reactivity only (no mounted hook, no DOM access, no observer); locale-switch test proves the
+  shared-state change replaces en tokens with ar ones (per-field omission honoured, replacement
+  not duplication).
+- **Failure semantics**: blank/null tokens emit nothing; empty customMetas emits nothing; rejected
+  Settings read → optional global tags absent, baseline title/description/social floor intact,
+  page renders. Bonus structural guarantee found during controls: unhead `sanitizeTagsInPlace`
+  drops ANY meta with empty content — an empty placeholder tag cannot exist in rendered output.
+- **Isolation**: dashboard/auth shells render none of the tags (behavioral mounts through the real
+  renderer + structural scan proving `projectPublicSettingsMetas` is wired in exactly ONE file;
+  app.vue untouched, still baseline-floor-only).
+- **Security**: hostile custom content (`<script>alert("x&y")</script>`) survives INTACT as quoted
+  attribute DATA via normal framework escaping (`"` → `&quot;`); parsed final output contains zero
+  script/noscript/iframe elements; every Settings meta carries exactly {name, content} attributes
+  (no key/tagPriority/innerHTML leak).
+- **Untouched**: GTM (`gtmContainerId`/`analyticsEnabled`/dataLayer — zero consumption), CSP,
+  PageSeo/canonical/hreflang/strictSeo, JSON-LD, all seven public pages, route budgets.
+
+Verification: focused **23/23**; full unit suite **2429/2429 across 154 files** (includes the
+page-seo-wiring contract suite); U2d1 helper + settings-request + useSiteSettings suites green
+(39/39); `typecheck` exit **0**; eslint exit **0** (lint-staged clean at commit). Negative controls
+A–F each executed targeted against the real renderer, failed for the intended reason, restored
+byte-identically (SHA-256 `b870d48d…` verified before = after per mutation): A removed per-tag key
+→ duplicate-survival test failed on `['two']`; B filtered google-named customs → collision test
+failed on `[]`; C sorted descriptors pre-map → API-order test failed; D moved the registration
+block into app.vue → ownership scan failed on `['app/app.vue']`; E emitted a blank verification
+descriptor → blank-omission test failed on `[ { … } ]` vs `[]` (first attempt with literally-empty
+content passed because unhead sanitizes empty-content metas away — recorded above as a structural
+guarantee, control re-run in the survivable whitespace form); F added a script-element sink for
+customs → security test failed on 8 unexpected script elements.
+
+**FR-DSH-052 verification/customMetas PUBLIC RENDERING: IMPLEMENTED.**
+
+Still open: GTM runtime integration (script/noscript/placement decision), CSP/D19-4 decision,
+final U2 public/browser/performance closure. No new browser lane created; e2e settings-dedupe lane
+unchanged and NOT run here. Nothing pushed or deployed.
+
+**Next step: OWNER DECISION before FE4-U2e (GTM). Do NOT mark GTM complete.**
