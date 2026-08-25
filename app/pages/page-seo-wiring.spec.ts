@@ -6,6 +6,11 @@ import type { Ref } from 'vue'
 import { mockNuxtImport, mountSuspended } from '@nuxt/test-utils/runtime'
 import AboutPage from './about.vue'
 import HomePage from './index.vue'
+import ExperiencePage from './experience.vue'
+import ProjectsPage from './projects/index.vue'
+import BlogPage from './blog/index.vue'
+import ResumePage from './resume.vue'
+import ContactPage from './contact.vue'
 import type { SiteSettings } from '~/types/models'
 import type { components } from '~/types/api'
 
@@ -115,6 +120,16 @@ const IDLE = <T,>() => ({ data: ref<T | null>(null), status: ref('success'), err
 
 let aboutContent: ReturnType<typeof IDLE>
 mockNuxtImport('useAboutContent', () => () => aboutContent)
+mockNuxtImport('useExperiences', () => () => IDLE())
+mockNuxtImport('useProjectsList', () => () => ({ ...IDLE(), meta: ref(null) }))
+mockNuxtImport('useArticlesList', () => () => IDLE())
+mockNuxtImport('useArticleCategories', () => async () => ({ data: ref([]), status: ref('success'), error: ref(null), refresh: () => Promise.resolve() }))
+mockNuxtImport('useResumeData', () => () => ({
+  settings: { data: computed(() => settingsFixture()), status: ref('success'), error: ref(null), refresh: () => Promise.resolve() },
+  experiences: IDLE(),
+  skills: IDLE()
+}))
+mockNuxtImport('useRoute', () => () => ({ query: {} }))
 mockNuxtImport('useHomeData', () => () => ({
   projects: IDLE(),
   skills: IDLE(),
@@ -132,6 +147,11 @@ mockNuxtImport('useAboutSchema', () => (...args: unknown[]) => {
 mockNuxtImport('useSeoMeta', () => (input: Record<string, unknown>) => {
   seoMetaCaptured.push(input)
 })
+const schemaOrgCaptured: unknown[] = []
+mockNuxtImport('useSchemaOrg', () => (input: unknown) => {
+  schemaOrgCaptured.push(input)
+})
+mockNuxtImport('defineBreadcrumb', () => (input: unknown) => input)
 mockNuxtImport('useHead', () => (input: Record<string, unknown>) => {
   headCaptured.push(input)
 })
@@ -158,10 +178,32 @@ const STUBS = {
   HomeTimeline: { template: '<div />', props: ['experiences', 'pending', 'error'] },
   HomeWriting: { template: '<div />', props: ['articles', 'pending', 'error'] },
   HomeVoices: { template: '<div />', props: ['testimonials', 'pending', 'error'] },
-  HomeContact: { template: '<div />' }
+  HomeContact: { template: '<div />' },
+  // The five remaining static pages (U2c2b) — render shells only; head wiring is the subject.
+  ContentTimelineEntry: { template: '<div />', props: ['entry'] },
+  ContentArticleRow: { template: '<div />', props: ['article'] },
+  ContentWorkEntry: { template: '<div />', props: ['project'] },
+  ProjectFilter: { template: '<div />', props: ['facets', 'modelValue'] },
+  UiChipFilter: { template: '<div />', props: ['id', 'label', 'allLabel', 'options', 'modelValue'] },
+  UPagination: { template: '<div />', props: ['page', 'pageCount'] },
+  ResumeActions: { template: '<div />', props: ['settings'] },
+  ResumeEntry: { template: '<div />', props: ['entry'] },
+  ContactDirectMethods: { template: '<div />', props: ['settings'] },
+  ContactForm: { template: '<form><slot /></form>' },
+  Outcome: { template: '<div />', props: ['state'] }
 }
 
 const MOUNTED: Array<{ unmount(): void }> = []
+
+/** U2c2b pages by component, for the mechanical coverage blocks. */
+type WiringPage = 'experience' | 'projects' | 'blog' | 'resume' | 'contact'
+const PAGE_COMPONENTS = {
+  experience: ExperiencePage,
+  projects: ProjectsPage,
+  blog: BlogPage,
+  resume: ResumePage,
+  contact: ContactPage
+} as const
 
 async function mount(page: 'home' | 'about') {
   const wrapper =
@@ -191,6 +233,7 @@ async function purgeAsyncData(): Promise<void> {
 beforeEach(async () => {
   calls.length = 0
   seoMetaCaptured.length = 0
+  schemaOrgCaptured.length = 0
   headCaptured.length = 0
   siteSchemaCalls.length = 0
   aboutSchemaCalls.length = 0
@@ -488,6 +531,206 @@ describe('BOUNDARY — the two pages introduce no new ownership', () => {
       expect(code, file).not.toMatch(/googleSiteVerification|bingSiteVerification|gtm|customMetas/i)
       expect(code, file).not.toMatch(/rel:\s*'canonical'|ld\+json/)
       expect(code, file).not.toMatch(/\/admin\//)
+    }
+  })
+})
+
+// ────────────────────────────────────────────────────────────────────────────────
+// FE4-U2c2b — the remaining five static pages, wired mechanically per the proven pattern.
+// ────────────────────────────────────────────────────────────────────────────────
+
+const FIVE: Array<{ page: WiringPage; titleKey: string; descKey: string }> = [
+  { page: 'experience', titleKey: 'seo.experience.title', descKey: 'seo.experience.description' },
+  { page: 'projects', titleKey: 'seo.projects.title', descKey: 'seo.projects.description' },
+  { page: 'blog', titleKey: 'seo.blog.title', descKey: 'seo.blog.description' },
+  { page: 'resume', titleKey: 'seo.resume.title', descKey: 'seo.resume.description' },
+  { page: 'contact', titleKey: 'seo.contact.title', descKey: 'seo.contact.description' }
+]
+
+async function mountFive(page: WiringPage) {
+  const wrapper = await mountSuspended(PAGE_COMPONENTS[page], { global: { stubs: STUBS } })
+  MOUNTED.push(wrapper)
+  return wrapper
+}
+
+describe.each(FIVE)('U2c2b — $page', ({ page, titleKey, descKey }) => {
+  it(`requests exactly GET /seo/pages/${page}`, async () => {
+    await mountFive(page)
+    expect(calls.filter(c => c.path === `/seo/pages/${page}`)).toHaveLength(1)
+  })
+
+  it('authored title reaches normal + OG + Twitter title', async () => {
+    const authored = `Authored ${page} title`
+    pageSeoResponder = (_p, l) => entity({ pageKey: page, locale: l, metaTitle: authored })
+    await mountFive(page)
+    const meta = lastMeta()
+    expect(meta.title).toBe(authored)
+    expect(meta.ogTitle).toBe(authored)
+    expect(meta.twitterTitle).toBe(authored)
+  })
+
+  it('authored description reaches normal + OG + Twitter description', async () => {
+    const authored = `Authored ${page} description`
+    pageSeoResponder = (_p, l) => entity({ pageKey: page, locale: l, metaDescription: authored })
+    await mountFive(page)
+    const meta = lastMeta()
+    expect(meta.description).toBe(authored)
+    expect(meta.ogDescription).toBe(authored)
+    expect(meta.twitterDescription).toBe(authored)
+  })
+
+  it('AR localized override reaches the head (no cross-locale fallback)', async () => {
+    const arTitle = `عنوان ${page} المؤلف`
+    pageSeoResponder = (_p, l) =>
+      entity({ pageKey: page, locale: l, metaTitle: l === 'ar' ? arTitle : `${page} EN` })
+    locale.value = 'ar'
+    await mountFive(page)
+    const meta = lastMeta()
+    expect(meta.title).toBe(arTitle)
+    const seoCall = calls.find(c => c.path === `/seo/pages/${page}`)
+    expect(seoCall?.locale).toBe('ar')
+  })
+
+  it('all-null response falls through to the governed copy', async () => {
+    pageSeoResponder = (_p, l) => entity({ pageKey: page, locale: l })
+    await mountFive(page)
+    const meta = lastMeta()
+    expect(meta.title).toBe(translate(titleKey))
+    expect(meta.description).toBe(translate(descKey))
+  })
+
+  it('a Page SEO failure falls through; the page still renders', async () => {
+    pageSeoResponder = () => {
+      throw Object.assign(new Error('boom'), { statusCode: 500 })
+    }
+    const wrapper = await mountFive(page)
+    const meta = lastMeta()
+    expect(String(meta.title)).toBe(translate(titleKey))
+    expect(String(meta.description)).toBe(translate(descKey))
+    expect(wrapper.find('div').exists()).toBe(true)
+  })
+
+  it('a PageSeo canonicalUrl never produces a canonical writer output', async () => {
+    pageSeoResponder = (_p, l) => entity({ pageKey: page, locale: l, canonicalUrl: 'https://example.com/x' })
+    await mountFive(page)
+    const meta = lastMeta()
+    for (const key of Object.keys(meta)) expect(key.toLowerCase()).not.toContain('canonical')
+    for (const h of headCaptured) expect((h.link as unknown[] | undefined) ?? []).toEqual([])
+  })
+})
+
+describe('U2c2b shared guarantees', () => {
+  it('31 — every new page awaits the read BEFORE registering metadata (structural)', () => {
+    for (const file of [
+      'app/pages/experience.vue',
+      'app/pages/projects/index.vue',
+      'app/pages/blog/index.vue',
+      'app/pages/resume.vue',
+      'app/pages/contact.vue'
+    ]) {
+      const code = readFileSync(file, 'utf8')
+        .replace(/<!--[\s\S]*?-->/g, '')
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        .replace(/^\s*\/\/.*$/gm, '')
+      const awaitedAt = code.indexOf('await usePublicPageSeo(')
+      const useSeoAt = code.indexOf('useSeoMeta(')
+      expect(awaitedAt, file).toBeGreaterThan(-1)
+      expect(awaitedAt, file).toBeLessThan(useSeoAt)
+    }
+  })
+
+  it('32 / 33 / 39 — five mounts, five own-key reads, zero admin calls, ONE settings request', async () => {
+    for (const { page } of FIVE) {
+      locale.value = 'en'
+      await mountFive(page)
+    }
+    const seoPaths = calls.filter(c => c.path.startsWith('/seo/')).map(c => c.path)
+    expect(new Set(seoPaths)).toEqual(
+      new Set([
+        '/seo/pages/experience',
+        '/seo/pages/projects',
+        '/seo/pages/blog',
+        '/seo/pages/resume',
+        '/seo/pages/contact'
+      ])
+    )
+    for (const path of seoPaths) expect(path.startsWith('/admin/')).toBe(false)
+    expect(calls.filter(c => c.path === '/settings/site')).toHaveLength(1)
+  })
+
+  it('35 — an accepted social image overrides the committed floor (absolute URL)', async () => {
+    pageSeoResponder = (_p, l) =>
+      entity({
+        pageKey: 'projects',
+        locale: l,
+        ogImage: { url: '/media/abc/collection.png', width: 1200, height: 630, alt: 'Projects preview' }
+      })
+    await mountFive('projects')
+    const meta = lastMeta()
+    expect(meta.ogImage).toBe('https://example.com/media/abc/collection.png')
+    expect(meta.twitterImage).toBe(meta.ogImage)
+  })
+
+  it('36 — a null or unsupported image registers no image keys (floor intact)', async () => {
+    pageSeoResponder = (_p, l) =>
+      entity({ pageKey: 'blog', locale: l, ogImage: { url: '/media/abc/wide-webp.webp' } })
+    await mountFive('blog')
+    const meta = lastMeta()
+    expect(Object.hasOwn(meta, 'ogImage')).toBe(false)
+    expect(Object.hasOwn(meta, 'twitterImage')).toBe(false)
+  })
+
+  it('37 — no PageSeo text reaches any structured-data call', async () => {
+    const authored = 'Schema-isolation authored title'
+    pageSeoResponder = (_p, l) => entity({ pageKey: 'contact', locale: l, metaTitle: authored })
+    locale.value = 'en'
+    await mountFive('contact')
+    await mountFive('resume')
+    await mountFive('experience')
+    const seen = new WeakSet<object>()
+    const sanitize = (v: unknown): unknown => {
+      if (v === null || typeof v !== 'object') return typeof v === 'function' ? undefined : v
+      const obj = v as Record<string, unknown> & { __v_isRef?: boolean }
+      if (seen.has(obj)) return '[circular]'
+      seen.add(obj)
+      if (obj.__v_isRef) return sanitize(obj.value)
+      return Array.isArray(v) ? v.map(sanitize) : Object.fromEntries(Object.entries(obj).map(([k, x]) => [k, sanitize(x)]))
+    }
+    const serialized = JSON.stringify(schemaOrgCaptured.map(sanitize))
+    expect(schemaOrgCaptured.length).toBeGreaterThan(0)
+    expect(serialized).not.toContain(authored)
+    expect(serialized).not.toContain('"canonicalUrl"')
+  })
+
+  it('38 — the five pages introduce no verification/GTM/customMetas surface', () => {
+    for (const file of [
+      'app/pages/experience.vue',
+      'app/pages/projects/index.vue',
+      'app/pages/blog/index.vue',
+      'app/pages/resume.vue',
+      'app/pages/contact.vue'
+    ]) {
+      const code = readFileSync(file, 'utf8')
+        .replace(/<!--[\s\S]*?-->/g, '')
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        .replace(/^\s*\/\/.*$/gm, '')
+      expect(code, file).not.toMatch(/googleSiteVerification|bingSiteVerification|gtm|customMetas/i)
+      expect(code, file).not.toMatch(/canonical/i)
+      expect(code, file).not.toMatch(/\/admin\//)
+    }
+  })
+
+  it('40 — each of the five pages stays locale-isolated across navigations', async () => {
+    for (const { page } of FIVE) {
+      locale.value = 'ar'
+      await purgeAsyncData()
+      const arTitle = `AR ${page}`
+      pageSeoResponder = (_p, l) =>
+        entity({ pageKey: page, locale: l, metaTitle: l === 'ar' ? arTitle : `EN ${page}` })
+      const before = calls.filter(c => c.locale === 'ar').length
+      await mountFive(page)
+      expect(lastMeta().title).toBe(arTitle)
+      expect(calls.filter(c => c.locale === 'ar').length).toBe(before + 1)
     }
   })
 })
