@@ -4495,3 +4495,47 @@ final public performance/browser closure (U2f). No route-budget changes; batched
 post-wiring; no new browser lane; nothing pushed or deployed.
 
 **Next unit: FE4-U2d — global verification + customMetas rendering in the public layout.**
+
+## FE4-U2d1 — pure public Settings meta projection COMPLETE (verification + customMetas) — 2026-08-25
+
+Implementation commit `4866780`: `app/utils/public-settings-metas.ts` +
+`public-settings-metas.spec.ts`. The smallest PURE projection layer between the public
+`GET /settings/site` payload and the later head wiring — it owns ONLY `googleSiteVerification`,
+`bingSiteVerification`, `customMetas`; no rendering, no Nuxt head APIs, no Settings fetching, no
+PageSeo/title/description/canonical/OG/Twitter/JSON-LD, no layout wiring yet.
+
+- **Vendor-name pin (OWNER APPROVED)**: rendered HTML names are the vendors' own documented values
+  — Google **`google-site-verification`**, Bing **`msvalidate.01`** — exported as constants,
+  verified against vendor docs. No aliases; the rejected `bing-site-verification` is proven never
+  emitted (t11).
+- **Verification semantics**: null/undefined/empty/whitespace-only tokens emit NOTHING; present
+  tokens are outer-trimmed with internal characters/case untouched (`pickMeta`, house blank
+  convention).
+- **customMetas**: pass through VERBATIM — name/content only, exact API order preserved, no sort,
+  no application deduplication (duplicate names stay independent entries), no reserved-name
+  collision policy invented (collisions with Google/Bing names preserved). The contract types both
+  fields as REQUIRED non-null strings, so no stricter client validation was invented.
+- **Order pinned**: Google → Bing → customMetas verbatim.
+- **Security boundary**: output type can express only `{name, content}` attribute pairs;
+  descriptors are constructed fresh so hostile extra runtime fields (property/http-equiv/
+  innerHTML/handlers) cannot leak; no script/raw-HTML capability exists; framework head rendering
+  owns escaping.
+- **GTM explicitly excluded**: `gtmContainerId`/`analyticsEnabled` outside input type, zero effect
+  on output (proven); GTM stays blocked on the CSP/runtime decision.
+
+Verification: focused suite **33/33** (t1–t32 + totality/purity/pin guards); related metadata
+suites green (52/52 across metadata + page-seo-metadata); `typecheck` exit **0**; eslint exit **0**
+(plus lint-staged clean at commit). Negative controls A–F each executed targeted, failed for the
+intended reason, restored byte-identically (SHA-256 `362cdd32…` before = after): A Bing name →
+alias → t6 failed on expected `msvalidate.01`; B blank Google token emitted → t5 failed; C
+customMetas sorted → t15 failed on order; D duplicate names deduped → t16 failed; E http-equiv
+added to descriptor shape → t23/t24 failed on key set; F gtmContainerId projected → t27 failed.
+
+Still open: U2d2 renders this output from the existing public-layout Settings state (must not let
+unhead erase same-name descriptors); GTM/CSP decision pending before U2e; PageSeo canonical stays
+storage-only; Dynamic RBAC UI deferred (OD-2); OD-7 unresolved. No layout/public page modified; no
+head wiring created; route budgets untouched; no new browser lane; nothing pushed or deployed.
+
+**Next unit: FE4-U2d2 — render verification + customMetas from the existing public-layout Settings
+state and prove SSR/public-only behavior.**
+Campaign tree clean after this docs-only commit.
