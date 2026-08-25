@@ -4441,3 +4441,57 @@ No route-budget changes; no new browser lane; nothing pushed or deployed.
 
 **Next unit: FE4-U2c2b — wire the remaining five static pages mechanically using the proven pattern.**
 Campaign tree clean after this docs-only commit.
+
+## FE4-U2c2b — remaining five static pages wired; PUBLIC TEXT/SOCIAL CONSUMPTION IMPLEMENTED — 2026-08-25
+
+Implementation commit `4b410c3`. The proven Home/About pattern applied mechanically to Experience,
+Projects (collection), Blog (collection), Resume, Contact. **All seven static public pages now
+consume PageSeo** with the exact route → key mapping:
+
+| Route(s) | PageSeo key |
+| --- | --- |
+| `/`, `/ar` | home |
+| `/about`, `/ar/about` | about |
+| `/experience`, `/ar/experience` | experience |
+| `/projects`, `/ar/projects` | projects |
+| `/blog`, `/ar/blog` | blog |
+| `/resume`, `/ar/resume` | resume |
+| `/contact`, `/ar/contact` | contact |
+
+Every page: awaited `usePublicPageSeo(key)` BEFORE `useSeoMeta`; effective chain override → i18n →
+Settings defaults → committed floor via the U2b resolver (title/description independent, blank/null
+falls through); ONE text pair drives normal+OG+Twitter (Experience/Projects/Blog/Contact normalized
+from their old local `${title} — brand` OG composition; Resume's hand-written Twitter pair replaced
+by the same effective pair); image override only when the resolver accepts the descriptor, otherwise
+no image keys registered and the committed card floor stays effective.
+
+- **Canonical**: storage-only everywhere — structural scans + runtime captures prove zero canonical
+  writers on all seven pages; strictSeo remains sole canonical/hreflang owner.
+- **Structured data**: Experience BreadcrumbList, Projects collection BreadcrumbList, Resume and
+  Contact schema calls keep their original inputs; no PageSeo field reaches JSON-LD (t37).
+- **Article/project detail pages untouched** — entity-level SEO intact.
+- **Settings**: single shared read still serves everything — five new mounts + Home/About produce
+  exactly ONE `/settings/site` request (shared payload key); each page adds only its own
+  `/seo/pages/{key}` read; zero admin SEO calls.
+- **Failures**: per-page 404/500 fall through silently to baseline metadata, page renders, zero
+  retries (composable-owned).
+
+Verification: wiring spec extended to **69 tests, 69/69** (five-page blocks + shared guarantees +
+Home/About reference blocks re-run green); combined sweep **271/271** across 9 files including the
+pre-existing Experience/Resume/Contact page matrices (Contact's full 78-test form/validation matrix
+green with the awaited read in place). `typecheck` exit **0**; eslint exit **0**. Negative controls
+A–F executed targeted, failed for intended reason, restored byte-identically (SHA-256 verified per
+file): A wrong key on Experience → key test; B un-awaited read on Projects → t31 structural scan;
+C old OG composition retained on Blog → coherence test; D PageSeo canonical link writer on Resume →
+canonical-owner test; E failure blanks description on Contact → fallback-survival test; F PageSeo
+text injected into Experience schema → t37 isolation test. (Process note recorded honestly: a
+backup-filename collision during control C's first attempt briefly restored PROJECTS content into
+blog/index.vue; detected by grep verification, recovered deterministically from git HEAD + re-applied
+wiring, backups rebuilt with unique names before any further control ran.)
+
+**Static Page SEO PUBLIC TEXT/SOCIAL CONSUMPTION: IMPLEMENTED across all seven static pages.**
+Still NOT complete: verification metas (U2d), customMetas (U2d), GTM + CSP/GTM decision (U2e),
+final public performance/browser closure (U2f). No route-budget changes; batched measurement owed
+post-wiring; no new browser lane; nothing pushed or deployed.
+
+**Next unit: FE4-U2d — global verification + customMetas rendering in the public layout.**
