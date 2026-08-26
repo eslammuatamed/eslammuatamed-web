@@ -188,11 +188,12 @@ describe('the default full-E2E command graph (R14 closure)', () => {
     }
   })
 
-  it('keeps the MEASURED shard count at exactly 4', () => {
+  it('keeps the MEASURED concurrency limit at exactly 4', () => {
     // The number is evidence-backed (≤4 concurrent pairs ran 616/616 green), not derived from the
-    // lane count; raising it requires new measurements, so the default is pinned exactly.
+    // lane count; raising it requires new measurements, so the default is pinned exactly. The fifth
+    // shard is the derived consequence of adding the GTM lane while keeping that limit unchanged.
     expect(maxConcurrentLanes({})).toBe(4)
-    expect(shardPlan(LANES).length).toBe(4)
+    expect(shardPlan(LANES).length).toBe(5)
   })
 
   it('preserves an explicit UNSHARDED diagnostic path that never recurses into sharding', () => {
@@ -219,8 +220,8 @@ describe('the default full-E2E command graph (R14 closure)', () => {
   })
 
   it('still declares every lane record, with no duplicate server ownership', () => {
-    // 15 through FE-3/R16; 16 since FE4-U1e added dashboard-seo (Static Page SEO editor proof).
-    expect(LANES.length).toBe(16)
+    // 15 through FE-3/R16; 16 since FE4-U1e added dashboard-seo; 17 since FE4-U2e2 added gtm-settings.
+    expect(LANES.length).toBe(17)
     const ports = LANES.flatMap(lane => [lane.ports.webDefault, lane.ports.apiDefault])
     expect(new Set(ports).size).toBe(ports.length)
   })
