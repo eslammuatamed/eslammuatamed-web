@@ -4798,3 +4798,41 @@ to green. The final focused Playwright rerun still requires an explicit captured
    the actual exit codes and build SHA.
 3. If all gates are green, record FE4-U2e3 closure in this ledger and the already-synchronized
    private Docs bundle; otherwise record the isolated blocker without weakening a gate.
+
+---
+
+## FE4-U2e3 harness-fix checkpoint — 2026-08-26
+
+The isolated browser failures were corrected without changing application code or the security
+policy. The scenario backend now serves the contract's all-null Page SEO shell dependency for every
+known static page; the Prism fixture has page-key-specific nullable examples so `/resume` cannot
+receive About metadata; contact axe runs only after hydration; and locale-head console assertions
+reuse the existing narrow CSP helper. Unknown scenario Page SEO keys remain 404.
+
+Three logical Web commits were added, with no push, deploy, email, webhook, or external message:
+
+1. `720a164` — `test(e2e): serve page SEO in scenario backend`
+2. `954d105` — `test(e2e): stabilize scenario accessibility assertions`
+3. `79866ad` — `test(e2e): select Page SEO examples by page key`
+
+Live checkpoint state before this ledger edit:
+
+| Repo | Branch / HEAD | Working tree | Campaign PR / remote effect |
+| --- | --- | --- | --- |
+| Web | `campaign/frontend-v1` / `79866adad1cd7691f01d18958e179d87b25590b5` | clean | no campaign PR; not pushed |
+| Docs | `docs/web-modernization-campaign` / `d6cbb84c32cc95eea356e6ae56c8985aacb5e316` | clean | no campaign PR; not pushed |
+| API | `fix/media-upload-error-contract` / `ac72539d529adf9c4255b12d8a918a718881e5e4` | clean | unrelated; no campaign effect |
+
+Verification at this boundary: the scenario-server negative control failed with the Page SEO route
+disabled (`1 failed, 28 passed`), then passed after restoration (`29/29`). The selector negative
+control returned the old locale-only name (`en` instead of `en-home`), then passed after the
+page-aware selector change (`14/14`). The combined targeted unit run passed `43/43`, and targeted
+ESLint plus OpenAPI JSON parsing exited 0.
+
+**Next three actions.**
+
+1. Rebuild the corrected Web HEAD and verify exact-build provenance.
+2. Rerun the focused affected browser tests, then the canonical E2E and governed Lighthouse checks,
+   recording actual exit codes and the build SHA.
+3. If all gates are green, record FE4-U2e3 closure here and synchronize the private Docs bundle;
+   otherwise record the isolated blocker without weakening a gate.
