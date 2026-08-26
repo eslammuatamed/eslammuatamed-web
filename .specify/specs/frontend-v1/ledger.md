@@ -18,7 +18,7 @@ Verify every line against live state before acting on it. Report drift before do
 | **Branch tip** | **Do not read a SHA for this from this table — run `git rev-parse HEAD`.** A checkpoint commit that stamps its own SHA here is false the instant it lands, and this ledger has done it once already. |
 | **Last source-touching commit** | **Do not read a SHA from this table — run `git log -1 --name-only`.** The repository rule is **ONE COMMIT PER LOGICAL UNIT**, so a phase may land as several coherent commits; the FE-2b commit bundled source + tests + ledger because that phase *was* one unit, not because bundling is required. What this row exists to prevent is narrower: **never stamp a SHA here that a later commit invalidates.** |
 | **Remote state** | **NOT PUSHED.** `origin/dev` = `54cea28737c558767ccb24a34e2b437b62f7f058`, `origin/main` = `648aa467cd8bc7157cbcad2fd7c0e8981ee1f16c` — neither moved by this campaign, re-verified after FE-2a |
-| **Docs repo** | ⚠ **TWO branches, and they DIVERGE — neither is an ancestor of the other.** (a) `docs/od-11-dashboard-localization` `3b607af9…` holds OD-11 (D02-15, D04-7, D11-8, doc 18). (b) `docs/web-modernization-campaign` **`fda38853…`** (D20-42; was `97efd02`, `95e9101`, `565abef8…`) holds doc 20's whole D20-2x/3x sequence and the governed inventory table — **D20-33 is NOT on the od-11 branch**, and **D20-34 landed on (b)** for that reason: writing it against a doc 20 lacking D20-33 would manufacture a conflict in the same table. Both **local-only** (R10); `origin/main` = `1896d8c7…`, untouched |
+| **Docs repo** | ⚠ **TWO branches, and they DIVERGE — neither is an ancestor of the other.** (a) `docs/od-11-dashboard-localization` `3b607af9…` holds OD-11 (D02-15, D04-7, D11-8, doc 18). (b) `docs/web-modernization-campaign` **`d6cbb84…`** (D20-42 at `fda38853`; generated-bundle sync at `d6cbb84`, previously `97efd02`, `95e9101`, `565abef8…`) holds doc 20's whole D20-2x/3x sequence and the governed inventory table — **D20-33 is NOT on the od-11 branch**, and **D20-34 landed on (b)** for that reason: writing it against a doc 20 lacking D20-33 would manufacture a conflict in the same table. Both **local-only** (R10); `origin/main` = `1896d8c7…`, untouched |
 | **Production** | Web release `20260817T175534Z-648aa46` — untouched |
 | **API** | ⚠ **Re-pointed 2026-08-23 (taxonomy contract unit; see the EOF checkpoint for the full measurement): `origin/main` = `d3eb74cc…` (PR #91 merged `dev` → `main`, carrying PR #89's taxonomy list-schema fix AND PR #90 media hardening), `origin/dev` = `b791c9c6…` (adds PR #97 deploy-summary fixes on top). The row below is the record as it then stood and is kept unedited beneath this correction. Load-bearing today: the contract blob this campaign consumes is now `185f067e…`, byte-identical at BOTH `main` and `dev`; Production serving tree was NOT re-measured in that unit.** |
 | | *(historical, as of the fifth resume)* `origin/main` = `9af1aace…` — live, deployed, and complete for v1 scope. ⚠ `origin/dev` is **no longer equal to it**: it is `e87f427c…`, the merge of Backend PR #86. That is a **separate workstream**, not Campaign 027 movement — measured, not assumed: `openapi.json` is the **same blob** `7a9e0ba6…` on both `main` and `dev`, so the contract this campaign consumes did not move. Read the API row as `origin/main`; `origin/dev` is informational. |
@@ -470,7 +470,7 @@ shared abstraction: the shared set is now `useTranslatableForm`, `DashboardTrans
 | **FE-1 — Contract & Integration Foundation** | **COMPLETE** — commit `19e3a05`. Contract adopted + gtm reconciliation; reply flow deliberately moved to FE-2 (see §4). Gates re-verified on the committed tree: typecheck 0, 1501/1501. |
 | **FE-2 — Articles Tracer Bullet + Dashboard Architecture** | **COMPLETE.** OD-11, OD-3, D20-33 and its amendment all resolved. FE-2a/2b/2c done: F-1 **CLOSED** with browser evidence · collection · editor · §14.6 extraction pass · **all ten §14.9 criteria demonstrated** · every gate green including `size:routes`. The reusable architecture is recorded in **§10**. |
 | **FE-3 — Content Module Replication** | **COMPLETE — CLOSED at SEO-U4 (2026-08-23).** All five content modules + the shared per-entity SEO panel implemented, verified and inside governance: Experiences, Skills, Testimonials, Taxonomy, plus `DashboardSeoPanel` serving Articles + Projects (the only entities the contract gives SEO fields), Projects null-clear fixed and browser-proven on the wire, R16 closed by the official `dashboard-projects` lane. Final evidence (§5/SEO-U4): clean provenance-stamped build (`632b160…`), all 21 governed routes inside frozen caps (`size:routes` exit 0, zero unclassified), CSS 28.1 KB gz / 30 PASS, typecheck/typecheck:e2e/lint exit 0, unit 144 files / **2102 tests exit 0**, Articles lane 48/48, Projects lane 21/21 (unfiltered axe EN+AR+loading, 380px both locales), full suite 614/616 with both casualties classified as the R15 load class (did not reproduce sharded), sharded suite **616/616 exit 0**, R14 conclusion (B) recorded as recommendation-only, R15 remains OPEN precisely stated. No FE-3 product scope remains open. **FE-4 is next.**<br>**Historical module record (superseded in verdict by the closure above, preserved for the record):** Delegation settled as **OD-12** (hybrid: module 1 in-house, modules 2–5 delegable once the pattern holds). `M1·U1` landed the instrument; **`M1·U2` landed the collection at `/dashboard/experiences`, its `lanes.ts` record, and a third public-isolation gate** — every gate green, the lane 10/10 booting 1 pair, and the route measured at 85,551 B against its own D20-34 cap of 99,328 B. The new route cost **zero CSS**. Four unpredicted findings are in §5/M1·U2, including a gate (`typecheck:e2e`) that had been RED since `M1·U1` because that unit's exit row never listed it. **`M1·U3` landed the editor** (`7e6d11a`): bilingual, Zod + `UForm`, 422→locale-tab mapping, the shared skill picker, `isCurrent`⇄`endDate` on a field-owned error path, and the calendar-date read that Articles' instant-shaped converter would have got wrong. Three rules were each proven able to fail; the `technologyIds` omission control failed **only** the clear-case test, which is the empirical reason both tests exist. Four more unpredicted findings are in §5/M1·U3, including a backend crash that reported itself as eight failing tests. Its route caps were **measured and escalated, never inherited** — the batched decision is **§9.5**, which the owner then **RESOLVED as D20-35** (caps stamped: Web `6b59261`, Docs `97efd02`), clearing the transient `size:routes` exit 2 that this row previously described as current. ⚠ That exit 2 was a MEASUREMENT FAILURE, never a budget breach — the distinction is kept because it is the reason no cap was invented to silence the gate. **`M1·U4b` performed the three HELD extractions** (`fd11c7b`) and **`M1·U5` closed the gates** (`328bf9c`): every authoritative gate green, axe unfiltered in BOTH dashboard languages across four surfaces, 380px verified, `size:routes` 0 on fourteen governed routes, CSS unchanged at 29.19 KB gz. Two findings kept out of the green claim: the full suite is flaky at 507 tests (**R15**, not attributable — shard 3 passed 93/93 twice) and **there is no Projects browser lane to re-run** (**R16**, measured at 0 matches). Module 1 is otherwise CLOSED; modules 2–5 are delegable under OD-12 now that the pattern holds.<br>**`M1·U4` rendered the verdicts**: **five of five §5.2 predictions HELD**, plus a sixth candidate (`DashboardSkillPicker`) discovered and already extracted — measured on 56 byte-identical code lines, 34% of the Experiences editor. The three HELD extractions are **queued, not performed**: acting on them refactors the shipped `ArticleEditor` and needs both lanes re-run, so it is its own unit — **`M1·U4b`, the extraction pass, is next**, then `M1·U5` (gates + axe).<br>**Lane-strategy unit (R14):** A run now boots only the lanes it selected: measured 1 preview pair for `--project=dashboard-articles`, against 10 before, same command. The full suite still boots all ten by design, so R14 is **NARROWED, NOT CLOSED** — see §6 and §5/FE-3/U-1. ⚠ This row previously said the full suite "loses exactly one test per run"; the pre-change control run **did not reproduce that** (471 passed, exit 0) and the claim is corrected here rather than carried forward. |
-| FE-4 — System Modules | **IN PROGRESS — U1a–U1f and U2e1–U2e2 landed.** U2e2 is complete in Web `b84f110` + test correction `0cd3f18`, with D20-42 in Docs `fda38853`; final U2 closure remains. |
+| FE-4 — System Modules | **COMPLETE — U1a–U1f and U2e1–U2e3 landed.** U2e3 final closure is recorded below at Web `f64a227`; the governed build, canonical E2E, static gates and Lighthouse all pass. Docs D20-42 and its synchronized bundle are at `d6cbb84`. |
 | FE-5 — Coherence, D20-32 Review, M4 Closure | NOT STARTED |
 
 ---
@@ -4749,11 +4749,11 @@ documented non-blocking D20-24 dashboard quality warnings. Both Web and Docs wor
 clean after this verification. This evidence is recorded before the ledger commit below; do not
 interpret it as a branch-tip stamp.
 
-**Documentation integrity note.** `npm run docs:group:check` on the Docs worktree reports
-`docs/group/03-delivery-and-roadmap.md (differs)`. That generated bundle was already stale relative
-to the existing D20-41 source history; it was deliberately not regenerated because it is outside
-this unit's declared file boundary. Owner approval is required before treating that as a separate
-Docs change.
+**Documentation integrity note (superseded at final closure).** An earlier checkpoint reported
+`docs/group/03-delivery-and-roadmap.md (differs)` before the private Docs bundle was synchronized.
+Docs commit `d6cbb84` now contains the synchronized bundle, and the live check returns
+`docs:group:check OK — 3 bundles, 25 sources, all current.` No owner-gated Docs edit remains for
+this unit.
 
 **Next three actions.**
 
@@ -4836,3 +4836,83 @@ ESLint plus OpenAPI JSON parsing exited 0.
    recording actual exit codes and the build SHA.
 3. If all gates are green, record FE4-U2e3 closure here and synchronize the private Docs bundle;
    otherwise record the isolated blocker without weakening a gate.
+
+---
+
+## FE4-U2e3 final verification and closure -- 2026-08-26
+
+**FE4-U2e3 is COMPLETE.** The unit corrected only E2E harness and contract-fixture fidelity; no
+application production code, security policy, route budget, or API source changed. The scenario
+backend serves the contract's all-null Page SEO shell dependency for every known static page, the
+Prism fixture selects page-specific nullable examples, contact axe waits for hydration, and the
+locale-head assertion uses the existing narrow CSP helper. Unknown scenario Page SEO keys remain 404.
+
+### Final live state
+
+| Repo | Branch / HEAD | Working tree | Campaign effect |
+| --- | --- | --- | --- |
+| Web | `campaign/frontend-v1` / `f64a2270c04dfe008de7a8a74f330dffab49e34d` | clean | no campaign PR; not pushed |
+| Docs | `docs/web-modernization-campaign` / `d6cbb84c32cc95eea356e6ae56c8985aacb5e316` | clean | D20-42 bundle synchronized; not pushed |
+| API | `fix/media-upload-error-contract` / `ac72539d529adf9c4255b12d8a918a718881e5e4` | clean | unrelated; no campaign effect |
+
+No commit was pushed, no PR was opened, nothing was merged or deployed, and no email, webhook or
+external message was sent. The only analytics id remains the fictional `GTM-TEST1234`; Lighthouse
+and browser tests used local mocks and did not contact Google.
+
+### Final Web commits
+
+1. `720a164` -- `test(e2e): serve page SEO in scenario backend`
+2. `954d105` -- `test(e2e): stabilize scenario accessibility assertions`
+3. `79866ad` -- `test(e2e): select Page SEO examples by page key`
+4. `f64a227` -- `docs(frontend-v1): checkpoint SSR harness corrections`
+
+### Verification evidence
+
+| Check | Result |
+| --- | --- |
+| Scenario server unit | **29/29**, exit 0; the route-disabled negative control failed and restoration passed |
+| Prism selector unit | **14/14**, exit 0; changing the Arabic example key failed the selector assertions |
+| Combined targeted units | **43/43**, exit 0 |
+| Focused browser reruns | Resume **1/1**, contact **3/3**, locale-head **4/4** |
+| Clean build before final gate | exit 0; tree `011c86a9937d8473e0cbb9fc81b0b5172d65ef2e`, 1,790 files |
+| `npm run typecheck` | exit 0 |
+| `npm run typecheck:e2e` | exit 0 |
+| `npm test` | **2525/2525 tests**, 157/157 files, exit 0 |
+| `npm run size:routes` | exit 0; budgets satisfied; 15 documented D20-24 quality warnings remain non-blocking |
+| `npm run check:bundle` | exit 0; 147 public chunks, no forbidden editor identifiers |
+| `npm run check:logical` | exit 0; no physical-direction styles |
+| `npm run check:gtm-isolation` | exit 0; GTM chunk isolated from initial public/dashboard/auth closures |
+| `npm run size` | exit 0; 29.2 kB gzip against the 30 kB cap |
+| Canonical `npm run test:e2e` | exit 0; five shards passed **348 + 85 + 110 + 130 + 4 = 677** tests |
+| `npm run docs:group:check` | exit 0; 3 bundles and 25 sources all current |
+
+### Governed Lighthouse evidence
+
+`npm run lighthouse:ci` returned **exit 0**. It rejected the pre-existing `.output` because its
+governed environment fingerprint had changed, quarantined it rather than measuring it, and rebuilt
+through the governed lifecycle. The final artifact is:
+
+| Field | Value |
+| --- | --- |
+| HEAD | `f64a2270c04dfe008de7a8a74f330dffab49e34d` |
+| tree | `011c86a9937d8473e0cbb9fc81b0b5172d65ef2e` |
+| output hash | `e1a0498e1a3ba0733dfa59a19b233ef198c1383392fcb18273f20dcff3ba1701` |
+| output files | `1,790` |
+| runtime | Node `v24.19.0`, npm `11.17.0` |
+
+Both profiles collected all **16/16 governed URLs** with three runs per configuration: mobile wrote
+48 reports and proved 3,999 first-party HTTP/2 responses; desktop wrote 48 reports and proved 4,617
+first-party HTTP/2 responses. The run bound **290 report files** to the HEAD/tree/output identity.
+The Lighthouse assertion ended with **"All Lighthouse medians within the doc 20 §1 thresholds."**
+Accessibility, Best Practices and SEO were 100 throughout; Performance, device-scoped LCP, CLS and
+Arabic-script font limits all passed, including the D20-16 and D20-17 mobile ceilings.
+
+### Closure and next three actions
+
+The FE4-U2 scope is closed. The earlier Docs bundle warning is resolved by `d6cbb84`, and no Docs
+file changed during this final Web-only unit. The next work is FE-5, not another FE4 correction.
+
+1. Begin the FE-5 coherence pass and review D20-32 without changing frozen budgets implicitly.
+2. Continue release-readiness evidence from a new clean, provenance-stamped source build when the
+   next governed change exists; do not reuse this measurement as future evidence.
+3. Keep Web and Docs branches local-only until the owner explicitly authorizes push, merge or deploy.
