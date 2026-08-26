@@ -28,7 +28,10 @@ import {
   resolveSharedFloor,
   DASHBOARD_DELIVERY_BUDGET,
   DASHBOARD_FLOOR_REFERENCE_ROUTES,
-  resolveDashboardSharedFloor
+  resolveDashboardSharedFloor,
+  PUBLIC_APP_OWNED_BASELINE_BYTES,
+  PUBLIC_APP_OWNED_CAP_BYTES,
+  publicAppCapFor
 } from './route-assets.mjs'
 import { DASHBOARD_ROUTES } from './dashboard-closure.mjs'
 
@@ -1147,6 +1150,46 @@ describe('D20-31 — public delivery model (shared floor + functional tiers)', (
     // A tier entry left behind for a deleted route reads as governance that is no longer enforced.
     expect(() => assertPublicTierCoverage(Object.keys(PUBLIC_ROUTE_TIERS).slice(1)))
       .toThrow(/not measured/)
+  })
+})
+
+describe('D20-42 — Home app-owned caps are frozen per route', () => {
+  const HOME_ROUTES = ['/', '/ar']
+  const HOME_BASELINE = 104_526
+  const HOME_CAP = 120_832
+
+  it('registers exactly the two Home locale routes, with the owner-approved bytes', () => {
+    expect(Object.keys(PUBLIC_APP_OWNED_BASELINE_BYTES).sort()).toEqual([...HOME_ROUTES].sort())
+    expect(Object.keys(PUBLIC_APP_OWNED_CAP_BYTES).sort()).toEqual([...HOME_ROUTES].sort())
+    expect(PUBLIC_APP_OWNED_BASELINE_BYTES).toEqual({ '/': HOME_BASELINE, '/ar': HOME_BASELINE })
+    expect(PUBLIC_APP_OWNED_CAP_BYTES).toEqual({ '/': HOME_CAP, '/ar': HOME_CAP })
+    expect(Object.isFrozen(PUBLIC_APP_OWNED_BASELINE_BYTES)).toBe(true)
+    expect(Object.isFrozen(PUBLIC_APP_OWNED_CAP_BYTES)).toBe(true)
+  })
+
+  it('derives both caps with D20-29\'s exact integer formula and records headroom', () => {
+    const derive = baseline => Math.ceil((baseline * 115) / (100 * KB)) * KB
+    for (const route of HOME_ROUTES) {
+      const baseline = PUBLIC_APP_OWNED_BASELINE_BYTES[route]
+      const cap = PUBLIC_APP_OWNED_CAP_BYTES[route]
+      expect(derive(baseline), `${route} must use the approved formula`).toBe(cap)
+      expect(approvedAppLimitBytes(baseline), `${route} must use the shared D20-12 helper`).toBe(cap)
+      expect(cap - baseline, `${route} headroom must be explicit`).toBe(16_306)
+    }
+  })
+
+  it('keeps EN and AR symmetric without inheriting either route from the other', () => {
+    expect(PUBLIC_APP_OWNED_BASELINE_BYTES['/']).toBe(PUBLIC_APP_OWNED_BASELINE_BYTES['/ar'])
+    expect(PUBLIC_APP_OWNED_CAP_BYTES['/']).toBe(PUBLIC_APP_OWNED_CAP_BYTES['/ar'])
+    expect(publicAppCapFor('/')).toBe(HOME_CAP)
+    expect(publicAppCapFor('/ar')).toBe(HOME_CAP)
+  })
+
+  it('preserves the original D20-12 cap for every other public route', () => {
+    for (const route of Object.keys(PUBLIC_ROUTE_TIERS)) {
+      if (HOME_ROUTES.includes(route)) continue
+      expect(publicAppCapFor(route), `${route} must retain D20-12`).toBe(BUDGET.appRenderedBytes)
+    }
   })
 })
 

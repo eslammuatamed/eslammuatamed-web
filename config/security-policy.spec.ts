@@ -36,10 +36,13 @@ describe('dependency facts', () => {
     expect(lock.packages['node_modules/nuxt-security']?.version).toBe('2.6.0')
   })
 
-  it('@nuxt/scripts is NOT installed yet (U2e2 owns GTM)', () => {
+  it('@nuxt/scripts is pinned at exactly 1.3.8 (U2e2 owns GTM through it)', () => {
     const pkg = JSON.parse(read('package.json')) as { dependencies: Record<string, string> }
-    expect(pkg.dependencies['@nuxt/scripts']).toBeUndefined()
-    expect(() => read('node_modules/@nuxt/scripts/package.json')).toThrow()
+    expect(pkg.dependencies['@nuxt/scripts']).toBe('1.3.8')
+    const installed = JSON.parse(
+      read('node_modules/@nuxt/scripts/package.json')
+    ) as { version: string }
+    expect(installed.version).toBe('1.3.8')
   })
 })
 
@@ -201,15 +204,23 @@ describe('ecosystem ownership boundaries', () => {
     }
   })
 
-  it('no GTM consumption exists yet (U2e2 owns it)', () => {
+  it('no MANUAL GTM infrastructure exists in app/server sources (registry composable only)', () => {
     for (const dir of ['app', 'server']) {
       const walk = (d: string): string[] =>
         readdirSync(join(repoRoot, d), { withFileTypes: true }).flatMap(e =>
           e.isDirectory() ? walk(join(d, e.name)) : join(d, e.name)
         )
       for (const file of walk(dir)) {
+        // Spec files are guardrails that QUOTE the forbidden tokens as their own negative
+        // assertions; they are not implementation. Only executable sources are scanned.
         if (!/\.(ts|vue)$/.test(file) || file.endsWith('.spec.ts')) continue
-        expect(read(file), file).not.toMatch(/googletagmanager|google-analytics|dataLayer/i)
+        const code = read(file)
+        // Manual bootstrap URL construction, raw dataLayer infrastructure and noscript frames are
+        // forbidden everywhere. The SANCTIONED surface is @nuxt/scripts' registry composable
+        // (`useScriptGoogleTagManager`), which owns the URL, the loader element and dedup itself.
+        expect(code, file).not.toMatch(/googletagmanager\.com/i)
+        expect(code, file).not.toMatch(/\bdataLayer\b/)
+        expect(code, file).not.toMatch(/<noscript/i)
       }
     }
   })

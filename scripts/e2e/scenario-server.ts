@@ -57,7 +57,7 @@ import { realpathSync } from 'node:fs'
 import http from 'node:http'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
-import { ARTICLES, CATEGORIES, EMPTY_PAGE, PROJECTS, REDIRECTS, SITE_SETTINGS, SKILLS,
+import { ARTICLES, CATEGORIES, EMPTY_PAGE, gtmSettings, PROJECTS, REDIRECTS, SITE_SETTINGS, SKILLS,
   TECHNOLOGY, TECHNOLOGY_SLUG, isLocale, problem,
   ABOUT_READINESS_SETTINGS, RESUME_PDF_BYTES, RESUME_PDF_FILENAME, resumePdfSettings } from './fixtures.ts'
 import type { Locale, ProblemDetail } from './fixtures.ts'
@@ -90,6 +90,18 @@ const ABOUT_STATE = process.env.E2E_ABOUT_STATE === 'portrait-null' ? 'portrait-
 const RESUME_STATE = process.env.E2E_RESUME_STATE === 'pdf' ? 'pdf' : 'none'
 
 /**
+ * Which `/settings/site` GTM publication this PROCESS serves (FE4-U2e2), on the same
+ * process-variant principle as the two states above.
+ *
+ * `valid` — selected by `ci-preview.mjs --backend gtm-settings` — publishes a syntactically valid,
+ * entirely FICTIONAL container id, which is the ONLY way a real browser can prove the GTM loader
+ * lifecycle end to end: Prism's committed contract publishes `null` (the true live state), and no
+ * other lane may see analytics enabled. The harness intercepts the loader request itself, so no
+ * real container is contacted.
+ */
+const GTM_STATE = process.env.E2E_GTM_STATE === 'valid' ? 'valid' : 'none'
+
+/**
  * The origin the résumé descriptor points at. Read from the SAME env var the listener binds below,
  * so the advertised URL and the port actually serving the bytes cannot disagree.
  */
@@ -99,7 +111,9 @@ const SETTINGS = ABOUT_STATE === 'portrait-null'
   ? ABOUT_READINESS_SETTINGS
   : RESUME_STATE === 'pdf'
     ? resumePdfSettings(MEDIA_ORIGIN)
-    : SITE_SETTINGS
+    : GTM_STATE === 'valid'
+      ? gtmSettings()
+      : SITE_SETTINGS
 
 /**
  * What the server should do with one request. `destroy` is the genuine connection failure: the socket

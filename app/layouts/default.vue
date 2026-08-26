@@ -44,6 +44,15 @@ const nuxtApp = useNuxtApp()
 // these afterwards with their own content (tier 1).
 const { data: settings } = await useSiteSettings()
 
+// FE4-U2e2/U2e2.1: public-only GTM lifecycle, driven by the SAME awaited Settings read above —
+// never a second request. Registration lives behind a lazy CLIENT-ONLY boundary
+// (`<LazyPublicGtmRuntime>`), so the scripts-module GTM runtime is fetched on the public client's
+// first render and is NOT a static dependency of the shared entry chunk — the dashboard and auth
+// shells have no dependency path to it at all. The backend's PUBLIC DTO encodes the kill switch
+// (disabled/unconfigured ⇒ gtmContainerId null) and the boundary fails closed on any malformed
+// value; snapshot-at-mount semantics are documented on the composable. This layout is the only
+// place that renders the boundary.
+
 const siteName = computed(() => pickMeta(settings.value?.siteName, t('brand.name')) ?? t('brand.name'))
 
 // `data-shell="public"` marks the PUBLIC document shell (024). It exists for exactly one reason: the
@@ -154,5 +163,6 @@ if (import.meta.client) {
 
     <LayoutFooter />
     <UiBackToTop />
+    <LazyPublicGtmRuntime :container-id="settings?.gtmContainerId ?? null" />
   </div>
 </template>

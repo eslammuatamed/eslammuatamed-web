@@ -283,8 +283,10 @@ export function classifyFloorDelta(deltaBytes, calibrationSha) {
 /**
  * doc 20 §1 budgets, 1024-based, INCLUSIVE ("≤", so exactly-at-budget passes).
  *
- * These are doc 20 §1 VERBATIM. Re-baselining any of them requires an owner decision plus a
- * decision-log entry in `eslammuatamed-docs/docs/20-performance.md` — never an edit here.
+ * These are doc 20 §1 VERBATIM defaults. Re-baselining any of them requires an owner decision plus a
+ * decision-log entry in `eslammuatamed-docs/docs/20-performance.md` — never an edit here. The
+ * FE4-U2e2 Home exception is registered separately below, while this default remains unchanged for
+ * every other public route.
  */
 export const BUDGET = {
   /**
@@ -324,8 +326,9 @@ export const BUDGET = {
  *                          innocent pages.
  *   2. `incrementalBytes`  caps what each page adds ON TOP of the floor, by FUNCTIONAL TIER.
  *
- * `appRenderedBytes` (D20-12) is untouched and remains an INDEPENDENT guard: a route can fail
- * either, and passing one never excuses the other.
+ * `appRenderedBytes` (D20-12) remains an INDEPENDENT guard: a route can fail either, and passing one
+ * never excuses the other. `publicAppCapFor` applies the separately governed Home exception while
+ * preserving this default for every other route.
  *
  * ⚠ THE GATED QUANTITY IS THE DELTA, NEVER THE TOTAL. Read `incrementalBytes` against
  * `route_total − shared_floor`. Comparing a route TOTAL against these numbers reinstates exactly the
@@ -405,8 +408,9 @@ export const PUBLIC_DELIVERY_BUDGET = {
  * — is the failure mode this table exists to make visible, which is why each entry carries the
  * FUNCTIONAL reason rather than a byte figure.
  *
- * ⚠ There is deliberately NO per-route byte exception table. If the functional tiers are ever proven
- * insufficient by evidence, that is a new owner decision, not a local edit here.
+ * ⚠ There is deliberately NO per-route byte exception table for incremental delivery. If the
+ * functional tiers are ever proven insufficient by evidence, that is a new owner decision, not a
+ * local edit here. App-owned caps are a separate D20-12 guard and are selected by `publicAppCapFor`.
  */
 export const PUBLIC_ROUTE_TIERS = {
   // Composite landing page: hero plus previews of several content collections.
@@ -433,6 +437,37 @@ export const PUBLIC_ROUTE_TIERS = {
   // Embeds the Nuxt UI form control set (`UForm`/`UFormField`/`UInput`/`UTextarea`).
   '/contact': 'interactive-subsystem',
   '/ar/contact': 'interactive-subsystem'
+}
+
+/**
+ * D20-42 / FE4-U2e2 — the Home routes' app-owned baselines, measured on the completed GTM surface.
+ *
+ * This is a deliberately narrow route-specific registration, following D20-29's measure-first
+ * formula without changing the D20-31 delivery tiers, shared floor, or any other public cap. The
+ * default D20-12 cap remains authoritative for every public route not listed here.
+ *
+ * These are frozen derivation inputs, not values that CI may refresh from the build it measures. The
+ * clean stamped reproduction and its measurements belong in the private doc-20 decision record.
+ */
+export const PUBLIC_APP_OWNED_BASELINE_BYTES = Object.freeze({
+  '/': 104_526,
+  '/ar': 104_526
+})
+
+/** Frozen absolute caps derived from the baselines above by D20-12's approved formula. */
+export const PUBLIC_APP_OWNED_CAP_BYTES = Object.freeze({
+  '/': 120_832,
+  '/ar': 120_832
+})
+
+/**
+ * Resolve the frozen app-owned cap for a public route.
+ *
+ * Home and Arabic Home have the D20-42 registration above; every other route deliberately retains
+ * D20-12's original 101 KiB cap. The caller separately asserts the route inventory is governed.
+ */
+export function publicAppCapFor(route) {
+  return PUBLIC_APP_OWNED_CAP_BYTES[route] ?? BUDGET.appRenderedBytes
 }
 
 /**

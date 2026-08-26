@@ -220,8 +220,12 @@ describe('source-boundary scans — layouts/default.vue wiring', () => {
     expect(code).not.toMatch(/\$fetch|useFetch|useAsyncData|useNuxtData/)
   })
 
-  it('consumes no GTM/analytics fields anywhere in the layout', () => {
-    expect(code).not.toMatch(/gtmContainerId|analyticsEnabled|dataLayer|googletagmanager/i)
+  it('hands the Settings container id to the lazy public GTM boundary and consumes no analytics machinery directly', () => {
+    // FE4-U2e2.1: the public layout is the sole Settings owner. It passes only the published id to
+    // Nuxt's lazy client boundary — no manual loader, dataLayer, third-party URL, or admin field.
+    expect(code).toMatch(/<LazyPublicGtmRuntime\s+:container-id="settings\?\.gtmContainerId \?\? null"/)
+    expect(code.match(/gtmContainerId/g)).toHaveLength(1)
+    expect(code).not.toMatch(/analyticsEnabled|dataLayer|googletagmanager|useScriptGoogleTagManager|usePublicGtm/i)
   })
 
   it('adds no client-only insertion path (no mounted hook / DOM access / observer around the wiring)', () => {

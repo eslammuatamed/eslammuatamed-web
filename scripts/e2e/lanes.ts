@@ -229,6 +229,15 @@ export const LANES: readonly Lane[] = [
     readyPath: '/',
     resetsBackendState: true,
     why: "FE4-U1e: the Static Page SEO editor's completed operator flow — one-list/zero-detail reads, per-locale upsert with explicit null clears on the wire, sent-order 422 mapping, dirty-switch/refresh protection — against the U1a instrument's resettable process pair"
+  },
+  {
+    project: 'gtm-settings',
+    dir: 'gtm',
+    backend: 'gtm-settings',
+    ports: { webEnv: 'CI_GTM_PORT', apiEnv: 'CI_GTM_MOCK_PORT', webDefault: 4700, apiDefault: 4701 },
+    readyPath: '/',
+    resetsBackendState: false,
+    why: "FE4-U2e2: the populated gtmContainerId settings variant must not leak into any other lane — null is the real live state every one of them must keep rendering — and a settings field with no slug or query to select a scenario on can only be a property of the process"
   }
 ] as const
 

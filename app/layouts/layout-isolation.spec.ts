@@ -97,15 +97,21 @@ describe('FE4-U2d2 — structural ownership scans', () => {
     expect(wired).toEqual(['app/layouts/default.vue'])
   })
 
-  it('no gtmContainerId/analyticsEnabled consumption anywhere in the four shells or app.vue', () => {
+  it('GTM registration stays public-layout-only: default hands the id to the lazy boundary; every other shell is gtm-free', () => {
+    // FE4-U2e2.1. The PUBLIC layout may read `gtmContainerId` ONLY to hand it to the lazy
+    // client-only boundary; analyticsEnabled (admin kill switch) and manual machinery stay
+    // forbidden there, and the other shells must not touch GTM at all.
+    const def = strip(readFileSync('app/layouts/default.vue', 'utf8'))
+    expect(def).toMatch(/<LazyPublicGtmRuntime\s+:container-id="settings\?\.gtmContainerId/)
+    expect(def).not.toMatch(/usePublicGtm|useScriptGoogleTagManager/)
+    expect(def).not.toMatch(/analyticsEnabled|dataLayer|googletagmanager|useScriptGoogleTagManager/i)
     for (const f of [
-      'app/layouts/default.vue',
       'app/layouts/auth.vue',
       'app/layouts/dashboard.vue',
       'app/layouts/preview.vue',
       'app/app.vue'
     ]) {
-      expect(strip(readFileSync(f, 'utf8')), f).not.toMatch(/gtmContainerId|analyticsEnabled|dataLayer|googletagmanager/i)
+      expect(strip(readFileSync(f, 'utf8')), f).not.toMatch(/gtmContainerId|analyticsEnabled|usePublicGtm|dataLayer|googletagmanager|gtm\.js/i)
     }
   })
 

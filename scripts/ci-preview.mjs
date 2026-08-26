@@ -103,6 +103,17 @@ const BACKENDS = {
     command: process.execPath,
     args: () => ['scripts/e2e/scenario-server.ts']
   },
+  // The SAME server, run as a separate process with one variable pinned (FE4-U2e2): `/settings/site`
+  // publishes a syntactically valid, entirely FICTIONAL GTM container id. A distinct process on a
+  // distinct port keeps analytics DISABLED (null id) for every other lane — the true live state they
+  // must keep rendering — and the variant stays a property of the process rather than of a request,
+  // exactly like the About/résumé variants above.
+  'gtm-settings': {
+    label: 'scenario backend (GTM container published)',
+    command: process.execPath,
+    args: () => ['scripts/e2e/scenario-server.ts'],
+    env: { E2E_GTM_STATE: 'valid' }
+  },
   // The SAME server, run as a separate process with one variable pinned: `/settings/site` answers
   // with the real live About state (governed prose, no portrait). A distinct process on a distinct
   // port is what keeps the global settings endpoint published and healthy for every other scenario —
