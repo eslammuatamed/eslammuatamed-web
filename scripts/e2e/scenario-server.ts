@@ -49,9 +49,10 @@
  * answers all three identically (a valid empty page), so the page can only tell them apart from the
  * category LIST. That is the behaviour the scenario exists to pin.
  *
- * `/settings/site`, `/skills` and `/categories` are ALWAYS healthy, including in the failure scenarios. If the page
- * shell also failed, the accessibility and recovery-action assertions would be measuring a different
- * page than the one under test.
+ * `/settings/site`, `/skills`, `/categories` and `/seo/pages/{pageKey}` are ALWAYS healthy, including in the
+ * failure scenarios. If the page shell also failed, the accessibility and recovery-action assertions would be
+ * measuring a different page than the one under test. Page SEO is the all-null optional override state: the
+ * scenario lane owns no authored SEO content, but a known key still answers 200 rather than 404.
  */
 import { realpathSync } from 'node:fs'
 import http from 'node:http'
@@ -64,6 +65,9 @@ import type { Locale, ProblemDetail } from './fixtures.ts'
 
 /** The contract's mount point. `NUXT_PUBLIC_API_BASE` points Nitro at `http://host:port/api/v1`. */
 export const API_PREFIX = '/api/v1'
+
+/** Static page keys whose optional SEO read is part of every public page shell. */
+export const PAGE_SEO_KEYS = ['home', 'about', 'experience', 'projects', 'blog', 'resume', 'contact'] as const
 
 /**
  * Which `/settings/site` variant this PROCESS serves, fixed at start-up and never per-request.
@@ -240,6 +244,25 @@ function resolveRedirect(path: string | null, locale: Locale, instance: string):
   return toPath ? json({ data: { toPath } }) : notFound(instance, `No redirect is registered for “${path}”.`)
 }
 
+/** `GET /seo/pages/{pageKey}` — the optional shell override, with no authored scenario content. */
+function resolvePageSeo(pageKey: string, locale: Locale, instance: string): Reply {
+  if (!(PAGE_SEO_KEYS as readonly string[]).includes(pageKey)) {
+    return notFound(instance, 'Unknown static page key.')
+  }
+
+  return json({
+    data: {
+      pageKey,
+      locale,
+      metaTitle: null,
+      metaDescription: null,
+      ogImageId: null,
+      ogImage: null,
+      canonicalUrl: null
+    }
+  })
+}
+
 /**
  * Pure request → reply mapping. Exported separately from the server so route selection, locale
  * selection, the redirect table and the RFC 7807 bodies are unit-testable without binding a port.
@@ -260,6 +283,9 @@ export function resolveRequest(url: string): Reply {
   if (!isLocale(locale)) {
     return unprocessable(instance, `Query parameter \`locale\` must be "en" or "ar"; received “${locale}”.`)
   }
+
+  const pageSeo = /^\/seo\/pages\/([^/]+)$/.exec(pathname)
+  if (pageSeo) return resolvePageSeo(decodeURIComponent(pageSeo[1]!), locale, instance)
 
   if (pathname === '/settings/site') return json({ data: SETTINGS[locale] })
   if (pathname === '/skills') return json({ data: SKILLS[locale] })

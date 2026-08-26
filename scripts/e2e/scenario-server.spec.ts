@@ -1,7 +1,7 @@
 import net from 'node:net'
 import { describe, expect, it } from 'vitest'
 import { ARTICLE_SLUG, CATEGORY, SLUG, TECHNOLOGY } from './fixtures.ts'
-import { API_PREFIX, createScenarioServer, resolveRequest, stopScenarioServer } from './scenario-server.ts'
+import { API_PREFIX, createScenarioServer, PAGE_SEO_KEYS, resolveRequest, stopScenarioServer } from './scenario-server.ts'
 
 /**
  * Unit coverage for the SSR scenario backend.
@@ -22,6 +22,26 @@ describe('route selection', () => {
     // against a broken shell instead of a working page with a failed section.
     expect(resolveRequest(url('/settings/site?locale=en'))).toMatchObject({ kind: 'json', status: 200 })
     expect(resolveRequest(url('/skills?locale=en'))).toMatchObject({ kind: 'json', status: 200 })
+  })
+
+  it('serves the all-null Page SEO override for every known static page', () => {
+    for (const pageKey of PAGE_SEO_KEYS) {
+      expect(resolveRequest(url(`/seo/pages/${pageKey}?locale=ar`))).toEqual({
+        kind: 'json',
+        status: 200,
+        body: {
+          data: {
+            pageKey,
+            locale: 'ar',
+            metaTitle: null,
+            metaDescription: null,
+            ogImageId: null,
+            ogImage: null,
+            canonicalUrl: null
+          }
+        }
+      })
+    }
   })
 
   it('answers the unfiltered index with a well-formed empty page', () => {
@@ -77,6 +97,7 @@ describe('route selection', () => {
     // along with the one endpoint that outgrew it.
     expect(resolveRequest(url('/tags?locale=en'))).toMatchObject({ kind: 'problem', status: 404 })
     expect(resolveRequest(url('/testimonials?locale=en'))).toMatchObject({ kind: 'problem', status: 404 })
+    expect(resolveRequest(url('/seo/pages/not-a-page?locale=en'))).toMatchObject({ kind: 'problem', status: 404 })
     expect(resolveRequest('/not-the-api/projects?locale=en')).toMatchObject({ kind: 'problem', status: 404 })
   })
 
