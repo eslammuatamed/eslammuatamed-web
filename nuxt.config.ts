@@ -1,5 +1,6 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 import { bundleAnalysisPlugin } from './config/bundle-analysis'
+import { apiOriginFromEnv } from './config/api-origin'
 import { siteUrlFromEnv } from './config/site-url'
 
 /**
@@ -14,6 +15,25 @@ import { siteUrlFromEnv } from './config/site-url'
  * module rather than inline here because `nuxt.config.ts` cannot be unit-tested.
  */
 const siteUrl = siteUrlFromEnv()
+
+/**
+ * CSP `connect-src` API origin, resolved ONCE at build time from the SAME env the app already
+ * consumes at runtime (D23-8: hosts are injected per environment at runtime). Production builds
+ * (deploy.yml) export the real API origin; CI/local builds fall back to the production origin so a
+ * baked policy is never weaker than production's. Because CI intentionally bakes PLACEHOLDER hosts
+ * (ci.yml:74-77) while preview/E2E re-injects the fixture origin at RUNTIME, the static policy alone
+ * cannot cover every environment: `server/plugins/csp-connect-origin.ts` completes it from the
+ * live runtime value through nuxt-security's documented `nuxt-security:headers` hook.
+ */
+const apiOrigin = apiOriginFromEnv()
+
+/**
+ * The media origin (D23-15): the API pre-generates every rendition and R2 serves the static objects,
+ * so `<NuxtImg>` emits ABSOLUTE contract URLs on this host (nuxt.config leaves @nuxt/image domains
+ * unset deliberately — see the comment on `image.domains`). It is not environment-configured in this
+ * repository because no code constructs media URLs; they arrive inside API payloads.
+ */
+const MEDIA_ORIGIN = 'https://media.eslammuatamed.com'
 
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
@@ -49,8 +69,76 @@ export default defineNuxtConfig({
     '@nuxt/ui',
     '@pinia/nuxt',
     '@nuxtjs/i18n',
-    '@nuxtjs/seo'
+    '@nuxtjs/seo',
+    'nuxt-security'
   ],
+
+  /**
+   * CSP foundation (FE4-U2e1, superseding D19-4's custom mechanism per the Aug-2026 ecosystem
+   * re-evaluation). nuxt-security owns nonce generation/stamping and CSP header emission; there is
+   * NO custom Nitro nonce plumbing and NO framework-script hashing anywhere in this repository.
+   *
+   * POLICY, from the U2e0.1 application threat model — not from D19-4's historical wording:
+   * - `script-src` uses `'strict-dynamic'` + the module's nonce template. Host allowlists are
+   *   obsolete under strict-dynamic, and NO `unsafe-inline`/`unsafe-eval`/wildcard fallback is
+   *   shipped for legacy browsers: current product support does not justify weakening script
+   *   execution control.
+   * - `style-src 'unsafe-inline'` remains the documented concession to Vue's runtime style bindings
+   *   (D19-4's original reasoning, which still holds).
+   * - `img-src` admits the media origin (D23-15) plus `data:`; `connect-src` admits the API origin
+   *   (build-time value; completed at runtime by server/plugins/csp-connect-origin.ts).
+   * - `upgrade-insecure-requests` is explicitly DISABLED: the module default adds it, but this site
+   *   is HTTPS-only end-to-end behind Cloudflare/Caddy, so it would be dead policy weight.
+   *
+   * EVERY OTHER MODULE DEFAULT IS EXPLICITLY OFF (Step-3 discipline): the baseline app emitted NO
+   * security headers beyond SWR cache-control, so each of COOP/COEP/CORP, HSTS, Permissions-Policy,
+   * Referrer-Policy, the X-* family and Origin-Agent-Cluster would be NEW behavior smuggled in by a
+   * default rather than decided here. The same applies to the middleware surface (`removeLoggers`
+   * mutates the CLIENT BUNDLE — it must never flip on silently under byte-governed size budgets —
+   * and `corsHandler` answers `access-control-allow-origin`, a real CORS opening). Adopting any of
+   * them is a deliberate follow-up decision, not an accident of installation.
+   */
+  security: {
+    nonce: true,
+    sri: true,
+    contentSecurityPolicyReportOnly: false,
+    removeLoggers: false,
+    hidePoweredBy: false,
+    requestSizeLimiter: false,
+    rateLimiter: false,
+    xssValidator: false,
+    corsHandler: false,
+    allowedMethodsRestricter: false,
+    headers: {
+      crossOriginResourcePolicy: false,
+      crossOriginOpenerPolicy: false,
+      crossOriginEmbedderPolicy: false,
+      referrerPolicy: false,
+      strictTransportSecurity: false,
+      xContentTypeOptions: false,
+      xDNSPrefetchControl: false,
+      xDownloadOptions: false,
+      xFrameOptions: false,
+      xPermittedCrossDomainPolicies: false,
+      xXSSProtection: false,
+      originAgentCluster: false,
+      permissionsPolicy: false,
+      contentSecurityPolicy: {
+        'default-src': ["'self'"],
+        'script-src': ["'self'", "'nonce-{{nonce}}'", "'strict-dynamic'"],
+        'style-src': ["'self'", "'unsafe-inline'"],
+        'font-src': ["'self'"],
+        'img-src': ["'self'", 'data:', MEDIA_ORIGIN],
+        'connect-src': ["'self'", apiOrigin],
+        'object-src': ["'none'"],
+        'base-uri': ["'none'"],
+        'frame-ancestors': ["'none'"],
+        'form-action': ["'self'"],
+        'script-src-attr': ["'none'"],
+        'upgrade-insecure-requests': false
+      }
+    }
+  },
 
   css: ['~/assets/css/main.css'],
 
