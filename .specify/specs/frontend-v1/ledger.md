@@ -4847,11 +4847,11 @@ backend serves the contract's all-null Page SEO shell dependency for every known
 Prism fixture selects page-specific nullable examples, contact axe waits for hydration, and the
 locale-head assertion uses the existing narrow CSP helper. Unknown scenario Page SEO keys remain 404.
 
-### Final live state
+### Final measured source state
 
 | Repo | Branch / HEAD | Working tree | Campaign effect |
 | --- | --- | --- | --- |
-| Web | `campaign/frontend-v1` / `f64a2270c04dfe008de7a8a74f330dffab49e34d` | clean | no campaign PR; not pushed |
+| Web | `campaign/frontend-v1` / measured source `f64a2270c04dfe008de7a8a74f330dffab49e34d` | clean at measurement boundary | no campaign PR; not pushed |
 | Docs | `docs/web-modernization-campaign` / `d6cbb84c32cc95eea356e6ae56c8985aacb5e316` | clean | D20-42 bundle synchronized; not pushed |
 | API | `fix/media-upload-error-contract` / `ac72539d529adf9c4255b12d8a918a718881e5e4` | clean | unrelated; no campaign effect |
 
