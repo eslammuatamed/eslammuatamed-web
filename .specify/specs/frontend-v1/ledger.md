@@ -4607,3 +4607,66 @@ final U2 public/browser/performance closure. No new browser lane created; e2e se
 unchanged and NOT run here. Nothing pushed or deployed.
 
 **Next step: OWNER DECISION before FE4-U2e (GTM). Do NOT mark GTM complete.**
+
+---
+
+## FE4-U2e1 — nuxt-security CSP foundation — COMPLETE (2026-08-26, commit a84421e)
+
+The U2e0 custom architecture (Nitro nonce plumbing + Nuxt-bootstrap SHA hashing) is DISCARDED.
+Preceded by U2e0.1 (ecosystem evaluation: nuxt-security 2.6.0 + @nuxt/scripts 1.3.8 proven in /tmp
+production spikes; strict-dynamic adopted) and U2e0.2 (compat gate CASE A: project/CI/production all
+Node 24; production binary v24.18.0 ≥ every engine floor). Docs decision **D19-14** (docs 19 v1.12.0)
+supersedes D19-4's MECHANISM with intent retained.
+
+- **Dependency**: `nuxt-security` pinned exactly `2.6.0` (package.json + lock). @nuxt/scripts NOT
+  installed (U2e2 owns GTM).
+- **CSP architecture** (nuxt.config.ts `security.headers.contentSecurityPolicy`):
+  `default-src 'self'`; `script-src 'self' 'nonce-{{nonce}}' 'strict-dynamic'`; `style-src 'self'
+  'unsafe-inline'`; `font-src 'self'`; `img-src 'self' data: https://media.eslammuatamed.com`;
+  `connect-src 'self' <api-origin>`; `object-src/base-uri " 'none' "`; `frame-ancestors 'none'`;
+  `form-action 'self'`; `script-src-attr 'none'`. No unsafe-inline/eval/wildcard for scripts; no GTM
+  origins anywhere.
+- **Nonce ownership**: nuxt-security ONLY (`nonce: true`, SRI on). ZERO custom nonce generation,
+  ZERO framework-script hashing, ZERO raw header writing — structural tests pin server/plugins to
+  exactly one file whose sole job is completing `connect-src` with the RUNTIME apiBase through the
+  module's documented `nuxt-security:routeRules` event (CI bakes placeholder hosts by design,
+  D23-8; direct-call hook variant measurably raced the module listener and was replaced by the
+  ordering-proof event mutation).
+- **Defaults disposition**: every unrelated header default (COOP/COEP/CORP, HSTS,
+  Permissions-Policy, Referrer-Policy, X-* family, Origin-Agent-Cluster) and middleware surface
+  (`removeLoggers` mutates the client bundle; corsHandler/rate/size/xss/methods limiters) explicitly
+  DISABLED — baseline app emitted none of them; adopting any is a future deliberate decision.
+  `hidePoweredBy:false` keeps `x-powered-by` as-is. `upgrade-insecure-requests` dropped (HTTPS-only
+  end-to-end already).
+- **SWR semantics (recorded honestly)**: Nitro caches header+HTML as ONE unit; a cache hit replays
+  its own consistent nonce pair for the TTL window. Proven: warm `/` pair byte-consistent;
+  uncached `/about` renders fresh nonces per response.
+- **Real proof (contract lane, production build)**: enforcing CSP on `/`, `/about`, `/projects`,
+  `/blog`, `/ar`; every EXECUTABLE script tag carries the header nonce (i18n's inert
+  application/json slp block legitimately omits one); `__NUXT_DATA__` + JSON-LD nonced; hydration +
+  client nav on home/about/projects/blog/ar clean; dashboard AND auth/login shells boot; canonical +
+  x-default/en/ar hreflang intact; zero analytics requests. Focused e2e **15/15**.
+- **Known-benign violations (documented, narrow-matched in e2e/csp-violations.ts)**:
+  `script-src-attr|inline` from @nuxt/image's hardcoded `onerror` marker (no consumer of the emit);
+  `script-src|eval` from valibot's JIT probe inside Nuxt UI (designed try/catch → supported jitless
+  fallback), observed on /dashboard/login only. Policy unchanged; both are blocked-by-design noise,
+  not allowances.
+- **Gates**: full unit suite **2475/2475 across 155 files** (incl. new config/security-policy.spec.ts
+  46/46); `typecheck` exit 0; `typecheck:e2e` clean; lint exit 0 (lint-staged at commit); production
+  build OK (provenance stamp correctly deferred until tree-clean post-commit).
+- **Negative controls A–F**: each targeted test failed for the intended reason, restored
+  byte-identically (SHA-256 baseline verified after each restore): A −strict-dynamic → policy pin
+  failed; B +script unsafe-inline → no-inline pin failed; C `nonce:false` → real e2e nonce proof
+  failed (header carried NO nonce); D wildcard script source → no-wildcard pin failed;
+  E `experimental.ssrStreaming enabled` → streaming-disabled pin failed; F planted custom
+  nonce/header plugin → ownership scan failed on both gates.
+- **Streaming**: remains OFF (U2e0.1 head-loss evidence stands). **Report-only rollout clarification**:
+  U2e1 proves ENFORCING in CI-compatible browser runs; a prod Report-Only phase has no value without
+  a chosen report destination — rollout mode is a release-time decision (D19-14).
+- **Untouched**: PageSeo/Settings product semantics, backend/API, route budgets, existing e2e lanes.
+
+Still open: **FE4-U2e2** (Settings-driven GTM via @nuxt/scripts — public layout only, Consent Mode
+defaults-denied capability, noscript omitted per U2e0.1), then final U2 closure. Nothing pushed or
+deployed.
+
+**Next step: FE4-U2e2 (GTM via @nuxt/scripts). Do NOT mark U2 complete.**
