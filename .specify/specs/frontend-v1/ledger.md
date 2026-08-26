@@ -18,7 +18,7 @@ Verify every line against live state before acting on it. Report drift before do
 | **Branch tip** | **Do not read a SHA for this from this table — run `git rev-parse HEAD`.** A checkpoint commit that stamps its own SHA here is false the instant it lands, and this ledger has done it once already. |
 | **Last source-touching commit** | **Do not read a SHA from this table — run `git log -1 --name-only`.** The repository rule is **ONE COMMIT PER LOGICAL UNIT**, so a phase may land as several coherent commits; the FE-2b commit bundled source + tests + ledger because that phase *was* one unit, not because bundling is required. What this row exists to prevent is narrower: **never stamp a SHA here that a later commit invalidates.** |
 | **Remote state** | **NOT PUSHED.** `origin/dev` = `54cea28737c558767ccb24a34e2b437b62f7f058`, `origin/main` = `648aa467cd8bc7157cbcad2fd7c0e8981ee1f16c` — neither moved by this campaign, re-verified after FE-2a |
-| **Docs repo** | ⚠ **TWO branches, and they DIVERGE — neither is an ancestor of the other.** (a) `docs/od-11-dashboard-localization` `3b607af9…` holds OD-11 (D02-15, D04-7, D11-8, doc 18). (b) `docs/web-modernization-campaign` `97efd02` (was `95e9101`, was `565abef8…`) holds doc 20's whole D20-2x/3x sequence and the governed inventory table — **D20-33 is NOT on the od-11 branch**, and **D20-34 landed on (b)** for that reason: writing it against a doc 20 lacking D20-33 would manufacture a conflict in the same table. Both **local-only** (R10); `origin/main` = `1896d8c7…`, untouched |
+| **Docs repo** | ⚠ **TWO branches, and they DIVERGE — neither is an ancestor of the other.** (a) `docs/od-11-dashboard-localization` `3b607af9…` holds OD-11 (D02-15, D04-7, D11-8, doc 18). (b) `docs/web-modernization-campaign` **`fda38853…`** (D20-42; was `97efd02`, `95e9101`, `565abef8…`) holds doc 20's whole D20-2x/3x sequence and the governed inventory table — **D20-33 is NOT on the od-11 branch**, and **D20-34 landed on (b)** for that reason: writing it against a doc 20 lacking D20-33 would manufacture a conflict in the same table. Both **local-only** (R10); `origin/main` = `1896d8c7…`, untouched |
 | **Production** | Web release `20260817T175534Z-648aa46` — untouched |
 | **API** | ⚠ **Re-pointed 2026-08-23 (taxonomy contract unit; see the EOF checkpoint for the full measurement): `origin/main` = `d3eb74cc…` (PR #91 merged `dev` → `main`, carrying PR #89's taxonomy list-schema fix AND PR #90 media hardening), `origin/dev` = `b791c9c6…` (adds PR #97 deploy-summary fixes on top). The row below is the record as it then stood and is kept unedited beneath this correction. Load-bearing today: the contract blob this campaign consumes is now `185f067e…`, byte-identical at BOTH `main` and `dev`; Production serving tree was NOT re-measured in that unit.** |
 | | *(historical, as of the fifth resume)* `origin/main` = `9af1aace…` — live, deployed, and complete for v1 scope. ⚠ `origin/dev` is **no longer equal to it**: it is `e87f427c…`, the merge of Backend PR #86. That is a **separate workstream**, not Campaign 027 movement — measured, not assumed: `openapi.json` is the **same blob** `7a9e0ba6…` on both `main` and `dev`, so the contract this campaign consumes did not move. Read the API row as `origin/main`; `origin/dev` is informational. |
@@ -470,7 +470,7 @@ shared abstraction: the shared set is now `useTranslatableForm`, `DashboardTrans
 | **FE-1 — Contract & Integration Foundation** | **COMPLETE** — commit `19e3a05`. Contract adopted + gtm reconciliation; reply flow deliberately moved to FE-2 (see §4). Gates re-verified on the committed tree: typecheck 0, 1501/1501. |
 | **FE-2 — Articles Tracer Bullet + Dashboard Architecture** | **COMPLETE.** OD-11, OD-3, D20-33 and its amendment all resolved. FE-2a/2b/2c done: F-1 **CLOSED** with browser evidence · collection · editor · §14.6 extraction pass · **all ten §14.9 criteria demonstrated** · every gate green including `size:routes`. The reusable architecture is recorded in **§10**. |
 | **FE-3 — Content Module Replication** | **COMPLETE — CLOSED at SEO-U4 (2026-08-23).** All five content modules + the shared per-entity SEO panel implemented, verified and inside governance: Experiences, Skills, Testimonials, Taxonomy, plus `DashboardSeoPanel` serving Articles + Projects (the only entities the contract gives SEO fields), Projects null-clear fixed and browser-proven on the wire, R16 closed by the official `dashboard-projects` lane. Final evidence (§5/SEO-U4): clean provenance-stamped build (`632b160…`), all 21 governed routes inside frozen caps (`size:routes` exit 0, zero unclassified), CSS 28.1 KB gz / 30 PASS, typecheck/typecheck:e2e/lint exit 0, unit 144 files / **2102 tests exit 0**, Articles lane 48/48, Projects lane 21/21 (unfiltered axe EN+AR+loading, 380px both locales), full suite 614/616 with both casualties classified as the R15 load class (did not reproduce sharded), sharded suite **616/616 exit 0**, R14 conclusion (B) recorded as recommendation-only, R15 remains OPEN precisely stated. No FE-3 product scope remains open. **FE-4 is next.**<br>**Historical module record (superseded in verdict by the closure above, preserved for the record):** Delegation settled as **OD-12** (hybrid: module 1 in-house, modules 2–5 delegable once the pattern holds). `M1·U1` landed the instrument; **`M1·U2` landed the collection at `/dashboard/experiences`, its `lanes.ts` record, and a third public-isolation gate** — every gate green, the lane 10/10 booting 1 pair, and the route measured at 85,551 B against its own D20-34 cap of 99,328 B. The new route cost **zero CSS**. Four unpredicted findings are in §5/M1·U2, including a gate (`typecheck:e2e`) that had been RED since `M1·U1` because that unit's exit row never listed it. **`M1·U3` landed the editor** (`7e6d11a`): bilingual, Zod + `UForm`, 422→locale-tab mapping, the shared skill picker, `isCurrent`⇄`endDate` on a field-owned error path, and the calendar-date read that Articles' instant-shaped converter would have got wrong. Three rules were each proven able to fail; the `technologyIds` omission control failed **only** the clear-case test, which is the empirical reason both tests exist. Four more unpredicted findings are in §5/M1·U3, including a backend crash that reported itself as eight failing tests. Its route caps were **measured and escalated, never inherited** — the batched decision is **§9.5**, which the owner then **RESOLVED as D20-35** (caps stamped: Web `6b59261`, Docs `97efd02`), clearing the transient `size:routes` exit 2 that this row previously described as current. ⚠ That exit 2 was a MEASUREMENT FAILURE, never a budget breach — the distinction is kept because it is the reason no cap was invented to silence the gate. **`M1·U4b` performed the three HELD extractions** (`fd11c7b`) and **`M1·U5` closed the gates** (`328bf9c`): every authoritative gate green, axe unfiltered in BOTH dashboard languages across four surfaces, 380px verified, `size:routes` 0 on fourteen governed routes, CSS unchanged at 29.19 KB gz. Two findings kept out of the green claim: the full suite is flaky at 507 tests (**R15**, not attributable — shard 3 passed 93/93 twice) and **there is no Projects browser lane to re-run** (**R16**, measured at 0 matches). Module 1 is otherwise CLOSED; modules 2–5 are delegable under OD-12 now that the pattern holds.<br>**`M1·U4` rendered the verdicts**: **five of five §5.2 predictions HELD**, plus a sixth candidate (`DashboardSkillPicker`) discovered and already extracted — measured on 56 byte-identical code lines, 34% of the Experiences editor. The three HELD extractions are **queued, not performed**: acting on them refactors the shipped `ArticleEditor` and needs both lanes re-run, so it is its own unit — **`M1·U4b`, the extraction pass, is next**, then `M1·U5` (gates + axe).<br>**Lane-strategy unit (R14):** A run now boots only the lanes it selected: measured 1 preview pair for `--project=dashboard-articles`, against 10 before, same command. The full suite still boots all ten by design, so R14 is **NARROWED, NOT CLOSED** — see §6 and §5/FE-3/U-1. ⚠ This row previously said the full suite "loses exactly one test per run"; the pre-change control run **did not reproduce that** (471 passed, exit 0) and the claim is corrected here rather than carried forward. |
-| FE-4 — System Modules | **IN PROGRESS — U1a–U1e landed** (instrument `68a02ce`, form/payload `0f013d4`+`8a48709`, destination `ff74a98`, editor `6f3b4c5`, browser lane `2262125`). Route measurement/governance (U1f) remains. |
+| FE-4 — System Modules | **IN PROGRESS — U1a–U1f and U2e1–U2e2 landed.** U2e2 is complete in Web `b84f110` + test correction `0cd3f18`, with D20-42 in Docs `fda38853`; final U2 closure remains. |
 | FE-5 — Coherence, D20-32 Review, M4 Closure | NOT STARTED |
 
 ---
@@ -4665,8 +4665,78 @@ supersedes D19-4's MECHANISM with intent retained.
   a chosen report destination — rollout mode is a release-time decision (D19-14).
 - **Untouched**: PageSeo/Settings product semantics, backend/API, route budgets, existing e2e lanes.
 
-Still open: **FE4-U2e2** (Settings-driven GTM via @nuxt/scripts — public layout only, Consent Mode
-defaults-denied capability, noscript omitted per U2e0.1), then final U2 closure. Nothing pushed or
-deployed.
+**FE4-U2e2 is now complete** (Settings-driven GTM via @nuxt/scripts — public layout only, Consent
+Mode defaults-denied capability, noscript omitted per U2e0.1). Still open: final U2 closure. Nothing
+pushed or deployed.
 
-**Next step: FE4-U2e2 (GTM via @nuxt/scripts). Do NOT mark U2 complete.**
+**Next step: final FE4-U2 closure. Do NOT mark U2 complete.**
+
+---
+
+## FE4-U2e2 — isolated public GTM runtime and Home budget governance — COMPLETE (2026-08-26)
+
+The unit landed in Web as implementation commit `b84f11037b91ca4453eade897103df1da6044a97` and
+test correction commit `0cd3f180a345f80b995cba6feb13df48bf76da49`. Its private performance decision
+is Docs commit `fda38853ed26c1fca8939fd70b11a6cfd1b56910`. No commit was pushed, and nothing was
+deployed or sent to an external endpoint.
+
+**Implementation contract.** `@nuxt/scripts` is pinned at exactly `1.3.8` in `package.json` and
+`package-lock.json`, registered once in `nuxt.config.ts`, and used only by the lazy client-only
+`PublicGtmRuntime.client.vue` boundary rendered from the public default layout. The boundary passes
+only the already-resolved `gtmContainerId`; it performs no second Settings read. The guard mirrors
+the backend contract `/^GTM-[A-Z0-9]{4,12}$/` and fails closed. Valid ids register one managed loader
+with `onNuxtReady`, `bundle:false`, and Consent Mode v2 defaults denied for
+`ad_storage`, `ad_user_data`, `ad_personalization` and `analytics_storage`. No manual script,
+`dataLayer` bootstrap, pageview push, nonce/hash work, GTM `noscript`, CSP origin or dashboard/auth
+registration exists. The fixture id is the fictional `GTM-TEST1234`; the enabled browser test
+intercepts the loader request and never contacts a real Google endpoint.
+
+**Budget decision.** D20-42 freezes `/` and `/ar` at **104,526 B** app-owned rendered baseline and
+**120,832 B (118 KiB)** cap:
+
+```
+ceil((104,526 x 115) / (100 x 1024)) x 1024 = 120,832 B
+```
+
+The default **103,424 B (101 KiB)** cap remains on the other sixteen public routes. D20-31's
+shared public floor, delivery tiers and CSS cap are unchanged. The clean analysis build at Web
+`0cd3f180` recorded tree `2d014182d2b181d9ada533cd861d818913daf80e`, output
+`2aaa5c9becfce1bca13e5f143d795e79f44e30d7d128a84ebc75c576e25ad968`, 1,790 files, Node `v24.19.0`
+and npm `11.17.0`. It used:
+`ANALYZE_BUNDLE=1 NUXT_PUBLIC_SITE_URL=https://example.com npm run build`.
+
+**Verification on the corrected source tree.**
+
+| Check | Result |
+| --- | --- |
+| `assert-exact-build` with matching governed environment | exit 0; provenance verified for `0cd3f180` |
+| `npm run size:routes` | exit 0; public floor **258,158 / 263,168 B gz**, all public app-owned/delivery/CSS checks pass; 15 documented D20-24 dashboard quality warnings remain non-blocking |
+| `npm run check:gtm-isolation` | GTM chunk `_nuxt/DMbUot_B2.js`, **8,919 B gzip**; public/dashboard/auth initial closures all isolated |
+| `npm run check:bundle` | exit 0; 147 public chunks, no tiptap/prosemirror/shiki/markdown-it identifiers |
+| `npm run check:logical` | exit 0; no physical-direction styles |
+| `npm run size` | exit 0; 29.2 kB gz against 30 kB |
+| `npm run lint` | exit 0 |
+| `npm run typecheck` | exit 0; existing non-fatal localhost URL warning from `@nuxtjs/i18n` |
+| `npm run typecheck:e2e` | exit 0 |
+| `npm test` | **2521/2521 tests**, 157/157 files, exit 0 |
+| `npx playwright test e2e/gtm/gtm-enabled.spec.ts --project=gtm-settings` | **4/4**, exit 0 |
+| `npx playwright test e2e/scenarios/gtm-disabled.spec.ts --project=ssr-scenarios` | **4/4**, exit 0 |
+
+The first full-unit run on the implementation exposed two stale assertions in
+`scripts/e2e/lane-isolation.spec.mjs` (the new lane changed the registry from 16 to 17 and the
+derived shard count from 4 to 5). The exact two tests failed in isolation, the assertions were
+updated in `0cd3f18`, the focused rerun passed 2/2, and the full suite then passed 2521/2521. The
+route-cap negative control also remains recorded: changing the `/ar` cap to `120,833` made three
+governance tests fail; restoring `120,832` made the focused four-test set pass.
+
+**Documentation integrity note.** `npm run docs:group:check` on the Docs worktree reports
+`docs/group/03-delivery-and-roadmap.md (differs)`. That generated bundle was already stale relative
+to the existing D20-41 source history; it was deliberately not regenerated because it is outside
+this unit's declared file boundary. Owner approval is required before treating that as a separate
+Docs change.
+
+**Next three actions.**
+
+1. Obtain an owner decision on whether to regenerate and separately commit the stale Docs group bundle.
+2. Complete the remaining FE4-U2 closure; **U2e3 has not started**.
+3. Begin FE-5 coherence, D20-32 review, and release-readiness work only after U2 closes.
