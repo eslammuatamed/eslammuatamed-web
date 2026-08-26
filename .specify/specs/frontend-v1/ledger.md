@@ -4916,3 +4916,55 @@ file changed during this final Web-only unit. The next work is FE-5, not another
 2. Continue release-readiness evidence from a new clean, provenance-stamped source build when the
    next governed change exists; do not reuse this measurement as future evidence.
 3. Keep Web and Docs branches local-only until the owner explicitly authorizes push, merge or deploy.
+
+---
+
+## FE5-U1 — Dashboard Operational Overview · COMPLETE · 2026-08-27
+
+Starting committed Web HEAD: `3e05b4634a56c64017e28a25457ea919225ead3a`.
+
+Implementation commit **`b0aa869da304be2a7f1bdfd06551c6507c860feb`** replaces the retired
+`/dashboard` placeholder with the approved operational Overview: Article and Project metadata
+snapshots, unread-message attention, navigation-only Skills/Testimonials cards, and the approved
+common actions. It changes no API contract, route topology, backend source, analytics, or budget.
+The nested card model deliberately carries `total`, `pending`, `failed`, and `forbidden` as refs
+with a `load` retry function. Vue only auto-unwraps top-level template refs, so the `v-for` card
+object previously interpolated Ref objects. The template now explicitly reads the four nested
+`.value` fields; a focused structural regression test and browser assertion prohibit Ref-object
+text from reaching the rendered card.
+
+### Verification
+
+| Check | Result |
+| --- | --- |
+| FE5-U1 source equivalence | 9/9 source/test/fixture files SHA-256 byte-identical between campaign worktree and writable verifier |
+| Regression negative control | Removing `snapshot.state.total.value` made the new focused assertion fail; restoration passed |
+| `npm test -- app/pages/dashboard/index.spec.ts` | 6/6, exit 0 |
+| `npm run typecheck` | exit 0 |
+| `npm run typecheck:e2e` | exit 0 |
+| `npm run lint` | exit 0 |
+| `npx playwright test --project=dashboard-overview` | 3/3, exit 0 — EN/AR RTL, real totals, no Ref leakage, exact three overview requests, isolated failure/retry, actual module and quick-action navigation, 380px overflow, axe |
+| Clean committed build | exit 0; `assert-exact-build` verified `b0aa869da304be2a7f1bdfd06551c6507c860feb` (tree `6239f9455ea2`) |
+| `npm run size:routes` | exit 0; budgets satisfied (the existing 15 D20-24 quality warnings remain non-blocking) |
+
+The focused fixture trace is exactly:
+
+1. `GET /api/v1/admin/articles?page=1&perPage=1`
+2. `GET /api/v1/admin/projects?page=1&perPage=1`
+3. `GET /api/v1/admin/messages?isRead=false&isArchived=false&perPage=1`
+
+Fresh size evidence from the committed build: dashboard shared floor **263,497 B gz** against
+the **268,288 B (262.0 KB)** cap; `/dashboard` **266,631 B gz (260.4 KB)**, increment **3,134 B**
+against the **86,016 B (84.0 KB)** cap, app-owned **77,015 B** against **103,424 B**. The D20-24
+reporting baseline is **229,657 B gz**, so the reported route delta is **+36,974 B (+36.1 KB)**.
+
+Private Docs IA decision commit **`b4c22bd360e5d13bf5ecb23d888e5c759d949dab`** adds D04-7 and
+updates the Dashboard map; `npm run docs:group:check` exited 0. No commits were pushed, no PR was
+opened, and nothing was deployed.
+
+**Next three actions.**
+
+1. Treat FE5-U1 as closed; do not begin FE5-U2 without separate authorization.
+2. Keep the private Web and Docs branches local-only until the owner authorizes a push, merge, or deploy.
+3. Reuse this verification only as U1 evidence; any product change requires a fresh source-equivalence,
+   build, browser, and route-size run.
