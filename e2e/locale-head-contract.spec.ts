@@ -1,5 +1,7 @@
 import type { ConsoleMessage, Page } from '@playwright/test'
 import { expect, test } from '@playwright/test'
+import { expectNoUnexpectedConsoleErrors } from './csp-violations'
+import { hydrated } from './hydration'
 
 /**
  * D22-7 locale-owned head state on the routes the SCENARIO lane does not serve.
@@ -86,6 +88,7 @@ for (const { name, from, to, click } of CASES) {
 
     const consoleLog = recordConsole(page)
     await page.goto(from)
+    await hydrated(page)
     await watchChrome(page)
     await switchLocale(page, click)
 
@@ -107,6 +110,6 @@ for (const { name, from, to, click } of CASES) {
     expect(samples.filter(state => state === 'true|false' || state === 'false|true')).toEqual([])
 
     expect(consoleLog.hydration, 'hydration warnings').toEqual([])
-    expect(consoleLog.errors, 'fatal console errors').toEqual([])
+    expectNoUnexpectedConsoleErrors(consoleLog.errors)
   })
 }
