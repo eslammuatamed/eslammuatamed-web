@@ -1330,6 +1330,174 @@
                         "canonicalUrl": null
                       }
                     }
+                  },
+                  "en-home": {
+                    "summary": "English home page with no authored SEO override.",
+                    "value": {
+                      "data": {
+                        "pageKey": "home",
+                        "locale": "en",
+                        "metaTitle": null,
+                        "metaDescription": null,
+                        "ogImageId": null,
+                        "ogImage": null,
+                        "canonicalUrl": null
+                      }
+                    }
+                  },
+                  "ar-home": {
+                    "summary": "Arabic home page with no authored SEO override.",
+                    "value": {
+                      "data": {
+                        "pageKey": "home",
+                        "locale": "ar",
+                        "metaTitle": null,
+                        "metaDescription": null,
+                        "ogImageId": null,
+                        "ogImage": null,
+                        "canonicalUrl": null
+                      }
+                    }
+                  },
+                  "en-experience": {
+                    "summary": "English experience page with no authored SEO override.",
+                    "value": {
+                      "data": {
+                        "pageKey": "experience",
+                        "locale": "en",
+                        "metaTitle": null,
+                        "metaDescription": null,
+                        "ogImageId": null,
+                        "ogImage": null,
+                        "canonicalUrl": null
+                      }
+                    }
+                  },
+                  "ar-experience": {
+                    "summary": "Arabic experience page with no authored SEO override.",
+                    "value": {
+                      "data": {
+                        "pageKey": "experience",
+                        "locale": "ar",
+                        "metaTitle": null,
+                        "metaDescription": null,
+                        "ogImageId": null,
+                        "ogImage": null,
+                        "canonicalUrl": null
+                      }
+                    }
+                  },
+                  "en-projects": {
+                    "summary": "English projects page with no authored SEO override.",
+                    "value": {
+                      "data": {
+                        "pageKey": "projects",
+                        "locale": "en",
+                        "metaTitle": null,
+                        "metaDescription": null,
+                        "ogImageId": null,
+                        "ogImage": null,
+                        "canonicalUrl": null
+                      }
+                    }
+                  },
+                  "ar-projects": {
+                    "summary": "Arabic projects page with no authored SEO override.",
+                    "value": {
+                      "data": {
+                        "pageKey": "projects",
+                        "locale": "ar",
+                        "metaTitle": null,
+                        "metaDescription": null,
+                        "ogImageId": null,
+                        "ogImage": null,
+                        "canonicalUrl": null
+                      }
+                    }
+                  },
+                  "en-blog": {
+                    "summary": "English blog page with no authored SEO override.",
+                    "value": {
+                      "data": {
+                        "pageKey": "blog",
+                        "locale": "en",
+                        "metaTitle": null,
+                        "metaDescription": null,
+                        "ogImageId": null,
+                        "ogImage": null,
+                        "canonicalUrl": null
+                      }
+                    }
+                  },
+                  "ar-blog": {
+                    "summary": "Arabic blog page with no authored SEO override.",
+                    "value": {
+                      "data": {
+                        "pageKey": "blog",
+                        "locale": "ar",
+                        "metaTitle": null,
+                        "metaDescription": null,
+                        "ogImageId": null,
+                        "ogImage": null,
+                        "canonicalUrl": null
+                      }
+                    }
+                  },
+                  "en-resume": {
+                    "summary": "English resume page with no authored SEO override.",
+                    "value": {
+                      "data": {
+                        "pageKey": "resume",
+                        "locale": "en",
+                        "metaTitle": null,
+                        "metaDescription": null,
+                        "ogImageId": null,
+                        "ogImage": null,
+                        "canonicalUrl": null
+                      }
+                    }
+                  },
+                  "ar-resume": {
+                    "summary": "Arabic resume page with no authored SEO override.",
+                    "value": {
+                      "data": {
+                        "pageKey": "resume",
+                        "locale": "ar",
+                        "metaTitle": null,
+                        "metaDescription": null,
+                        "ogImageId": null,
+                        "ogImage": null,
+                        "canonicalUrl": null
+                      }
+                    }
+                  },
+                  "en-contact": {
+                    "summary": "English contact page with no authored SEO override.",
+                    "value": {
+                      "data": {
+                        "pageKey": "contact",
+                        "locale": "en",
+                        "metaTitle": null,
+                        "metaDescription": null,
+                        "ogImageId": null,
+                        "ogImage": null,
+                        "canonicalUrl": null
+                      }
+                    }
+                  },
+                  "ar-contact": {
+                    "summary": "Arabic contact page with no authored SEO override.",
+                    "value": {
+                      "data": {
+                        "pageKey": "contact",
+                        "locale": "ar",
+                        "metaTitle": null,
+                        "metaDescription": null,
+                        "ogImageId": null,
+                        "ogImage": null,
+                        "canonicalUrl": null
+                      }
+                    }
                   }
                 }
               }
