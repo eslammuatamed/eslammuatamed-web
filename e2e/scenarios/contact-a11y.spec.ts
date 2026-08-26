@@ -61,6 +61,9 @@ for (const route of ROUTES) {
       test(`idle — ${route.label} ${viewport.label} ${theme}`, async ({ page }) => {
         await page.setViewportSize({ width: viewport.width, height: viewport.height })
         await page.goto(route.path)
+        // Axe must inspect the hydrated form: before Vue mounts, UFormField's generated label ids can
+        // briefly disagree with the SSR controls and produce a false label association failure.
+        await hydrated(page)
         await applyTheme(page, theme)
         expect(await violations(page)).toEqual([])
       })
@@ -171,6 +174,7 @@ test.describe('contact keyboard and zoom', () => {
   test('honours reduced motion', async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' })
     await page.goto('/contact')
+    await hydrated(page)
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
     expect(await violations(page)).toEqual([])
   })

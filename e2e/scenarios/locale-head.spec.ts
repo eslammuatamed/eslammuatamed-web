@@ -1,5 +1,6 @@
 import type { ConsoleMessage, Page } from '@playwright/test'
 import { expect, test } from '@playwright/test'
+import { expectNoUnexpectedConsoleErrors } from '../csp-violations'
 import { hydrated } from '../hydration'
 import { ARTICLE_SLUG, SLUG } from './backend.ts'
 
@@ -184,6 +185,8 @@ for (const { name, from, to, click, heading, documentNavigation } of CASES) {
       await assertChromeNeverMixed(page)
     }
     expect(consoleLog.hydration, 'hydration warnings').toEqual([])
-    expect(consoleLog.errors, 'fatal console errors').toEqual([])
+    // The shared helper excludes only the two measured CSP signatures; all other console errors remain
+    // fatal, including the scenario backend's unexpected resource failures.
+    expectNoUnexpectedConsoleErrors(consoleLog.errors)
   })
 }
