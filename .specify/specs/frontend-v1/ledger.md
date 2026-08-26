@@ -4760,3 +4760,41 @@ Docs change.
 1. Obtain an owner decision on whether to regenerate and separately commit the stale Docs group bundle.
 2. Complete the remaining FE4-U2 closure; **U2e3 has not started**.
 3. Begin FE-5 coherence, D20-32 review, and release-readiness work only after U2 closes.
+
+---
+
+## FE4-U2e3 test-correction checkpoint — 2026-08-26
+
+The final-closure investigation found two test/instrument issues and no production regression. Both
+corrections were kept as separate logical Web commits, with no push, deploy, email, webhook, or
+external message:
+
+1. `6e505af` — `test(e2e): add locale-aware Page SEO Prism examples`: the committed public
+   `GET /api/v1/seo/pages/{pageKey}` response now declares named `en` and `ar` examples, and the
+   Prism selector tests pin discovery plus Arabic selection. The dedicated `page-seo` backend had
+   already proven localized `/about` and `/ar/about` responses, so this is contract-fixture
+   fidelity, not application behavior.
+2. `4b686d6` — `test(e2e): await hydrated locale head navigation`: the locale-head contract lane
+   waits for hydration before clicking and uses the existing narrow console-error helper for the
+   known `@nuxt/image` `script-src-attr|inline` blocked-by-policy marker. No CSP allowance changed.
+
+Live checkpoint state before this ledger edit:
+
+| Repo | Branch / HEAD | Working tree | Campaign PR / remote effect |
+| --- | --- | --- | --- |
+| Web | `campaign/frontend-v1` / `4b686d6b8164c122c2ec77730389e99d578a8453` | clean | no campaign PR; not pushed |
+| Docs | `docs/web-modernization-campaign` / `d6cbb84c32cc95eea356e6ae56c8985aacb5e316` | clean | no campaign PR; not pushed |
+| API | campaign dependency unchanged; no API file touched | not part of this unit | no API campaign PR/effect |
+
+Web unit evidence at this boundary: `npx vitest run scripts/e2e/prism-locale-selection.spec.mjs`
+returned **13/13**, exit 0. The negative control for the selector was previously proven: changing
+the Arabic example key made both selector assertions fail, then restoration returned the instrument
+to green. The final focused Playwright rerun still requires an explicit captured result.
+
+**Next three actions.**
+
+1. Rebuild the corrected Web HEAD and verify exact-build provenance.
+2. Rerun the focused contract/browser suite and the governed performance/release checks, recording
+   the actual exit codes and build SHA.
+3. If all gates are green, record FE4-U2e3 closure in this ledger and the already-synchronized
+   private Docs bundle; otherwise record the isolated blocker without weakening a gate.
