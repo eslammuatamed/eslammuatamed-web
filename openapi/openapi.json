@@ -1301,6 +1301,36 @@
                       "$ref": "#/components/schemas/PublicPageSeoEntity"
                     }
                   }
+                },
+                "examples": {
+                  "en": {
+                    "summary": "English (?locale=en) — the resolved English static-page SEO.",
+                    "value": {
+                      "data": {
+                        "pageKey": "about",
+                        "locale": "en",
+                        "metaTitle": "About — Eslam Muatamed",
+                        "metaDescription": "Engineering background, philosophy, and current focus.",
+                        "ogImageId": null,
+                        "ogImage": null,
+                        "canonicalUrl": null
+                      }
+                    }
+                  },
+                  "ar": {
+                    "summary": "Arabic (?locale=ar) — the resolved Arabic static-page SEO.",
+                    "value": {
+                      "data": {
+                        "pageKey": "about",
+                        "locale": "ar",
+                        "metaTitle": "نبذة — إسلام معتمد",
+                        "metaDescription": "الخلفية الهندسية والفلسفة والتركيز الحالي.",
+                        "ogImageId": null,
+                        "ogImage": null,
+                        "canonicalUrl": null
+                      }
+                    }
+                  }
                 }
               }
             }

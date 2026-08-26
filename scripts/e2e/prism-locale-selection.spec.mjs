@@ -27,11 +27,16 @@ const CONTRACT = JSON.parse(
 )
 const INDEX = readExampleIndex(CONTRACT)
 const SETTINGS = '/api/v1/settings/site'
+const PAGE_SEO = '/api/v1/seo/pages/{pageKey}'
 const params = (query = '') => new URLSearchParams(query)
 
 describe('the committed contract', () => {
   it('declares named en/ar examples for the settings operation', () => {
     expect(INDEX.get(`GET ${SETTINGS}`)).toEqual(new Set(['en', 'ar']))
+  })
+
+  it('declares named en/ar examples for the public static-page SEO operation', () => {
+    expect(INDEX.get(`GET ${PAGE_SEO}`)).toEqual(new Set(['en', 'ar']))
   })
 })
 
@@ -42,6 +47,10 @@ describe('selectExample', () => {
 
   it('selects the Arabic example for an Arabic request', () => {
     expect(selectExample(INDEX, 'GET', SETTINGS, params('locale=ar'))).toBe('ar')
+  })
+
+  it('selects the Arabic Page SEO example for an Arabic request', () => {
+    expect(selectExample(INDEX, 'GET', '/api/v1/seo/pages/about', params('locale=ar'))).toBe('ar')
   })
 
   // The API applies `en` when `?locale=` is absent (the parameter's documented default), so the
