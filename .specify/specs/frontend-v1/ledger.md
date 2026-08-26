@@ -4729,6 +4729,26 @@ updated in `0cd3f18`, the focused rerun passed 2/2, and the full suite then pass
 route-cap negative control also remains recorded: changing the `/ar` cap to `120,833` made three
 governance tests fail; restoring `120,832` made the focused four-test set pass.
 
+**Checkpoint-tip re-verification — Web `250aaf32` (2026-08-26).** The clean governed build was
+re-run after the preceding ledger checkpoint with `ANALYZE_BUNDLE=1
+NUXT_PUBLIC_SITE_URL=https://example.com npm run build`. Its provenance is:
+
+| Field | Value |
+| --- | --- |
+| HEAD | `250aaf32e16c603fee1627e762f4e72cdcf2ae5e` |
+| tree | `0035d7f1cf9aed3a355ca3162dd18f62f20bf0cf` |
+| output hash | `8783b1cd6761f4f405bd650d232dbd1dfe0ceafc26ff10bf12e1730a9b532d83` |
+| output files | `1,790` |
+| runtime | Node `v24.19.0`, npm `11.17.0` |
+
+`ANALYZE_BUNDLE=1 NUXT_PUBLIC_SITE_URL=https://example.com node scripts/assert-exact-build.mjs`
+returned `[assert-exact-build] provenance verified: 250aaf32e16c603fee1627e762f4e72cdcf2ae5e
+(tree 0035d7f1cf9a)`. `npm run size:routes` exited 0 with `Budgets satisfied`, public floor
+`258,158 / 263,168 B gz`, all public app-owned/delivery/CSS checks passing, and the same 15
+documented non-blocking D20-24 dashboard quality warnings. Both Web and Docs working trees were
+clean after this verification. This evidence is recorded before the ledger commit below; do not
+interpret it as a branch-tip stamp.
+
 **Documentation integrity note.** `npm run docs:group:check` on the Docs worktree reports
 `docs/group/03-delivery-and-roadmap.md (differs)`. That generated bundle was already stale relative
 to the existing D20-41 source history; it was deliberately not regenerated because it is outside
