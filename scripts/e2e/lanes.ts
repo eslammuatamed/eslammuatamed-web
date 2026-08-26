@@ -76,6 +76,7 @@ export interface Lane {
 }
 
 export const LANES: readonly Lane[] = [
+  { project: 'dashboard-overview', dir: 'dashboard-overview', backend: 'overview', ports: { webEnv: 'CI_OVERVIEW_PORT', apiEnv: 'CI_OVERVIEW_MOCK_PORT', webDefault: 4800, apiDefault: 4801 }, readyPath: '/about', resetsBackendState: true, why: 'FE5-U1: isolated controlled totals, partial failure and request-cost evidence for the operational Overview' },
   {
     project: 'contract',
     dir: null,

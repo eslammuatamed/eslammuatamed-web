@@ -321,7 +321,7 @@
     "title": "Dashboard",
     "welcome": "Signed in as {email}",
     "signOut": "Sign out",
-    "placeholder": "Modules arrive in the next milestone.",
+    "overview": { "title": "Overview", "description": "A focused starting point for managing your portfolio content.", "contentSnapshot": { "title": "Content snapshot", "description": "Open a module to manage its content. Totals appear only where the API provides them." }, "attention": { "title": "Attention" }, "quickActions": { "title": "Quick actions", "description": "Start common content tasks directly.", "newArticle": "New article", "newProject": "New project", "media": "Media", "seo": "Static page SEO" }, "total": "{count} total", "unread": "{count} unread", "navigationOnly": "Open this module to manage its content.", "openModule": "Open module", "unavailable": "This information is currently unavailable.", "forbidden": "You do not have access to this information.", "retry": "Try again" },
     "shell": {
       "language": "Dashboard language",
       "theme": "Dashboard appearance",

@@ -45,6 +45,7 @@ import { resolveMockPort, resolvePreviewPort } from './lib/preview-base.mjs'
 const prismUpstreamPort = port => String(Number(port) + 40)
 
 const BACKENDS = {
+  overview: { label: 'dashboard overview backend', command: process.execPath, args: () => ['scripts/e2e/overview-server.ts'] },
   // The RESOLVED binary, not `npx`: the npx shim spawns Prism as a grandchild, so the process we
   // track is not the process that binds the port, and signalling the shim leaves the listener holding
   // the port. Invoking the binary directly makes the listener our direct child, which is what makes
