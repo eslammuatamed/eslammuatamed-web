@@ -5057,3 +5057,47 @@ nothing was pushed or deployed.
 1. Treat FE5-U3 as closed; do not begin FE5-U4 without separate authorization.
 2. Keep the private Web and Docs branches local-only until the owner authorizes a push, merge, or deploy.
 3. Begin FE5-U4 — Project editor coherence — only from a clean committed checkpoint and with fresh scoped verification.
+
+---
+
+## FE5-U4 — Dashboard Project editor coherence · COMPLETE · 2026-08-27
+
+Starting committed Web HEAD: `9e1dc7934b7da45e430a4ede4c092059590910f7`.
+
+Implementation commit **`5395c11`** moves only the Dashboard Project create/edit editor onto the
+already-approved translatable-entity model. It reuses `DashboardTranslationTabs`,
+`useTranslatableForm`, `dashboard-translation-errors`, `DashboardEntityFormActions`,
+`DashboardEntityEditorSkeleton`, and `useUnsavedChangesGuard`; no new generic editor, tab, action,
+or validation abstraction was created. EN and AR remain the only supported translations. The
+Dashboard locale seeds the tab once; the operator thereafter owns entity-local tab selection.
+
+Project-specific publication and featured switches, ordering/year/URLs, technology ids, gallery and
+media behavior, SEO null/omission payload behavior, slug warning, create/update payloads, retryable
+read failure, and dirty semantics are preserved. The only fixture change is a one-shot local 422
+control used to exercise the existing sent-locale error contract; no product Backend/API code or
+contract changed. Projects collection/list code, Messages, Profile, Overview, budgets, route
+topology, and FE5-U5+ remain untouched.
+
+### Verification
+
+| Check | Result |
+| --- | --- |
+| Focused Project editor + affected form/error units | **109/109**, exit 0 |
+| `npm run typecheck` | exit 0 |
+| `npm run typecheck:e2e` | exit 0 |
+| `npm run lint` | exit 0 |
+| Fresh verifier production build | exit 0; final source byte-identical in all eight changed files |
+| Focused Projects browser lane | **29/29**, exit 0 in three serial bounded slices: collection/create+tabs **10/10**, request states+technology **7/7**, SEO/mobile/axe/public isolation **12/12** |
+| Browser proof | create POST and edit PATCH, EN/AR tab persistence and direction, shell-locale tab seed, clean/dirty/saved action states, cancel/accept dirty guard, EN and AR indexed 422 routing, non-locale error surface, gallery/technology/SEO preservation, 380px overflow ≤ 1px, axe EN/AR/loading zero violations |
+| Route size | not required for this editor-only coherence unit; not measured; no budget changed |
+| Negative controls | A tabs removal, B shared-action removal, and C sent-locale routing disable each failed its discriminating focused assertion; restored source/test SHA-256 values matched byte-for-byte |
+
+No private Docs decision was required: this unit mechanically reuses established Dashboard editor
+architecture. The separate Docs worktree's pre-existing owner CV/OG dirt was not touched. No commit
+was pushed, no PR was opened, and nothing was deployed.
+
+**Next three actions.**
+
+1. Treat FE5-U4 as closed; do not begin FE5-U5 without separate authorization.
+2. Keep the private Web and Docs branches local-only until the owner authorizes a push, merge, or deploy.
+3. Start FE5-U5 — tiny stale cleanup — only from this clean committed checkpoint with fresh scoped verification.
