@@ -86,7 +86,7 @@ describe('the Inbox copy contract', () => {
   const localeFile = (code: string) =>
     JSON.parse(readFileSync(resolve(process.cwd(), `i18n/locales/${code}.json`), 'utf8')) as Record<string, Record<string, unknown>>
 
-  const INBOX_KEYS = ['title', 'view', 'column', 'status', 'detail', 'actions', 'retentionNotice', 'staleSelection', 'forbiddenTitle', 'offlineTitle'] as const
+  const INBOX_KEYS = ['title', 'view', 'column', 'status', 'detail', 'actions', 'retentionNotice', 'staleSelection', 'staleNotice', 'forbiddenTitle', 'offlineTitle'] as const
 
   it('every key the Inbox uses exists in en.json', () => {
     const messages = localeFile('en').dashboard?.messages as Record<string, unknown> | undefined
@@ -189,6 +189,27 @@ describe('useMessages — only the newest request may write', () => {
     await first
 
     expect(items.value[0]?.subject).toBe('CURRENT')
+    expect(failed.value).toBe(false)
+  })
+
+  it('keeps rendered rows through a current refresh failure, then replaces them on retry', async () => {
+    holder.api = vi.fn()
+      .mockResolvedValueOnce(page('HELD'))
+      .mockRejectedValueOnce(new Error('temporary transport failure'))
+      .mockResolvedValueOnce(page('RECOVERED'))
+
+    const { items, failed, load } = useMessages()
+    await load('inbox', 1)
+    expect(items.value[0]?.subject).toBe('HELD')
+
+    await load('inbox', 2)
+    // This is the collection contract: a failed page/filter refresh is stale data, not permission
+    // to blank the usable list underneath the operator.
+    expect(items.value[0]?.subject).toBe('HELD')
+    expect(failed.value).toBe(true)
+
+    await load('inbox', 2)
+    expect(items.value[0]?.subject).toBe('RECOVERED')
     expect(failed.value).toBe(false)
   })
 })

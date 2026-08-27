@@ -66,10 +66,9 @@ export function useMessages() {
       // A superseded request's failure is not this view's failure — it must not clear the newer
       // request's rows or raise an error state the reader would attach to the wrong list.
       if (seq !== loadSeq) return
-      // A failed load must not leave the previous page's rows on screen pretending to be current.
-      items.value = []
-      total.value = 0
-      totalPages.value = 1
+      // Keep usable rows visible while the next inbox view or page is unavailable. The page marks
+      // them stale and offers retry; clearing them would make a transient refresh failure destroy
+      // the reader's usable context.
       if (error instanceof ApiError && error.status === 403) forbidden.value = true
       else failed.value = true
     } finally {

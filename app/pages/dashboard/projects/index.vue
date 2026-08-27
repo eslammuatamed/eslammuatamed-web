@@ -48,6 +48,12 @@ useHead({ title: () => `${t('dashboard.projects.title')} · ${t('dashboard.title
  */
 const parsed = computed(() => parseAdminProjectsQuery(route.query))
 
+const hasData = computed(() => items.value.length > 0)
+const { initialPending, refreshing } = useRequestState(pending, hasData, failed)
+const showErrorState = computed(() => failed.value && !hasData.value)
+const showStaleNotice = computed(() => failed.value && hasData.value)
+const isEmpty = computed(() => !pending.value && !failed.value && !forbidden.value && !hasData.value)
+
 function setQuery(patch: Record<string, string | undefined>): void {
   // Build the next query by filtering rather than deleting: `undefined` means "drop this parameter",
   // and a rebuilt object states that without mutating the route's own query object.
@@ -278,18 +284,10 @@ watch(parsed, value => void load(value), { immediate: true, deep: true })
     </section>
 
     <section :aria-label="t('dashboard.projects.listRegionLabel')">
-      <div v-if="pending" class="flex flex-col gap-2" :aria-label="t('dashboard.projects.loading')" aria-busy="true">
-        <!-- `h-16`, not a size chosen for looks: the public stylesheet is ONE file shared by every
-             route, so a utility this module is the first to use is a new rule on the public CSS
-             budget — which sits at 29.99 of its 30 KB gz ceiling. Every size here is one the app
-             already emits. -->
-        <USkeleton v-for="i in 6" :key="i" class="h-16 w-full" />
-      </div>
-
       <!-- The subtle error title defaults to the 500 red, which measures 3.15:1 on its own tinted
            background — under the 4.5:1 AA minimum. The 700 shade is 5.32:1, matching the Inbox. -->
       <UAlert
-        v-else-if="forbidden"
+        v-if="forbidden"
         color="error"
         variant="subtle"
         icon="i-lucide-lock"
@@ -299,26 +297,46 @@ watch(parsed, value => void load(value), { immediate: true, deep: true })
         :description="t('dashboard.projects.forbiddenBody')"
       />
 
-      <div v-else-if="failed" class="rounded-control border border-default p-6 text-center" data-projects-failed>
-        <p class="font-medium text-highlighted">{{ t('dashboard.projects.errorTitle') }}</p>
-        <p class="mt-1 text-sm text-muted">{{ t('dashboard.projects.errorBody') }}</p>
-        <UButton class="mt-4" color="neutral" variant="subtle" @click="load(parsed)">
-          {{ t('dashboard.projects.retry') }}
-        </UButton>
-      </div>
-
-      <!-- An empty FILTERED result is a different answer from an empty library, and saying so is the
-           difference between "change your filters" and "create your first project". -->
-      <div v-else-if="items.length === 0" class="rounded-control border border-default p-10 text-center" data-projects-empty>
-        <p class="font-medium text-highlighted">
-          {{ filtered ? t('dashboard.projects.emptyFilteredTitle') : t('dashboard.projects.emptyTitle') }}
-        </p>
-        <p class="mt-1 text-sm text-muted">
-          {{ filtered ? t('dashboard.projects.emptyFilteredBody') : t('dashboard.projects.emptyBody') }}
-        </p>
-      </div>
-
       <template v-else>
+        <p
+          v-if="showStaleNotice"
+          role="status"
+          data-projects-stale
+          class="mb-3 rounded-control border border-warning/40 bg-warning/10 px-3 py-2 text-sm text-highlighted"
+        >
+          {{ t('dashboard.projects.staleNotice') }}
+          <UButton class="ms-2" size="xs" color="neutral" variant="subtle" data-projects-stale-retry @click="load(parsed)">
+            {{ t('dashboard.projects.retry') }}
+          </UButton>
+        </p>
+
+        <UiRequestState
+          :pending="initialPending"
+          :refreshing="refreshing"
+          :error="showErrorState"
+          :empty="isEmpty"
+          skeleton="rows"
+          :count="6"
+          @retry="load(parsed)"
+        >
+          <template #error>
+            <UiStateError data-projects-failed :message="t('dashboard.projects.errorTitle')" @retry="load(parsed)" />
+          </template>
+
+          <!-- An empty FILTERED result is a different answer from an empty library, and saying so is the
+               difference between "change your filters" and "create your first project". -->
+          <template #empty>
+            <div class="rounded-control border border-default p-10 text-center" data-projects-empty>
+              <p class="font-medium text-highlighted">
+                {{ filtered ? t('dashboard.projects.emptyFilteredTitle') : t('dashboard.projects.emptyTitle') }}
+              </p>
+              <p class="mt-1 text-sm text-muted">
+                {{ filtered ? t('dashboard.projects.emptyFilteredBody') : t('dashboard.projects.emptyBody') }}
+              </p>
+            </div>
+          </template>
+
+          <div>
         <p class="mb-3 text-sm text-muted" data-projects-count>
           {{ t('dashboard.projects.resultCount', { total, page: parsed.page, pages: totalPages }) }}
         </p>
@@ -436,6 +454,8 @@ watch(parsed, value => void load(value), { immediate: true, deep: true })
             @update:page="goToPage"
           />
         </div>
+          </div>
+        </UiRequestState>
       </template>
     </section>
   </UContainer>

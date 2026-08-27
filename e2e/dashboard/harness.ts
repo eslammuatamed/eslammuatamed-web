@@ -45,7 +45,7 @@ export const SINGLE_PAGE = [
 
 export async function setBackendState(
   page: Page,
-  state: { mode?: 'ok' | 'empty' | 'error' | 'forbidden', failNextPatch?: boolean }
+  state: { mode?: 'ok' | 'empty' | 'error' | 'forbidden', delayMs?: number, failNextPatch?: boolean }
 ): Promise<void> {
   const res = await page.request.post(`${CONTROL_BASE}/__e2e/state`, { data: state })
   expect(res.ok(), 'backend state change must succeed').toBe(true)

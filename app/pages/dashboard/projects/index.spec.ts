@@ -20,6 +20,7 @@ const holder = vi.hoisted(() => ({
   data: [] as unknown[],
   meta: { page: 1, perPage: 12, total: 0, totalPages: 1 },
   status: 0,
+  next: null as Promise<unknown> | null,
   /**
    * Assigned below, not inside the hoisted factory: `mockNuxtImport` is hoisted above the imports,
    * so the factory body cannot reference `ApiError` yet. It is only READ when a request is made,
@@ -33,6 +34,9 @@ const holder = vi.hoisted(() => ({
 
 mockNuxtImport('useApi', () => () => (path: string, options: Record<string, unknown> = {}) => {
   holder.calls.push({ path, options })
+  if (holder.next) {
+    return holder.next
+  }
   if (holder.status !== 0) {
     return Promise.reject(holder.makeError?.(holder.status) ?? new Error('failed'))
   }
@@ -104,6 +108,7 @@ async function mount(route = '/', options: {
   holder.data = options.data ?? [project()]
   holder.meta = options.meta ?? { page: 1, perPage: 12, total: 1, totalPages: 1 }
   holder.status = options.status ?? 0
+  holder.next = null
   const wrapper = await mountSuspended(ProjectsList, { route })
   mounted = wrapper
   await flushPromises()
@@ -300,5 +305,42 @@ describe('the answers that are not rows', () => {
 
     const filtered = await mount('/?q=nothing', { data: [], meta: { page: 1, perPage: 12, total: 0, totalPages: 1 } })
     expect(filtered.find('[data-projects-empty]').text()).toContain('Nothing matches these filters')
+  })
+})
+
+describe('refreshes preserve a usable collection', () => {
+  function deferred<T>() {
+    let resolve!: (value: T) => void
+    let reject!: (reason: unknown) => void
+    const promise = new Promise<T>((res, rej) => { resolve = res; reject = rej })
+    return { promise, resolve, reject }
+  }
+
+  it('keeps rows visible through an in-flight failure and exposes an in-place retry', async () => {
+    const wrapper = await mount('/', { data: [project({ id: 'held' })] })
+    const refresh = deferred<{ data: unknown[], meta: typeof holder.meta }>()
+    holder.next = refresh.promise
+
+    await wrapper.vm.$router.push({ query: { q: 'next' } })
+    await flushPromises()
+
+    // The page must overlay the held list, not regress to its initial skeleton during a filter/page
+    // transition. This assertion is the negative-control target for FE5-U3.
+    expect(wrapper.find('[data-project-row="held"]').exists(), 'held row remains during pending refresh').toBe(true)
+    expect(wrapper.find('[aria-busy="true"]').exists(), 'refresh overlay remains observable').toBe(true)
+
+    refresh.reject(new Error('temporary failure'))
+    await settle()
+    expect(wrapper.find('[data-project-row="held"]').exists(), 'held row remains after refresh failure').toBe(true)
+    expect(wrapper.find('[data-projects-stale]').exists(), 'stale retry is shown after refresh failure').toBe(true)
+    expect(wrapper.find('[data-projects-failed]').exists()).toBe(false)
+
+    holder.next = null
+    holder.data = [project({ id: 'recovered' })]
+    holder.meta = { page: 1, perPage: 12, total: 1, totalPages: 1 }
+    await wrapper.find('[data-projects-stale-retry]').trigger('click')
+    await settle()
+    expect(wrapper.find('[data-project-row="recovered"]').exists(), 'retry replaces held data').toBe(true)
+    expect(wrapper.find('[data-projects-stale]').exists()).toBe(false)
   })
 })

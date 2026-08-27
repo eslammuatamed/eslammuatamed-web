@@ -30,6 +30,7 @@
 import { realpathSync } from 'node:fs'
 import http from 'node:http'
 import process from 'node:process'
+import { setTimeout as sleep } from 'node:timers/promises'
 import { fileURLToPath } from 'node:url'
 
 export const API_PREFIX = '/api/v1'
@@ -113,6 +114,8 @@ export function seedMessages(): SeedMessage[] {
 /** Mutable per-process state. Reset between specs through `POST /__e2e/reset`. */
 let messages = seedMessages()
 let mode: MessageMode = 'ok'
+/** Fixture-only response hold used to make stale-content refresh states observable in browser tests. */
+let delayMs = 0
 /** Makes one PATCH fail, to prove a failed mutation preserves the previous confirmed state. */
 let failNextPatch = false
 
@@ -188,12 +191,14 @@ const server = http.createServer(async (req, res) => {
   if (path === '/__e2e/reset' && req.method === 'POST') {
     messages = seedMessages()
     mode = 'ok'
+    delayMs = 0
     failNextPatch = false
     return json(res, 200, { ok: true })
   }
   if (path === '/__e2e/state' && req.method === 'POST') {
-    const body = JSON.parse((await readBody(req)) || '{}') as { mode?: MessageMode, failNextPatch?: boolean, messages?: SeedMessage[] }
+    const body = JSON.parse((await readBody(req)) || '{}') as { mode?: MessageMode, delayMs?: number, failNextPatch?: boolean, messages?: SeedMessage[] }
     if (body.mode) mode = body.mode
+    if (typeof body.delayMs === 'number') delayMs = Math.max(0, body.delayMs)
     if (typeof body.failNextPatch === 'boolean') failNextPatch = body.failNextPatch
     if (body.messages) messages = body.messages
     return json(res, 200, { ok: true, mode })
@@ -224,6 +229,7 @@ const server = http.createServer(async (req, res) => {
   // ── admin messages ───────────────────────────────────────────────────────────────────────────
   if (path.startsWith(`${API_PREFIX}/admin/messages`)) {
     if (!authorized(req)) return problem(res, 401, 'Unauthorized')
+    if (req.method === 'GET' && delayMs > 0) await sleep(delayMs)
     if (mode === 'forbidden') return problem(res, 403, 'Forbidden')
     if (mode === 'error') {
       // A transport-level failure: destroy the socket so the client sees a real network error

@@ -58,10 +58,9 @@ export function useAdminProjects() {
       // A superseded request's failure is not the current query's failure — it must not clear the
       // newer request's rows or raise an error the operator would attach to the wrong list.
       if (seq !== loadSeq) return
-      // A failed load must not leave the previous page's rows on screen pretending to be current.
-      items.value = []
-      total.value = 0
-      totalPages.value = 1
+      // Keep usable rows visible while the next page or filter result is unavailable. The page marks
+      // them stale and offers retry; clearing them would turn a transient refresh failure into a
+      // destructive whole-surface takeover.
       if (error instanceof ApiError && error.status === 403) forbidden.value = true
       else failed.value = true
     } finally {

@@ -123,6 +123,37 @@ test.describe('request states, made observable by delayMs', () => {
     await expect(page.locator('[data-project-row]')).toHaveCount(2)
   })
 
+  test('a filter refresh preserves held rows, then stale retry recovers in place', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL!)
+    await page.goto('/dashboard/projects')
+    await listSettled(page)
+    await expect(page.locator('[data-project-row]')).toHaveCount(2)
+
+    // The control plane holds only the fixture response. The user-triggered search remains the
+    // real route transition that used to replace this usable list with the initial skeleton.
+    await setBackendState(page, { delayMs: 2000 })
+    await page.locator('[data-projects-search]').fill('content')
+    await expect(page.locator('[aria-busy=true]').first()).toBeVisible()
+    await expect(page.locator('[data-project-row]')).toHaveCount(2)
+
+    await setBackendState(page, { mode: 'error' })
+    await expect(page.locator('[data-projects-stale]')).toBeVisible({ timeout: 15_000 })
+    await expect(page.locator('[data-project-row]')).toHaveCount(2)
+    await expect(page.locator('[data-projects-failed]')).toHaveCount(0)
+
+    await setBackendState(page, { mode: 'ok', delayMs: 0 })
+    await page.locator('[data-projects-stale-retry]').click()
+    await listSettled(page)
+    await expect(page.locator('[data-projects-stale]')).toHaveCount(0)
+    // This fixture records the server request but intentionally keeps its two canonical rows for
+    // every healthy collection response; recovery is therefore proven by return to those rows.
+    await expect(page.locator('[data-project-row]')).toHaveCount(2)
+
+    await page.setViewportSize(NARROW)
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
+    expect(overflow, 'the retained-list notice must not introduce 380px horizontal overflow').toBeLessThanOrEqual(1)
+  })
+
   test('a forbidden read is neither an error nor an empty list', async ({ page, baseURL }) => {
     await signIn(page, 'en', baseURL!)
     await setBackendState(page, { mode: 'forbidden' })

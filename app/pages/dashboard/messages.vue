@@ -36,6 +36,11 @@ const parsedQuery = computed(() => parseMessagesQuery(route.query))
 const view = computed(() => parsedQuery.value.view)
 const page = computed(() => parsedQuery.value.page)
 const selectedId = computed(() => parsedQuery.value.message ?? null)
+const hasData = computed(() => items.value.length > 0)
+const { initialPending, refreshing } = useRequestState(pending, hasData, failed)
+const showErrorState = computed(() => failed.value && !hasData.value)
+const showStaleNotice = computed(() => failed.value && hasData.value)
+const isEmpty = computed(() => !pending.value && !failed.value && !forbidden.value && !hasData.value)
 
 /** Offline is a first-class state: mutations are disabled and no queue is kept (owner decision 11). */
 const online = ref(true)
@@ -499,10 +504,19 @@ onMounted(() => {
       :aria-label="listRegionLabel"
       class="focus:outline-none"
     >
-    <div v-if="pending" class="flex flex-col gap-2" :aria-label="t('dashboard.messages.loading')" aria-busy="true">
-      <USkeleton v-for="i in 6" :key="i" class="h-12 w-full" />
-    </div>
+    <p
+      v-if="showStaleNotice"
+      role="status"
+      data-messages-stale
+      class="mb-3 rounded-control border border-warning/40 bg-warning/10 px-3 py-2 text-sm text-highlighted"
+    >
+      {{ t('dashboard.messages.staleNotice') }}
+      <UButton class="ms-2" size="xs" color="neutral" variant="subtle" data-messages-stale-retry @click="load(view, page)">
+        {{ t('dashboard.messages.retry') }}
+      </UButton>
+    </p>
 
+    <template v-if="forbidden">
     <!-- The subtle error title defaults to the 500 red, which measures 3.15:1 on its own tinted
          background — under the 4.5:1 AA minimum. The 700 shade is 5.32:1; the dark-mode counterpart
          keeps the same relationship against the dark surface. Caught by axe during the visual
@@ -516,7 +530,6 @@ onMounted(() => {
          retained opacity. Applied to every error alert that carries a description, for the same
          no-drift reason. -->
     <UAlert
-      v-else-if="forbidden"
       color="error"
       variant="subtle"
       icon="i-lucide-lock"
@@ -524,16 +537,30 @@ onMounted(() => {
       :title="t('dashboard.messages.forbiddenTitle')"
       :description="t('dashboard.messages.forbiddenBody')"
     />
+    </template>
 
-    <div v-else-if="failed" class="rounded-control border border-default p-6 text-center">
+    <UiRequestState
+      v-else
+      :pending="initialPending"
+      :refreshing="refreshing"
+      :error="showErrorState"
+      :empty="isEmpty"
+      skeleton="rows"
+      :count="6"
+      @retry="load(view, page)"
+    >
+    <template #error>
+    <div class="rounded-control border border-default p-6 text-center" data-messages-failed>
       <p class="font-medium text-highlighted">{{ t('dashboard.messages.errorTitle') }}</p>
       <p class="mt-1 text-sm text-muted">{{ t('dashboard.messages.errorBody') }}</p>
       <UButton class="mt-4" color="neutral" variant="subtle" @click="load(view, page)">
         {{ t('dashboard.messages.retry') }}
       </UButton>
     </div>
+    </template>
 
-    <div v-else-if="items.length === 0" class="rounded-control border border-default p-10 text-center">
+    <template #empty>
+    <div class="rounded-control border border-default p-10 text-center" data-messages-empty>
       <p class="font-medium text-highlighted">
         {{ view === 'archived' ? t('dashboard.messages.emptyArchivedTitle') : t('dashboard.messages.emptyTitle') }}
       </p>
@@ -541,8 +568,9 @@ onMounted(() => {
         {{ view === 'archived' ? t('dashboard.messages.emptyArchivedBody') : t('dashboard.messages.emptyBody') }}
       </p>
     </div>
+    </template>
 
-    <template v-else>
+    <div>
       <!-- DESKTOP: the existing table, unchanged. `hidden sm:block` rather than a JS viewport branch
            — `display:none` removes the inactive presentation from the accessibility tree and the
            focus order, so the two can never both be reachable, and nothing depends on hydration. -->
@@ -695,7 +723,8 @@ onMounted(() => {
           @update:page="goToPage"
         />
       </div>
-    </template>
+    </div>
+    </UiRequestState>
     </section>
 
     <USlideover
