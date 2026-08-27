@@ -4968,3 +4968,9 @@ opened, and nothing was deployed.
 2. Keep the private Web and Docs branches local-only until the owner authorizes a push, merge, or deploy.
 3. Reuse this verification only as U1 evidence; any product change requires a fresh source-equivalence,
    build, browser, and route-size run.
+
+### Administrative closure update
+
+**FE5-U1 COMPLETE.** The next unit is **FE5-U2 — Profile dirty-navigation protection**. It is
+recorded as next work only; no FE5-U2 source, test, budget, Backend/API, deployment, or remote
+action was started by this administrative closure.
