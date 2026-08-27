@@ -4969,6 +4969,48 @@ opened, and nothing was deployed.
 3. Reuse this verification only as U1 evidence; any product change requires a fresh source-equivalence,
    build, browser, and route-size run.
 
+---
+
+## FE5-U2 — Dashboard Profile dirty-navigation protection · COMPLETE · 2026-08-27
+
+Starting committed Web HEAD: `6c3b33e5d11b022be5409ade4dafbee5f3704758`.
+
+Implementation commit **`3a5c6e3a1f316dbe6645639094b48cc061b412fe`** reuses the canonical
+`useUnsavedChangesGuard` with Profile's combined condition
+`portraitDirty || resumeDirty`. Portrait dirtiness remains the existing
+`isPortraitFormDirty(form, initial)` comparison; résumé dirtiness remains the selected PDF asset id
+against `resumeInitial`. No Profile API, save, upload, budget, backend, or route contract changed.
+
+Each successful section save advances only that section's baseline. Thus a saved portrait leaves an
+unsaved résumé guarded, and vice versa; failed portrait and résumé PATCHes retain their respective
+dirty state. Initial hydration adopts both server baselines, so the loaded page is clean. The existing
+`dashboard-media` fixture was extended only to persist the already-contractual `resumeAssetId`, making
+the browser proof exercise the real Profile résumé flow rather than a fabricated product path.
+
+### Verification
+
+| Check | Result |
+| --- | --- |
+| `npm test -- app/pages/dashboard/profile.spec.ts` | 28/28, exit 0 |
+| Focused dirty-guard unit rerun | 3/3, exit 0 |
+| `npm run typecheck` | exit 0 |
+| `npm run typecheck:e2e` | exit 0 |
+| `npm run lint` | exit 0 |
+| Fresh verifier production build | exit 0 (required by the production browser lane; no route-size measurement run) |
+| `npx playwright test e2e/dashboard-media/media-profile.spec.ts --project=dashboard-media --grep 'Profile dirty navigation protection'` | 3/3, exit 0 — clean navigation, portrait-only cancel/accept + unload, résumé-only failure retention, both-dirty single confirmation, save-one preservation, final-save clearance |
+| Negative control | changing the combined condition to `false` made the 3 focused dirty-guard tests fail; restored source SHA-256 `6f2a1e81315b6691fc458dd308df1627119c4586913e6311805da7fda5329823` and tracked diff SHA-256 `036ef6813aacf4175e6b620bd195f11e041a458c7f9aeadb4c9c80e67abc01e5` matched the pre-control values |
+
+EN is covered through the shared existing localized confirmation; no application-rendered dialog
+exists, so the browser-owned confirmation adds no separate AR dialog surface. Existing Profile RTL
+coverage remains in the same serial lane. No private Docs decision was required because this is a
+mechanical reuse of the established Dashboard guard. Nothing was pushed or deployed.
+
+**Next three actions.**
+
+1. Treat FE5-U2 as closed; do not begin FE5-U3 without separate authorization.
+2. Keep the private Web and Docs branches local-only until the owner authorizes a push, merge, or deploy.
+3. Begin FE5-U3 only from a clean committed checkpoint and with fresh scoped verification.
+
 ### Administrative closure update
 
 **FE5-U1 COMPLETE.** The next unit is **FE5-U2 — Profile dirty-navigation protection**. It is
