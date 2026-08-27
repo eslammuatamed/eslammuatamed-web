@@ -5101,3 +5101,37 @@ was pushed, no PR was opened, and nothing was deployed.
 1. Treat FE5-U4 as closed; do not begin FE5-U5 without separate authorization.
 2. Keep the private Web and Docs branches local-only until the owner authorizes a push, merge, or deploy.
 3. Start FE5-U5 — tiny stale cleanup — only from this clean committed checkpoint with fresh scoped verification.
+
+---
+
+## FE5-U5 — stale Frontend-v1 cleanup · COMPLETE · 2026-08-27
+
+Starting committed Web HEAD: `b0ca73e4286c81d2b4e978b4ed8682b43b12c08d`.
+
+Implementation commit **`2bdd12f0a6f8e2a9da16da4a559363d862ea125b`** removes two objectively stale
+Dashboard navigation comments from `app/composables/useDashboardNav.ts`: the completed
+Testimonials editor routes were no longer future work, and the completed in-route Taxonomy editor
+was no longer a later-unit surface. The bounded Dashboard/frontend-v1 production-source scan found
+no other objectively stale artifact; current route-existence, active-prefix, intentional-absence,
+and native input-placeholder references were retained. No navigation item, route, label,
+permission behavior, localization, ordering, feature, budget, Backend/API contract, or product
+behavior changed.
+
+### Verification
+
+| Check | Result |
+| --- | --- |
+| `npm test -- --run app/composables/useDashboardNav.spec.ts` | 15/15, exit 0 |
+| `npm run typecheck` | exit 0 |
+| `npm run lint` | exit 0 |
+
+The primary worktree's shared `node_modules` is read-only to Vite, so the focused test was run in
+the existing writable verifier with the exact deletion-only source applied; typecheck and lint ran
+there as well. No production build, browser E2E, route-size, Lighthouse, Backend/API, Docs, remote,
+or deployment action ran. The separate Docs worktree's owner CV/OG dirt remains untouched.
+
+**Next three actions.**
+
+1. Treat FE5-U5 as closed; do not begin FE5-U6 without separate authorization.
+2. Keep the private Web and Docs branches local-only until the owner authorizes a push, merge, or deploy.
+3. FE5-U6 is final D20-32 recalibration from the completed FE5 baseline only; it has not started.
