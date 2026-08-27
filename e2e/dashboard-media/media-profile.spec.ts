@@ -106,6 +106,17 @@ test.beforeEach(async ({ page }) => {
  * reordered, silently asserting against the wrong picker.
  */
 const portraitSection = (page: Page) => page.locator('[data-portrait-section]')
+const resumeSection = (page: Page) => page.locator('[data-resume-section]')
+
+async function selectResume(page: Page): Promise<void> {
+  await resumeSection(page).locator('[data-picker-open]').click()
+  await page.locator('[role=dialog]').locator(`[data-media-id="${ASSET.resume}"]`).click()
+  await expect(resumeSection(page).locator('[data-picker-filename]')).toHaveText('eslam-cv.pdf')
+}
+
+async function beforeUnloadAllowed(page: Page): Promise<boolean> {
+  return page.evaluate(() => window.dispatchEvent(new Event('beforeunload', { cancelable: true })))
+}
 
 test.describe('the media library', () => {
   test('lists, paginates, searches and filters by kind through the URL', async ({ page }) => {
@@ -421,6 +432,74 @@ test.describe('the About portrait section of /dashboard/profile', () => {
     await card(page, ASSET.portrait).click()
     await expect(page.locator('[data-usage-list]')).toContainText('About portrait')
     await expect(page.locator('[data-delete-start]')).toHaveCount(0)
+  })
+})
+
+test.describe('Profile dirty navigation protection', () => {
+  test('allows clean navigation and guards a portrait-only edit on route leave and browser unload', async ({ page }) => {
+    await setBackendState(page, { portraitAssetId: ASSET.portrait })
+    await signIn(page)
+    await page.goto('/dashboard/profile')
+    await settled(page)
+
+    expect(await beforeUnloadAllowed(page)).toBe(true)
+    await page.locator('a[href="/dashboard/media"]').first().click()
+    await expect(page).toHaveURL(/\/dashboard\/media$/)
+    await page.goto('/dashboard/profile')
+    await settled(page)
+
+    await altInput(page, 'en').fill('Unsaved portrait alt')
+    expect(await beforeUnloadAllowed(page)).toBe(false)
+
+    page.once('dialog', dialog => dialog.dismiss())
+    await page.locator('a[href="/dashboard/media"]').first().click()
+    await expect(page).toHaveURL(/\/dashboard\/profile$/)
+
+    page.once('dialog', dialog => dialog.accept())
+    await page.locator('a[href="/dashboard/media"]').first().click()
+    await expect(page).toHaveURL(/\/dashboard\/media$/)
+  })
+
+  test('guards a résumé-only edit and preserves that guard after a failed résumé save', async ({ page }) => {
+    await signIn(page)
+    await page.goto('/dashboard/profile')
+    await settled(page)
+
+    await selectResume(page)
+    expect(await beforeUnloadAllowed(page)).toBe(false)
+    await setBackendState(page, { failNextPatch: true })
+    await page.locator('[data-resume-save]').click()
+    await expect(page.getByText('The change did not save')).toBeVisible({ timeout: 15_000 })
+    expect(await beforeUnloadAllowed(page)).toBe(false)
+  })
+
+  test('uses one guard for both sections, clears each only after its save, then removes the final guard', async ({ page }) => {
+    await setBackendState(page, { portraitAssetId: ASSET.portrait })
+    await signIn(page)
+    await page.goto('/dashboard/profile')
+    await settled(page)
+
+    await altInput(page, 'en').fill('An English description')
+    await altInput(page, 'ar').fill('وصف بالعربية')
+    await selectResume(page)
+    expect(await beforeUnloadAllowed(page)).toBe(false)
+
+    let confirmations = 0
+    page.once('dialog', async dialog => {
+      confirmations += 1
+      await dialog.dismiss()
+    })
+    await page.locator('a[href="/dashboard/media"]').first().click()
+    await expect(page).toHaveURL(/\/dashboard\/profile$/)
+    expect(confirmations).toBe(1)
+
+    await page.locator('[data-profile-save]').click()
+    await expect(page.locator('[data-profile-saved]')).toBeVisible({ timeout: 15_000 })
+    expect(await beforeUnloadAllowed(page)).toBe(false)
+
+    await page.locator('[data-resume-save]').click()
+    await expect(page.locator('[data-resume-saved]')).toBeVisible({ timeout: 15_000 })
+    expect(await beforeUnloadAllowed(page)).toBe(true)
   })
 })
 

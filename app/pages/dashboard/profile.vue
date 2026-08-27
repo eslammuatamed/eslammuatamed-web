@@ -78,6 +78,7 @@ const resumeSaved = ref(false)
 const errors = computed(() => validatePortraitForm(form.value))
 const dirty = computed(() => isPortraitFormDirty(form.value, initial.value))
 const resumeDirty = computed(() => resumeAssetId.value !== resumeInitial.value)
+const profileDirty = computed(() => dirty.value || resumeDirty.value)
 
 /**
  * Seed one section's edited state and its baseline from the loaded settings.
@@ -227,6 +228,12 @@ async function saveResume(): Promise<void> {
     resumeSaving.value = false
   }
 }
+
+useUnsavedChangesGuard({
+  dirty: profileDirty,
+  bypass: false,
+  message: () => t('dashboard.articles.editor.unsavedWarning')
+})
 </script>
 
 <template>

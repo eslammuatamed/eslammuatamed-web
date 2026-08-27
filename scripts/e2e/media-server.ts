@@ -100,6 +100,7 @@ let mode: MediaMode = 'ok'
 /** The About portrait association and its PER-USAGE alts — what the Profile page writes. */
 let portraitAssetId: string | null = null
 let portraitAlt: Record<string, string | null> = { en: null, ar: null }
+let resumeAssetId: string | null = null
 /** Makes the next settings PATCH fail, to prove a failed save preserves the operator's input. */
 let failNextPatch = false
 /** Makes the next upload fail with a 422, to prove the validation surface is real. */
@@ -218,7 +219,7 @@ function settingsEntity() {
   return {
     id: '00000000-0000-4000-9000-00000000s001',
     profileLinks: [],
-    resumeAssetId: null,
+    resumeAssetId,
     portraitAssetId,
     portrait: asset
       ? {
@@ -258,6 +259,7 @@ const server = http.createServer(async (req, res) => {
     mode = 'ok'
     portraitAssetId = null
     portraitAlt = { en: null, ar: null }
+    resumeAssetId = null
     failNextPatch = false
     failNextUpload = false
     return json(res, 200, { ok: true })
@@ -267,12 +269,14 @@ const server = http.createServer(async (req, res) => {
       mode?: MediaMode
       portraitAssetId?: string | null
       portraitAlt?: Record<string, string | null>
+      resumeAssetId?: string | null
       failNextPatch?: boolean
       failNextUpload?: boolean
     }
     if (body.mode) mode = body.mode
     if (body.portraitAssetId !== undefined) portraitAssetId = body.portraitAssetId
     if (body.portraitAlt) portraitAlt = { ...portraitAlt, ...body.portraitAlt }
+    if (body.resumeAssetId !== undefined) resumeAssetId = body.resumeAssetId
     if (typeof body.failNextPatch === 'boolean') failNextPatch = body.failNextPatch
     if (typeof body.failNextUpload === 'boolean') failNextUpload = body.failNextUpload
     return json(res, 200, { ok: true, mode })
@@ -315,12 +319,13 @@ const server = http.createServer(async (req, res) => {
       }
       const body = JSON.parse((await readBody(req)).toString('utf8') || '{}') as {
         portraitAssetId?: string | null
+        resumeAssetId?: string | null
         translations?: Array<{ locale: string, portraitAlt?: string | null }>
       }
       // `forbidNonWhitelisted`, as the real API enforces it: a payload carrying a read-only field
       // is a 422. Modelled so a Dashboard that echoed the read entity back would FAIL here rather
       // than pass against a permissive fake.
-      const allowed = new Set(['portraitAssetId', 'translations'])
+      const allowed = new Set(['portraitAssetId', 'resumeAssetId', 'translations'])
       const extra = Object.keys(body).filter(key => !allowed.has(key))
       if (extra.length > 0) return problem(res, 422, 'Validation failed', `property ${extra[0]} should not exist`)
 
@@ -332,6 +337,14 @@ const server = http.createServer(async (req, res) => {
           if (target.kind !== 'IMAGE') return problem(res, 422, 'Validation failed', 'portraitAssetId must reference an IMAGE asset')
         }
         portraitAssetId = body.portraitAssetId
+      }
+      if (body.resumeAssetId !== undefined) {
+        if (body.resumeAssetId !== null) {
+          const target = assets.find(a => a.id === body.resumeAssetId)
+          if (!target) return problem(res, 422, 'Validation failed', 'resumeAssetId must reference an existing asset')
+          if (target.kind !== 'PDF') return problem(res, 422, 'Validation failed', 'resumeAssetId must reference a PDF asset')
+        }
+        resumeAssetId = body.resumeAssetId
       }
       for (const entry of body.translations ?? []) {
         // `undefined` means "leave it alone"; `null` is the explicit no-fallback clear.

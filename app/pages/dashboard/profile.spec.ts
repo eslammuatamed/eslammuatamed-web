@@ -1,4 +1,5 @@
 // @vitest-environment nuxt
+import { toValue } from 'vue'
 import { describe, expect, it, vi } from 'vitest'
 import { mockNuxtImport, mountSuspended } from '@nuxt/test-utils/runtime'
 import { flushPromises } from '@vue/test-utils'
@@ -17,8 +18,14 @@ import Profile from './profile.vue'
 
 const holder = vi.hoisted(() => ({
   calls: [] as Array<{ path: string, options: Record<string, unknown> }>,
-  settings: null as unknown
+  settings: null as unknown,
+  failNextPatch: false,
+  guard: null as { dirty: unknown, bypass: unknown, message: () => string } | null
 }))
+
+mockNuxtImport('useUnsavedChangesGuard', () => (options: { dirty: unknown, bypass: unknown, message: () => string }) => {
+  holder.guard = options
+})
 
 const STAMP = '2026-08-01T00:00:00.000Z'
 
@@ -46,6 +53,10 @@ mockNuxtImport('useApi', () => () => (path: string, options: Record<string, unkn
     return Promise.resolve({ data: holder.settings })
   }
   if (path === '/admin/settings' && options.method === 'PATCH') {
+    if (holder.failNextPatch) {
+      holder.failNextPatch = false
+      return Promise.reject(new Error('Save failed'))
+    }
     // The contract says the response is the FULL UPDATED entity, and the page depends on that: each
     // section re-seeds its baseline from it, so a mock that echoed the pre-save settings back would
     // leave Save enabled after a successful save and hide that regression rather than expose it.
@@ -55,6 +66,13 @@ mockNuxtImport('useApi', () => () => (path: string, options: Record<string, unkn
     const merged = { ...(holder.settings as Record<string, unknown>) }
     for (const key of ['resumeAssetId', 'portraitAssetId']) {
       if (key in body) merged[key] = body[key]
+    }
+    if (Array.isArray(body.translations)) {
+      const translations = { ...(merged.translations as Record<string, Record<string, unknown>>) }
+      for (const entry of body.translations as Array<{ locale: string, portraitAlt?: string | null }>) {
+        translations[entry.locale] = { ...translations[entry.locale], portraitAlt: entry.portraitAlt ?? null }
+      }
+      merged.translations = translations
     }
     holder.settings = merged
     return Promise.resolve({ data: merged })
@@ -100,10 +118,17 @@ function trapSettings(enAlt: string | null = null, arAlt: string | null = null, 
 async function mount(settings: unknown) {
   holder.settings = settings
   holder.calls = []
+  holder.failNextPatch = false
+  holder.guard = null
   const wrapper = await mountSuspended(Profile)
   await flushPromises()
   await flushPromises()
   return wrapper
+}
+
+function guardIsDirty(): boolean {
+  expect(holder.guard).not.toBeNull()
+  return toValue(holder.guard!.dirty as never)
 }
 
 const altInput = (wrapper: Awaited<ReturnType<typeof mount>>, locale: 'en' | 'ar') =>
@@ -407,5 +432,54 @@ describe('the two sections do not destroy each other\'s unsaved work', () => {
         { locale: 'ar', portraitAlt: 'وصف بالعربية' }
       ]
     }])
+  })
+})
+
+describe('Profile dirty navigation protection', () => {
+  it('starts clean, becomes dirty for either section, and keeps one combined guard for both', async () => {
+    const wrapper = await mount(trapSettings(null, null, null))
+
+    expect(guardIsDirty()).toBe(false)
+
+    await altInput(wrapper, 'en').setValue('Unsaved portrait alt')
+    expect(guardIsDirty()).toBe(true)
+
+    await altInput(wrapper, 'en').setValue('')
+    await selectResume(wrapper, 'resume-1')
+    expect(guardIsDirty()).toBe(true)
+
+    await altInput(wrapper, 'en').setValue('Unsaved portrait alt')
+    expect(guardIsDirty()).toBe(true)
+    expect(holder.guard?.message()).toBe('You have unsaved changes. Leave this page and lose them?')
+  })
+
+  it('clears only the successfully saved section from the combined guard', async () => {
+    const wrapper = await mount(trapSettings(null, null, null))
+    await altInput(wrapper, 'en').setValue('An English description')
+    await altInput(wrapper, 'ar').setValue('وصف بالعربية')
+    await selectResume(wrapper, 'resume-1')
+
+    await wrapper.find('[data-profile-save]').trigger('click')
+    await flushPromises()
+    expect(guardIsDirty()).toBe(true)
+
+    await saveResume(wrapper)
+    expect(guardIsDirty()).toBe(false)
+  })
+
+  it('keeps the guard active when either section save fails', async () => {
+    const portrait = await mount(trapSettings(null, null, null))
+    await altInput(portrait, 'en').setValue('An English description')
+    await altInput(portrait, 'ar').setValue('وصف بالعربية')
+    holder.failNextPatch = true
+    await portrait.find('[data-profile-save]').trigger('click')
+    await flushPromises()
+    expect(guardIsDirty()).toBe(true)
+
+    const resume = await mount(trapSettings(null, null, null))
+    await selectResume(resume, 'resume-1')
+    holder.failNextPatch = true
+    await saveResume(resume)
+    expect(guardIsDirty()).toBe(true)
   })
 })
