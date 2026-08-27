@@ -173,12 +173,15 @@ let mode: Mode = 'ok'
 let delayMs = 0
 /** The body of the last PATCH, for wire-level assertions through the control plane. */
 let lastPatchBody: Record<string, unknown> | null = null
+/** A one-shot RFC 7807 validation response, used only to prove client-side error routing. */
+let nextWriteErrors: Array<{ field: string, message: string }> | null = null
 
 function reset(): void {
   projects = seedProjects()
   mode = 'ok'
   delayMs = 0
   lastPatchBody = null
+  nextWriteErrors = null
 }
 
 const TOKEN = 'e2e-access-token'
@@ -289,6 +292,7 @@ const server = http.createServer((req, res) => {
       const state = await readBody(req)
       if (state.mode !== undefined) mode = state.mode as Mode
       if (state.delayMs !== undefined) delayMs = Number(state.delayMs)
+      if (Array.isArray(state.nextWriteErrors)) nextWriteErrors = state.nextWriteErrors
       json(res, 204, null)
       return
     }
@@ -392,6 +396,18 @@ const server = http.createServer((req, res) => {
       if (req.method === 'PATCH') {
         const body = await readBody(req)
         lastPatchBody = body
+        if (nextWriteErrors) {
+          const errors = nextWriteErrors
+          nextWriteErrors = null
+          json(res, 422, {
+            type: '/problems/validation',
+            title: 'Validation failed',
+            status: 422,
+            detail: `${errors.length} field(s) failed validation.`,
+            errors
+          })
+          return
+        }
         const updated = applyPatch(id, body)
         if (!updated) {
           json(res, 404, { title: 'Not found' })

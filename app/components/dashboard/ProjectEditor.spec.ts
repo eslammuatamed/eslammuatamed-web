@@ -202,6 +202,17 @@ describe('EN and AR are both editable, and neither borrows from the other', () =
     expect(wrapper.find('[data-locale-state="ar:empty"]').exists()).toBe(true)
   })
 
+  it('keeps each translation field mounted with its own content direction', async () => {
+    const wrapper = await mount('p1', {
+      project: project({ translations: { en: translation(), ar: translation({ title: 'منصة المحتوى', slug: 'mnsah' }) } })
+    })
+    expect(wrapper.find('[data-editor-tabs]').exists()).toBe(true)
+    expect(wrapper.find('[data-editor-panel="en"]').attributes('dir')).toBe('ltr')
+    expect(wrapper.find('[data-editor-panel="ar"]').attributes('dir')).toBe('rtl')
+    expect(field(wrapper, 'en.title').attributes('dir')).toBe('ltr')
+    expect(field(wrapper, 'ar.title').attributes('dir')).toBe('rtl')
+  })
+
   it('sends BOTH languages once the second is written, not only the edited one', async () => {
     const wrapper = await mount('p1', { project: project({ translations: { en: translation() } }) })
     await fillLocale(wrapper, 'ar', 'عربي')
@@ -465,9 +476,22 @@ describe('editing', () => {
     expect(lastWrite()?.path).toBe('/admin/projects/p1')
   })
 
-  it('offers no save while nothing has changed', async () => {
+  it('uses the persistent shared actions even while the hydrated editor is clean', async () => {
     const wrapper = await mount('p1')
-    expect(wrapper.find('[data-project-save]').attributes('disabled')).toBeDefined()
+    expect(wrapper.find('[data-editor-actions]').exists()).toBe(true)
+    expect(wrapper.find('[data-editor-save]').exists()).toBe(true)
+    expect(wrapper.find('[data-editor-save-state="idle"]').exists()).toBe(true)
+  })
+
+  it('owns save and delete presentation through the shared entity actions component', () => {
+    const source = readFileSync(resolve(process.cwd(), 'app/components/dashboard/ProjectEditor.vue'), 'utf8')
+    expect(source).toContain('<DashboardEntityFormActions')
+  })
+
+  it('uses the shared translation tabs instead of rendering concurrent locale panels', () => {
+    const source = readFileSync(resolve(process.cwd(), 'app/components/dashboard/ProjectEditor.vue'), 'utf8')
+    expect(source).toContain('<DashboardTranslationTabs')
+    expect(source).not.toContain('v-for="contentLocale in PROJECT_LOCALES"')
   })
 })
 
@@ -476,7 +500,6 @@ describe('the API\'s own answer reaches the screen (RFC 7807)', () => {
     const wrapper = await mount('p1', {
       writeStatus: 422,
       fieldErrors: [
-        { field: 'translations.0.slug', message: 'slug already exists' },
         { field: 'liveUrl', message: 'must be a URL' }
       ]
     })
@@ -486,8 +509,23 @@ describe('the API\'s own answer reaches the screen (RFC 7807)', () => {
     const alert = wrapper.find('[data-save-error]')
     expect(alert.exists()).toBe(true)
     expect(alert.text()).toContain('The API said no.')
-    expect(wrapper.find('[data-save-field-error="translations.0.slug"]').text()).toContain('slug already exists')
     expect(wrapper.find('[data-save-field-error="liveUrl"]').text()).toContain('must be a URL')
+  })
+
+  it('routes an indexed translation 422 to the sent Arabic locale, field, and tab', async () => {
+    const wrapper = await mount('p1', {
+      project: project({ translations: { en: translation(), ar: translation({ title: 'منصة المحتوى', slug: 'mnsah' }) } }),
+      writeStatus: 422,
+      fieldErrors: [{ field: 'translations[1].slug', message: 'slug already exists' }]
+    })
+    await field(wrapper, 'en.summary').setValue('Moved')
+    await save(wrapper)
+
+    expect(field(wrapper, 'ar.slug').attributes('aria-invalid')).toBe('true')
+    expect(field(wrapper, 'en.slug').attributes('aria-invalid')).not.toBe('true')
+    expect(wrapper.find('[data-editor-tab-invalid="ar"]').exists()).toBe(true)
+    expect(wrapper.find('[data-editor-error-summary]').text()).toContain('slug already exists')
+    expect(wrapper.find('[data-save-error]').exists()).toBe(false)
   })
 
   it('keeps the operator\'s edits after a rejected save', async () => {
@@ -501,7 +539,7 @@ describe('the API\'s own answer reaches the screen (RFC 7807)', () => {
   it('shows a FORBIDDEN surface when the read is refused, not an empty form', async () => {
     const wrapper = await mount('p1', { readStatus: 403 })
     expect(wrapper.find('[data-project-forbidden]').exists()).toBe(true)
-    expect(wrapper.find('[data-project-save]').exists()).toBe(false)
+    expect(wrapper.find('[data-editor-save]').exists()).toBe(false)
   })
 
   it('says a project does not exist rather than offering a blank editor', async () => {
@@ -644,17 +682,19 @@ describe('the shared SEO panel is wired to the project form', () => {
     expect(seoInput(wrapper, 'en', 'canonicalUrl').attributes('dir')).toBe('ltr')
   })
 
-  it('an SEO edit opens the save affordance — the form registers as changed', async () => {
+  it('an SEO edit updates the persistent actions to unsaved — the form registers as changed', async () => {
     const wrapper = await mount('p1', { project: enTranslationWith({}) })
-    expect(wrapper.find('[data-project-save]').attributes('disabled')).toBeDefined()
+    expect(wrapper.find('[data-editor-actions]').exists()).toBe(true)
+    expect(wrapper.find('[data-editor-save-state="idle"]').exists()).toBe(true)
     await seoInput(wrapper, 'en', 'metaTitle').setValue('Dirtying the form')
     await flushPromises()
-    expect(wrapper.find('[data-project-save]').attributes('disabled')).toBeUndefined()
+    expect(wrapper.find('[data-editor-save-state="unsaved"]').exists()).toBe(true)
   })
 
-  it('carries no Articles presentation anywhere in the rendered editor', async () => {
+  it('uses the shared translation tabs without carrying Articles presentation', async () => {
     const wrapper = await mount('p1')
-    expect(wrapper.find('[data-editor-meta-title], [data-editor-slug], [data-editor-tabs]').exists()).toBe(false)
+    expect(wrapper.find('[data-editor-meta-title], [data-editor-slug]').exists()).toBe(false)
+    expect(wrapper.find('[data-editor-tabs]').exists()).toBe(true)
     expect(wrapper.html()).not.toContain('dashboard.articles.')
   })
 })

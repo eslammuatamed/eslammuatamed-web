@@ -37,7 +37,11 @@ export async function resetBackend(page: Page): Promise<void> {
  */
 export async function setBackendState(
   page: Page,
-  state: { mode?: 'ok' | 'empty' | 'error' | 'forbidden', delayMs?: number }
+  state: {
+    mode?: 'ok' | 'empty' | 'error' | 'forbidden'
+    delayMs?: number
+    nextWriteErrors?: Array<{ field: string, message: string }>
+  }
 ): Promise<void> {
   const res = await page.request.post(`${CONTROL_BASE}/__e2e/state`, { data: state })
   expect(res.ok(), 'backend state change must succeed').toBe(true)
@@ -69,7 +73,7 @@ export async function listSettled(page: Page): Promise<void> {
 
 /** The editor has reached a form or an unreadable surface, and nothing is still loading. */
 export async function editorSettled(page: Page): Promise<void> {
-  await page.locator('[data-project-save], [data-project-forbidden], [data-project-not-found]')
+  await page.locator('[data-editor-save], [data-project-forbidden], [data-project-not-found]')
     .first().waitFor({ timeout: 15_000 })
   await expect(page.locator(BUSY)).toHaveCount(0, { timeout: 15_000 })
 }

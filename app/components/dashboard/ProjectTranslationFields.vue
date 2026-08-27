@@ -33,6 +33,8 @@ const props = defineProps<{
   /** Validation messages appear only after a save has been ATTEMPTED, not while the operator types. */
   showErrors?: boolean
   missingFields: readonly RequiredTranslationField[]
+  /** API 422 errors already resolved from a sent `translations[N]` path into form field paths. */
+  serverFieldErrors?: Readonly<Record<string, string>>
 }>()
 
 const emit = defineEmits<{ 'update:modelValue': [value: ProjectTranslationForm] }>()
@@ -55,6 +57,9 @@ function setField(field: keyof ProjectTranslationForm, value: string | null): vo
 const isMissing = (field: RequiredTranslationField): boolean =>
   props.showErrors === true && props.missingFields.includes(field)
 
+const serverError = (field: string): string | undefined =>
+  props.serverFieldErrors?.[`translations.${props.locale}.${field}`]
+
 const fieldId = (field: string): string => `project-${props.locale}-${field}`
 </script>
 
@@ -63,9 +68,10 @@ const fieldId = (field: string): string => `project-${props.locale}-${field}`
     <UFormField
       v-for="field in SHORT_FIELDS"
       :key="field"
+      :name="`translations.${locale}.${field}`"
       :label="t(`dashboard.projects.field.${field}`)"
       required
-      :error="isMissing(field) ? t('dashboard.projects.editor.localePartial') : undefined"
+      :error="serverError(field) ?? (isMissing(field) ? t('dashboard.projects.editor.localePartial') : undefined)"
     >
       <UInput
         :id="fieldId(field)"
@@ -81,10 +87,11 @@ const fieldId = (field: string): string => `project-${props.locale}-${field}`
     <UFormField
       v-for="field in LONG_FIELDS"
       :key="field"
+      :name="`translations.${locale}.${field}`"
       :label="t(`dashboard.projects.field.${field}`)"
       required
       :help="field === 'summary' ? undefined : t('dashboard.projects.editor.markdownHint')"
-      :error="isMissing(field) ? t('dashboard.projects.editor.localePartial') : undefined"
+      :error="serverError(field) ?? (isMissing(field) ? t('dashboard.projects.editor.localePartial') : undefined)"
     >
       <UTextarea
         :id="fieldId(field)"
@@ -111,6 +118,9 @@ const fieldId = (field: string): string => `project-${props.locale}-${field}`
       :content-dir="locale === 'ar' ? 'rtl' : 'ltr'"
       :disabled="disabled"
       class="mt-2"
+      :meta-title-error="serverError('metaTitle')"
+      :meta-description-error="serverError('metaDescription')"
+      :canonical-url-error="serverError('canonicalUrl')"
       @update:meta-title="setField('metaTitle', $event)"
       @update:meta-description="setField('metaDescription', $event)"
       @update:canonical-url="setField('canonicalUrl', $event)"

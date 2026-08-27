@@ -38,6 +38,20 @@ test.beforeEach(async ({ page }) => {
 const seoInput = (page: import('@playwright/test').Page, locale: 'en' | 'ar', field: string) =>
   page.locator(`[data-locale-section="${locale}"] [data-seo-field="${field}"]`)
 
+const tab = (page: import('@playwright/test').Page, locale: 'en' | 'ar') =>
+  page.locator('[data-editor-tabs]').getByRole('tab').nth(locale === 'en' ? 0 : 1)
+
+const REQUIRED_PROJECT_FIELDS = [
+  'title', 'slug', 'summary', 'overview', 'businessProblem', 'solution',
+  'role', 'architecture', 'challenges', 'features', 'lessonsLearned'
+] as const
+
+async function fillTranslation(page: import('@playwright/test').Page, locale: 'en' | 'ar', prefix: string): Promise<void> {
+  for (const field of REQUIRED_PROJECT_FIELDS) {
+    await page.locator(`[data-project-field="${locale}.${field}"]`).fill(`${prefix} ${field}`)
+  }
+}
+
 async function patchBodyFor(page: import('@playwright/test').Page, action: () => Promise<void>) {
   const sent = page.waitForRequest(req =>
     req.url().includes('/admin/projects/') && req.method() === 'PATCH'
@@ -78,8 +92,34 @@ test.describe('collection and editor entry', () => {
     await page.goto('/dashboard/projects/new')
     await editorSettled(page)
 
-    await expect(page.locator('[data-project-save]')).toBeVisible()
+    await expect(page.locator('[data-editor-save]')).toBeVisible()
     await expect(page.locator('[data-project-forbidden], [data-project-not-found]')).toHaveCount(0)
+  })
+
+  test('create keeps EN/AR tab state local and POSTs the established payload', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL!)
+    await page.goto('/dashboard/projects/new')
+    await editorSettled(page)
+
+    await expect(tab(page, 'en')).toHaveAttribute('aria-selected', 'true')
+    await fillTranslation(page, 'en', 'New')
+    await tab(page, 'ar').click()
+    await page.locator('[data-project-field="ar.title"]').fill('مسودة عربية')
+    await tab(page, 'en').click()
+    await expect(page.locator('[data-project-field="en.title"]')).toHaveValue('New title')
+    await tab(page, 'ar').click()
+    await expect(page.locator('[data-project-field="ar.title"]')).toHaveValue('مسودة عربية')
+    await page.locator('[data-project-field="ar.title"]').fill('')
+    await tab(page, 'en').click()
+
+    const sent = page.waitForRequest(req =>
+      req.url().endsWith('/admin/projects') && req.method() === 'POST'
+    )
+    await page.locator('[data-editor-save]').click()
+    const body = (await sent).postDataJSON() as { isPublished: boolean, translations: Array<{ locale: string, title: string }> }
+    expect(body.isPublished).toBe(false)
+    expect(body.translations).toContainEqual(expect.objectContaining({ locale: 'en', title: 'New title' }))
+    await page.waitForURL('**/dashboard/projects/00000000-0000-4000-a000-0000000000aa')
   })
 })
 
@@ -90,10 +130,10 @@ test.describe('request states, made observable by delayMs', () => {
     await page.goto(`/dashboard/projects/${PRJ.main}`)
 
     await expect(page.locator('[aria-busy=true]').first()).toBeVisible()
-    await expect(page.locator('[data-project-save]')).toHaveCount(0)
+    await expect(page.locator('[data-editor-save]')).toHaveCount(0)
 
     await editorSettled(page)
-    await expect(page.locator('[data-project-save]')).toBeVisible()
+    await expect(page.locator('[data-editor-save]')).toBeVisible()
     await expect(seoInput(page, 'en', 'metaTitle')).toHaveValue('Held EN title')
   })
 
@@ -192,18 +232,112 @@ test.describe('the technology picker', () => {
     await page.goto(`/dashboard/projects/${PRJ.main}`)
     await editorSettled(page)
 
-    // A clean form's save is DISABLED (nothing to send), so dirty the form through a NON-picker
-    // field: the invariant under test is that the untouched picker still travels intact.
+    // Dirty the form through a NON-picker field: the invariant under test is that the untouched
+    // picker still travels intact.
     await page.locator('[data-locale-section="en"] textarea >> nth=0').fill('Summary moved; picker untouched.')
 
     const body = await patchBodyFor(page, async () => {
-      await page.locator('[data-project-save]').click()
+      await page.locator('[data-editor-save]').click()
     })
     expect(body.technologyIds).toEqual([SKILL.typescript])
 
     await page.reload()
     await editorSettled(page)
     expect(await selectedTechnologyIds(page)).toEqual([SKILL.typescript])
+  })
+})
+
+test.describe('shared translation tabs and unsaved navigation', () => {
+  test('preserves independent English and Arabic edits while switching tabs', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL!)
+    await page.goto(`/dashboard/projects/${PRJ.main}`)
+    await editorSettled(page)
+
+    await tab(page, 'en').click()
+    await page.locator('[data-project-field="en.title"]').fill('English edit in flight')
+    await tab(page, 'ar').click()
+    await page.locator('[data-project-field="ar.title"]').fill('تعديل عربي')
+    await tab(page, 'en').click()
+    await expect(page.locator('[data-project-field="en.title"]')).toHaveValue('English edit in flight')
+    await tab(page, 'ar').click()
+    await expect(page.locator('[data-project-field="ar.title"]')).toHaveValue('تعديل عربي')
+  })
+
+  test('seeds the active tab from Arabic dashboard chrome and keeps field directions per locale', async ({ page, baseURL }) => {
+    await signIn(page, 'ar', baseURL!)
+    await page.goto(`/dashboard/projects/${PRJ.main}`)
+    await editorSettled(page)
+
+    await expect(tab(page, 'ar')).toHaveAttribute('aria-selected', 'true')
+    await expect(page.locator('[data-editor-panel="en"]')).toHaveAttribute('dir', 'ltr')
+    await expect(page.locator('[data-editor-panel="ar"]')).toHaveAttribute('dir', 'rtl')
+    await expect(page.locator('[data-project-field="ar.title"]')).toHaveAttribute('dir', 'rtl')
+  })
+
+  test('routes an indexed 422 to the Arabic tab and preserves the unsaved edit', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL!)
+    await page.goto(`/dashboard/projects/${PRJ.main}`)
+    await editorSettled(page)
+
+    await page.locator('[data-project-field="en.summary"]').fill('Still here after the rejected save')
+    await setBackendState(page, {
+      nextWriteErrors: [{ field: 'translations[1].slug', message: 'Arabic slug is already taken.' }]
+    })
+    await page.locator('[data-editor-save]').click()
+
+    await expect(tab(page, 'ar')).toHaveAttribute('aria-selected', 'true')
+    await expect(page.locator('[data-editor-tab-invalid="ar"]')).toBeVisible()
+    await expect(page.locator('[data-project-field="ar.slug"]')).toHaveAttribute('aria-invalid', 'true')
+    await expect(page.locator('[data-editor-error-summary]')).toContainText('Arabic slug is already taken.')
+    await expect(page.locator('[data-project-field="en.summary"]')).toHaveValue('Still here after the rejected save')
+    await expect(page.locator('[data-editor-save-state="unsaved"]')).toBeVisible()
+  })
+
+  test('routes an indexed 422 to the English tab', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL!)
+    await page.goto(`/dashboard/projects/${PRJ.main}`)
+    await editorSettled(page)
+
+    await page.locator('[data-project-field="en.summary"]').fill('Rejected English save')
+    await setBackendState(page, {
+      nextWriteErrors: [{ field: 'translations[0].slug', message: 'English slug is already taken.' }]
+    })
+    await page.locator('[data-editor-save]').click()
+
+    await expect(tab(page, 'en')).toHaveAttribute('aria-selected', 'true')
+    await expect(page.locator('[data-editor-tab-invalid="en"]')).toBeVisible()
+    await expect(page.locator('[data-project-field="en.slug"]')).toHaveAttribute('aria-invalid', 'true')
+  })
+
+  test('keeps a non-localized validation error in the established form-level surface', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL!)
+    await page.goto(`/dashboard/projects/${PRJ.main}`)
+    await editorSettled(page)
+
+    await page.locator('[data-project-field="en.summary"]').fill('Rejected non-locale save')
+    await setBackendState(page, {
+      nextWriteErrors: [{ field: 'liveUrl', message: 'Live URL must be absolute.' }]
+    })
+    await page.locator('[data-editor-save]').click()
+
+    await expect(page.locator('[data-save-error]')).toBeVisible()
+    await expect(page.locator('[data-save-field-error="liveUrl"]')).toContainText('Live URL must be absolute.')
+  })
+
+  test('challenges navigation away from dirty work and honours the operator response', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL!)
+    await page.goto(`/dashboard/projects/${PRJ.main}`)
+    await editorSettled(page)
+    await page.locator('[data-project-field="en.summary"]').fill('Something not yet saved')
+
+    page.once('dialog', dialog => void dialog.dismiss())
+    await page.locator('[data-editor-back]').click()
+    await expect(page).toHaveURL(new RegExp(`/dashboard/projects/${PRJ.main}$`))
+    await expect(page.locator('[data-project-field="en.summary"]')).toHaveValue('Something not yet saved')
+
+    page.once('dialog', dialog => void dialog.accept())
+    await page.locator('[data-editor-back]').click()
+    await page.waitForURL('**/dashboard/projects')
   })
 })
 
@@ -231,7 +365,7 @@ test.describe('the shared SEO panel inside Projects', () => {
 
     await seoInput(page, 'en', 'metaTitle').fill('')
     const body = await patchBodyFor(page, async () => {
-      await page.locator('[data-project-save]').click()
+      await page.locator('[data-editor-save]').click()
     })
 
     const en = body.translations.find(entry => entry.locale === 'en')
@@ -250,7 +384,7 @@ test.describe('the shared SEO panel inside Projects', () => {
     const body = await patchBodyFor(page, async () => {
       // An unrelated edit dirties the form; SEO stays untouched.
       await page.locator('[data-locale-section="en"] textarea >> nth=0').fill('Rewritten summary.')
-      await page.locator('[data-project-save]').click()
+      await page.locator('[data-editor-save]').click()
     })
 
     const en = body.translations.find(entry => entry.locale === 'en')
@@ -274,7 +408,7 @@ test.describe('the shared SEO panel inside Projects', () => {
     await enPanel.locator('[data-picker-clear]').click()
 
     const body = await patchBodyFor(page, async () => {
-      await page.locator('[data-project-save]').click()
+      await page.locator('[data-editor-save]').click()
     })
     const en = body.translations.find(entry => entry.locale === 'en')
     expect(en).toHaveProperty('ogImageId', null)
@@ -293,7 +427,7 @@ test.describe('the shared SEO panel inside Projects', () => {
 
     await seoInput(page, 'ar', 'canonicalUrl').fill('https://held.example.com/ar-clear')
     const body = await patchBodyFor(page, async () => {
-      await page.locator('[data-project-save]').click()
+      await page.locator('[data-editor-save]').click()
     })
     const ar = body.translations.find(entry => entry.locale === 'ar')
     expect(ar).toMatchObject({ canonicalUrl: 'https://held.example.com/ar-clear' })
@@ -307,14 +441,14 @@ test.describe('the shared SEO panel inside Projects', () => {
     await signIn(page, 'en', baseURL!)
     await page.goto(`/dashboard/projects/${PRJ.main}`)
     await editorSettled(page)
-    await expect(page.locator('[data-project-save]')).toBeDisabled()
+    await expect(page.locator('[data-editor-save-state="idle"]')).toHaveCount(1)
 
     await seoInput(page, 'en', 'metaDescription').fill('Fresh description')
-    await expect(page.locator('[data-project-save]')).toBeEnabled()
+    await expect(page.locator('[data-editor-save-state="unsaved"]')).toBeVisible()
 
     await saveAndSettle(page)
     // The response re-seeds the form, so the affordance rests again — saved, not dirty.
-    await expect(page.locator('[data-project-save]')).toBeDisabled()
+    await expect(page.locator('[data-editor-save-state="saved"]')).toBeVisible()
   })
 })
 
@@ -324,7 +458,7 @@ async function saveAndSettle(page: import('@playwright/test').Page): Promise<voi
   const sent = page.waitForRequest(req =>
     req.url().includes('/admin/projects/') && req.method() === 'PATCH'
   )
-  await page.locator('[data-project-save]').click()
+  await page.locator('[data-editor-save]').click()
   await sent
   await editorSettled(page)
 }
