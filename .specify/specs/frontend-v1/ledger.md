@@ -5016,3 +5016,44 @@ mechanical reuse of the established Dashboard guard. Nothing was pushed or deplo
 **FE5-U1 COMPLETE.** The next unit is **FE5-U2 — Profile dirty-navigation protection**. It is
 recorded as next work only; no FE5-U2 source, test, budget, Backend/API, deployment, or remote
 action was started by this administrative closure.
+
+---
+
+## FE5-U3 — Dashboard collection request-state coherence · COMPLETE · 2026-08-27
+
+Starting committed Web HEAD: `d8ef7d9b734f2bb556993e7fd938334c6cdf71cc`.
+
+Implementation commit **`d6e6586fc508ea4292fb42aded814a867d4e17f9`** brings the Messages and
+Projects collections onto the existing Articles request-state contract. Each surface derives
+initial pending, refreshing, no-data failure, stale-data failure, and empty conditions through
+`useRequestState`: first load remains a skeleton; a later page/filter refresh overlays the retained
+rows; and a failed refresh retains those rows with a compact localized retry. The existing
+action-local `busyId` mutation behavior in Messages is preserved. No ProjectEditor, Profile,
+Overview, production Backend/API contract, route topology, or budget changed. The only server edit
+is a fixture-only Dashboard test-control delay to make the Messages refresh state observable.
+
+### Verification
+
+| Check | Result |
+| --- | --- |
+| Focused Projects + Messages + locale-parity units | 48/48, exit 0 — initial/loading/error/empty, retained refresh data, stale retry, and EN/AR key parity |
+| `npm run typecheck` | exit 0 |
+| `npm run typecheck:e2e` | exit 0 |
+| `npm run lint` | exit 0 |
+| Fresh verifier production build | exit 0 (required for the focused production browser lanes; no route-size measurement required by this unit) |
+| `npx playwright test --project=dashboard-projects --grep 'filter refresh preserves held rows'` | 1/1, exit 0 — filter refresh retained rows, stale error retained rows, retry recovered, 380px overflow ≤ 1px |
+| `npx playwright test --project=dashboard --grep 'page refresh keeps the current list'` | 1/1, exit 0 — page refresh retained messages, stale retry recovered, detail opened, 380px overflow ≤ 1px |
+| Projects negative control | deliberately treated refresh as initial pending; focused retained-row unit failed as expected |
+| Messages negative control | deliberately treated refresh as initial pending; focused retained-row browser test failed as expected |
+
+Both controls were reverted byte-identically. Final committed SHA-256 values are
+`73a3fb17e339dbd0d64a5410f20166fed0612708ec6012cd55c4d709bc824844` for the Projects page and
+`0e63dbe1bd51d1366bd543931209fd81b9c745e0d72c2c0709ea14313513100a` for the Messages page; each
+matches the committed source blob. No Docs decision was required, no private Docs file changed, and
+nothing was pushed or deployed.
+
+**Next three actions.**
+
+1. Treat FE5-U3 as closed; do not begin FE5-U4 without separate authorization.
+2. Keep the private Web and Docs branches local-only until the owner authorizes a push, merge, or deploy.
+3. Begin FE5-U4 — Project editor coherence — only from a clean committed checkpoint and with fresh scoped verification.
