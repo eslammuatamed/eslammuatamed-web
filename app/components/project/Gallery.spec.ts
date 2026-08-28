@@ -29,10 +29,38 @@ function item(overrides: Partial<ProjectGalleryItem['mediaAsset']> = {}, rest: P
   } as ProjectGalleryItem
 }
 
+// Matches Nuxt Image's offending server output. If a future edit restores NuxtImg at this render site,
+// the native-image assertion below fails against the actual component boundary rather than a source scan.
+const nuxtImgHandlerStub = {
+  template: '<img :src="src" :srcset="srcset" :sizes="sizes" :width="width" :height="height" :alt="alt" :loading="loading" :decoding="decoding" data-nuxt-img onerror="this.setAttribute(\'data-error\', 1)">',
+  props: ['src', 'srcset', 'sizes', 'width', 'height', 'alt', 'loading', 'decoding']
+}
+
 const mount = (items: ProjectGalleryItem[]) =>
-  mountSuspended(ProjectGallery, { props: { items, heading: 'Gallery' } })
+  mountSuspended(ProjectGallery, {
+    props: { items, heading: 'Gallery' },
+    global: { stubs: { NuxtImg: nuxtImgHandlerStub } }
+  })
 
 describe('ProjectGallery', () => {
+  it('renders a native image without Nuxt Image’s inline error handler', async () => {
+    const wrapper = await mount([item()])
+    const img = wrapper.find('img')
+
+    expect(img.attributes('onerror')).toBeUndefined()
+    expect(img.attributes('data-nuxt-img')).toBeUndefined()
+    expect(img.attributes('src')).toBe('https://media.example.com/1920.webp')
+    expect(img.attributes('srcset')).toBe(
+      'https://media.example.com/640.webp 640w, https://media.example.com/1280.webp 1280w'
+    )
+    expect(img.attributes('sizes')).toBe('(max-width: 767px) 100vw, (max-width: 1023px) 768px, 1024px')
+    expect(img.attributes('width')).toBe('2400')
+    expect(img.attributes('height')).toBe('1350')
+    expect(img.attributes('alt')).toBe('A dashboard overview')
+    expect(img.attributes('loading')).toBe('lazy')
+    expect(img.attributes('decoding')).toBe('async')
+  })
+
   it('renders one figure per item as a labelled section', async () => {
     const wrapper = await mount([item(), item({}, { mediaAssetId: 'asset-2', order: 1 })])
 
