@@ -5135,3 +5135,43 @@ or deployment action ran. The separate Docs worktree's owner CV/OG dirt remains 
 1. Treat FE5-U5 as closed; do not begin FE5-U6 without separate authorization.
 2. Keep the private Web and Docs branches local-only until the owner authorizes a push, merge, or deploy.
 3. FE5-U6 is final D20-32 recalibration from the completed FE5 baseline only; it has not started.
+
+---
+
+## PR #75 — CSP Lighthouse remediation · COMPLETE · 2026-08-29
+
+Starting committed Web HEAD: `975f8aeecf39d952f78f83f33458b37a40b87462`.
+
+Implementation commit **`b1ee6e011ab52375e36b637af074ae7bb20b6e56`** replaces `NuxtImg` with native responsive images at the only two
+proven public render sites: the optional testimonial avatar in `QuoteBlock.vue` and project-gallery
+media in `Gallery.vue`. This removes Nuxt Image's server-rendered inline `onerror` handler while
+preserving the exact URL, `srcset`, responsive `sizes`, dimensions, alternate text, lazy loading,
+async decoding where it previously existed, classes, blurhash background, and layout. Gallery's
+native media-query `sizes` strings are the exact expansion Nuxt Image 2.1.0 previously produced from
+its shorthand. No CSP policy, image source policy, budget, Backend/API, database, R2, route, or
+deployment configuration changed.
+
+### Verification
+
+| Check | Result |
+| --- | --- |
+| Focused QuoteBlock + Gallery units | 28/28, exit 0 |
+| Negative control | temporarily restoring `NuxtImg` made the discriminating avatar assertion fail on the stubbed inline `onerror`; restored and byte-compared source |
+| `npm run typecheck` | exit 0 |
+| `npm run lint` | exit 0 |
+| Production build | exit 0 with the standard production public-site/API environment |
+| Built SSR HTML | `/`, `/ar`, `/projects/content-platform-api`, and `/ar/projects/content-platform-api` contain no inline event attributes; the two affected image surfaces remain semantically equivalent |
+| CSP header | strict policy retained: `script-src-attr 'none'`; no `unsafe-inline` or `unsafe-eval` added to `script-src` |
+| Focused Lighthouse desktop | 3 HTTP/2 runs each for the four affected public routes; all configured medians passed; Best Practices and `errors-in-console` were 100/clean |
+| Focused Lighthouse mobile | 3 HTTP/2 runs each for the same four routes; all configured medians passed; Best Practices and `errors-in-console` were 100/clean |
+
+The independent `/ar/about` LCP investigation remains open. Existing browser-E2E infrastructure
+blockers and the frozen Messages cap remain open. FE5-U6 and FE5-U7 were not started. The separate
+Docs worktree's pre-existing owner dirt was not touched. The normal campaign branch push is authorized
+for this PR-only remediation; it does not authorize merging or deployment.
+
+**Next three actions.**
+
+1. Keep PR #75 unmerged while its normal remote checks complete.
+2. Resume the independent `/ar/about` LCP investigation separately; do not fold it into this CSP fix.
+3. Leave FE5-U6 and FE5-U7 untouched pending explicit authorization.
