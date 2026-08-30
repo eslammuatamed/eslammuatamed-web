@@ -60,9 +60,9 @@ export async function signIn(page: Page, locale: 'en' | 'ar', baseURL: string): 
   await page.waitForURL('**/dashboard')
 }
 
-/** The sidebar/drawer link to Articles — structural, not copy-based. */
+/** The desktop sidebar's navigation-landmark link to Articles — structural, not copy-based. */
 export function articlesNavLink(page: Page) {
-  return page.locator('a[href="/dashboard/articles"]')
+  return page.locator('aside').getByRole('navigation').locator('a[href="/dashboard/articles"]')
 }
 
 export const rows = (page: Page) => page.locator('[data-article-row]')

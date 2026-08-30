@@ -81,7 +81,7 @@ test.describe('Shell, navigation and list presentations', () => {
     await signIn(page)
     await page.goto('/dashboard/messages')
     await listSettled(page)
-    const link = messagesNavLink(page).first()
+    const link = messagesNavLink(page)
     const active = await link.evaluate(el =>
       el.getAttribute('aria-current') ?? (el.className.includes('active') ? 'page' : null))
     expect(active, 'the current destination must be programmatically exposed').not.toBeNull()
@@ -111,10 +111,10 @@ test.describe('Shell, navigation and list presentations', () => {
     await signIn(page)
     await page.goto('/dashboard/messages')
     await listSettled(page)
-    // The sidebar link exists in the DOM at every width but is hidden below `lg`, so the assertion
-    // must be scoped to the DRAWER — otherwise it passes against the hidden desktop sidebar.
+    // The sidebar link exists in the DOM at every width but is hidden below `lg`, so assert against
+    // the sidebar navigation landmark rather than the visible Overview action with the same route.
     await expect(
-      messagesNavLink(page).first(),
+      messagesNavLink(page),
       'the desktop sidebar must be hidden on mobile'
     ).toBeHidden()
 

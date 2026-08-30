@@ -70,9 +70,9 @@ export async function signIn(page: Page): Promise<void> {
   await page.waitForURL('**/dashboard')
 }
 
-/** The sidebar/drawer link to Messages — structural, not copy-based. */
+/** The desktop sidebar's navigation-landmark link to Messages — structural, not copy-based. */
 export function messagesNavLink(page: Page) {
-  return page.locator('a[href="/dashboard/messages"]')
+  return page.locator('aside').getByRole('navigation').locator('a[href="/dashboard/messages"]')
 }
 
 /**
