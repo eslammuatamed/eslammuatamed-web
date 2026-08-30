@@ -519,6 +519,8 @@ test.describe('Mutations, contact shapes, required states and accessibility', ()
     await openRowMenu(page)
     await page.locator('[role=menu] [role=menuitem]').first().click()
     await listSettled(page)
+    await expect(page.locator('div[aria-live="polite"]')).toContainText('The change did not save')
+    await expect(messagesNavLink(page)).toBeVisible()
 
     expect(await tableOpeners(page).allTextContents(), 'a failed mutation must not change the list')
       .toEqual(rowsBefore)
