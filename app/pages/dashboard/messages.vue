@@ -214,7 +214,7 @@ watch(selectedId, async (id, previous) => {
   // its node still is. Paging or switching view while the detail is open lands here.
   const sameList = key !== null && key.view === view.value && key.page === page.value
 
-  if (sameList && isFocusable(el)) {
+  if (sameList && isFocusable(el) && el.dataset.message === key?.id) {
     el.focus()
     return
   }
