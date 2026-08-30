@@ -5175,3 +5175,20 @@ for this PR-only remediation; it does not authorize merging or deployment.
 1. Keep PR #75 unmerged while its normal remote checks complete.
 2. Resume the independent `/ar/about` LCP investigation separately; do not fold it into this CSP fix.
 3. Leave FE5-U6 and FE5-U7 untouched pending explicit authorization.
+
+---
+
+## PR #75 — advisory hosted Lighthouse governance · APPROVED · 2026-08-30
+
+Owner decision: GitHub-hosted PR Lighthouse continues to collect the unchanged governed matrix,
+thresholds, medians, HTTP/2 proof, Prism fixtures, and artifacts, but a completed metric-threshold
+breach is advisory because hosted runner capacity is not a comparable performance reference. Build,
+preview, Prism, Chrome launch, collection, route coverage, HTTP/2/provenance proof, missing or
+malformed reports, and script/runtime failures remain hard failures.
+
+The default local `npm run lighthouse:ci` contract remains hard. FE5-U7 release acceptance must run
+the same governed Lighthouse gate in the stable reference environment. This decision approves no
+benchmarkIndex scaling, no rerun-until-green behavior, no threshold change, and no product
+optimization: `/ar/about` has not been established as a product regression. Future CI-runner
+normalization is post-v1 work. The temporary hosted-runner diagnostics at `b085d0b` are no longer
+needed once this governance change is implemented.
