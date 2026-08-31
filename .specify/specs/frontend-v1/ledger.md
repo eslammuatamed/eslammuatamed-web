@@ -5237,3 +5237,29 @@ No API, Backend, navigation, CRUD, application-locale persistence, translation-s
 budget changed. Focused browser E2E was deliberately not run; its stale panel-direction assertions
 were migrated to assert explicit field direction instead. **FE5-U6 remains blocked pending the
 remaining acceptance feedback; FE5-U7 was not started.**
+
+---
+
+## Acceptance Feedback U2 — Dashboard header action grouping · COMPLETE · 2026-08-31
+
+Starting committed HEAD: `bdc9be4e2765fe7ec73b4c9ff276f72e93041c5b`.
+
+The Dashboard header now uses two local, non-generic groups: workspace controls (View site, locale,
+and theme) and account controls (operator identity and sign out). A logical inline-end divider
+separates the groups, so it follows shell direction in both English and Arabic. Existing control
+components, destinations, new-tab protection, persistence behavior, no-dropdown bundle decision,
+email truncation, and mobile visibility breakpoints remain unchanged.
+
+### Verification
+
+| Check | Result |
+| --- | --- |
+| Focused Dashboard layout/header tests | 7/7, exit 0 — grouping membership, View site new-tab contract, identity/sign-out, RTL shell, and mobile trigger/identity behavior |
+| Negative control | Replacing the workspace wrapper with a transparent template removed the grouping relationship; both focused assertions failed as expected. Restored immediately. |
+| `npm run typecheck` | exit 0 |
+| `npm run lint` | exit 0 |
+| `git diff --check` | exit 0 |
+
+No routes, auth semantics, overview or CRUD behavior, API/backend contracts, budgets, dropdowns, or
+browser E2E changed. `typecheck:e2e` was not applicable because no E2E test or fixture type changed.
+**FE5-U6 remains blocked pending the remaining acceptance feedback; FE5-U7 was not started.**
