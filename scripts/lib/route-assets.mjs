@@ -915,7 +915,8 @@ export const DASHBOARD_APP_OWNED_BASELINE_PROVENANCE = {
  *
  * These are doc 20 VERBATIM. This map is an ENFORCEMENT mechanism, never the authority: a new cap,
  * or a change to one, requires an owner decision plus a decision-log entry in
- * `eslammuatamed-docs/docs/20-performance.md` — never an edit here.
+ * `eslammuatamed-docs/docs/20-performance.md` — never an edit here, except an explicitly
+ * owner-approved, ledger-recorded acceptance bridge such as PR #75's interim Messages cap.
  *
  * ABSOLUTE CEILINGS, NOT REGRESSION BASELINES. Nothing here is recomputed from a build, and the
  * gate may never raise one. A route that grows past its cap FAILS (exit 1) and is fixed by
@@ -934,7 +935,9 @@ export const DASHBOARD_APP_OWNED_CAP_BYTES = {
   // D20-23 / D20-12 — preserved unchanged.
   '/dashboard/login': 101 * KB,
   '/dashboard': 101 * KB,
-  '/dashboard/messages': 101 * KB,
+  // PR #75 owner-approved acceptance bridge: 104,858 B -> 120,832 B under the existing 15%
+  // formula. Interim only; FE5-U6 owns the final post-feedback recalibration.
+  '/dashboard/messages': 120_832,
   // D20-29 — derived from the baselines above.
   //
   // `/dashboard/articles` is D20-33 (owner decision, 2026-08-18): the cap is D20-29's formula

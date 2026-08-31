@@ -5192,3 +5192,18 @@ benchmarkIndex scaling, no rerun-until-green behavior, no threshold change, and 
 optimization: `/ar/about` has not been established as a product regression. Future CI-runner
 normalization is post-v1 work. The temporary hosted-runner diagnostics at `b085d0b` are no longer
 needed once this governance change is implemented.
+
+---
+
+## PR #75 — Dashboard Messages acceptance-budget bridge · OWNER APPROVED · 2026-08-31
+
+The owner explicitly approved an **interim acceptance bridge** for the sole remaining PR blocker.
+Current-HEAD CI run `33336673888` measured `/dashboard/messages` at **104,858 B** against its prior
+frozen **103,424 B** cap: **1,434 B (1.39%)** over. The bridge cap is exactly **120,832 B (118 KiB)**,
+derived with the existing campaign formula
+`ceil(measured × 115 / 102400) × 1024`.
+
+All other PR gates were green before this decision. This is not FE5-U6, a D20-32 recalibration, or a
+final Frontend-v1 budget certification; it changes no other route, CSS, public, warning, measurement,
+Lighthouse, E2E, or product policy. **FE5-U6 remains solely responsible for final post-feedback
+recalibration from a clean baseline. This bridge MUST NOT be treated as the final D20-32 value.**

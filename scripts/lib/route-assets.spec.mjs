@@ -577,7 +577,9 @@ describe('DASHBOARD_ACCEPTED_BASELINE_BYTES — reporting input, never a gate', 
  * drop one. Each of those failures is invisible in a green exit code.
  */
 describe('dashboard app-owned caps — frozen, per route (D20-29)', () => {
-  const D20_23_ROUTES = ['/dashboard/login', '/dashboard', '/dashboard/messages']
+  const D20_23_ROUTES = ['/dashboard/login', '/dashboard']
+  /** PR #75 owner-approved interim acceptance bridge; FE5-U6 remains its final recalibration. */
+  const PR75_BRIDGE_ROUTES = ['/dashboard/messages']
   const D20_29_ROUTES = [
     '/dashboard/media',
     '/dashboard/profile',
@@ -663,6 +665,7 @@ describe('dashboard app-owned caps — frozen, per route (D20-29)', () => {
     expect(Object.keys(DASHBOARD_APP_OWNED_CAP_BYTES).sort())
       .toEqual([
         ...D20_23_ROUTES,
+        ...PR75_BRIDGE_ROUTES,
         ...D20_29_ROUTES,
         ...D20_33_ROUTES,
         ...D20_34_ROUTES,
@@ -927,7 +930,7 @@ describe('dashboard app-owned caps — frozen, per route (D20-29)', () => {
     expect(DASHBOARD_APP_OWNED_CAP_BYTES).toEqual({
       '/dashboard/login': 103_424,
       '/dashboard': 103_424,
-      '/dashboard/messages': 103_424,
+      '/dashboard/messages': 120_832,
       '/dashboard/articles': 102_400,
       '/dashboard/articles/new': 122_880,
       '/dashboard/articles/00000000-0000-0000-0000-000000000000': 122_880,
@@ -968,15 +971,14 @@ describe('dashboard app-owned caps — frozen, per route (D20-29)', () => {
     }
   })
 
-  it('does NOT re-derive the three D20-23 routes — D20-29 never raises an existing cap', () => {
+  it('keeps D20-23 frozen and pins the owner-approved PR #75 Messages bridge', () => {
     for (const route of D20_23_ROUTES) {
       expect(DASHBOARD_APP_OWNED_CAP_BYTES[route]).toBe(101 * KB)
       expect(DASHBOARD_APP_OWNED_BASELINE_BYTES[route]).toBeUndefined()
     }
-    // The specific trap: the formula would RAISE /dashboard/messages, so a future "consistency"
-    // fix that re-derives all eight would quietly loosen a governed budget.
-    expect(approvedAppLimitBytes(92_442)).toBe(106_496)
-    expect(DASHBOARD_APP_OWNED_CAP_BYTES['/dashboard/messages']).toBeLessThan(106_496)
+    expect(DASHBOARD_APP_OWNED_CAP_BYTES['/dashboard/messages']).toBe(120_832)
+    expect(approvedAppLimitBytes(104_858)).toBe(120_832)
+    expect(DASHBOARD_APP_OWNED_BASELINE_BYTES['/dashboard/messages']).toBeUndefined()
   })
 
   it('exposes no single class-wide app-owned budget for a caller to read by mistake', () => {
