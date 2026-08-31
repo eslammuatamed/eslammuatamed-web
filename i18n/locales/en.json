@@ -347,6 +347,8 @@
       "experiences": "Experience",
       "skills": "Skills",
       "testimonials": "Testimonials",
+      "categories": "Categories",
+      "tags": "Tags",
       "taxonomy": "Taxonomy"
     },
     "messages": {
@@ -898,6 +900,8 @@
       "description": "Categories and tags that organize articles, in both languages.",
       "retry": "Try again",
       "staleNotice": "This list may be out of date — the last refresh did not complete.",
+      "slug": "Slug",
+      "actions": "Actions",
       "translationState": {
         "label": "Translations",
         "present": "{locale} written",

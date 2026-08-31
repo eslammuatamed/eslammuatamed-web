@@ -46,7 +46,7 @@ describe('isNavItemActive', () => {
 describe('the navigation model', () => {
   const items = () => useDashboardNav().groups.value.flatMap(group => group.items)
 
-  it('offers Articles, Experience, Skills, Testimonials, Taxonomy and Projects, in the Content group', () => {
+  it('offers Articles, Experience, Skills, Testimonials, Categories, Tags and Projects, in the Content group', () => {
     const groups = useDashboardNav().groups.value
     const content = groups.find(group => group.key === 'content')
     expect(content?.items.map(item => item.key)).toEqual([
@@ -54,9 +54,18 @@ describe('the navigation model', () => {
       'experiences',
       'skills',
       'testimonials',
-      'taxonomy',
+      'categories',
+      'tags',
       'projects'
     ])
+  })
+
+  it('points Categories and Tags at their separate collection routes and never exposes Taxonomy navigation', () => {
+    expect(items().find(item => item.key === 'categories')?.to).toBe('/dashboard/categories')
+    expect(items().find(item => item.key === 'tags')?.to).toBe('/dashboard/tags')
+    expect(items().some(item => item.key === 'taxonomy')).toBe(false)
+    expect(active(items(), '/dashboard/categories')).toBe('categories')
+    expect(active(items(), '/dashboard/tags')).toBe('tags')
   })
 
   it('points Experience at a route that EXISTS — no placeholder destinations', () => {

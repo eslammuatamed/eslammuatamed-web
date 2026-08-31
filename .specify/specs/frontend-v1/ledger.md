@@ -5296,3 +5296,67 @@ unprefixed route behavior remain intact.
 No header, navigation ownership, collection CRUD, backend/API contract, E2E fixture, or budget
 changed; `typecheck:e2e` was therefore not applicable. **FE5-U6 remains blocked by remaining
 acceptance feedback; FE5-U7 was not started.**
+
+---
+
+## Acceptance Feedback U4 — Categories and Tags route split · COMPLETE · 2026-08-31
+
+Starting committed HEAD: `c17799e7d1e7f13a4220cd56cb16ab0fc11c53a1`.
+
+The former combined `/dashboard/taxonomy` collection page is split into authenticated
+`/dashboard/categories` and `/dashboard/tags` list pages. Each uses `UTable`, keeps its existing
+entity-specific lightweight overlay for create/edit/delete, retains its own pending/error/stale/403/
+retry state, translations and in-place refresh contract, and adds no pagination, filter, search, or
+new API contract. The Content navigation now names Categories and Tags separately. The legacy
+`/dashboard/taxonomy` route is deliberately retained as an authenticated `replace` redirect to
+`/dashboard/categories`; it remains governed so existing bookmarks cannot become an unmeasured
+application route.
+
+### Owner-authorized clean route measurements
+
+The analyzed production build used the existing dashboard static-closure and Rollup
+`renderedLength` attribution machinery. The old combined Taxonomy baseline/cap is retired, not
+transferred. The frozen formula is `ceil(measured × 115 / 102400) × 1024`.
+
+| Route | App-owned measured bytes | Formula cap | Closure files |
+| --- | ---: | ---: | ---: |
+| `/dashboard/categories` | 112,895 B | 130,048 B (127 KiB) | 68 |
+| `/dashboard/tags` | 110,367 B | 126,976 B (124 KiB) | 67 |
+| `/dashboard/taxonomy` redirect | 66,748 B | 76,800 B (75 KiB) | 56 |
+
+All three page chunks resolved from the same analyzed build and each ordinary app-owned verdict
+passed. The normal size gate also passed. It emitted D20-24 quality-target warnings for Categories
+and Tags at 323.3 KiB and 320.4 KiB gzip route total respectively; under the existing D20-32 model
+these are explicitly non-blocking because the shared-floor, incremental, CSS, and frozen app-owned
+caps pass. This decision is a topology-specific measurement registration, not FE5-U6, a general
+recalibration, a budget framework, a cap waiver, or a change to the frozen floor set.
+
+### Verification
+
+| Check | Result |
+| --- | --- |
+| Focused Categories, Tags, legacy redirect, and navigation units | 19/19, exit 0 |
+| Focused route-governance units | 185/185, exit 0 |
+| Migrated Categories, Tags, and authenticated legacy-redirect browser lane | 14/14, exit 0 — separate route ownership, table/list reads, CRUD, validation, errors/retries/403, delete confirmation, focus restoration, RTL, and axe coverage |
+| Browser negative control | Temporarily expecting the legacy redirect to land on Tags failed: the authenticated browser received `/dashboard/categories`; restored immediately. |
+| `npm run typecheck` | exit 0 |
+| `npm run typecheck:e2e` | exit 0 |
+| `npm run lint` / `git diff --check` | exit 0 / exit 0 |
+| Clean provenance build (`23d77a8cb0357a4600fbdfb392a6124fabc39e9b`) | `ANALYZE_BUNDLE=1 NUXT_PUBLIC_SITE_URL=https://example.com npm run build`, exit 0; clean stamped analysis produced the three registered values |
+| `NUXT_PUBLIC_SITE_URL=https://example.com npm run size:routes` | exit 0 on the clean provenance build; Categories 112,895 B / 130,048 B, Tags 110,367 B / 126,976 B, Taxonomy redirect 66,748 B / 76,800 B |
+
+The old browser suite's combined-page assumption (two lists, two request states, and both overlays on
+`/dashboard/taxonomy`) is removed. The mutable backend lane stays one spec file by existing lane
+isolation policy, but it now exercises separate route journeys and one authenticated legacy redirect
+assertion. No CRUD behavior was removed. **FE5-U6 remains blocked by remaining acceptance feedback;
+FE5-U7 was not started.**
+
+The final amendment records the exact clean measurement SHA above in route governance and changes no
+client-bundle input. A final clean rebuild of the amended commit is required before push to reproduce
+the same values. **FE5-U6 remains blocked by remaining acceptance feedback; FE5-U7 was not started.**
+
+**Next three actions.**
+
+1. Reproduce the clean build and normal size gate on this final, provenance-recording commit.
+2. Push only the resulting U4 commit after remote state is rechecked and the owner-approved normal-push boundary is confirmed.
+3. Do not start FE5-U6 or FE5-U7.

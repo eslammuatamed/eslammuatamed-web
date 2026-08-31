@@ -840,13 +840,11 @@ export const DASHBOARD_APP_OWNED_BASELINE_BYTES = {
   // governance commit before registration. Two routes, two numbers, one build — one comparable batch.
   '/dashboard/testimonials/new': 125_465,
   '/dashboard/testimonials/00000000-0000-0000-0000-000000000000': 125_573,
-  // D20-39 — FE-3's Taxonomy destination (ONE route hosting the Categories + Tags collections),
-  // measured at the completed `U2` checkpoint via the §1.2 closure workflow on the implementation
-  // commit itself (blob sha256 verified against the registered provenance tree below).
-  // ⚠ SUPERSEDED by D20-40: U3b added the approved create/edit/delete overlays to this SAME route,
-  // so the completed surface re-measured at 135,345 B. The 92,160 B pre-overlay reading is kept as
-  // historical evidence of the D20-39 decision chain, not as a live derivation input.
-  '/dashboard/taxonomy': 135_345,
+  // U4 owner-authorized clean measurement — the former combined Taxonomy baseline is retired.
+  // Categories, Tags, and the app-owned legacy redirect each carry their own measured input.
+  '/dashboard/categories': 112_895,
+  '/dashboard/tags': 110_367,
+  '/dashboard/taxonomy': 66_748,
   '/dashboard/projects': 95_029,
   '/dashboard/projects/new': 152_208,
   '/dashboard/projects/00000000-0000-0000-0000-000000000000': 152_393,
@@ -901,8 +899,11 @@ export const DASHBOARD_APP_OWNED_BASELINE_PROVENANCE = {
   // D20-37: checkpoint reading confirmed byte-for-byte on the clean, stamped governance build.
   '/dashboard/testimonials/new': '7f22ce775e4cc96bad3f50fa605398d8ec692fcd',
   '/dashboard/testimonials/00000000-0000-0000-0000-000000000000': '7f22ce775e4cc96bad3f50fa605398d8ec692fcd',
-  // D20-39 — `U2` (0de9b54), the commit that created the route. Superseded by D20-40.
-  '/dashboard/taxonomy': '4fe9cfe7086260411854cbb8789f8d223a6eeb14',
+  // U4 owner-authorized measurement build: clean, stamped implementation commit. The subsequent
+  // governance-only amendment records this provenance and changes no client-bundle input.
+  '/dashboard/categories': '23d77a8cb0357a4600fbdfb392a6124fabc39e9b',
+  '/dashboard/tags': '23d77a8cb0357a4600fbdfb392a6124fabc39e9b',
+  '/dashboard/taxonomy': '23d77a8cb0357a4600fbdfb392a6124fabc39e9b',
   // D20-41 — the U1f measurement tree: HEAD of the clean, provenance-stamped analysis build the
   // authoritative completed-route reading (109,003 B) was taken on. The governance commit that
   // registers this route changes no client-bundle input, and the post-registration reproduction
@@ -1028,21 +1029,12 @@ export const DASHBOARD_APP_OWNED_CAP_BYTES = {
   // (D20-37) is untouched and was NOT re-derived.
   '/dashboard/testimonials/new': 141 * KB,
   '/dashboard/testimonials/00000000-0000-0000-0000-000000000000': 142 * KB,
-  // D20-39 (owner decision, 2026-08-23) — FE-3's Taxonomy destination: ONE route hosting BOTH the
-  // Categories and Tags collections (plan §7.1 groups them as one destination; they share this one
-  // route and therefore one budget line). Derived by D20-29's formula from the route's OWN measured
-  // baseline — `ceil(92,160 × 115 / 102,400) × 1024` = 106,496 B (104 KiB) on the U2 tree
-  // (`0de9b54d2efdb28191be7b0e66ae8171e7fd3d2b`). Route-specific: not inherited from Articles,
-  // Experiences, Skills or Testimonials, and no sibling number was rounded toward.
-  //
-  // ⚠ SUPERSEDED by D20-40 (owner decision, 2026-08-23) — U3b landed the approved create/edit/
-  // delete overlays ON this same route (no editor route exists), so the completed surface
-  // re-measured at 135,345 B and the owner re-derived the cap by the same frozen formula:
-  // ceil((135,345 × 115) / 102,400) × 1024 = 155,648 B (152 KiB), headroom 20,303 B. Route-specific,
-  // not inherited from any sibling, not rounded upward. Still explicitly NOT a waiver, NOT a
-  // shared-floor change, NOT an incremental-allowance change, and NOT a D20-32 recalibration; the
-  // frozen floor set is untouched.
-  '/dashboard/taxonomy': 152 * KB,
+  // U4 owner decision — independent, clean §1.2 closure measurements. The former combined
+  // Taxonomy baseline/cap is retired rather than transferred. The legacy route is still app-owned
+  // and redirecting, so it has its own evidence-based cap until a future decision removes it.
+  '/dashboard/categories': 127 * KB,
+  '/dashboard/tags': 124 * KB,
+  '/dashboard/taxonomy': 75 * KB,
   '/dashboard/media': 108 * KB,
   '/dashboard/profile': 121 * KB,
   '/dashboard/projects': 107 * KB,

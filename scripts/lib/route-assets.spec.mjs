@@ -647,12 +647,9 @@ describe('dashboard app-owned caps — frozen, per route (D20-29)', () => {
     '/dashboard/testimonials/new',
     '/dashboard/testimonials/00000000-0000-0000-0000-000000000000'
   ]
-  // U2 — ONE destination hosting BOTH the Categories and Tags collections (plan §7.1), so ONE
-  // budget line carries both.
-  const D20_39_ROUTES = ['/dashboard/taxonomy']
-  /** Historical D20-39 inputs, kept as evidence of the supersession chain (D20-40). */
-  const D20_39_HISTORICAL_BASELINE = 92_160
-  const D20_39_HISTORICAL_CAP = 106_496
+  // U4 — clean owner-authorized measurements. The former combined Taxonomy baseline/cap is
+  // retired; each collection and the app-owned redirect carries its own independent cap.
+  const U4_ROUTES = ['/dashboard/categories', '/dashboard/tags', '/dashboard/taxonomy']
 
   /**
    * D20-41 — FE-4 Static Page SEO's ONE editing destination. The Dashboard read surface (U1c) and
@@ -661,7 +658,7 @@ describe('dashboard app-owned caps — frozen, per route (D20-29)', () => {
    */
   const D20_41_ROUTES = ['/dashboard/seo']
 
-  it('governs exactly the twenty-two routes doc 20 §1.1 names — no more, no fewer', () => {
+  it('governs exactly the twenty-four registered routes — no more, no fewer', () => {
     expect(Object.keys(DASHBOARD_APP_OWNED_CAP_BYTES).sort())
       .toEqual([
         ...D20_23_ROUTES,
@@ -673,7 +670,7 @@ describe('dashboard app-owned caps — frozen, per route (D20-29)', () => {
         ...D20_36_ROUTES,
         ...D20_37_ROUTES,
         ...D20_38_ROUTES,
-        ...D20_39_ROUTES,
+        ...U4_ROUTES,
         ...D20_41_ROUTES
       ].sort())
   })
@@ -776,26 +773,21 @@ describe('dashboard app-owned caps — frozen, per route (D20-29)', () => {
     expect(DASHBOARD_APP_OWNED_CAP_BYTES['/dashboard/testimonials']).toBe(99_328)
   })
 
-  it("derives the D20-39 cap from its OWN recorded baseline and pins the owner's exact bytes", () => {
-    for (const route of D20_39_ROUTES) {
+  it("derives each U4 cap from its OWN recorded baseline and pins the owner's exact bytes", () => {
+    for (const route of U4_ROUTES) {
       const baseline = DASHBOARD_APP_OWNED_BASELINE_BYTES[route]
       expect(baseline, `${route} must record the baseline its cap was derived from`).toBeTypeOf('number')
       expect(approvedAppLimitBytes(baseline), `${route} cap must equal ceil((baseline x 1.15)/KiB) x KiB`)
         .toBe(DASHBOARD_APP_OWNED_CAP_BYTES[route])
     }
-    // The owner's exact numbers, pinned so a later "tidy" cannot drift them silently.
-    // ⚠ HISTORY: D20-39 pinned the PRE-overlay pair 92,160 -> 106,496. D20-40 supersedes it after
-    // U3b landed the overlays on this same route; the historical bytes are preserved here so the
-    // supersession chain stays auditable.
-    expect(D20_39_HISTORICAL_BASELINE).toBe(92_160)
-    expect(D20_39_HISTORICAL_CAP).toBe(106_496)
-    expect(DASHBOARD_APP_OWNED_BASELINE_BYTES['/dashboard/taxonomy']).toBe(135_345)
-    expect(DASHBOARD_APP_OWNED_CAP_BYTES['/dashboard/taxonomy']).toBe(155_648)
-    // Route-specific: NOT inherited — no sibling shares this number, and no sibling baseline equals it.
-    for (const [sibling, bytes] of Object.entries(DASHBOARD_APP_OWNED_BASELINE_BYTES)) {
-      if (sibling === '/dashboard/taxonomy') continue
-      expect(bytes, `${sibling} must not share the taxonomy baseline`).not.toBe(92_160)
-    }
+    expect(DASHBOARD_APP_OWNED_BASELINE_BYTES['/dashboard/categories']).toBe(112_895)
+    expect(DASHBOARD_APP_OWNED_CAP_BYTES['/dashboard/categories']).toBe(130_048)
+    expect(DASHBOARD_APP_OWNED_BASELINE_BYTES['/dashboard/tags']).toBe(110_367)
+    expect(DASHBOARD_APP_OWNED_CAP_BYTES['/dashboard/tags']).toBe(126_976)
+    expect(DASHBOARD_APP_OWNED_BASELINE_BYTES['/dashboard/taxonomy']).toBe(66_748)
+    expect(DASHBOARD_APP_OWNED_CAP_BYTES['/dashboard/taxonomy']).toBe(76_800)
+    expect(DASHBOARD_APP_OWNED_BASELINE_BYTES['/dashboard/categories'])
+      .not.toBe(DASHBOARD_APP_OWNED_BASELINE_BYTES['/dashboard/tags'])
   })
 
   it('derives every D20-36 cap from its OWN recorded baseline, not from a sibling', () => {
@@ -948,9 +940,10 @@ describe('dashboard app-owned caps — frozen, per route (D20-29)', () => {
       // deliberately different numbers.
       '/dashboard/testimonials/new': 144_384,
       '/dashboard/testimonials/00000000-0000-0000-0000-000000000000': 145_408,
-      // D20-40 — the Taxonomy destination re-baselined after U3b's overlays joined the SAME route:
-      // own baseline 135,345 B -> 155,648 B (152 KiB), owner-exact, no rounding upward.
-      '/dashboard/taxonomy': 155_648,
+      // U4 — independently measured split collections plus the legacy redirect.
+      '/dashboard/categories': 130_048,
+      '/dashboard/tags': 126_976,
+      '/dashboard/taxonomy': 76_800,
       '/dashboard/media': 110_592,
       '/dashboard/profile': 123_904,
       '/dashboard/projects': 109_568,
@@ -1071,17 +1064,15 @@ describe('assertGovernedRouteCoverage — both directions (D20-29)', () => {
     // ungoverned; the owner's cap arrived after measurement, as D20-34 prescribed).
     // 18 -> 20: T·U3 creates the Testimonials editor's two routes; D20-38 then governs them from
     // their OWN measured baselines — the same measure-first sequence as every module before.
-    // 20 -> 21: U2 registered /dashboard/taxonomy (ONE destination for Categories + Tags) measured
-    // but deliberately UNGOVERNED, and the gate named it exactly as it once named Skills at M2·U2
-    // and Testimonials at T·U2. D20-39 now governs it from its own 92,160 B baseline, so coverage
-    // closes in BOTH directions again — measured == governed at 21.
+    // 20 -> 21: U2 registered the former combined Taxonomy destination. U4 replaces its retired
+    // combined baseline/cap with independently governed Categories, Tags, and legacy redirect.
     // 21 -> 22: D20-41 governs /dashboard/seo (FE-4 Static Page SEO's ONE editing destination) from
     // its own 109,003 B U1f baseline. Unlike Skills/Testimonials/Taxonomy, this route was measured
     // BEFORE any registration at all — U1f proved `size:routes` exited 0 while the route was absent
     // from the inventory entirely (invisible, not reported ungoverned). The focused D20-41 tests
     // pin that lesson; a general filesystem-vs-inventory completeness assertion remains a recorded
     // future governance finding, deliberately not built here.
-    expect(measured).toHaveLength(22)
+    expect(measured).toHaveLength(24)
     expect(() => assertGovernedRouteCoverage(measured)).not.toThrow()
   })
 
@@ -1422,6 +1413,7 @@ describe('D20-32 — resolveDashboardSharedFloor and its FROZEN reference set', 
       '/dashboard/articles',
       '/dashboard/articles/00000000-0000-0000-0000-000000000000',
       '/dashboard/articles/new',
+      '/dashboard/categories',
       // D20-34 joins the governed set and stays OUT of the frozen floor set, which is the same
       // shrink-on-add protection working a second time: FE-3 adds five more modules, so this is the
       // list that must keep growing while the eight calibration routes stay put.
@@ -1436,7 +1428,8 @@ describe('D20-32 — resolveDashboardSharedFloor and its FROZEN reference set', 
       '/dashboard/skills',
       '/dashboard/skills/00000000-0000-0000-0000-000000000000',
       '/dashboard/skills/new',
-      // U2 — the Taxonomy destination, measured-but-ungoverned under the same shrink-on-add rule.
+      // U4 split collections and the retained legacy redirect all remain outside the frozen set.
+      '/dashboard/tags',
       '/dashboard/taxonomy',
       // T·U2 — the Testimonials collection, registered measured-but-ungoverned and, like every
       // route above, staying OUT of the frozen floor set.

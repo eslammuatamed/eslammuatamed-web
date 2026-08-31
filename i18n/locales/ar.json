@@ -347,6 +347,8 @@
       "experiences": "الخبرات",
       "skills": "المهارات",
       "testimonials": "التوصيات",
+      "categories": "التصنيفات",
+      "tags": "الوسوم",
       "taxonomy": "التصنيف"
     },
     "messages": {
@@ -898,6 +900,8 @@
       "description": "الفئات والوسوم التي تُنظّم المقالات، باللغتين.",
       "retry": "أعد المحاولة",
       "staleNotice": "قد تكون هذه القائمة قديمة — آخر تحديث لم يكتمل.",
+      "slug": "المعرّف",
+      "actions": "الإجراءات",
       "translationState": {
         "label": "الترجمات",
         "present": "{locale} مكتوبة",
