@@ -74,9 +74,10 @@ describe('the collection request-state contract', () => {
     expect(page.find('[data-skills-empty]').exists()).toBe(false)
   })
 
-  it('renders loaded rows as content', async () => {
+  it('renders loaded rows in the Skills UTable', async () => {
     const page = await mount({ rows: [skill()] })
     expect(page.find('[data-skills-loaded]').exists()).toBe(true)
+    expect(page.find('[data-skills-table]').exists()).toBe(true)
     expect(page.findAll('[data-skill-row]')).toHaveLength(1)
     expect(page.find('[data-skills-empty]').exists()).toBe(false)
     expect(page.find('[data-skills-failed]').exists()).toBe(false)

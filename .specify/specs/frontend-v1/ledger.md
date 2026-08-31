@@ -5360,3 +5360,54 @@ the same values. **FE5-U6 remains blocked by remaining acceptance feedback; FE5-
 1. Reproduce the clean build and normal size gate on this final, provenance-recording commit.
 2. Push only the resulting U4 commit after remote state is rechecked and the owner-approved normal-push boundary is confirmed.
 3. Do not start FE5-U6 or FE5-U7.
+
+---
+
+## Acceptance Feedback U5A — Skills UTable + lightweight slideover CRUD · COMPLETE · 2026-09-01
+
+Starting committed HEAD: `4337573c0f820eda908daab8f164fbd219cb1e51`. The Skills collection now
+uses `UTable` for name/translation state, group, slug, order, optional brand color, visibility, and
+row actions. Create and edit open an entity-owned lazy `USlideover`; no pagination, group filter,
+backend/API contract, generic CRUD framework, or Project integration was added.
+
+`SkillEditor.vue` is now route-independent: it retains the existing schema/state, bilingual field
+rendering, validation, API mutation/error mapping, loading, pending state, and two-step delete
+confirmation, while emitting saved/deleted outcomes. `SkillOverlay.vue` owns close interception and
+the page owns query intent, collection refresh, and trigger-focus restoration. This leaves the
+creation boundary ready for future Project use: create a Skill, receive its returned entity, refresh
+the picker, append its id — without Skills routing, page chrome, table state, or route-leave guards.
+That future Project work remains explicitly out of scope.
+
+`/dashboard/skills/new` now redirects to `/dashboard/skills?create=1`; `/dashboard/skills/:id`
+redirects to `/dashboard/skills?edit=<id>`. Closing clears only the relevant query key and preserves
+unrelated query state. Dirty close and Escape require confirmation; confirmed close returns focus to
+the original Create or Edit control. Existing validation, server 422 field mapping, mutation-error
+focus, translation tabs/direction, and delete-conflict behavior remain browser-proven.
+
+### Route governance
+
+The owner-authorized U4 methodology was applied to the materially changed collection and both
+redirect-only compatibility closures using the clean analyzed implementation commit
+`7b5be3683023e3bda2ed289db150585a2b58a9e0`:
+
+| Route | App-owned bytes | D20-29 arithmetic | Cap |
+| --- | ---: | --- | ---: |
+| `/dashboard/skills` | 89,941 B | `ceil(89,941 × 115 / 102,400) × 1,024` | 104,448 B (102 KiB) |
+| `/dashboard/skills/new` redirect | 66,734 B | `ceil(66,734 × 115 / 102,400) × 1,024` | 76,800 B (75 KiB) |
+| `/dashboard/skills/:id` redirect | 66,885 B | `ceil(66,885 × 115 / 102,400) × 1,024` | 77,824 B (76 KiB) |
+
+The lazy overlay is intentional: it keeps the editor and Zod out of the collection's initial
+closure, so the dashboard incremental delivery gate passes. No unrelated route cap changed.
+
+### Focused evidence
+
+| Check | Result |
+| --- | --- |
+| Skills page unit | 9/9, exit 0 |
+| Skills browser lane | 12/12, exit 0 — table/list states, create/edit/delete, validation/errors, dirty/focus, redirects/query state, EN/AR responsive axe coverage |
+| Browser negative control | Temporarily bypassing dirty-close confirmation made the dirty-close test fail because its first close discarded the editor; guard restored and focused test passed. |
+| Clean provenance analysis | `ANALYZE_BUNDLE=1 NUXT_PUBLIC_SITE_URL=https://example.com npm run build`, exit 0 |
+| Route gate | `npm run size:routes`, exit 0 with the pre-registration limits; final clean rerun is required after the governance-only amendment. |
+
+Skills pagination and durable group filtering remain backend-dependent acceptance work. **FE5-U6
+remains blocked; FE5-U7 was not started.**

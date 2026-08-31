@@ -740,6 +740,7 @@
       "title": "Skills",
       "description": "The vocabulary used across the site and dashboard.",
       "retry": "Try again",
+      "staleNotice": "This list may be out of date — the last refresh did not complete.",
       "errorTitle": "Skills could not be loaded",
       "forbiddenTitle": "You do not have access to skills",
       "forbiddenBody": "This account is not permitted to manage skills.",
@@ -765,7 +766,8 @@
         "group": "Group",
         "order": "Order",
         "visibility": "Visibility",
-        "brandColor": "Brand color"
+        "brandColor": "Brand color",
+        "actions": "Actions"
       },
       "group": {
         "LANGUAGE": "Language",
@@ -807,6 +809,10 @@
         "deleteConfirm": "Delete this skill",
         "deleteCancel": "Keep it",
         "deleteFailed": "The skill could not be deleted."
+      },
+      "overlay": {
+        "close": "Close skill editor",
+        "unsavedConfirm": "This skill has unsaved changes. Discard them?"
       },
       "validation": {
         "slugRequired": "A slug is required.",

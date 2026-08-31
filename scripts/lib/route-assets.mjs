@@ -825,12 +825,12 @@ export const DASHBOARD_APP_OWNED_BASELINE_BYTES = {
   // is what D20-34's standing instruction required: the collection's 99,328 B was NOT inherited.
   '/dashboard/experiences/new': 105_051,
   '/dashboard/experiences/00000000-0000-0000-0000-000000000000': 105_159,
-  // D20-36 — FE-3 module 2's three Skills routes, measured on the completed integrated tree
-  // (`M2·U3` cherry-picked as `5c7db16`, isolation fix `785d1b8`) via the §1.2 closure workflow.
-  // All three numbers come from the SAME build, so they form one comparable batch.
-  '/dashboard/skills': 83_997,
-  '/dashboard/skills/new': 96_571,
-  '/dashboard/skills/00000000-0000-0000-0000-000000000000': 96_679,
+  // U5A owner-authorized clean measurement — Skills is now a UTable collection with a lazy,
+  // entity-owned slideover; the former full-page editor routes are redirect-only compatibility
+  // routes. All three values come from one clean closure build of `7b5be36`.
+  '/dashboard/skills': 89_941,
+  '/dashboard/skills/new': 66_734,
+  '/dashboard/skills/00000000-0000-0000-0000-000000000000': 66_885,
   // D20-37 — FE-3 module 3's Testimonials collection, measured at the `T·U2` checkpoint via the
   // §1.2 closure workflow and REPRODUCED on a clean, stamped build of the governance commit before
   // registration. One route, one number from one build.
@@ -887,11 +887,11 @@ export const DASHBOARD_APP_OWNED_BASELINE_PROVENANCE = {
   // D20-35 — `M1·U3`, the commit that created the two editor routes.
   '/dashboard/experiences/new': '7e6d11a',
   '/dashboard/experiences/00000000-0000-0000-0000-000000000000': '7e6d11a',
-  // D20-36 — `M2·U3` integrated on the campaign branch; the measurement build's stamped HEAD
-  // (the docs-only ledger commit that followed shares this tree for all build inputs).
-  '/dashboard/skills': '785d1b83c4f249d3af175bc081b7c2ebda5d97c4',
-  '/dashboard/skills/new': '785d1b83c4f249d3af175bc081b7c2ebda5d97c4',
-  '/dashboard/skills/00000000-0000-0000-0000-000000000000': '785d1b83c4f249d3af175bc081b7c2ebda5d97c4',
+  // U5A — the clean, stamped implementation commit. The governance-only amendment records this
+  // provenance and changes no client-bundle input.
+  '/dashboard/skills': '7b5be3683023e3bda2ed289db150585a2b58a9e0',
+  '/dashboard/skills/new': '7b5be3683023e3bda2ed289db150585a2b58a9e0',
+  '/dashboard/skills/00000000-0000-0000-0000-000000000000': '7b5be3683023e3bda2ed289db150585a2b58a9e0',
   // D20-37 — `T·U2`, the commit that created the collection route. The checkpoint build's closure
   // reading was reproduced byte-for-byte on a clean, stamped build of the governance commit.
   '/dashboard/testimonials': '474b2501dbee7d0999b5e3a6292d2ed7556bd0b9',
@@ -991,19 +991,18 @@ export const DASHBOARD_APP_OWNED_CAP_BYTES = {
   // routes is not the repeated evidence it asked for.
   '/dashboard/experiences/new': 118 * KB,
   '/dashboard/experiences/00000000-0000-0000-0000-000000000000': 119 * KB,
-  // D20-36 (owner decision, 2026-08-22) — FE-3 module 2's THREE Skills routes, each derived from
-  // its OWN measured baseline by D20-29's formula on the completed integrated Skills tree
-  // (`785d1b83c4f249d3af175bc081b7c2ebda5d97c4`). Measured FIRST and escalated as ONE batched
-  // decision — the D20-33 amendment's lesson, and the reason `M2·U2` registered the collection as
-  // deliberately ungoverned instead of inheriting a sibling's number.
+  // U5A owner-authorized recalibration — each materially changed Skills route derives from its OWN
+  // clean `7b5be36` baseline using D20-29: 89,941 B -> ceil(89,941 * 115 / 102,400) KiB = 102 KiB;
+  // 66,734 B -> 75 KiB; 66,885 B -> 76 KiB. The lazy collection overlay keeps its editor form out
+  // of the initial route closure; the two legacy routes are intentionally smaller redirect routes.
   //
   // Explicitly NOT a waiver, NOT a shared-floor change, NOT a generic incremental-allowance change,
   // and NOT a D20-32 recalibration. The owner declined consistency-rounding toward Articles
   // (100/120 KiB), Experiences (97/118/119 KiB) or Projects (107/171/172 KiB): each route carries
   // the cap its own baseline derives.
-  '/dashboard/skills': 95 * KB,
-  '/dashboard/skills/new': 109 * KB,
-  '/dashboard/skills/00000000-0000-0000-0000-000000000000': 109 * KB,
+  '/dashboard/skills': 102 * KB,
+  '/dashboard/skills/new': 75 * KB,
+  '/dashboard/skills/00000000-0000-0000-0000-000000000000': 76 * KB,
   // D20-37 (owner decision, 2026-08-22) — FE-3 module 3's Testimonials COLLECTION, derived from its
   // OWN measured baseline (86,069 B at `T·U2`, Web `474b2501`) by D20-29's formula, registered after
   // measurement exactly as D20-34 did for the Experiences collection. Its editor routes are

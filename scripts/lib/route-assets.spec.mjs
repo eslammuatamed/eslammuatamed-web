@@ -622,9 +622,8 @@ describe('dashboard app-owned caps — frozen, per route (D20-29)', () => {
   ]
 
   /**
-   * D20-36 (2026-08-22) — FE-3 module 2's THREE Skills routes, measured then escalated as ONE
-   * batched decision on the completed integrated tree. This is why M2·U2 left the collection
-   * deliberately ungoverned instead of inheriting a sibling's number.
+   * U5A — the Skills UTable collection and its two retained redirect routes, each remeasured from
+   * the same clean implementation build after their route closures changed materially.
    */
   const D20_36_ROUTES = [
     '/dashboard/skills',
@@ -790,7 +789,7 @@ describe('dashboard app-owned caps — frozen, per route (D20-29)', () => {
       .not.toBe(DASHBOARD_APP_OWNED_BASELINE_BYTES['/dashboard/tags'])
   })
 
-  it('derives every D20-36 cap from its OWN recorded baseline, not from a sibling', () => {
+  it('derives every U5A Skills cap from its OWN recorded baseline, not from a sibling', () => {
     for (const route of D20_36_ROUTES) {
       const baseline = DASHBOARD_APP_OWNED_BASELINE_BYTES[route]
       expect(baseline, `${route} must record the baseline its cap was derived from`).toBeTypeOf('number')
@@ -798,15 +797,15 @@ describe('dashboard app-owned caps — frozen, per route (D20-29)', () => {
         .toBe(DASHBOARD_APP_OWNED_CAP_BYTES[route])
     }
     // The owner's exact numbers, pinned so a later "tidy" cannot drift them silently.
-    expect(DASHBOARD_APP_OWNED_BASELINE_BYTES['/dashboard/skills']).toBe(83_997)
-    expect(DASHBOARD_APP_OWNED_BASELINE_BYTES['/dashboard/skills/new']).toBe(96_571)
-    expect(DASHBOARD_APP_OWNED_BASELINE_BYTES['/dashboard/skills/00000000-0000-0000-0000-000000000000']).toBe(96_679)
-    expect(DASHBOARD_APP_OWNED_CAP_BYTES['/dashboard/skills']).toBe(97_280)
-    expect(DASHBOARD_APP_OWNED_CAP_BYTES['/dashboard/skills/new']).toBe(111_616)
-    expect(DASHBOARD_APP_OWNED_CAP_BYTES['/dashboard/skills/00000000-0000-0000-0000-000000000000']).toBe(111_616)
+    expect(DASHBOARD_APP_OWNED_BASELINE_BYTES['/dashboard/skills']).toBe(89_941)
+    expect(DASHBOARD_APP_OWNED_BASELINE_BYTES['/dashboard/skills/new']).toBe(66_734)
+    expect(DASHBOARD_APP_OWNED_BASELINE_BYTES['/dashboard/skills/00000000-0000-0000-0000-000000000000']).toBe(66_885)
+    expect(DASHBOARD_APP_OWNED_CAP_BYTES['/dashboard/skills']).toBe(104_448)
+    expect(DASHBOARD_APP_OWNED_CAP_BYTES['/dashboard/skills/new']).toBe(76_800)
+    expect(DASHBOARD_APP_OWNED_CAP_BYTES['/dashboard/skills/00000000-0000-0000-0000-000000000000']).toBe(77_824)
   })
 
-  it('keeps the Skills routes on their OWN caps, not rounded toward a sibling module', () => {
+  it('keeps the U5A Skills routes on their OWN caps, not rounded toward a sibling module', () => {
     // The discriminating half of the decision: the owner declined consistency-rounding, so edits
     // that "tidied" these to any Articles/Experiences/Projects number would be budget changes made
     // without a decision.
@@ -820,10 +819,11 @@ describe('dashboard app-owned caps — frozen, per route (D20-29)', () => {
       expect(DASHBOARD_APP_OWNED_CAP_BYTES[route])
         .toBeLessThan(DASHBOARD_APP_OWNED_CAP_BYTES['/dashboard/articles/new'])
     }
-    // And above the collection they were forbidden to inherit — an editor is a heavier surface.
+    // The retained editor URLs now only redirect; they must stay lighter than the collection rather
+    // than inheriting a former full-editor budget.
     for (const route of D20_36_ROUTES.slice(1)) {
       expect(DASHBOARD_APP_OWNED_CAP_BYTES[route])
-        .toBeGreaterThan(DASHBOARD_APP_OWNED_CAP_BYTES['/dashboard/skills'])
+        .toBeLessThan(DASHBOARD_APP_OWNED_CAP_BYTES['/dashboard/skills'])
     }
   })
 
@@ -929,10 +929,10 @@ describe('dashboard app-owned caps — frozen, per route (D20-29)', () => {
       '/dashboard/experiences': 99_328,
       '/dashboard/experiences/new': 120_832,
       '/dashboard/experiences/00000000-0000-0000-0000-000000000000': 121_856,
-      // D20-36 — the three Skills routes, each from its own baseline (83,997 / 96,571 / 96,679 B).
-      '/dashboard/skills': 97_280,
-      '/dashboard/skills/new': 111_616,
-      '/dashboard/skills/00000000-0000-0000-0000-000000000000': 111_616,
+      // U5A — collection + two redirect routes from 89,941 / 66,734 / 66,885 B.
+      '/dashboard/skills': 104_448,
+      '/dashboard/skills/new': 76_800,
+      '/dashboard/skills/00000000-0000-0000-0000-000000000000': 77_824,
       // D20-37 — the Testimonials collection, from its own baseline (86,069 B). Numerically equal to
       // the Experiences collection's cap by coincidence of close baselines, not by inheritance.
       '/dashboard/testimonials': 99_328,
