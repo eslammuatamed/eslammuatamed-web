@@ -9,7 +9,9 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), { variant: 'rows', count: 3 })
-const { t } = useI18n()
+// Both worlds render this component, so the locale that owns the SURFACE decides the
+// copy — not the route locale, which is always `en` inside the dashboard (plan §14.9 F-1).
+const { t } = useSurfaceI18n()
 const items = computed(() => Array.from({ length: props.count }, (_, i) => i))
 </script>
 

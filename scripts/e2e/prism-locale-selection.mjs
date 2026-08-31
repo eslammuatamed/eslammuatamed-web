@@ -10,7 +10,8 @@
  * So a blanket "every `?locale=ar` request gets `Prefer: example=ar`" would break `/experiences`,
  * `/skills`, `/projects` and every other operation the moment it was introduced. These functions
  * read the committed contract and select a name ONLY where that operation's 200 response actually
- * declares one. New named examples are picked up with no change here.
+ * declares one. Parameterized operations may declare `<locale>-<path-value>` examples; those are
+ * preferred over the locale-only fallback so one response cannot masquerade as another resource.
  */
 
 /**
@@ -57,12 +58,32 @@ export function matchContractPath(index, method, pathname) {
  * The example name for a request, or `null` to forward it untouched.
  *
  * Derived from the request's OWN `?locale=`, so the selector follows the locale the application
- * actually asked for rather than holding a second copy of the routing rules. An absent `?locale=`
- * means the contract's documented default (`en`) — the same default the API itself applies.
+ * actually asked for rather than holding a second copy of the routing rules. When a matching
+ * operation declares a `<locale>-<path-value>` example, the path value is included too. An absent
+ * `?locale=` means the contract's documented default (`en`) — the same default the API itself applies.
  */
 export function selectExample(index, method, pathname, searchParams) {
   const key = matchContractPath(index, method, pathname)
   if (!key) return null
   const locale = searchParams.get('locale') ?? 'en'
-  return index.get(key).has(locale) ? locale : null
+  const names = index.get(key)
+
+  for (const value of pathParameterValues(key, pathname)) {
+    const specific = `${locale}-${value}`
+    if (names.has(specific)) return specific
+  }
+
+  return names.has(locale) ? locale : null
+}
+
+/** Return concrete values for `{parameter}` segments in a matched contract path. */
+function pathParameterValues(contractKey, pathname) {
+  const separator = contractKey.indexOf(' ')
+  const template = contractKey.slice(separator + 1).split('/')
+  const concrete = pathname.split('/')
+  if (template.length !== concrete.length) return []
+
+  return template.flatMap((segment, index) =>
+    segment.startsWith('{') && segment.endsWith('}') ? [concrete[index]] : []
+  )
 }

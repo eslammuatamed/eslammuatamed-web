@@ -4,6 +4,25 @@
 Status vocabulary: **TODO** · **DOING** · **DONE** · **DEFERRED** (evidence + reopen condition) ·
 **GATED** (blocked on an owner decision).
 
+> ## ✅ Campaign status — LIVE IN PRODUCTION (2026-08-17)
+> **ALL PHASES CLOSED — CAMPAIGN 026 IS CLOSED (2026-08-17).** Campaign 026 was promoted and deployed to Production on 2026-08-17, and Phase 8 (rescoped to campaign documentation, handoff and truth reconciliation) is complete.
+>
+> | what | value |
+> |---|---|
+> | live release | **`20260817T175534Z-648aa46`** |
+> | Production SHA — `origin/main` | **`648aa467cd8bc7157cbcad2fd7c0e8981ee1f16c`** (true 2-parent merge, PR #67) · **unchanged since the cutover** |
+> | current `origin/dev` | **`8598df61413ce46d66a2f6dbc622c3e02074ad2c`** — `648aa46` **plus documentation-only closeout commits**. ⚠ **This is expected and is NOT Production drift:** `dev` is the integration branch and legitimately carries docs ahead of `main`; no application code differs, and Phase 8 does **not** modify `main` or Production |
+> | serving tree | **`7deef81c1316ad07603eede5c54206f6df11bbac`** — unbroken `0677e10` → `f8ffd72` (squash) → `648aa46` (merge) |
+> | deploy run | `32050429649` — **15/15 cutover steps `success`, no rollback** |
+> | post-deploy `dev` sync | **DONE** (D17-4 fast-forward `f8ffd72..648aa46`; dev CI `32054971908` `success`) |
+>
+> ⚠ **What closure does and does not mean.** It means every Campaign 026 engineering, release and
+> documentation obligation is discharged. It does **not** mean the Web roadmap is complete, and it
+> does **not** close the **deferred** work below — that work was **transferred**, with a named
+> receiving campaign and a trigger, and its existence does not hold this campaign open. Five
+> **operational follow-ups** and five **watchpoints** remain open by design; none is a blocker.
+> See **§Phase 8** and **§Remaining follow-ups**.
+
 ---
 
 ## Phase 0 — Recovery, SpecKit and baseline
@@ -393,45 +412,114 @@ peer), while `nuxt@4.5.2` — also still latest — depends on `unhead`/`@unhead
 `@nuxtjs/seo`'s three sub-modules deduped onto that same v2 copy). **No supported convergence exists.**
 Confirmed upstream-owned; re-check only if a genuinely new compatible release appears.
 
-## Phase 6 — Verification, security & performance closure
+## Phase 6 — Verification, security & performance closure — ✅ **CLOSED 2026-08-17** (hosted-verified `0677e10`, run 32044021643; ledger §35)
 
 | ID | Task | Status |
 |---|---|---|
-| T6.1 | Derive and run the project's **actual** authoritative gates | ✅ **DONE (local).** Every deterministic gate exit **0** at `6f132c1`: lint · typecheck · typecheck:e2e · unit **1501/1501** · `api:types` **fixed point** (regenerate → no diff) · build ×2 · `size` **29.08 kB / 30 kB** · `size:routes` **exit 0** (18/18 public, 8/8 dashboard) · `check:bundle` · `check:logical` · E2E **412/412 ×2**. ⚠ `size:routes` read only from an `ANALYZE_BUNDLE=1` build (else exit **2** = measurement failure, not breach), and build success + size>0 asserted before any budget number was believed. Ledger §34.8. **Hosted re-run still owed — that is the Phase 6 exit gate** |
-| T6.2 | Report under separated headings: **TEST FAMILIES / CI GUARDS / PERFORMANCE GATES / SECURITY GATES / PRODUCTION SMOKES** | TODO — belongs with the final Phase 6 report, after hosted verification |
-| T6.3 | Milestone comparison `BASELINE → AFTER CI → AFTER FAST CLEANUP → AFTER NUXT → AFTER DEPENDENCIES → FINAL` | TODO — the FINAL column is not authoritative until hosted CI confirms `6f132c1` |
-| T6.4 | Record regressions as honestly as improvements | ◐ **IN PROGRESS, and honoured so far.** Phase 6 recorded against itself: the §33.4 remedy this ledger had itself prescribed was **rejected on evidence**; the first version of `alert-materialization.py` was **wrong** and is recorded as wrong; one new spec assertion **failed on the correct behaviour** and was recorded as a test defect; the alert count carried in §33.8 (33) was **stale** and is corrected to **32**; and an E2E race that hosted CI was passing through was found locally and fixed rather than left latent |
-| T6.5 | Final security disposition for all ~~31~~ **32** alerts (cleared / waived-with-evidence / deferred-with-reopen) | ✅ **DONE.** ⚠ The count itself was re-derived: **32** live on the default branch, not §2's 31 nor §33.8's 33 — **`nanoid` #35 is NEW**. Against the candidate: **9 open / 23 resolved / 0 critical** (all 7 `nuxt`, the critical `@nuxt/devtools` #25 and `nanoid` #35 all CLEAR; both `image-size` ABSENT). Materialization measured by a real `npm ci --omit=dev` from the exact candidate lockfile: **7 DEV-ONLY** (`tmp`, `uuid`, `extract-zip`, `lodash`), **1 EXTRANEOUS** (`sharp` — a stale lockfile record npm never installs, `nuxt-og-image` declares it an OPTIONAL PEER), **1 production-installed** (`esbuild` #7, **LOW**). #7 dispositioned **NOT MATERIALIZED + NON-APPLICABLE**: `GHSA-g7r4-m6w7-qqqr` is a **Windows-only** path traversal in esbuild's **development server**, and the artifact has **0 esbuild imports** while CI and the host are Linux. **ZERO alerts materialized in the shipped artifact; ZERO FIX NOW.** No downgrade, no `overrides`, no dedupe, no lockfile surgery. Ledger §34.1 |
-| **T6.6** | ⚠ **WAS the carried Production blocker — RESOLVED by D20-32 (owner decision, 2026-08-17), pending hosted confirmation.** History preserved: `/dashboard/messages` measured **337,460 B gz** against D20-24's flat **327,680 B** hard ceiling (**+9,786 B**, `size:routes` **exit 1**), which made Production promotion (T7.3/T7.4) **mechanically impossible** — `deploy.yml`'s `verify` runs `size:routes` with no `continue-on-error` and `deploy` **`needs: verify`**. **D20-30 accepted the residual as attributed but changed no number, so it could not make the gate pass.** ⚠ **The owner UN-DEFERRED the minimum Dashboard budget-model recalibration rather than accept permanent blockage.** **Resolution — the gated QUANTITY was corrected, no number was raised:** the flat total-JS hard ceiling is **RETIRED** and replaced by **shared dashboard floor ≤ 262 KiB (268,288 B) gz** + **ONE generic per-route incremental allowance ≤ 84 KiB (86,016 B) gz** above that floor, with the **frozen per-route app-owned caps (D20-29) preserved as an independent third guard**, CSS and release-blocking isolation untouched, and **D20-24's 300 KB gz quality target and its six-part attribution obligation UNCHANGED** as the only threshold a route TOTAL still meets. **Both caps derive from ONE MEASURED unit** (OD-26-7's `@nuxtjs/i18n` adoption, **+1,946 B gz/route**, ×4, ceiled to KiB). Measured locally at the candidate: floor **259,911 B / 45 assets (96.9 %)**, deltas **449 … 77,549 B**, **8 of 8 GREEN**, `size:routes` **exit 0**. `/dashboard/messages` is green at **90.2 %** of its incremental cap and **still prints full attribution** (above the quality target AND above the 85 % threshold) — the accepted condition stayed visible. ⚠ **None of the forbidden shortcuts was used:** no `continue-on-error`, no removal of `size:routes` from `verify`, no de-listed route, no waiver state, no interim ceiling on a route total, no per-route exception table, no "owner-approved red", and Dashboard breaches still exit 1. ⚠ **A two-tier split and a public/dashboard gate split were both REJECTED** — the latter as a **waiver in disguise**. ⚠ **INTERIM**: D11-8's post-campaign Dashboard UI/UX pass still owes this model a review. Doc 20 **v1.24.0 / D20-32**, doc 11 **v1.4.0**, ledger §32 | ✅ **DISCHARGED — hosted-confirmed GREEN at `fd56aaa`** (run 32039342735, `size:routes` exit 0, dashboard 8/8). No longer a Production blocker. ⚠ Promotion remains UNAUTHORIZED — that is a separate owner act, not a gate state |
+| T6.1 | Derive and run the project's **actual** authoritative gates | ✅ **DONE (local).** Every deterministic gate exit **0** at `6f132c1`: lint · typecheck · typecheck:e2e · unit **1501/1501** · `api:types` **fixed point** (regenerate → no diff) · build ×2 · `size` **29.08 kB / 30 kB** · `size:routes` **exit 0** (18/18 public, 8/8 dashboard) · `check:bundle` · `check:logical` · E2E **412/412 ×2**. ⚠ `size:routes` read only from an `ANALYZE_BUNDLE=1` build (else exit **2** = measurement failure, not breach), and build success + size>0 asserted before any budget number was believed. Ledger §34.8. ✅ **HOSTED-CONFIRMED at `0677e10`** — run **32044021643**, conclusion `success`, 5/5 jobs, **every step of all 5 jobs `success` and ZERO skipped** (read from the step arrays, not the run conclusion — a `bash -e` job can make later gates unreachable while the run still looks conclusive). Hosted: unit **1501/1501** · `api:types` fixed point · CSS **29.08 kB** · `size:routes` **exit 0** · `check:bundle` · `check:logical` · E2E **412/412** · both Lighthouse profiles, **0 failed assertions**. Ledger §35.2 |
+| T6.2 | Report under separated headings: **TEST FAMILIES / CI GUARDS / PERFORMANCE GATES / SECURITY GATES / PRODUCTION SMOKES** | ✅ **DONE.** **TEST FAMILIES** — unit 1501/1501 (104 files); browser E2E 412/412 incl. unfiltered WCAG 2.2 AA, EN/AR/RTL, SSR. **CI GUARDS** — lint · typecheck · typecheck:e2e · `api:types` idempotence · `check:bundle` · `check:logical` · branch-policy guard. **PERFORMANCE GATES** — `size` (CSS 29.08/30 kB); `size:routes` (D20-31 public floor + tiers, D20-32 dashboard floor + incremental, frozen app-owned caps both surfaces); Lighthouse ×2 profiles, 16/16 URLs each, HTTP/2-asserted. **SECURITY GATES** — ⚠ **there is no CI security gate**, and that is stated rather than implied: Dependabot scans the DEFAULT branch only (F-5), so no hosted step verified this branch's advisories. The disposition is the out-of-band analysis in §34.1/§35.7. **PRODUCTION SMOKES** — ⚠ **none ran in Phase 6, by design**: they belong to T7.5, after a promotion that had not yet happened. ➤ **Since executed** — the full Production smoke ran 2026-08-17 against release `20260817T175534Z-648aa46`; results under T7.5 and ledger §42.4. Ledger §35.2 |
+| T6.3 | Milestone comparison `BASELINE → AFTER CI → AFTER FAST CLEANUP → AFTER NUXT → AFTER DEPENDENCIES → FINAL` | ✅ **DONE — both endpoints MEASURED.** **BASELINE `ced8490`**: unit **1460/1460** · E2E **403/403** · CSS **29.99 kB** (~10 B headroom) · `size:routes` green under the flat D20-11/D20-24 model with 1 warning. **FINAL `0677e10` (hosted)**: unit **1501/1501** · E2E **412/412** · CSS **29.08 kB** · `size:routes` exit 0 under D20-31/D20-32 with 4 quality-target warnings. **Net: +41 unit, +9 E2E, −0.91 kB CSS.** ⚠ **The intermediate columns are NOT re-measurable now and are deliberately NOT reconstructed** — each was measured at a SHA on a stack that no longer exists, and inventing a comparable row would fabricate evidence. They stand where they were recorded: AFTER CI §10 (no change warranted), AFTER FAST CLEANUP §12, AFTER NUXT §14/§20, AFTER DEPENDENCIES §21–§23. ⚠ **The CSS and route figures are NOT like-for-like across the middle**: OD-26-4/OD-26-5 tolerated three named budget regressions through Phases 3–4, and D20-31/D20-32 replaced the models the baseline was measured against — so the endpoints are comparable but the trajectory between them is not monotone, and must not be presented as such |
+| T6.4 | Record regressions as honestly as improvements | ✅ **DONE, and honoured — the record includes five findings against my own work.** Phase 6 recorded against itself: the §33.4 remedy this ledger had itself prescribed was **rejected on evidence**; the first version of `alert-materialization.py` was **wrong** and is recorded as wrong; one new spec assertion **failed on the correct behaviour** and was recorded as a test defect; the alert count carried in §33.8 (33) was **stale** and is corrected to **32**; and an E2E race that hosted CI was passing through was found locally and fixed rather than left latent |
+| T6.5 | Final security disposition for all alerts (cleared / waived-with-evidence / deferred-with-reopen) | ✅ **DONE — as the Phase 6 disposition of 2026-08-17, and every number below is DATED TO THAT READ, not a present-tense claim.** ⚠ The count itself was re-derived at that time: **32** live on the default branch, not §2's 31 nor §33.8's 33 — **`nanoid` #35 is NEW**. Against the candidate: **9 open / 23 resolved / 0 critical** (all 7 `nuxt`, the critical `@nuxt/devtools` #25 and `nanoid` #35 all CLEAR; both `image-size` ABSENT). Materialization measured by a real `npm ci --omit=dev` from the exact candidate lockfile: **7 DEV-ONLY** (`tmp`, `uuid`, `extract-zip`, `lodash`), **1 EXTRANEOUS** (`sharp` — a stale lockfile record npm never installs, `nuxt-og-image` declares it an OPTIONAL PEER), **1 production-installed** (`esbuild` #7, **LOW**). #7 dispositioned **NOT MATERIALIZED + NON-APPLICABLE**: `GHSA-g7r4-m6w7-qqqr` is a **Windows-only** path traversal in esbuild's **development server**, and the artifact has **0 esbuild imports** while CI and the host are Linux. **ZERO alerts materialized in the shipped artifact; ZERO FIX NOW.** No downgrade, no `overrides`, no dedupe, no lockfile surgery. Ledger §34.1. ⚠ **NOT CURRENT SECURITY TRUTH.** Alerts are scoped to the **default branch** and move on their own; the push banner has already proven an unreliable instrument (it read 33 against an API-read 32). **No count from this row — 32, 9, or any other — may be carried forward as verified-current.** The **next security/dependency review must perform a fresh authoritative recount** (paginated Dependabot API, `state=open`, plus `npm audit`, reporting the delta between the two instruments) before asserting any security posture |
+| **T6.6** | ⚠ **WAS the carried Production blocker — RESOLVED by D20-32 (owner decision, 2026-08-17), pending hosted confirmation.** History preserved: `/dashboard/messages` measured **337,460 B gz** against D20-24's flat **327,680 B** hard ceiling (**+9,786 B**, `size:routes` **exit 1**), which made Production promotion (T7.3/T7.4) **mechanically impossible** — `deploy.yml`'s `verify` runs `size:routes` with no `continue-on-error` and `deploy` **`needs: verify`**. **D20-30 accepted the residual as attributed but changed no number, so it could not make the gate pass.** ⚠ **The owner UN-DEFERRED the minimum Dashboard budget-model recalibration rather than accept permanent blockage.** **Resolution — the gated QUANTITY was corrected, no number was raised:** the flat total-JS hard ceiling is **RETIRED** and replaced by **shared dashboard floor ≤ 262 KiB (268,288 B) gz** + **ONE generic per-route incremental allowance ≤ 84 KiB (86,016 B) gz** above that floor, with the **frozen per-route app-owned caps (D20-29) preserved as an independent third guard**, CSS and release-blocking isolation untouched, and **D20-24's 300 KB gz quality target and its six-part attribution obligation UNCHANGED** as the only threshold a route TOTAL still meets. **Both caps derive from ONE MEASURED unit** (OD-26-7's `@nuxtjs/i18n` adoption, **+1,946 B gz/route**, ×4, ceiled to KiB). Measured locally at the candidate: floor **259,911 B / 45 assets (96.9 %)**, deltas **449 … 77,549 B**, **8 of 8 GREEN**, `size:routes` **exit 0**. `/dashboard/messages` is green at **90.2 %** of its incremental cap and **still prints full attribution** (above the quality target AND above the 85 % threshold) — the accepted condition stayed visible. ⚠ **None of the forbidden shortcuts was used:** no `continue-on-error`, no removal of `size:routes` from `verify`, no de-listed route, no waiver state, no interim ceiling on a route total, no per-route exception table, no "owner-approved red", and Dashboard breaches still exit 1. ⚠ **A two-tier split and a public/dashboard gate split were both REJECTED** — the latter as a **waiver in disguise**. ⚠ **INTERIM**: D11-8's post-campaign Dashboard UI/UX pass still owes this model a review. Doc 20 **v1.24.0 / D20-32**, doc 11 **v1.4.0**, ledger §32 | ✅ **DISCHARGED — hosted-confirmed GREEN at `fd56aaa`** (run 32039342735, `size:routes` exit 0, dashboard 8/8). No longer a Production blocker. ~~⚠ Promotion remains UNAUTHORIZED — that is a separate owner act, not a gate state~~ ➤ **SUPERSEDED 2026-08-17:** the owner authorized promotion, the `production` environment gate was approved, and the campaign is **LIVE in Production** at release `20260817T175534Z-648aa46`. See Phase 7 |
 
 ---
 
-## Phase 7 — Integration, promotion & Production verification
+## Phase 7 — Integration, promotion & Production verification — ✅ **COMPLETE 2026-08-17** (LIVE in Production; ledger §36–§43)
 
 | ID | Task | Status |
 |---|---|---|
-| T7.1 | Integrate to `dev` by the correct D17-4 feature/fix merge method | TODO |
-| T7.2 | Prove exact SHA, final diff, CI, security, performance, merge shape, Production target | TODO |
-| T7.3 | `dev`→`main` promotion via the **governed true merge-commit path** (never squash, never rebase) | TODO |
-| T7.4 | **STOP at the `production` environment approval — owner gate** | **GATED** |
-| T7.5 | Production verification: public + dashboard routes, EN/AR/RTL, SSR, hydration, console, API journeys, security headers, cache/SWR, assets, perf routes | TODO |
-| T7.6 | Required D17-4 `dev` synchronization after promotion | TODO |
+| T7.1 | Integrate to `dev` by the correct D17-4 feature/fix merge method | ✅ **DONE.** PR **#66** **squash**-merged into `dev` — the D17-4 method for a feature/fix branch, structurally enforced by ruleset `20759551`. Result `f8ffd72`. ⚠ **The stale PR title was treated as BLOCKING, not cosmetic**: with `COMMIT_OR_PR_TITLE`, a multi-commit squash writes the **PR title** into history, so it was corrected before merge. ⚠ The local `c141802` was **deliberately excluded** from the release candidate — its one file is already inside the 61-file scope, so including it would have changed the squashed tree and destroyed the tree-equality proof. Ledger §37 |
+| T7.2 | Prove exact SHA, final diff, CI, security, performance, merge shape, Production target | ✅ **DONE — proved by TREE HASH, never by ancestry.** A squash breaks ancestry, so integration was proven by **tree identity**: candidate `0677e10^{tree}` = `7deef81c1316ad07603eede5c54206f6df11bbac` = `f8ffd72^{tree}` = `648aa46^{tree}`. Post-merge `dev` CI run **32047156183** read per-context. ⚠ **No Backend dependency, measured not argued**: the campaign changes neither `openapi/openapi.json` nor `app/types/api.d.ts`, and live `https://api.eslammuatamed.com/docs-json` run through the repo's own `openapi-typescript@7.13.0` **diffs to 0 lines** against the committed types — a schema-level fixed point. ⚠ Recorded against the instrument: `api:types` reads the **committed** spec, so the CI fixed-point gate proves nothing about the live API. Ledger §36, §38 |
+| T7.3 | `dev`→`main` promotion via the **governed true merge-commit path** (never squash, never rebase) | ✅ **DONE.** PR **#67**, **true 2-parent merge commit `648aa467cd8bc7157cbcad2fd7c0e8981ee1f16c`** — merge method structurally enforced by ruleset `20759552` (`allowed_merge_methods: ["merge"]`), not merely intended. A live→`main` reconciliation ran first. All four required contexts green. Ledger §40, §41 |
+| T7.4 | **STOP at the `production` environment approval — owner gate** | ✅ **HONOURED, THEN OWNER-APPROVED.** The run was driven to the approval boundary and **stopped there** (§41); every mandated fact was re-verified **immediately before** approving — run still `waiting` on exactly `648aa46`, `main`/`dev` unmoved, `main^{tree}` = `7deef81c…`, all required checks still green, live release still `20260810T104718Z-d53af11`. Only then was environment `19802593028` approved, scoped to that run and SHA. ⚠ **This was the gate's FIRST-EVER exercise** — added `b5e2d66` 2026-08-13, so all 11 prior cutovers ran with no gate. It was authorized as a **watched** run for exactly that reason. Ledger §42.1 |
+| T7.5 | Production verification: public + dashboard routes, EN/AR/RTL, SSR, hydration, console, API journeys, security headers, cache/SWR, assets, perf routes | ✅ **DONE — full manual smoke, measured not eyeballed.** Deploy run `32050429649`, **15/15 cutover steps `success`**, **no rollback**. **16/16 governed URLs 200** · **the campaign's payload-extraction contract PROVEN IN PRODUCTION** (`_payload.json` preloads went 2/1/1/2/2/1/1/2 → **0 on all 18 URLs**) · icons measured as painted via real `mask-image` data URIs · `--ui-secondary`/`--ui-info` **0** in the served CSS · locale switch correct both ways with **0 Arabic characters remaining** and 0 `/ar/ar/` double-prefixes · contact `POST → 200` read from the network response · mobile 390 px RTL with no horizontal overflow · **0 console errors**. ⚠ **Pre-existing, NOT a regression:** `/projects/content-platform-api` and its `/ar` twin **404**, identical to the pre-cutover baseline (`content:sync` has never run). ⚠ **NOT VERIFIED and not guessed at — access-limited, not failing:** the 8 authenticated Dashboard routes, admin visibility of the contact message, and the reply path (which would send real external mail). Ledger §42.2–§42.5 |
+| T7.6 | Required D17-4 `dev` synchronization after promotion | ✅ **DONE 2026-08-17.** `origin/dev` fast-forwarded `f8ffd72..648aa46` — plain FF direct push, **no force, no bypass, no merge commit** (`dev`'s ruleset `20759551` blocks only `deletion` + `non_fast_forward`, so a fast-forward is policy-legal there). Final state: `origin/dev` = `origin/main` = `648aa467…`, **both trees `7deef81c…`**, `git diff` empty. Post-push `dev` CI run **32054971908** `success` across all 4 active jobs with real step arrays (16/12/9/9, **0 failed steps**), both F-6 budget steps green on a fresh `ANALYZE_BUNDLE=1` analysis. ⚠ **No deployment was triggered** — `deploy.yml` is `push: [main]` + `workflow_dispatch` only. Ledger §43 |
 
 ---
 
-## Phase 8 — Documentation & Arabic study closure
+## Phase 8 — Campaign closeout: documentation, handoff and truth reconciliation
+
+⚠ **SCOPE CORRECTED 2026-08-17 by owner directive — this section SUPERSEDES the earlier Phase 8
+definition.** Phase 8 is **final campaign documentation, handoff and truth reconciliation ONLY**. It
+is **not** the comprehensive Web learnability / study-map pass. The owner had established that
+sequencing before Campaign 026 reached Production; the earlier definition, which folded the study
+maps into this campaign, was a mis-scope and is retired here.
+
+⚠ **The earlier instruction that "Campaign 026 must therefore not be described as closed" is
+SUPERSEDED.** It was written when the study maps were still believed to be in scope. Under the
+corrected scope, **the existence of deferred post-v1 study maps does NOT keep Campaign 026 open** —
+Campaign 026 closes when §Phase 8 exit below is satisfied.
+
+**Standing constraint for this phase:** change only what is *materially stale because of Campaign 026
+or its Production closeout*. Do **not** rewrite documents for style, do **not** turn intermediate
+campaign experiments into current-architecture documentation, and do **not** silently promote a
+watchpoint into a task.
+
+### In scope — the authorized closeout
 
 | ID | Task | Status |
 |---|---|---|
-| T8.1 | Update materially affected docs: PROJECT_GUIDE, READMEs, architecture, testing, CI/CD, security, performance, dependency strategy, roadmap, handoff, ledger | TODO |
-| T8.2 | **A. Web/Nuxt Application Study Map** from the final structure, with FOUNDATION/INTERMEDIATE/ADVANCED and `Follow one real feature` | TODO |
-| T8.3 | **B. Testing Study Map** from the **actual** final taxonomy, with `Learning order` and `Follow one real test journey`; separates test types from CI guards from perf/a11y gates from Production smokes | TODO |
-| T8.4 | **C. Additional maps only where justified** — no files created to raise the count | TODO |
-| T8.5 | Preserve historical lessons (failed Nuxt upgrade, CSS budget investigation, CI evidence) **without teaching them as current architecture** | TODO |
-| T8.6 | Verify paths + anchors; **Arabic combining-mark-safe** anchor checking; negative-control the validator | TODO |
-| T8.7 | `docs/group` source-driven regeneration: blast radius → pre-check → regenerate → postcheck → negative control → exact restore → deterministic second generation → byte-identical → record hashes. **Never hand-edit bundles** | TODO |
-| T8.8 | Close doc 24 §2b RB-1; synchronize roadmap / ledger / handoff | TODO |
-| T8.9 | Final report separating **COMPLETED / DEFERRED / OWNER-GATED / OUTSIDE CAMPAIGN / NEXT PROJECT PHASE** | TODO |
+| T8.1 | **Documentation truth reconciliation.** Update the Campaign-026-relevant statements that Campaign 026 or its Production closeout made stale, across: PROJECT_GUIDE · repo READMEs · architecture · testing · CI/CD · security · performance · dependency strategy · roadmap · handoff · ledger / SpecKit | **DONE** |
+| T8.1a | **Final architecture truth** — the Nuxt 4.5.2-era stack; current Nuxt UI / Vue / Router / Pinia / i18n state; **D20-31** public performance model; **interim D20-32** Dashboard model; **D11-8** post-Campaign Dashboard UI/UX obligation; current payload-extraction policy; current prefetch / self-link behaviour where documented; current CI/deploy verification behaviour; exact Node/runtime requirements; remaining supported dependency exceptions; upstream-owned Unhead duplication if still relevant | **DONE** |
+| T8.1b | **Security truth** — preserve the Phase 6 disposition as **dated campaign evidence**, never as verified-current. No remembered Dependabot/banner count may be carried forward. Document the measurement-source problem clearly enough that future work does not trust the GitHub push banner as authoritative. **R-4 stands** | **DONE** |
+| T8.1c | **Production truth** — the handoff records Production SHA `648aa467cd8bc7157cbcad2fd7c0e8981ee1f16c`, release `20260817T175534Z-648aa46`, the successful watched deployment, completed `dev`/`main` reconciliation, current `dev` `8598df61413ce46d66a2f6dbc622c3e02074ad2c`, and `main` unchanged at `648aa467…`. **The docs-only `dev` commit after Production is expected and must not be described as Production drift** | **DONE** |
+| T8.5 | Preserve historical lessons (the failed Nuxt 4.5.1 upgrade, the CSS-budget investigation, the CI evidence) **as dated history, without teaching them as current architecture** | **DONE** — doc 24 §2b keeps the 4.5.1 probe findings under *"The starting condition RB-1 named"*; doc 20's 2026-07-26 framework floor is relabelled dated evidence pointing at the calibrated D20-31/D20-32 figures; the D20-12 frozen baseline was checked and deliberately left untouched |
+| T8.6 | Verify paths + anchors across the reconciled documents; **Arabic combining-mark-safe** anchor checking; **negative-control the validator** before trusting a zero-finding result. Scope: an existing documentation-integrity gate — **not** a new curriculum-validation system | **DONE** — `docs/research/tools/link-anchor-check.py`. Self-test **exit 0**: 10 slug fixtures + a control asserting the naive `isalnum()` slugger *disagrees* on Arabic + an end-to-end negative control. ⚠ **The validator was WRONG on its first real run and the run caught it** (trim-before-filter, leading-hyphen anchors). Web: **0** intra-repo findings, 29 cross-repo links re-rooted and all resolved. Docs: **exit 1**, all findings classified — see §Phase 8 exit |
+| T8.7 | `docs/group` **source-driven** regeneration: blast radius → pre-check → regenerate → postcheck → negative control → exact restore → deterministic second generation → byte-identical → record hashes. **Never hand-edit bundles** | **DONE** — blast radius predicted *then* confirmed (bundle **01 sha256 unchanged**); pre-check **1** → post-check **0**; second generation **byte-identical**; negative control drove the gate red and the restore was **sha256-verified against the pre-mutation value**. No bundle hand-edited |
+| T8.8 | Close doc 24 §2b **RB-1** and every other Campaign-026 obligation *actually satisfied*; synchronize **roadmap / ledger / handoff / SpecKit**; remove or supersede stale TODOs Campaign 026 genuinely completed. **Do not close deferred post-Frontend-v1 work as completed** | **DONE** — RB-1 **CLOSED** against an exit-condition evidence table; doc 24 §3.1 closed **line by line** with its two undelivered lines named as deferred; D16-11's **Web half** discharged (API half untouched). Agreement **verified mechanically, not asserted**: the Production SHA, release id, current `dev` SHA, serving tree and final CSS figure were diffed across all six artifacts — no conflicts, and the two SHAs match live `git` |
+| T8.9 | Final report separating **COMPLETED · DEFERRED · OWNER-GATED · OUTSIDE CAMPAIGN · NEXT FRONTEND WORKSTREAM** | **DONE** — ledger §45 |
+| T8.10 | **Record the deferral transfer explicitly**, so a future session reads it as *transferred*, never as *forgotten* | **DONE** — §Deferred below, plus ledger §44 |
+
+### DEFERRED out of Campaign 026 — transferred, not forgotten
+
+⚠ **These are NOT abandoned and NOT incomplete Campaign 026 work.** They were removed from this
+campaign by owner directive on 2026-08-17 and transferred, whole, to a separate campaign.
+
+**Receiving campaign:** `Web Learnability & Maintainability Pass`
+**Reopen condition (single, for every row):** **Frontend v1 is complete.** Not before.
+
+| ID | Task | Status |
+|---|---|---|
+| T8.2 | **A. Web/Nuxt Application Study Map** from the final structure, with FOUNDATION / INTERMEDIATE / ADVANCED and `Follow one real feature` | **DEFERRED** → `Web Learnability & Maintainability Pass` |
+| T8.3 | **B. Testing Study Map** from the **actual** final taxonomy, with `Learning order` and `Follow one real test journey`; separating test types from CI guards from perf/a11y gates from Production smokes | **DEFERRED** → `Web Learnability & Maintainability Pass` |
+| T8.4 | **C. Additional maps only where justified** — no files created to raise the count | **DEFERRED** → `Web Learnability & Maintainability Pass` |
+
+Also transferred to that same campaign, and likewise **out of Campaign 026**:
+
+- broad source-comment cleanup unrelated to Campaign 026;
+- broad maintainability refactoring;
+- final Frontend curriculum design;
+- any comprehensive post-v1 learning architecture work.
+
+⚠ **Do not partially implement any of the above under a Campaign 026 heading** merely because an
+older Phase 8 task list named it. A partial study map is worse than none: it becomes a document that
+looks authoritative and is not.
+
+### Phase 8 exit
+
+Campaign 026 may be declared **CLOSED** when, and only when:
+
+1. all Campaign-026-specific documentation reflects current Production truth;
+2. stale modernization-era claims are reconciled;
+3. roadmap / handoff / ledger / SpecKit agree with each other;
+4. the documentation-integrity gates pass;
+5. the deferred learning work is **explicitly transferred** to the `Web Learnability & Maintainability Pass`;
+6. no Campaign 026 engineering or release blocker remains.
+
+**The existence of deferred post-v1 study maps does not block any of the six.**
+
+#### Exit verdict — SATISFIED 2026-08-17
+
+⚠ **Stated precisely, because "the gates pass" would otherwise read as "everything exited 0", and
+one of them did not.**
+
+| Gate | Result |
+|---|---|
+| `docs:group:check` | **exit 0** — bundles current, second generation byte-identical, bundle 01 unchanged |
+| link/anchor validator — **self-test** | **exit 0** — 10 slug fixtures, naive-slugger discrimination control, end-to-end negative control |
+| link/anchor validator — **Web repo** | **exit 0 intra-repo findings**; all 29 cross-repo links re-rooted against the Docs branch and resolved, anchors included |
+| link/anchor validator — **Docs repo** | ⚠ **exit 1.** Every finding classified: the overwhelming majority sit **inside the generated bundles** and are a **pre-existing generator characteristic** (`generate-doc-groups.mjs` does not rewrite relative links, so a link correct relative to `docs/` does not resolve from `docs/group/`); the remainder are **worktree-layout artifacts** whose sibling-repo targets exist in the canonical checkout. **Controlled against the pre-Phase-8 baseline `b1072b9`, which reports the same count: Phase 8 introduced ZERO new finding classes in the sources.** Reported, deliberately **not** fixed — changing the generator is outside this phase's authorized scope |
 
 ---
 
@@ -481,6 +569,13 @@ Primary worktree · Node **v24.19.0** · npm **11.17.0** · `.nvmrc` = 24 ·
 
 ### Security
 
+⚠ **DATED BASELINE EVIDENCE — 2026-08-15 — NOT CURRENT SECURITY TRUTH.** Every figure in this
+subsection describes the campaign's **starting condition** and is preserved as the measured baseline.
+**No count here (nor the 32 / 9 in T6.5) may be read as the present security posture** — alerts are
+scoped to the default branch and move on their own, and the push banner has proven an unreliable
+instrument. A **fresh authoritative recount is required** before any security assertion: see
+**R-4** under §Remaining follow-ups.
+
 | Item | Value |
 |---|---|
 | Dependabot open alerts | **31** — **1 critical** / 21 high / 7 medium / 2 low (full table in ledger §2) |
@@ -502,3 +597,62 @@ T6.5, not an assumption to make now.
 The first build attempt was piped to `tail`, which reported **exit 0 while the build had actually
 failed** on the `site-url` guard (missing `NUXT_PUBLIC_SITE_URL`). Re-run with `set -o pipefail`
 and the CI-matching env. This is why the standing rules forbid piping a gate without `pipefail`.
+
+
+---
+
+## Remaining follow-ups — the accurate open state after Production
+
+Recorded 2026-08-17 after the deployment and the D17-4 `dev` reconciliation; **re-classified
+2026-08-17 into the owner's closeout buckets** (Phase 8 scope correction). **None of these is a
+Production blocker**; all are carried deliberately, each with its reopen condition.
+
+⚠ **Classification is load-bearing.** A *deferred* item is transferred work with a named receiving
+campaign. An *operational follow-up* is a real action someone still has to take. A *watchpoint* is an
+observation deliberately **not** acted on. **Do not silently promote a watchpoint into a task.**
+
+**R-1 — Phase 8** is no longer listed here as outstanding: under the corrected scope it *is* this
+closeout, tracked in **§Phase 8** above, and its study-map component has been transferred out (below).
+
+### DEFERRED / FUTURE CAMPAIGNS
+
+Transferred out of Campaign 026. **Their existence does not keep Campaign 026 open.**
+
+| # | Item | Receiving campaign · reopen condition |
+|---|---|---|
+| **D-1** | **Comprehensive Web Learnability & Maintainability Pass** — incl. the Web/Nuxt Application Study Map (T8.2), the frontend-specific Testing Study Map / testing curriculum (T8.3), additional learning maps (T8.4), broad source-comment cleanup, broad maintainability refactoring and the final Frontend curriculum design | `Web Learnability & Maintainability Pass` · **after Frontend v1 is complete**. Full record in **§Phase 8 → DEFERRED** |
+| **D-2** | **Dashboard UI/UX architecture pass (D11-8)** — *and the D20-32 final review / recalibration it owes.* D20-32 is explicitly **INTERIM**. The **5 of 8 Dashboard routes without accepted baselines** must be recorded ***as part of*** that recalibration and **never before it**. One route (`/dashboard/messages`) sits at **90.2 %** of its incremental cap and still prints its full six-part attribution — that visibility is the accepted condition working, not a defect *(was R-2)* | Dashboard UI/UX pass · **after Dashboard stabilization**, post-Campaign |
+
+### OPERATIONAL FOLLOW-UPS
+
+Real actions still owed. Each needs access, a decision, or a fresh measurement — none is a blocker.
+
+| # | Item | State |
+|---|---|---|
+| **R-3** | **Verify the Production rollback POINTER** | **OPERATIONAL FOLLOW-UP — open.** ⚠ What is verified: the previous release **directory** `20260810T104718Z-d53af11` **remains present** on the server. ⚠ What is **NOT** verified: that the rollback **pointer/symlink is currently valid**. The latest post-deploy check did **not** prove it. **A retained directory is not a proven pointer**, and any earlier wording claiming auto-rollback is "genuinely armed" was a **pre-deploy** reading (ledger §36.7 / §39) that the post-cutover state has not re-established. ⚠ Related standing lesson: a liveness-only gate cannot verify a real cutover and **disarms any rollback hanging off it** |
+| **R-4** | **Fresh authoritative security recount** | **REQUIRED before any security assertion.** ⚠ **No vulnerability count from this campaign — 32, 9, or any push-banner figure — may be carried forward as verified-current truth.** The push banner has proven unreliable (33 vs an API-read 32). The last authoritative disposition is the **Phase 6** read of 2026-08-17 (T6.5, ledger §34.1/§35.7), which stands **as dated evidence only**. The next security/dependency review must recount from the paginated Dependabot API (`state=open`) **plus** `npm audit`, and report the delta between the two instruments |
+| **R-5** | **One Production test artifact needs owner cleanup** | A real contact message submitted by the smoke, subject `[TEST] Campaign 026 production smoke — safe to delete`, sent to the **owner's own address** so no third party received mail. Deleting it needs Dashboard access |
+| **R-6** | **Two smoke groups remain access-limited** | The **8 authenticated Dashboard routes**, admin visibility of the contact message, and the reply path (which would send **real external mail**) were **NOT verified** — they need owner credentials. ⚠ **Access-limited, not failing**; the gate itself was verified (login renders, unauthenticated Dashboard routes redirect) |
+| **R-7** | **Docs repository is still private** | The campaign ledger and all Campaign 026 research remain **unpublished**. Publication is a separate owner decision |
+
+### WATCHPOINTS — recorded, NOT active work
+
+⚠ **These are observations, not tasks.** None is to be converted into Campaign 026 work.
+
+| # | Item | Why it stays open |
+|---|---|---|
+| **W-1** | Three **thin** Lighthouse readings on the final hosted verification at `fd56aaa` (run `32039342735`, ledger §33): Arabic fonts `/ar` **132,080 / 133,120 B (99.2 %)**; mobile `/ar/about` **LCP 3,916 / 4,000 ms** and **CLS 0.0487 / 0.05** | **Watchpoints, NOT defects** — 0 failed assertions on both profiles. **Do not reopen optimization merely to buy headroom** |
+| **W-2** | The **±6 B `size:routes` local↔hosted variance band** | Rests on limited hosted evidence. Re-read the calibration if the offset moves. Related cosmetic imperfection, recorded and deliberately not fixed: `sharedFloorCalibrationBytes` is a **local** reading, so hosted prints `+6 B ← shared framework/ecosystem growth` — environment variance mislabelled as growth. Fixing it would change a verified SHA |
+| **W-3** | `/projects/content-platform-api` and its `/ar` twin return **404** in Production | ⚠ **Pre-existing content gap, NOT a campaign regression** — identical to the pre-cutover baseline. `content:sync` has never been run |
+| **W-4** | Issue **#30** — the known-red `test:e2e:repeat` hydration defect | Explicitly **out of scope** for Campaign 026 (spec §4). Neither suppressed nor duplicated |
+| **W-5** | The **`push: main` deploy trigger and its merged-PR fallback share one dependency — GitHub's API.** On the Production cutover the fallback's dispatch failed with **HTTP 503 on all 5 attempts** while the primary trigger fired normally, so the deployment was unaffected and the dispatch would have no-opped at preflight anyway (same-SHA idempotency). ⚠ The redundancy therefore does **not** protect against a GitHub-wide outage — **the two paths fail together** | **Watchpoint, NOT a defect.** Recovery for that case is a manual `workflow_dispatch` with `target_sha` once the API recovers, which `preflight` validates like any other path. **No code change proposed.** Ledger §41.5 |
+
+### Repository state carried forward
+
+- Campaign branch **`026-p3-nuxt`** is **preserved** at `0677e10`, plus the local-only commit
+  `c141802` on top of it. ⚠ **`c141802` was NOT landed and must not be cherry-picked** — it predates
+  Phase 7 and carries stale campaign state (it asserts a promotion that had not happened). Its
+  still-valid documentation content has been **re-authored against the current `dev`** in this
+  document instead.
+- `probe/nuxt-4.5.1-experiment` (`8fee07c`) is preserved as a private verified git bundle per
+  OD-26-1; the tag is **not** pushed to the public origin.

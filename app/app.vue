@@ -29,10 +29,27 @@ const brand = computed(() => t('brand.name'))
 // contract can be unit-tested rather than only observed in a browser.
 const pageTransition = createPageTransition(finalizePendingLocaleChange)
 
-// Nuxt UI localizes its built-in strings and mirrors component direction from this locale pack,
-// switched with the active i18n locale (ui.nuxt.com/docs/getting-started/i18n/nuxt). The pack keys
-// (`en`/`ar`) match our i18n codes; the `<html lang dir>` authority is i18n's, per D22-7.
-const uiLocale = computed(() => uiLocales[locale.value as keyof typeof uiLocales])
+// Nuxt UI localizes its built-in strings and mirrors component direction from this locale pack
+// (ui.nuxt.com/docs/getting-started/i18n/nuxt). The pack keys (`en`/`ar`) match our i18n codes; the
+// `<html lang dir>` authority is i18n's, per D22-7.
+//
+// TWO WORLDS, ONE PROVIDER (D11-8). Public chrome follows the i18n locale, which is derived from the
+// route (D06-6). Dashboard chrome follows the Dashboard APPLICATION locale, a persisted operator
+// preference that is deliberately not in the URL (D02-15 / D04-7) — so on `/dashboard/**` the pack
+// is chosen from that instead.
+//
+// WHY HERE AND NOT IN THE DASHBOARD LAYOUT. `UApp` renders the Reka `ConfigProvider` that every Nuxt
+// UI overlay reads its direction from, and overlays TELEPORT to `document.body` — outside the
+// dashboard shell's own `dir`. Resolving the pack at this one provider is what makes a dialog,
+// slideover or toast opened in an Arabic dashboard render RTL. Nesting a second `<UApp>` inside the
+// dashboard layout would also work for direction and would additionally mount a second
+// `UOverlayProvider` over the same shared overlay state, rendering every programmatic overlay twice.
+const route = useRoute()
+const { locale: dashboardLocale } = useDashboardLocale()
+const chromeLocale = computed(() =>
+  isDashboardPath(route.path) ? dashboardLocale.value : locale.value
+)
+const uiLocale = computed(() => uiLocales[chromeLocale.value as keyof typeof uiLocales])
 
 // Title only. Locale-derived tags are the module's (D22-7); description, OG image, structured data
 // and the D22-6 global metas remain page/entity concerns, below and in the pages themselves.
@@ -61,7 +78,7 @@ useHead(() => ({
 // description or image" holds because the committed tier is always the last candidate — not
 // because the API is avoided.
 // NO API READ HERE, DELIBERATELY. `app.vue` wraps EVERY route, including `/dashboard/*` (its own
-// `dashboard`/`auth` layouts, authenticated, English-only chrome, noindex). Awaiting the PUBLIC
+// `dashboard`/`auth` layouts, authenticated, its own application locale (D11-8), noindex). Awaiting the PUBLIC
 // `/settings/site` read here made every dashboard navigation block on a public endpoint it has no
 // use for, and made an authenticated surface fail to render when the public API was down — a
 // breach of the dashboard's isolation from public reads. Tier 2 therefore belongs to the PUBLIC

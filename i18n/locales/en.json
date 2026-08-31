@@ -22,7 +22,8 @@
     "closeMenu": "Close menu",
     "homeLink": "Go to homepage",
     "backToTop": "Back to top",
-    "switchToOtherLocale": "Switch to Arabic"
+    "switchToOtherLocale": "Switch to Arabic",
+    "opensInNewTab": "Opens in a new tab"
   },
   "theme": {
     "light": "Light",
@@ -307,6 +308,8 @@
     "subtitle": "Access the dashboard.",
     "email": "Email",
     "password": "Password",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
     "submit": "Sign in",
     "submitting": "Signing in…",
     "errorEmail": "Enter a valid email address.",
@@ -318,10 +321,18 @@
     "title": "Dashboard",
     "welcome": "Signed in as {email}",
     "signOut": "Sign out",
-    "placeholder": "Modules arrive in the next milestone.",
+    "overview": { "title": "Overview", "description": "A focused starting point for managing your portfolio content.", "contentSnapshot": { "title": "Content snapshot", "description": "Open a module to manage its content. Totals appear only where the API provides them." }, "attention": { "title": "Attention" }, "quickActions": { "title": "Quick actions", "description": "Start common content tasks directly.", "newArticle": "New article", "newProject": "New project", "media": "Media", "seo": "Static page SEO" }, "total": "{count} total", "unread": "{count} unread", "navigationOnly": "Open this module to manage its content.", "openModule": "Open module", "unavailable": "This information is currently unavailable.", "forbidden": "You do not have access to this information.", "retry": "Try again" },
+    "shell": {
+      "language": "Dashboard language",
+      "theme": "Dashboard appearance",
+      "account": "Account",
+      "viewSite": "View site",
+      "backToSite": "Back to the site"
+    },
     "nav": {
       "overview": "Overview",
       "content": "Content",
+      "articles": "Articles",
       "projects": "Projects",
       "communication": "Communication",
       "messages": "Messages",
@@ -331,7 +342,12 @@
       "library": "Library",
       "media": "Media",
       "system": "System",
-      "profile": "Profile"
+      "profile": "Profile",
+      "seo": "Static page SEO",
+      "experiences": "Experience",
+      "skills": "Skills",
+      "testimonials": "Testimonials",
+      "taxonomy": "Taxonomy"
     },
     "messages": {
       "title": "Messages",
@@ -370,6 +386,7 @@
       "errorTitle": "Messages could not be loaded",
       "errorBody": "The request did not complete. This is usually temporary.",
       "retry": "Try again",
+      "staleNotice": "This list may be out of date — the last refresh did not complete.",
       "forbiddenTitle": "You do not have access to messages",
       "forbiddenBody": "This account is not permitted to read the contact inbox.",
       "offlineTitle": "You are offline",
@@ -524,11 +541,436 @@
       },
       "saveFor": "Save {section}"
     },
+    "articles": {
+      "title": "Articles",
+      "description": "Blog posts, in both languages.",
+      "retry": "Try again",
+      "staleNotice": "This list may be out of date — the last refresh did not complete.",
+      "errorTitle": "Articles could not be loaded",
+      "forbiddenTitle": "You do not have access to articles",
+      "forbiddenBody": "This account is not permitted to manage articles.",
+      "emptyTitle": "No articles yet",
+      "emptyBody": "Write the first article and it will appear here.",
+      "emptyFilteredTitle": "Nothing matches this filter",
+      "emptyFilteredBody": "Change the status filter to see more.",
+      "listRegionLabel": "Articles",
+      "resultCount": "{total} articles · page {page} of {pages}",
+      "untitled": "Untitled article",
+      "create": "New article",
+      "edit": "Edit",
+      "editFor": "Edit {title}",
+      "filters": {
+        "heading": "Filters",
+        "status": "Status",
+        "allStatuses": "All statuses"
+      },
+      "status": {
+        "DRAFT": "Draft",
+        "SCHEDULED": "Scheduled",
+        "PUBLISHED": "Published",
+        "ARCHIVED": "Archived"
+      },
+      "translationState": {
+        "label": "Translations",
+        "present": "{locale} written",
+        "missing": "{locale} missing"
+      },
+      "locale": {
+        "en": "English",
+        "ar": "Arabic"
+      },
+      "field": {
+        "status": "Status",
+        "publishAt": "Publish date",
+        "updated": "Updated",
+        "category": "Category",
+        "tags": "Tags",
+        "coverImage": "Cover image",
+        "title": "Title",
+        "slug": "Slug",
+        "excerpt": "Excerpt",
+        "body": "Body"
+      },
+      "validation": {
+        "categoryRequired": "Choose a category.",
+        "atLeastOneLocale": "Write the article in at least one language.",
+        "fieldRequired": "Required when this language is being written.",
+        "cannotClearLocale": "This language is already published. Emptying it here would not remove it — delete the article instead, or restore the text.",
+        "publishAtRequired": "A scheduled article needs a publish date.",
+        "publishAtFuture": "The publish date must be in the future."
+      },
+      "editor": {
+        "createTitle": "New article",
+        "editTitle": "Edit article",
+        "description": "Shared settings apply to the article; each language has its own text.",
+        "back": "All articles",
+        "publicationSection": "Publication",
+        "classificationSection": "Classification",
+        "contentSection": "Content",
+        "seoSection": "Search and social (optional)",
+        "publishAtHelp": "Required when the status is Scheduled. Shown in your own time zone.",
+        "slugHelp": "The address this article gets on the site, in this language.",
+        "bodyHelp": "Markdown. Stored exactly as typed.",
+        "save": "Save",
+        "saving": "Saving…",
+        "saved": "Saved",
+        "unsaved": "Unsaved changes",
+        "publish": "Publish",
+        "delete": "Delete",
+        "deleteConfirm": "Confirm delete",
+        "deleteFailed": "The article could not be deleted.",
+        "preview": "Preview",
+        "previewFailed": "The preview link could not be created.",
+        "viewOnSite": "View on site",
+        "errorSummaryTitle": "This article could not be saved yet",
+        "tabInvalid": "Has a problem",
+        "fill": {
+          "empty": "Not written",
+          "partial": "Incomplete",
+          "complete": "Complete"
+        },
+        "unsavedWarning": "You have unsaved changes. Leave this page and lose them?",
+        "loadingArticle": "Loading the article",
+        "notFoundTitle": "That article does not exist",
+        "notFoundBody": "It may have been deleted. Return to the list to see what is there.",
+        "loadFailedBody": "The request did not complete. This is usually temporary.",
+        "deleteCancel": "Keep it"
+      }
+    },
+    "experiences": {
+      "title": "Experience",
+      "description": "Roles and positions, in both languages.",
+      "retry": "Try again",
+      "staleNotice": "This list may be out of date — the last refresh did not complete.",
+      "errorTitle": "Experience could not be loaded",
+      "forbiddenTitle": "You do not have access to experience",
+      "forbiddenBody": "This account is not permitted to manage experience.",
+      "emptyTitle": "No experience yet",
+      "emptyBody": "Add the first role and it will appear here.",
+      "listRegionLabel": "Experience",
+      "resultCount": "{total} roles",
+      "untitled": "Untitled role",
+      "create": "New role",
+      "edit": "Edit",
+      "editFor": "Edit {role}",
+      "current": "Current",
+      "present": "Present",
+      "period": "{start} – {end}",
+      "translationState": {
+        "label": "Translations",
+        "present": "{locale} written",
+        "missing": "{locale} missing"
+      },
+      "locale": {
+        "en": "English",
+        "ar": "Arabic"
+      },
+      "field": {
+        "role": "Role",
+        "impact": "Impact",
+        "startDate": "Start date",
+        "endDate": "End date",
+        "isCurrent": "This is my current role",
+        "company": "Company",
+        "location": "Location",
+        "employmentType": "Employment type",
+        "period": "Period",
+        "skills": "Skills",
+        "order": "Order"
+      },
+      "employmentType": {
+        "FULL_TIME": "Full time",
+        "PART_TIME": "Part time",
+        "CONTRACT": "Contract",
+        "FREELANCE": "Freelance"
+      },
+      "skillCount": "{count} linked",
+      "editor": {
+        "createTitle": "New role",
+        "editTitle": "Edit role",
+        "description": "One role, in both languages. Shared details are set once; the text is written per language.",
+        "back": "Back to experience",
+        "detailsSection": "Role details",
+        "skillsSection": "Skills",
+        "contentSection": "Description",
+        "loadingRole": "Loading the role",
+        "notFoundTitle": "That role does not exist",
+        "notFoundBody": "It may have been deleted. Go back to the list to see what is there.",
+        "loadFailedBody": "The role could not be loaded. Try again, or go back to the list.",
+        "isCurrentHelp": "A current role has no end date.",
+        "endDateHelp": "Leave empty while the role is ongoing.",
+        "orderHelp": "Breaks ties between roles that start in the same month. Lower comes first.",
+        "impactHelp": "Markdown. What changed because you were there.",
+        "skillsHelp": "The set is replaced on save — whatever is ticked here is what the role will have.",
+        "skillsFilter": "Filter skills",
+        "skillsEmpty": "No skills are defined yet, so none can be linked.",
+        "skillsError": "The skill list could not be loaded, so the choices below are incomplete. This role keeps the skills it already has — saving will not clear them.",
+        "skillsUnknown": "Already linked, name unavailable",
+        "skillsSelected": "{count} selected",
+        "errorSummaryTitle": "This role could not be saved",
+        "tabInvalid": "Has errors",
+        "fill": {
+          "empty": "Not written",
+          "partial": "Incomplete",
+          "complete": "Written"
+        },
+        "save": "Save",
+        "saving": "Saving…",
+        "saved": "Saved",
+        "unsaved": "Unsaved changes",
+        "unsavedWarning": "This role has unsaved changes. Leave the page and they are lost.",
+        "delete": "Delete",
+        "deleteConfirm": "Delete this role",
+        "deleteCancel": "Keep it",
+        "deleteFailed": "The role could not be deleted."
+      },
+      "validation": {
+        "startDateRequired": "A start date is required.",
+        "currentHasEndDate": "A current role cannot have an end date. Clear the date, or untick \u201cthis is my current role\u201d.",
+        "endBeforeStart": "The end date cannot be before the start date.",
+        "orderInvalid": "Order must be a whole number, zero or more.",
+        "fieldRequired": "This language is partly written. Fill this in, or clear the language completely.",
+        "atLeastOneLocale": "Write the role in at least one language.",
+        "cannotClearLocale": "This language is already saved and cannot be emptied here. Saving would leave the old text published. Delete the role instead."
+      }
+    },
+    "skills": {
+      "title": "Skills",
+      "description": "The vocabulary used across the site and dashboard.",
+      "retry": "Try again",
+      "errorTitle": "Skills could not be loaded",
+      "forbiddenTitle": "You do not have access to skills",
+      "forbiddenBody": "This account is not permitted to manage skills.",
+      "emptyTitle": "No skills yet",
+      "emptyBody": "Create the first skill and it will appear here.",
+      "listRegionLabel": "Skills",
+      "resultCount": "{total} skills",
+      "create": "New skill",
+      "edit": "Edit",
+      "editFor": "Edit {label}",
+      "public": "Public",
+      "hidden": "Hidden",
+      "noBrandColor": "No brand color",
+      "translationState": {
+        "label": "Translations",
+        "present": "{locale} written",
+        "missing": "{locale} missing"
+      },
+      "locale": { "en": "English", "ar": "Arabic" },
+      "field": {
+        "slug": "Slug",
+        "label": "Skill name",
+        "group": "Group",
+        "order": "Order",
+        "visibility": "Visibility",
+        "brandColor": "Brand color"
+      },
+      "group": {
+        "LANGUAGE": "Language",
+        "FRONTEND": "Frontend",
+        "BACKEND": "Backend",
+        "DELIVERY": "Delivery"
+      },
+      "editor": {
+        "createTitle": "New skill",
+        "editTitle": "Edit skill",
+        "description": "One skill, in both languages. The slug is the stable public identity.",
+        "back": "Back to skills",
+        "detailsSection": "Skill details",
+        "contentSection": "Names",
+        "loadingSkill": "Loading the skill",
+        "notFoundTitle": "That skill does not exist",
+        "notFoundBody": "It may have been deleted. Go back to the list to see what is there.",
+        "loadFailedBody": "The skill could not be loaded. Try again, or go back to the list.",
+        "slugHelp": "The slug cannot be changed after creation.",
+        "orderHelp": "The API accepts the Skills order value as authored.",
+        "brandColorHelp": "Optional design token or color value. Clear it to send null.",
+        "clearBrandColor": "Clear",
+        "labelHelp": "Up to 120 characters.",
+        "complete": "Both languages written",
+        "incomplete": "One language written; the other can be added later.",
+        "errorSummaryTitle": "This skill could not be saved",
+        "tabInvalid": "Has errors",
+        "fill": {
+          "empty": "Not written",
+          "partial": "Incomplete",
+          "complete": "Written"
+        },
+        "save": "Save",
+        "saving": "Saving…",
+        "saved": "Saved",
+        "unsaved": "Unsaved changes",
+        "unsavedWarning": "This skill has unsaved changes. Leave the page and they are lost.",
+        "delete": "Delete",
+        "deleteConfirm": "Delete this skill",
+        "deleteCancel": "Keep it",
+        "deleteFailed": "The skill could not be deleted."
+      },
+      "validation": {
+        "slugRequired": "A slug is required.",
+        "slugTooLong": "The slug must be 60 characters or fewer.",
+        "slugInvalid": "Use lowercase letters, numbers, and single hyphens.",
+        "labelRequired": "Write a name in this language.",
+        "labelTooLong": "The name must be 120 characters or fewer.",
+        "atLeastOneLocale": "Write the skill in at least one language."
+      }
+    },
+    "testimonials": {
+      "title": "Testimonials",
+      "description": "Client quotes shown on the home page, in both languages.",
+      "retry": "Try again",
+      "staleNotice": "This list may be out of date — the last refresh did not complete.",
+      "errorTitle": "Testimonials could not be loaded",
+      "forbiddenTitle": "You do not have access to testimonials",
+      "forbiddenBody": "This account is not permitted to manage testimonials.",
+      "emptyTitle": "No testimonials yet",
+      "emptyBody": "Add the first testimonial and it will appear here.",
+      "listRegionLabel": "Testimonials",
+      "resultCount": "{total} testimonials",
+      "untitled": "Untitled testimonial",
+      "create": "New testimonial",
+      "edit": "Edit",
+      "editFor": "Edit {author}",
+      "visible": "Visible",
+      "hidden": "Hidden",
+      "avatarLinked": "Avatar linked",
+      "noAvatar": "No avatar",
+      "translationState": {
+        "label": "Translations",
+        "present": "{locale} written",
+        "missing": "{locale} missing"
+      },
+      "locale": { "en": "English", "ar": "Arabic" },
+      "field": {
+        "order": "Order",
+        "visibility": "Visibility",
+        "avatar": "Avatar",
+        "quote": "Quote",
+        "author": "Author name",
+        "role": "Author role"
+      },
+      "editor": {
+        "createTitle": "New testimonial",
+        "editTitle": "Edit testimonial",
+        "description": "One client quote, in both languages. The avatar links an image from the media library.",
+        "back": "Back to testimonials",
+        "detailsSection": "Testimonial details",
+        "contentSection": "The quote",
+        "loadingTestimonial": "Loading the testimonial",
+        "notFoundTitle": "That testimonial does not exist",
+        "notFoundBody": "It may have been deleted. Go back to the list to see what is there.",
+        "loadFailedBody": "The testimonial could not be loaded. Try again, or go back to the list.",
+        "orderHelp": "An integer of zero or more. Display order on the site is decided by the API.",
+        "quoteHelp": "Up to 4000 characters.",
+        "complete": "Both languages written",
+        "incomplete": "One language written; the other can be added later.",
+        "errorSummaryTitle": "This testimonial could not be saved",
+        "tabInvalid": "Has errors",
+        "fill": {
+          "empty": "Not written",
+          "partial": "Incomplete",
+          "complete": "Written"
+        },
+        "save": "Save",
+        "saving": "Saving…",
+        "saved": "Saved",
+        "unsaved": "Unsaved changes",
+        "unsavedWarning": "This testimonial has unsaved changes. Leave the page and they are lost.",
+        "delete": "Delete",
+        "deleteConfirm": "Delete this testimonial",
+        "deleteCancel": "Keep it",
+        "deleteFailed": "The testimonial could not be deleted."
+      },
+      "validation": {
+        "orderInteger": "The order must be a whole number.",
+        "orderNegative": "The order must not be less than 0.",
+        "quoteRequired": "Write the quote in this language.",
+        "quoteTooLong": "The quote must be 4000 characters or fewer.",
+        "authorNameRequired": "Write the author name in this language.",
+        "authorNameTooLong": "The author name must be 160 characters or fewer.",
+        "authorRoleRequired": "Write the author role in this language.",
+        "authorRoleTooLong": "The author role must be 160 characters or fewer.",
+        "atLeastOneLocale": "Write the testimonial in at least one language."
+      }
+    },
+    "taxonomy": {
+      "title": "Taxonomy",
+      "description": "Categories and tags that organize articles, in both languages.",
+      "retry": "Try again",
+      "staleNotice": "This list may be out of date — the last refresh did not complete.",
+      "translationState": {
+        "label": "Translations",
+        "present": "{locale} written",
+        "missing": "{locale} missing"
+      },
+      "locale": {
+        "en": "English",
+        "ar": "Arabic"
+      },
+      "categories": {
+        "title": "Categories",
+        "description": "Broad topics articles are filed under. Each category carries a name and a slug per language.",
+        "regionLabel": "Categories",
+        "resultCount": "{total} categories",
+        "untitled": "Untitled category",
+        "errorTitle": "Categories could not be loaded",
+        "forbiddenTitle": "You do not have access to categories",
+        "forbiddenBody": "This account is not permitted to manage categories.",
+        "emptyTitle": "No categories yet",
+        "emptyBody": "Categories created for articles will appear here.",
+        "deleteConflict": "This category is still used by articles. Re-file those articles, then delete it."
+      },
+      "tags": {
+        "title": "Tags",
+        "description": "Smaller labels attached to articles. Each tag carries a name and a slug per language.",
+        "regionLabel": "Tags",
+        "resultCount": "{total} tags",
+        "untitled": "Untitled tag",
+        "errorTitle": "Tags could not be loaded",
+        "forbiddenTitle": "You do not have access to tags",
+        "forbiddenBody": "This account is not permitted to manage tags.",
+        "emptyTitle": "No tags yet",
+        "emptyBody": "Tags attached to articles will appear here."
+      },
+      "validation": {
+        "atLeastOneLocale": "Write the name and slug in at least one language before saving."
+      }
+    ,
+      "overlay": {
+            "createCategory": "New category",
+            "editCategory": "Edit category",
+            "createTag": "New tag",
+            "edit": "Edit",
+            "editTag": "Edit tag",
+            "close": "Close",
+            "create": "Create",
+            "save": "Save",
+            "saving": "Saving…",
+            "saved": "Saved",
+            "unsaved": "Unsaved changes",
+            "unsavedConfirm": "Discard unsaved changes?",
+            "cancel": "Cancel",
+            "delete": "Delete",
+            "confirmDelete": "Yes, delete",
+            "invalid": "Invalid",
+            "fill": {
+                  "empty": "Empty",
+                  "partial": "Partial",
+                  "complete": "Complete"
+            },
+            "field": {
+                  "name": "Name",
+                  "slug": "Slug",
+                  "description": "Description",
+                  "descriptionHelp": "Optional. Clearing it and saving removes the stored description."
+            }
+      }},
     "projects": {
       "title": "Projects",
       "description": "Case studies, in both languages.",
       "loading": "Loading projects…",
       "retry": "Try again",
+      "staleNotice": "This list may be out of date — the last refresh did not complete.",
       "errorTitle": "Projects could not be loaded",
       "errorBody": "The request did not complete. This is usually temporary.",
       "forbiddenTitle": "You do not have access to projects",
@@ -590,10 +1032,6 @@
         "challenges": "Challenges",
         "features": "Features",
         "lessonsLearned": "Lessons learned",
-        "metaTitle": "Meta title",
-        "metaDescription": "Meta description",
-        "canonicalUrl": "Canonical URL",
-        "ogImage": "Social image",
         "caption": "Caption"
       },
       "state": {
@@ -621,7 +1059,9 @@
         "notFoundTitle": "That project does not exist",
         "notFoundBody": "It may have been deleted. Return to the list to see what is there.",
         "save": "Save",
+        "saving": "Saving…",
         "saved": "Saved.",
+        "unsaved": "Unsaved changes",
         "created": "Project created.",
         "noChanges": "No unsaved changes.",
         "discard": "Discard changes",
@@ -657,11 +1097,10 @@
         "galleryImageMissing": "Choose an image for this row, or remove the row.",
         "content": "Case study",
         "contentHelp": "Each language is written on its own. Nothing is copied between them, so a language you leave empty stays visibly empty.",
-        "seo": "Search and social",
-        "seoHelp": "Optional. Left empty, the site falls back to its own defaults.",
         "localeComplete": "Complete",
         "localeEmpty": "Not written",
         "localePartial": "Partly written",
+        "tabInvalid": "Has an error",
         "markdownHint": "Markdown is stored as you write it.",
         "slugWarningTitle": "This project is published and its address is changing",
         "slugWarningBody": "The API records a redirect from the old address so existing links keep working. The change takes effect when you save.",
@@ -681,6 +1120,67 @@
         "deleteWarning": "This removes the project and its case study in both languages. It cannot be undone.",
         "deleteErrorTitle": "The project was not deleted",
         "deleteErrorBody": "The request did not complete — try again."
+      }
+    },
+    "seo": {
+      "title": "Search and social",
+      "help": "Optional. Left empty, the site falls back to its own defaults.",
+      "validation": {
+        "canonicalUrl": "Enter a full absolute URL (for example https:// or ftp://)."
+      },
+      "refresh": "Refresh",
+      "page": {
+        "title": "Static page SEO",
+        "description": "Per-page search and social overrides for the seven static pages. Values left unset fall back to the site defaults."
+      },
+      "pages": {
+        "regionLabel": "Static pages",
+        "home": "Home",
+        "about": "About",
+        "experience": "Experience",
+        "projects": "Projects",
+        "blog": "Blog",
+        "resume": "Résumé",
+        "contact": "Contact"
+      },
+      "localeHeading": "{locale}",
+      "locale": {
+        "en": "English",
+        "ar": "Arabic"
+      },
+      "editor": {
+        "save": "Save",
+        "saving": "Saving…",
+        "saved": "Saved",
+        "unsaved": "Unsaved changes",
+        "tabInvalid": "Error",
+        "fill": {
+          "empty": "No overrides",
+          "partial": "Partially set",
+          "complete": "Set"
+        },
+        "unsavedWarning": "This page has unsaved SEO changes. Leave without saving?",
+        "discardConfirm": "Discard the unsaved SEO changes for this page and switch?",
+        "saveFailedTitle": "The changes were not saved.",
+        "orphanNotice": "The page being edited is no longer in the loaded collection — your unsaved edits are kept on screen.",
+        "delete": "Delete",
+        "deleteConfirm": "Delete",
+        "deleteCancel": "Cancel"
+      },
+      "selected": {
+        "regionLabel": "SEO overrides for {page}"
+      },
+      "staleNotice": "The page could not be refreshed — showing the last loaded values.",
+      "errorTitle": "Static page SEO could not be loaded.",
+      "emptyTitle": "No static pages returned.",
+      "emptyBody": "The service responded without any static page records. Retry, or check back later.",
+      "forbiddenTitle": "Access denied",
+      "forbiddenBody": "This account does not have permission to view static page SEO.",
+      "field": {
+        "metaTitle": "Meta title",
+        "metaDescription": "Meta description",
+        "canonicalUrl": "Canonical URL",
+        "ogImage": "Social image"
       }
     }
   },

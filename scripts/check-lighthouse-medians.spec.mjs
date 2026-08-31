@@ -1,11 +1,8 @@
-import { execFile } from 'node:child_process'
-import { mkdtemp, mkdir, writeFile, rm, readdir } from 'node:fs/promises'
+import { spawn } from 'node:child_process'
+import { mkdtemp, mkdir, open, readFile, writeFile, rm, readdir } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { promisify } from 'node:util'
 import { afterAll, describe, expect, it } from 'vitest'
-
-const run = promisify(execFile)
 
 /**
  * Exit-code semantics of the Lighthouse median gate (D20-13).
@@ -26,15 +23,29 @@ async function scratch() {
 }
 afterAll(async () => { await Promise.all(tmpDirs.map(d => rm(d, { recursive: true, force: true }))) })
 
-async function gate(dirs) {
+async function gate(dirs, { enforcement } = {}) {
+  const outputPath = join(await scratch(), 'gate-output.log')
+  const output = await open(outputPath, 'w')
+  const env = {
+    ...process.env,
+    LHCI_REPORT_DIRS: dirs.join(','),
+    ...(enforcement === undefined ? {} : { LIGHTHOUSE_ENFORCEMENT: enforcement })
+  }
+  // The default-contract fixture must be genuinely unset, even if its parent process supplied an
+  // advisory value for some other test command.
+  if (enforcement === undefined) delete env.LIGHTHOUSE_ENFORCEMENT
   try {
-    const { stdout, stderr } = await run('node', ['scripts/check-lighthouse-medians.mjs'], {
-      env: { ...process.env, LHCI_REPORT_DIRS: dirs.join(',') },
-      timeout: 60_000
+    const code = await new Promise((resolve, reject) => {
+      const child = spawn(process.execPath, ['scripts/check-lighthouse-medians.mjs'], {
+        env,
+        stdio: ['ignore', output.fd, output.fd]
+      })
+      child.once('error', reject)
+      child.once('exit', (exitCode, signal) => resolve(exitCode ?? (signal ? -1 : 1)))
     })
-    return { code: 0, out: stdout + stderr }
-  } catch (error) {
-    return { code: error.code ?? -1, out: `${error.stdout ?? ''}${error.stderr ?? ''}` }
+    return { code, out: await readFile(outputPath, 'utf8') }
+  } finally {
+    await output.close()
   }
 }
 
@@ -108,6 +119,23 @@ describe('lighthouse median gate', () => {
     expect(out).not.toMatch(/MEASUREMENT FAILURE/)
   })
 
+  it('reports the identical breached median but exits 0 in explicit advisory mode', async () => {
+    const dir = join(await scratch(), 'mobile')
+    await seed(dir, { performance: 40 })
+
+    const hard = await gate([dir])
+    const advisory = await gate([dir], { enforcement: 'advisory' })
+
+    expect(hard.code).toBe(1)
+    expect(advisory.code).toBe(0)
+    expect(advisory.out).toMatch(/thresholds not satisfied/)
+    expect(advisory.out).toMatch(/performance median 40\.0 < required 60/)
+    expect(advisory.out).toMatch(/Lighthouse advisory threshold breach/)
+
+    const medianLines = out => out.split('\n').filter(line => /performance\s+runs \[|performance median/.test(line))
+    expect(medianLines(advisory.out)).toEqual(medianLines(hard.out))
+  })
+
   it('exits 2 — not 1 — when a configuration has fewer than three runs', async () => {
     const dir = join(await scratch(), 'mobile')
     await seed(dir, { performance: 10 }, 2)
@@ -124,6 +152,26 @@ describe('lighthouse median gate', () => {
     const { code, out } = await gate([dir])
     expect(code).toBe(2)
     expect(out).toMatch(/not valid JSON/)
+  })
+
+  it('keeps malformed reports hard in advisory mode', async () => {
+    const dir = join(await scratch(), 'mobile')
+    await seed(dir, { performance: 70 })
+    await writeFile(join(dir, 'lhr-broken.json'), '{ not json')
+    const { code, out } = await gate([dir], { enforcement: 'advisory' })
+    expect(code).toBe(2)
+    expect(out).toMatch(/MEASUREMENT FAILURE/)
+    expect(out).toMatch(/not valid JSON/)
+    expect(out).not.toMatch(/advisory threshold breach/i)
+  })
+
+  it('keeps an invalid enforcement configuration hard instead of swallowing the runtime error', async () => {
+    const dir = join(await scratch(), 'mobile')
+    await seed(dir, { performance: 40 })
+    const { code, out } = await gate([dir], { enforcement: 'not-a-mode' })
+    expect(code).toBe(2)
+    expect(out).toMatch(/LIGHTHOUSE_ENFORCEMENT must be "hard" or "advisory"/)
+    expect(out).not.toMatch(/advisory threshold breach/i)
   })
 
   it('exits 2 when the report directory does not exist', async () => {

@@ -1,5 +1,6 @@
 // @vitest-environment nuxt
 import { describe, expect, it } from 'vitest'
+import { readFileSync } from 'node:fs'
 import { isNavItemActive, useDashboardNav } from './useDashboardNav'
 import type { DashboardNavItem } from './useDashboardNav'
 
@@ -45,14 +46,58 @@ describe('isNavItemActive', () => {
 describe('the navigation model', () => {
   const items = () => useDashboardNav().groups.value.flatMap(group => group.items)
 
-  it('offers Projects, in the Content group', () => {
+  it('offers Articles, Experience, Skills, Testimonials, Taxonomy and Projects, in the Content group', () => {
     const groups = useDashboardNav().groups.value
     const content = groups.find(group => group.key === 'content')
-    expect(content?.items.map(item => item.key)).toEqual(['projects'])
+    expect(content?.items.map(item => item.key)).toEqual([
+      'articles',
+      'experiences',
+      'skills',
+      'testimonials',
+      'taxonomy',
+      'projects'
+    ])
+  })
+
+  it('points Experience at a route that EXISTS — no placeholder destinations', () => {
+    expect(items().find(item => item.key === 'experiences')?.to).toBe('/dashboard/experiences')
+  })
+
+  it('points Testimonials at the collection route that EXISTS — no editor placeholder', () => {
+    expect(items().find(item => item.key === 'testimonials')?.to).toBe('/dashboard/testimonials')
   })
 
   it('points Projects at a route that EXISTS — no placeholder destinations', () => {
     expect(items().find(item => item.key === 'projects')?.to).toBe('/dashboard/projects')
+  })
+
+  it('points Skills at the collection route that EXISTS — no editor placeholder', () => {
+    expect(items().find(item => item.key === 'skills')?.to).toBe('/dashboard/skills')
+  })
+
+  it('offers Static Page SEO in the SYSTEM group at the route that EXISTS', () => {
+    const groups = useDashboardNav().groups.value
+    const system = groups.find(group => group.key === 'system')
+    expect(system?.items.map(item => item.key)).toContain('seo')
+    expect(items().find(item => item.key === 'seo')?.to).toBe('/dashboard/seo')
+  })
+
+  it('resolves the SEO label in BOTH dashboard catalogues', () => {
+    const en = JSON.parse(readFileSync('i18n/locales/en.json', 'utf8'))
+    const ar = JSON.parse(readFileSync('i18n/locales/ar.json', 'utf8'))
+    expect(en.dashboard.nav.seo).toBeTruthy()
+    expect(ar.dashboard.nav.seo).toBeTruthy()
+  })
+
+  it('adds NO Users, Roles or Permissions destination — dynamic RBAC UI stays deferred post-v1', () => {
+    const keys = items().map(item => item.key)
+    for (const key of keys) {
+      expect(key.toLowerCase()).not.toMatch(/user|role|permission/)
+      expect(key).not.toBe('settings')
+    }
+    for (const item of items()) {
+      expect(item.to).not.toMatch(/users|roles|permissions/i)
+    }
   })
 
   /**

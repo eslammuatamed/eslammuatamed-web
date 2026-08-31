@@ -194,6 +194,67 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/seo/pages/{pageKey}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Static-page SEO overrides resolved to the requested locale.
+         * @description An OVERRIDE layer, not a content record (FR-DSH-051, D10-24). A known page key with nothing authored for the requested locale returns 200 with every field null, which tells the caller to use the site defaults instead (doc 22 §3, F-D4) — 404 is reserved for a page key outside the known set, so "nothing authored" and "no such page" stay distinguishable. No cross-locale fallback (D10-6).
+         */
+        get: operations["SeoController_getPage_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/seo/pages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List every static page with its full per-locale SEO map.
+         * @description One entry per known page key (D09-24), each carrying every enabled locale — an unauthored locale arrives all-null so the editor can render its tab.
+         */
+        get: operations["SeoAdminController_list_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/seo/pages/{pageKey}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read one static page’s SEO map, all locales. */
+        get: operations["SeoAdminController_get_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Upsert one static page’s SEO values per locale.
+         * @description Locales present in the body are upserted; locales absent from it are untouched. Within a field, an omitted key preserves the stored value and an explicit null clears it (D10-23). All locales apply in one transaction.
+         */
+        patch: operations["SeoAdminController_update_v1"];
+        trace?: never;
+    };
     "/api/v1/categories": {
         parameters: {
             query?: never;
@@ -1090,16 +1151,11 @@ export interface components {
              * @example bing-def456
              */
             bingSiteVerification: string | null;
-            /** @description Present only when analytics is enabled; null otherwise (FR-DSH-052, D20-5). */
-            analytics?: {
-                /**
-                 * @example ga4
-                 * @enum {string}
-                 */
-                provider: "ga4" | "gtm";
-                /** @example G-XXXXXXXXXX */
-                measurementId: string;
-            } | null;
+            /**
+             * @description Google Tag Manager container id to load; null when tracking is disabled or unconfigured (FR-DSH-052, D20-5). Individual vendors live inside the container.
+             * @example GTM-ABCD123
+             */
+            gtmContainerId: string | null;
             customMetas: components["schemas"]["CustomMetaEntity"][];
             /** @description Resolved résumé PDF descriptor (FR-PUB-023); null when no résumé is configured. The bare asset id stays admin-only. */
             resumeAsset: components["schemas"]["PublicMediaPdfDescriptor"] | null;
@@ -1182,11 +1238,10 @@ export interface components {
             careerStartMonth: number | null;
             googleSiteVerification: string | null;
             bingSiteVerification: string | null;
-            /** @enum {string|null} */
-            analyticsProvider: "ga4" | "gtm" | null;
-            analyticsMeasurementId: string | null;
             /** @example false */
             analyticsEnabled: boolean;
+            /** @example GTM-ABCD123 */
+            gtmContainerId: string | null;
             customMetas: components["schemas"]["CustomMetaEntity"][];
             /** @description Translation map keyed by locale code, e.g. { "en": {…}, "ar": {…} }. */
             translations: {
@@ -1213,22 +1268,40 @@ export interface components {
              * @example ar
              */
             locale?: string;
-            /** @example Eslam Muatamed */
-            siteName?: string;
-            /** @example Software engineer & architect */
-            tagline?: string;
-            /** @example Open to select consulting engagements */
-            availabilityStatus?: string;
-            /** @example Eslam Muatamed */
-            defaultMetaTitle?: string;
-            /** @example Portfolio, case studies, and writing. */
-            defaultMetaDescription?: string;
-            /** @description Markdown source. */
-            aboutBio?: string;
-            /** @description Markdown source. */
-            engineeringPhilosophy?: string;
-            /** @example Building bilingual product platforms. */
-            currentFocus?: string;
+            /**
+             * @description null clears it.
+             * @example Eslam Muatamed
+             */
+            siteName?: string | null;
+            /**
+             * @description null clears it.
+             * @example Software engineer & architect
+             */
+            tagline?: string | null;
+            /**
+             * @description null clears it.
+             * @example Open to select consulting engagements
+             */
+            availabilityStatus?: string | null;
+            /**
+             * @description null clears it.
+             * @example Eslam Muatamed
+             */
+            defaultMetaTitle?: string | null;
+            /**
+             * @description null clears it.
+             * @example Portfolio, case studies, and writing.
+             */
+            defaultMetaDescription?: string | null;
+            /** @description Markdown source. null clears it. */
+            aboutBio?: string | null;
+            /** @description Markdown source. null clears it. */
+            engineeringPhilosophy?: string | null;
+            /**
+             * @description null clears it.
+             * @example Building bilingual product platforms.
+             */
+            currentFocus?: string | null;
             /**
              * @description Localized alt text for the About portrait in THIS locale, or null to clear. Per-usage: it overrides the asset-level MediaAssetAlt default.
              * @example Eslam Muatamed, smiling, in front of a bookshelf.
@@ -1271,19 +1344,26 @@ export interface components {
              * @example 11
              */
             careerStartMonth?: number | null;
-            /** @example google-abc123 */
-            googleSiteVerification?: string;
-            /** @example bing-def456 */
-            bingSiteVerification?: string;
-            /** @enum {string} */
-            analyticsProvider?: "ga4" | "gtm";
-            /** @example G-XXXXXXXXXX */
-            analyticsMeasurementId?: string;
             /**
-             * @description Analytics is off by default (D20-5).
+             * @description Google Search Console token; null withdraws it.
+             * @example google-abc123
+             */
+            googleSiteVerification?: string | null;
+            /**
+             * @description Bing Webmaster token; null withdraws it.
+             * @example bing-def456
+             */
+            bingSiteVerification?: string | null;
+            /**
+             * @description Tracking kill switch; off by default (D20-5). Enabling it requires a gtmContainerId — the service rejects the pair otherwise (422).
              * @example false
              */
             analyticsEnabled?: boolean;
+            /**
+             * @description Google Tag Manager container id; null withdraws it. GA4, Meta Pixel, LinkedIn Insight and any other vendor are configured INSIDE the container, never here.
+             * @example GTM-ABCD123
+             */
+            gtmContainerId?: string | null;
             customMetas?: components["schemas"]["CustomMetaDto"][];
             /** @description Per-locale upserts. */
             translations?: components["schemas"]["SettingsTranslationDto"][];
@@ -1424,6 +1504,80 @@ export interface components {
                 [key: string]: string;
             };
         };
+        PublicPageSeoEntity: {
+            /**
+             * @example about
+             * @enum {string}
+             */
+            pageKey: "home" | "about" | "experience" | "projects" | "blog" | "resume" | "contact";
+            /**
+             * @description The requested locale.
+             * @example ar
+             */
+            locale: string;
+            /** @example About — Eslam Muatamed */
+            metaTitle: string | null;
+            /** @example Engineering background, philosophy, and current focus. */
+            metaDescription: string | null;
+            /** Format: uuid */
+            ogImageId: string | null;
+            /** @description Resolved OG image descriptor; null when this page/locale sets none. Its `alt` is the asset-level localized default for the requested locale. */
+            ogImage: components["schemas"]["PublicMediaImageDescriptor"] | null;
+            /** Format: uri */
+            canonicalUrl: string | null;
+        };
+        PageSeoTranslationEntity: {
+            metaTitle: string | null;
+            metaDescription: string | null;
+            /** Format: uuid */
+            ogImageId: string | null;
+            /** Format: uri */
+            canonicalUrl: string | null;
+        };
+        AdminPageSeoEntity: {
+            /**
+             * @example about
+             * @enum {string}
+             */
+            pageKey: "home" | "about" | "experience" | "projects" | "blog" | "resume" | "contact";
+            /** @description Translation map keyed by locale code, e.g. { "en": {…}, "ar": {…} }. Every enabled locale is present; an unauthored locale is all-null. */
+            translations: {
+                [key: string]: components["schemas"]["PageSeoTranslationEntity"];
+            };
+        };
+        PageSeoTranslationDto: {
+            /**
+             * @description Two-letter locale; must be enabled.
+             * @example ar
+             */
+            locale: string;
+            /**
+             * @description null clears it.
+             * @example About — Eslam Muatamed
+             */
+            metaTitle?: string | null;
+            /**
+             * @description null clears it.
+             * @example Engineering background, philosophy, and current focus.
+             */
+            metaDescription?: string | null;
+            /**
+             * Format: uuid
+             * @description OG image MediaAsset id (must be an IMAGE); null clears it. The asset is RESTRICT-referenced while set.
+             * @example 0194f9a2-ef2a-7a31-8cb7-369c87f7933a
+             */
+            ogImageId?: string | null;
+            /**
+             * Format: uri
+             * @description Canonical override; null clears it.
+             * @example https://eslammuatamed.com/about
+             */
+            canonicalUrl?: string | null;
+        };
+        UpdatePageSeoDto: {
+            /** @description Per-locale upserts; at least one entry. */
+            translations: components["schemas"]["PageSeoTranslationDto"][];
+        };
         PublicCategoryEntity: {
             /** Format: uuid */
             id: string;
@@ -1469,8 +1623,11 @@ export interface components {
             name: string;
             /** @example engineering */
             slug: string;
-            /** @example Systems, architecture, and craft. */
-            description?: string;
+            /**
+             * @description null clears it.
+             * @example Systems, architecture, and craft.
+             */
+            description?: string | null;
         };
         CreateCategoryDto: {
             /** @description At least one locale translation. */
@@ -1689,12 +1846,20 @@ export interface components {
              *     Opaque Markdown…
              */
             body: string;
-            metaTitle?: string;
-            metaDescription?: string;
-            /** Format: uuid */
-            ogImageId?: string;
-            /** Format: uri */
-            canonicalUrl?: string;
+            /** @description null clears it. */
+            metaTitle?: string | null;
+            /** @description null clears it. */
+            metaDescription?: string | null;
+            /**
+             * Format: uuid
+             * @description OG image MediaAsset id; null clears it.
+             */
+            ogImageId?: string | null;
+            /**
+             * Format: uri
+             * @description Canonical override; null clears it.
+             */
+            canonicalUrl?: string | null;
         };
         CreateArticleDto: {
             /**
@@ -1709,14 +1874,14 @@ export interface components {
             status: "DRAFT" | "SCHEDULED" | "PUBLISHED" | "ARCHIVED";
             /**
              * Format: date-time
-             * @description Required and future when SCHEDULED.
+             * @description Required and future when SCHEDULED; null means unscheduled.
              */
-            publishAt?: string;
+            publishAt?: string | null;
             /**
              * Format: uuid
-             * @description Cover MediaAsset id.
+             * @description Cover MediaAsset id; null for none.
              */
-            coverImageId?: string;
+            coverImageId?: string | null;
             /** @description Tag ids (optional). */
             tagIds?: string[];
             /** @description At least one locale translation. */
@@ -1727,10 +1892,16 @@ export interface components {
             categoryId?: string;
             /** @enum {string} */
             status?: "DRAFT" | "SCHEDULED" | "PUBLISHED" | "ARCHIVED";
-            /** Format: date-time */
-            publishAt?: string;
-            /** Format: uuid */
-            coverImageId?: string;
+            /**
+             * Format: date-time
+             * @description null unschedules (clears it); omitted keeps the stored instant. Required and future when SCHEDULED.
+             */
+            publishAt?: string | null;
+            /**
+             * Format: uuid
+             * @description Cover MediaAsset id; null clears it.
+             */
+            coverImageId?: string | null;
             tagIds?: string[];
             translations?: components["schemas"]["ArticleTranslationDto"][];
         };
@@ -1781,8 +1952,11 @@ export interface components {
         CreateRoleDto: {
             /** @example Editor */
             name: string;
-            /** @example Manages content; no settings or user access. */
-            description?: string;
+            /**
+             * @description null for no description.
+             * @example Manages content; no settings or user access.
+             */
+            description?: string | null;
             /**
              * @description Catalog keys or "*".
              * @example [
@@ -1796,7 +1970,8 @@ export interface components {
         UpdateRoleDto: {
             /** @example Senior Editor */
             name?: string;
-            description?: string;
+            /** @description null clears it. */
+            description?: string | null;
             /**
              * @example [
              *       "articles.read",
@@ -2461,20 +2636,28 @@ export interface components {
              *     Keep module seams explicit.
              */
             lessonsLearned: string;
-            /** @example Content platform API case study */
-            metaTitle?: string;
-            /** @example How the multilingual platform was built. */
-            metaDescription?: string;
+            /**
+             * @description null clears it.
+             * @example Content platform API case study
+             */
+            metaTitle?: string | null;
+            /**
+             * @description null clears it.
+             * @example How the multilingual platform was built.
+             */
+            metaDescription?: string | null;
             /**
              * Format: uuid
+             * @description OG image MediaAsset id; null clears it.
              * @example 0194f9a2-ef2a-7a31-8cb7-369c87f7933a
              */
-            ogImageId?: string;
+            ogImageId?: string | null;
             /**
              * Format: uri
+             * @description Canonical override; null clears it.
              * @example https://eslammuatamed.com/projects/content-platform-api
              */
-            canonicalUrl?: string;
+            canonicalUrl?: string | null;
         };
         ProjectGalleryCaptionDto: {
             /** @example Admin dashboard overview. */
@@ -2581,15 +2764,15 @@ export interface components {
              */
             name: string;
             /**
-             * @description Optional. Trimmed before validation. At least one of `email` or `phone` is required; a supplied but malformed value is rejected rather than ignored (D10-16).
+             * @description Optional. Trimmed before validation. At least one of `email` or `phone` is required; a supplied but malformed value is rejected rather than ignored (D10-16). `null` states "not supplied" explicitly — `isSupplied()` already treats it as empty, so a phone-only visitor may send it (D10-23).
              * @example alex@example.com
              */
-            email?: string;
+            email?: string | null;
             /**
-             * @description Optional. E.164 international format — the API stores an international number, never a display-formatted one; human spacing is normalized away before validation. At least one of `email` or `phone` is required (D10-16).
+             * @description Optional. E.164 international format — the API stores an international number, never a display-formatted one; human spacing is normalized away before validation. At least one of `email` or `phone` is required (D10-16). `null` states "not supplied" explicitly, which is what the Web's `normalizePhone()` returns for an empty entry (D10-23).
              * @example +201002785408
              */
-            phone?: string;
+            phone?: string | null;
             /**
              * @description Trimmed of surrounding whitespace before validation; a value empty after trimming is rejected (D10-15).
              * @example Project inquiry
@@ -3506,6 +3689,238 @@ export interface operations {
             };
         };
     };
+    SeoController_getPage_v1: {
+        parameters: {
+            query?: {
+                /** @description Two-letter locale code, validated against enabled locales. */
+                locale?: string;
+            };
+            header?: never;
+            path: {
+                pageKey: "home" | "about" | "experience" | "projects" | "blog" | "resume" | "contact";
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["PublicPageSeoEntity"];
+                    };
+                };
+            };
+            /** @description Unknown or disabled locale. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Unknown static page key. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Malformed query parameters. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    SeoAdminController_list_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["AdminPageSeoEntity"][];
+                    };
+                };
+            };
+            /** @description Missing or invalid access token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Missing the required permission. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Admin rate limit exceeded (300 / min). */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    SeoAdminController_get_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                pageKey: "home" | "about" | "experience" | "projects" | "blog" | "resume" | "contact";
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["AdminPageSeoEntity"];
+                    };
+                };
+            };
+            /** @description Missing or invalid access token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Missing the required permission. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Unknown static page key (the set is closed — D09-24). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Admin rate limit exceeded (300 / min). */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    SeoAdminController_update_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                pageKey: "home" | "about" | "experience" | "projects" | "blog" | "resume" | "contact";
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdatePageSeoDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["AdminPageSeoEntity"];
+                    };
+                };
+            };
+            /** @description Unknown or disabled locale in a translation entry. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Missing or invalid access token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Missing the required permission. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Unknown static page key, malformed field, or an ogImageId that is missing or not an IMAGE. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Admin rate limit exceeded (300 / min). */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
     CategoriesController_list_v1: {
         parameters: {
             query?: {
@@ -3564,7 +3979,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        data: components["schemas"]["AdminCategoryEntity"];
+                        data: components["schemas"]["AdminCategoryEntity"][];
                     };
                 };
             };
@@ -3871,7 +4286,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        data: components["schemas"]["AdminTagEntity"];
+                        data: components["schemas"]["AdminTagEntity"][];
                     };
                 };
             };

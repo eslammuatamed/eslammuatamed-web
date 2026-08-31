@@ -343,4 +343,15 @@ describe('messages.vue — focus restoration targets the exact opener', () => {
     // A mutation re-renders the list; focusing a detached node drops focus to <body>.
     expect(src).toContain('isConnected')
   })
+
+  it('rejects a connected opener that has been reused for another message', () => {
+    const directRestoreStart = src.indexOf('if (sameList && isFocusable(el)')
+    const directRestore = src.slice(directRestoreStart, src.indexOf('// The node was replaced', directRestoreStart))
+
+    // During a retained-list refresh, UTable can reuse the clicked node for the next row. Connection
+    // and visibility therefore establish only that it can receive focus, not that it is still the
+    // saved message. The same-ID re-acquisition path below owns the replacement case.
+    expect(directRestore).toContain('el.dataset.message === key?.id')
+    expect(directRestore).toContain('el.focus()')
+  })
 })

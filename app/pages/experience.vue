@@ -9,6 +9,13 @@ const { t } = useI18n()
 
 const { data, status, error, refresh } = await useExperiences()
 
+// Static Page SEO override (FR-DSH-051 consumption) — awaited so SSR renders the FINAL head.
+// Optional by design: a failure leaves `data` null and the resolver falls through (below).
+// The Settings tier rides the SHARED public read (same payload key as the layout) — no second
+// `/settings/site` request.
+const { data: experiencePageSeo } = await usePublicPageSeo('experience')
+const { data: experienceSettings } = await useSiteSettings()
+
 // Initial load (skeleton) vs a refetch with content already on screen (branded overlay):
 // `useAsyncData` keeps the previous `data` while refetching (doc 13 §9.1).
 const hasData = computed(() => !!data.value)
@@ -51,11 +58,38 @@ useSchemaOrg([
 // No `ogImage`: the repository has no branded social-image fallback (`ogImage` is disabled in
 // nuxt.config and `public/` holds only favicons), and emitting a URL that does not resolve is worse
 // than inheriting nothing. Recorded as a later Web SEO/launch requirement, not silently patched.
+// Effective metadata: authored `experience` override → page i18n → Settings defaults → committed
+// floor (doc 22 §3 F-D4 via utils/page-seo-metadata). ONE text pair feeds title + og + twitter;
+// the image overrides ONLY when the resolver accepts the descriptor. Canonical/hreflang stay with
+// strictSeo; PageSeo canonicalUrl is storage-only and never read here.
+const effectiveExperienceMeta = resolvePageSeoMetadata({
+  pageSeo: experiencePageSeo.value,
+  pageTitle: t('seo.experience.title'),
+  pageDescription: t('seo.experience.description'),
+  settingsDefaultTitle: experienceSettings.value?.defaultMetaTitle ?? null,
+  settingsDefaultDescription: experienceSettings.value?.defaultMetaDescription ?? null,
+  fallbackTitle: t('seo.defaultTitle'),
+  fallbackDescription: t('seo.siteDescription'),
+  siteUrl: siteConfig.url
+})
+const experienceImage = effectiveExperienceMeta.socialImageOverride
 useSeoMeta({
-  title: () => t('seo.experience.title'),
-  description: () => t('seo.experience.description'),
-  ogTitle: () => `${t('seo.experience.title')} — ${t('brand.name')}`,
-  ogDescription: () => t('seo.experience.description')
+  title: () => effectiveExperienceMeta.title,
+  description: () => effectiveExperienceMeta.description,
+  ogTitle: () => effectiveExperienceMeta.title,
+  ogDescription: () => effectiveExperienceMeta.description,
+  twitterTitle: () => effectiveExperienceMeta.title,
+  twitterDescription: () => effectiveExperienceMeta.description,
+  ...(experienceImage
+    ? {
+        ogImage: () => experienceImage.url,
+        ogImageWidth: () => experienceImage.width,
+        ogImageHeight: () => experienceImage.height,
+        ogImageAlt: () => experienceImage.alt,
+        twitterImage: () => experienceImage.url,
+        twitterImageAlt: () => experienceImage.alt
+      }
+    : {})
 })
 </script>
 

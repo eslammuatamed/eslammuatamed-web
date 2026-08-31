@@ -4,11 +4,14 @@ import { mountSuspended } from '@nuxt/test-utils/runtime'
 import type { Testimonial } from '~/types/models'
 import QuoteBlock from './QuoteBlock.vue'
 
-// Quote block (FR-PUB-016) — a testimonial pull quote. When there is no avatar (the current contract),
-// attribution falls back to a monogram of the author's first character; when an avatar is present it
-// renders through NuxtImg instead, with no layout change.
+// This stub models the package's server-only inline handler. The component no longer renders NuxtImg,
+// but retaining the stub makes the no-inline-handler assertion discriminating: restoring NuxtImg makes
+// that assertion fail rather than merely proving the current DOM happened not to contain the string.
 const stubs = {
-  NuxtImg: { template: '<img :src="src" :alt="alt">', props: ['src', 'alt'] }
+  NuxtImg: {
+    template: '<img :src="src" :alt="alt" :width="width" :height="height" :loading="loading" data-nuxt-img onerror="this.setAttribute(\'data-error\', 1)">',
+    props: ['src', 'alt', 'width', 'height', 'loading']
+  }
 }
 
 const testimonial = (overrides: Partial<Testimonial> = {}): Testimonial => ({
@@ -40,7 +43,7 @@ describe('ContentQuoteBlock', () => {
     expect(wrapper.find('figcaption span[aria-hidden="true"]').text()).toBe('S')
   })
 
-  it('renders a NuxtImg when avatar.url is set', async () => {
+  it('renders a native avatar image with the existing semantics and no inline handler', async () => {
     const wrapper = await mountSuspended(QuoteBlock, {
       props: {
         testimonial: testimonial({
@@ -61,5 +64,12 @@ describe('ContentQuoteBlock', () => {
     const img = wrapper.find('img')
     expect(img.exists()).toBe(true)
     expect(img.attributes('src')).toBe('https://media.example.com/avatar.webp')
+    expect(img.attributes('alt')).toBe('Alex Morgan')
+    expect(img.attributes('width')).toBe('40')
+    expect(img.attributes('height')).toBe('40')
+    expect(img.attributes('loading')).toBe('lazy')
+    expect(img.classes()).toEqual(expect.arrayContaining(['size-10', 'shrink-0', 'rounded-full', 'object-cover']))
+    expect(img.attributes('onerror')).toBeUndefined()
+    expect(img.attributes('data-nuxt-img')).toBeUndefined()
   })
 })

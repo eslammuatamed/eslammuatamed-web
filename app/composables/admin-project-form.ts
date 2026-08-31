@@ -28,7 +28,10 @@ import type {
  *    blocks the save and names the empty fields instead of quietly discarding what was typed.
  */
 
-/** The two authored locales (D04-2). The dashboard itself is English-only; these are CONTENT locales. */
+/**
+ * The two authored locales (D04-2). These are CONTENT locales — independent of the dashboard's own
+ * chrome language, which is a separate persisted preference (D02-15).
+ */
 export const PROJECT_LOCALES = ['en', 'ar'] as const
 export type ProjectLocale = (typeof PROJECT_LOCALES)[number]
 
@@ -51,7 +54,11 @@ export const REQUIRED_TRANSLATION_FIELDS = [
 ] as const
 export type RequiredTranslationField = (typeof REQUIRED_TRANSLATION_FIELDS)[number]
 
-/** The per-translation SEO fields. Optional on the wire, so blank means "send nothing". */
+/**
+ * The per-translation SEO fields. Optional on the wire AND nullable, which gives each one three
+ * states a PATCH must distinguish (D10-23): untouched (key omitted — the server preserves),
+ * explicitly cleared (`null` sent — the server clears), and changed (the new value sent).
+ */
 export const OPTIONAL_TRANSLATION_FIELDS = ['metaTitle', 'metaDescription', 'canonicalUrl'] as const
 export type OptionalTranslationField = (typeof OPTIONAL_TRANSLATION_FIELDS)[number]
 
@@ -317,16 +324,41 @@ export function changedSlugLocales(form: ProjectFormState, saved: AdminProject |
 
 /* ── payload ───────────────────────────────────────────────────────────────────────────────────── */
 
-/** Blank optional string → the key is omitted entirely; the DTO types these `string`, never `null`. */
-function optional(value: string): string | undefined {
+/**
+ * Blank optional string in CREATE position → the key is omitted. On a create there is no
+ * server-held value for an omission to preserve, so "absent" and "empty" mean the same thing.
+ */
+function optionalCreate(value: string): string | undefined {
   return blank(value) ? undefined : value.trim()
 }
 
-function translationInput(locale: ProjectLocale, form: ProjectTranslationForm): ProjectTranslationInput {
-  const metaTitle = optional(form.metaTitle)
-  const metaDescription = optional(form.metaDescription)
-  const canonicalUrl = optional(form.canonicalUrl)
-  return {
+/**
+ * One text SEO field's wire value on a PATCH, decided by original-vs-current — never by the
+ * current value alone, because "blank" is two different operator intents:
+ *
+ *   unchanged since load (both blank, or identical) → `undefined` → key omitted → server PRESERVES
+ *   was held, now blanked                           → `null` sent → server CLEARS (D10-23)
+ *   changed to another value                        → the new trimmed string
+ *
+ * Whitespace-only differences count as unchanged, matching the trim discipline of `comparable()`.
+ */
+function seoTextPatchValue(before: string, after: string): string | null | undefined {
+  const next = after.trim()
+  if (next === before.trim()) return undefined
+  return blank(next) ? null : next
+}
+
+/** The same three-state decision for the OG image reference: same id or both null → omitted. */
+function seoImagePatchValue(before: string | null, after: string | null): string | null | undefined {
+  return after === before ? undefined : after
+}
+
+function translationInput(
+  locale: ProjectLocale,
+  form: ProjectTranslationForm,
+  initial?: ProjectTranslationForm
+): ProjectTranslationInput {
+  const required = {
     locale,
     title: form.title.trim(),
     slug: form.slug.trim(),
@@ -340,11 +372,37 @@ function translationInput(locale: ProjectLocale, form: ProjectTranslationForm): 
     architecture: form.architecture.trim(),
     challenges: form.challenges.trim(),
     features: form.features.trim(),
-    lessonsLearned: form.lessonsLearned.trim(),
+    lessonsLearned: form.lessonsLearned.trim()
+  }
+
+  // CREATE (no baseline): blanks are omitted. There is nothing stored to clear, so omission and
+  // explicit `null` are indistinguishable to the API here and the simpler shape stays.
+  if (!initial) {
+    const metaTitle = optionalCreate(form.metaTitle)
+    const metaDescription = optionalCreate(form.metaDescription)
+    const canonicalUrl = optionalCreate(form.canonicalUrl)
+    return {
+      ...required,
+      ...(metaTitle === undefined ? {} : { metaTitle }),
+      ...(metaDescription === undefined ? {} : { metaDescription }),
+      ...(canonicalUrl === undefined ? {} : { canonicalUrl }),
+      ...(form.ogImageId === null ? {} : { ogImageId: form.ogImageId })
+    }
+  }
+
+  // PATCH: the four SEO fields travel ONLY when the operator changed them, and a cleared field
+  // travels as an explicit `null` — that is what makes clearing expressible at all (D10-23).
+  // A field left as loaded is omitted so the upsert preserves exactly what the server holds.
+  const metaTitle = seoTextPatchValue(initial.metaTitle, form.metaTitle)
+  const metaDescription = seoTextPatchValue(initial.metaDescription, form.metaDescription)
+  const canonicalUrl = seoTextPatchValue(initial.canonicalUrl, form.canonicalUrl)
+  const ogImageId = seoImagePatchValue(initial.ogImageId, form.ogImageId)
+  return {
+    ...required,
     ...(metaTitle === undefined ? {} : { metaTitle }),
     ...(metaDescription === undefined ? {} : { metaDescription }),
     ...(canonicalUrl === undefined ? {} : { canonicalUrl }),
-    ...(form.ogImageId === null ? {} : { ogImageId: form.ogImageId })
+    ...(ogImageId === undefined ? {} : { ogImageId })
   }
 }
 
@@ -355,8 +413,8 @@ function galleryInput(item: ProjectGalleryItemForm, index: number): ProjectGalle
     // ORDER IS THE ARRAY, not a number the operator maintains by hand. The move-up/move-down
     // controls reorder the array, so the two cannot drift apart.
     order: index,
-    // A caption is nullable, so a cleared box really does clear it — unlike the SEO fields above,
-    // which are `string | undefined` and can only be omitted.
+    // A caption is nullable, so a cleared box really does clear it — the same explicit-`null`
+    // contract the translation SEO fields follow on a PATCH (D10-23).
     translations: {
       en: { caption: blank(item.captions.en) ? null : item.captions.en.trim() },
       ar: { caption: blank(item.captions.ar) ? null : item.captions.ar.trim() }
@@ -390,8 +448,20 @@ function galleryInput(item: ProjectGalleryItemForm, index: number): ProjectGalle
  * keeps one payload shape for create and update and matches what the form re-seeds from. Empty
  * locales are omitted; a locale that WAS saved and is now empty never reaches here at all —
  * `validateProjectForm` refuses that save.
+ *
+ * ── THE BASELINE PARAMETER, AND WHY IT ONLY MATTERS ON A PATCH ──────────────────────────────────
+ *
+ * `initial` is the form as it was seeded from the server (the same baseline the unsaved-changes
+ * guard measures against — no second dirty-tracking system). With it, each optional SEO field is
+ * decided by original-vs-current: unchanged → omitted → preserved; held-then-blanked → explicit
+ * `null` → cleared (D10-23). Without it — CREATE — blanks are simply omitted, because there is no
+ * stored value for an omission to preserve. The eleven required fields are sent verbatim in both
+ * modes: the upsert needs them whole regardless of what changed.
  */
-export function buildProjectPayload(form: ProjectFormState): CreateProjectPayload {
+export function buildProjectPayload(
+  form: ProjectFormState,
+  initial?: ProjectFormState | null
+): CreateProjectPayload {
   const complete = PROJECT_LOCALES.filter(
     locale => translationFillState(form.translations[locale]) === 'complete'
   )
@@ -406,7 +476,9 @@ export function buildProjectPayload(form: ProjectFormState): CreateProjectPayloa
     year: blank(form.year) ? null : Number(form.year),
     technologyIds: [...form.technologyIds],
     gallery: form.gallery.map(galleryInput),
-    translations: complete.map(locale => translationInput(locale, form.translations[locale]))
+    translations: complete.map(locale =>
+      translationInput(locale, form.translations[locale], initial?.translations[locale])
+    )
   }
 }
 

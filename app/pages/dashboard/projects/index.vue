@@ -27,9 +27,13 @@ import type { AdminProject } from '~/composables/admin-project-types'
  * translation summary — so a single list of rows reads correctly from 320px up and there is exactly
  * one node per project in the DOM, which makes that entire class of bug impossible here.
  */
+// No locale-prefixed twin of this route (D04-7) — the dashboard is bilingual through a persisted
+// application locale, not through the URL. Rationale in `~/utils/dashboard-locale`.
+defineI18nRoute(false)
+
 definePageMeta({ layout: 'dashboard', middleware: 'auth' })
 
-const { t, locale } = useI18n()
+const { t, locale } = useDashboardI18n()
 const route = useRoute()
 const router = useRouter()
 const { items, total, totalPages, pending, forbidden, failed, load } = useAdminProjects()
@@ -43,6 +47,12 @@ useHead({ title: () => `${t('dashboard.projects.title')} · ${t('dashboard.title
  * which is what keeps normalisation from re-triggering the watcher that reads it.
  */
 const parsed = computed(() => parseAdminProjectsQuery(route.query))
+
+const hasData = computed(() => items.value.length > 0)
+const { initialPending, refreshing } = useRequestState(pending, hasData, failed)
+const showErrorState = computed(() => failed.value && !hasData.value)
+const showStaleNotice = computed(() => failed.value && hasData.value)
+const isEmpty = computed(() => !pending.value && !failed.value && !forbidden.value && !hasData.value)
 
 function setQuery(patch: Record<string, string | undefined>): void {
   // Build the next query by filtering rather than deleting: `undefined` means "drop this parameter",
@@ -164,16 +174,20 @@ function goToPage(next: number): void {
 /**
  * The row's heading.
  *
- * Prefers the English title and falls back to the ARABIC one, then to a neutral placeholder — never
- * to the slug alone and never to an empty row. This is the ONE place a cross-locale read is correct:
- * it is a label for a row in an English-only chrome, not authored content, and the translation
- * column right beside it states plainly which languages actually exist. The editor itself does no
- * such thing.
+ * Prefers the title in the DASHBOARD's language and falls back to the other one, then to a neutral
+ * placeholder — never to the slug alone and never to an empty row. This is the ONE place a
+ * cross-locale read is correct: it is a way to identify a row, not authored content, and the
+ * translation column right beside it states plainly which languages actually exist. The editor
+ * itself does no such thing.
+ *
+ * The preferred locale used to be hard-coded `en`, because the chrome was English-only. OD-11
+ * (D02-15) makes the chrome bilingual, so an Arabic-working operator now sees Arabic titles first —
+ * with the same fallback shape, only the preference order follows the operator.
  */
 function rowTitle(project: AdminProject): string {
-  const english = project.translations.en?.title
-  if (english && english.trim().length > 0) return english
-  const arabic = project.translations.ar?.title
+  const preferred = project.translations[locale.value]?.title
+  if (preferred && preferred.trim().length > 0) return preferred
+  const arabic = project.translations[locale.value === 'ar' ? 'en' : 'ar']?.title
   if (arabic && arabic.trim().length > 0) return arabic
   return t('dashboard.projects.untitled')
 }
@@ -270,18 +284,10 @@ watch(parsed, value => void load(value), { immediate: true, deep: true })
     </section>
 
     <section :aria-label="t('dashboard.projects.listRegionLabel')">
-      <div v-if="pending" class="flex flex-col gap-2" :aria-label="t('dashboard.projects.loading')" aria-busy="true">
-        <!-- `h-16`, not a size chosen for looks: the public stylesheet is ONE file shared by every
-             route, so a utility this module is the first to use is a new rule on the public CSS
-             budget — which sits at 29.99 of its 30 KB gz ceiling. Every size here is one the app
-             already emits. -->
-        <USkeleton v-for="i in 6" :key="i" class="h-16 w-full" />
-      </div>
-
       <!-- The subtle error title defaults to the 500 red, which measures 3.15:1 on its own tinted
            background — under the 4.5:1 AA minimum. The 700 shade is 5.32:1, matching the Inbox. -->
       <UAlert
-        v-else-if="forbidden"
+        v-if="forbidden"
         color="error"
         variant="subtle"
         icon="i-lucide-lock"
@@ -291,26 +297,46 @@ watch(parsed, value => void load(value), { immediate: true, deep: true })
         :description="t('dashboard.projects.forbiddenBody')"
       />
 
-      <div v-else-if="failed" class="rounded-control border border-default p-6 text-center" data-projects-failed>
-        <p class="font-medium text-highlighted">{{ t('dashboard.projects.errorTitle') }}</p>
-        <p class="mt-1 text-sm text-muted">{{ t('dashboard.projects.errorBody') }}</p>
-        <UButton class="mt-4" color="neutral" variant="subtle" @click="load(parsed)">
-          {{ t('dashboard.projects.retry') }}
-        </UButton>
-      </div>
-
-      <!-- An empty FILTERED result is a different answer from an empty library, and saying so is the
-           difference between "change your filters" and "create your first project". -->
-      <div v-else-if="items.length === 0" class="rounded-control border border-default p-10 text-center" data-projects-empty>
-        <p class="font-medium text-highlighted">
-          {{ filtered ? t('dashboard.projects.emptyFilteredTitle') : t('dashboard.projects.emptyTitle') }}
-        </p>
-        <p class="mt-1 text-sm text-muted">
-          {{ filtered ? t('dashboard.projects.emptyFilteredBody') : t('dashboard.projects.emptyBody') }}
-        </p>
-      </div>
-
       <template v-else>
+        <p
+          v-if="showStaleNotice"
+          role="status"
+          data-projects-stale
+          class="mb-3 rounded-control border border-warning/40 bg-warning/10 px-3 py-2 text-sm text-highlighted"
+        >
+          {{ t('dashboard.projects.staleNotice') }}
+          <UButton class="ms-2" size="xs" color="neutral" variant="subtle" data-projects-stale-retry @click="load(parsed)">
+            {{ t('dashboard.projects.retry') }}
+          </UButton>
+        </p>
+
+        <UiRequestState
+          :pending="initialPending"
+          :refreshing="refreshing"
+          :error="showErrorState"
+          :empty="isEmpty"
+          skeleton="rows"
+          :count="6"
+          @retry="load(parsed)"
+        >
+          <template #error>
+            <UiStateError data-projects-failed :message="t('dashboard.projects.errorTitle')" @retry="load(parsed)" />
+          </template>
+
+          <!-- An empty FILTERED result is a different answer from an empty library, and saying so is the
+               difference between "change your filters" and "create your first project". -->
+          <template #empty>
+            <div class="rounded-control border border-default p-10 text-center" data-projects-empty>
+              <p class="font-medium text-highlighted">
+                {{ filtered ? t('dashboard.projects.emptyFilteredTitle') : t('dashboard.projects.emptyTitle') }}
+              </p>
+              <p class="mt-1 text-sm text-muted">
+                {{ filtered ? t('dashboard.projects.emptyFilteredBody') : t('dashboard.projects.emptyBody') }}
+              </p>
+            </div>
+          </template>
+
+          <div>
         <p class="mb-3 text-sm text-muted" data-projects-count>
           {{ t('dashboard.projects.resultCount', { total, page: parsed.page, pages: totalPages }) }}
         </p>
@@ -428,6 +454,8 @@ watch(parsed, value => void load(value), { immediate: true, deep: true })
             @update:page="goToPage"
           />
         </div>
+          </div>
+        </UiRequestState>
       </template>
     </section>
   </UContainer>

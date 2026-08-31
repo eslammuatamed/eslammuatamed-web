@@ -19,7 +19,7 @@ const props = defineProps<{
 
 defineEmits<{ select: [asset: MediaAsset] }>()
 
-const { t, locale } = useI18n()
+const { t, locale } = useDashboardI18n()
 
 const thumbnail = computed(() => thumbnailFor(props.asset))
 

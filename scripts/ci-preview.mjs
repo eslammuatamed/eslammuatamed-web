@@ -45,6 +45,7 @@ import { resolveMockPort, resolvePreviewPort } from './lib/preview-base.mjs'
 const prismUpstreamPort = port => String(Number(port) + 40)
 
 const BACKENDS = {
+  overview: { label: 'dashboard overview backend', command: process.execPath, args: () => ['scripts/e2e/overview-server.ts'] },
   // The RESOLVED binary, not `npx`: the npx shim spawns Prism as a grandchild, so the process we
   // track is not the process that binds the port, and signalling the shim leaves the listener holding
   // the port. Invoking the binary directly makes the listener our direct child, which is what makes
@@ -103,6 +104,17 @@ const BACKENDS = {
     command: process.execPath,
     args: () => ['scripts/e2e/scenario-server.ts']
   },
+  // The SAME server, run as a separate process with one variable pinned (FE4-U2e2): `/settings/site`
+  // publishes a syntactically valid, entirely FICTIONAL GTM container id. A distinct process on a
+  // distinct port keeps analytics DISABLED (null id) for every other lane — the true live state they
+  // must keep rendering — and the variant stays a property of the process rather than of a request,
+  // exactly like the About/résumé variants above.
+  'gtm-settings': {
+    label: 'scenario backend (GTM container published)',
+    command: process.execPath,
+    args: () => ['scripts/e2e/scenario-server.ts'],
+    env: { E2E_GTM_STATE: 'valid' }
+  },
   // The SAME server, run as a separate process with one variable pinned: `/settings/site` answers
   // with the real live About state (governed prose, no portrait). A distinct process on a distinct
   // port is what keeps the global settings endpoint published and healthy for every other scenario —
@@ -154,6 +166,76 @@ const BACKENDS = {
     label: 'media backend (Media Library + Profile, mutable)',
     command: process.execPath,
     args: () => ['scripts/e2e/media-server.ts']
+  },
+  // Articles authoring (FE-2c). Mutable like `dashboard` and `media` — a create/update/delete must
+  // change what the next GET returns — and its own process for the same lane-isolation reason: a
+  // mutable lane is serial only while it is ONE spec file, so it cannot share a directory with the
+  // Inbox or Media specs.
+  //
+  // It is also the ONLY backend that can HOLD A RESPONSE OPEN (`delayMs`, via `POST /__e2e/state`).
+  // Six of plan §14.9's ten criteria assert a state that exists only while a request is in flight;
+  // against an instant mock every one of them passes without that state ever rendering.
+  articles: {
+    label: 'articles backend (FE-2c authoring, mutable, latency-controllable)',
+    command: process.execPath,
+    args: () => ['scripts/e2e/articles-server.ts']
+  },
+  // FE-3 module 1. A separate process from `articles` for the same invariant, not for symmetry: a
+  // mutable lane is serial only while it is ONE spec file. What it holds that `articles` cannot is
+  // a DIFFERENT write shape — `technologyIds` replaces its whole set while `translations` upsert and
+  // `endDate` clears on an explicit null, so the three clearing semantics can disagree in one save.
+  // It also answers the skills 422 WITHOUT a field path, which is the shape the real service throws
+  // and the one an editor reading only `errors[]` would swallow.
+  experiences: {
+    label: 'experiences backend (FE-3 module 1, mutable, latency-controllable)',
+    command: process.execPath,
+    args: () => ['scripts/e2e/experiences-server.ts']
+  },
+  // FE-3 module 2. Skills owns a separate mutable backend so its collection fixtures can be reset
+  // between browser tests without sharing state with Experiences or another future module.
+  skills: {
+    label: 'skills backend (FE-3 module 2, mutable)',
+    command: process.execPath,
+    args: () => ['scripts/e2e/skills-server.ts']
+  },
+  // FE-3 module 3. A separate process from `skills` for the same invariant, not for symmetry: a
+  // mutable lane is serial only while it is ONE spec file. What this lane holds that Skills cannot
+  // is fixtures whose `order` values run deliberately OUT of sequence — the discriminating state
+  // that makes a client-side re-sort fail loudly instead of passing by coincidence with a
+  // monotonic seed. Its instrument (`testimonials-server.ts`) and calibration landed in T·U1;
+  // registering the backend belongs to T·U2's browser lane.
+  testimonials: {
+    label: 'testimonials backend (FE-3 module 3, mutable)',
+    command: process.execPath,
+    args: () => ['scripts/e2e/testimonials-server.ts']
+  },
+  // FE-3 Taxonomy (U2). One backend for BOTH collections — the product surface is ONE destination,
+  // and the two stores keep separate slug namespaces inside it exactly like the two database
+  // tables. What this lane holds that Testimonials cannot: TWO server-order pins on one page plus
+  // the no-detail-read request counting, against fixtures whose names run deliberately out of
+  // alphabetical sequence.
+  taxonomy: {
+    label: 'taxonomy backend (FE-3 Categories + Tags, mutable)',
+    command: process.execPath,
+    args: () => ['scripts/e2e/taxonomy-server.ts']
+  },
+  // R16 closure (SEO-U3c). Projects predates the lane architecture and never had a browser pair.
+  // This one models the paginated collection envelope the other FE-3 backends deliberately lack,
+  // and the D10-23 SEO pair on the wire — omitted key preserves, explicit null clears — so the
+  // browser can prove a cleared meta title reaches the PATCH as `null`, not an omission.
+  projects: {
+    label: 'projects backend (R16, mutable, SEO null-clear on the wire)',
+    command: process.execPath,
+    args: () => ['scripts/e2e/projects-server.ts']
+  },
+  // FE4-U1e. The U1a Static Page SEO instrument, now serving its browser lane: one list read is
+  // the whole surface's edit source (zero detail GETs), PATCH upserts per locale with explicit
+  // null clears, and admin/public share ONE in-process SEO state. Mutable + resettable like every
+  // sibling; the additive /admin/media reads exist only so the shared OG picker functions.
+  'page-seo': {
+    label: 'page-seo backend (FE4-U1e Static Page SEO, mutable)',
+    command: process.execPath,
+    args: () => ['scripts/e2e/page-seo-server.ts']
   },
   // Project-detail freshness. This backend starts with an empty gallery and exposes test-only
   // controls that publish the authored gallery after both localized detail pages have been primed.

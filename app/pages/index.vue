@@ -9,32 +9,56 @@ const { t } = useI18n()
 const { data: settings, error: settingsError, refresh: refreshSettings } = await useSiteSettings()
 const { projects, skills, experiences, articles, testimonials } = useHomeData()
 
+// Static Page SEO override (FR-DSH-051 consumption) — awaited so SSR renders the FINAL head.
+// The read is optional: a failure leaves `data` null and the resolver falls through (below).
+const { data: homePageSeo } = await usePublicPageSeo('home')
+
 useSiteSchema(settings, skills.data)
 
 // Home is the title exception (D22-4): a standalone brand-first title with role, not the sitewide
-// "%s — Eslam Muatamed" template — leading with the brand serves branded search (D22-1).
+// "%s — Eslam Muatamed" template — leading with the brand serves branded search (D22-1). This page
+// keeps `titleTemplate: null`, and the Page SEO override (when authored) arrives VERBATIM through
+// the resolver — no brand suffix is appended here for any tier.
 useHead({ titleTemplate: null })
-// The Twitter pair is set here too, and for a sharper reason than on `/about`. It is NOT about an
-// empty tag: `layouts/default.vue` already fills `twitter:title`/`twitter:description` from the CMS
-// `defaultMetaTitle`/`defaultMetaDescription` (TIER 2), so this route shipped two DISAGREEING
-// previews of one URL — `og:*` carrying the governed home title and hero description, `twitter:*`
-// carrying the site-wide CMS defaults. Measured against the built server with a live backend.
-//
-// That matters more here than anywhere else, because the CMS `defaultMetaDescription` is the surface
-// still carrying the SUPERSEDED positioning (positioning-strategy v2.0.0 §8's outstanding backlog):
-// until the canonical dataset is corrected, the home page's Twitter card is where the retired
-// wording actually reaches a public consumer. Tier 1 wins over tier 2, so stating the governed
-// values here is what makes the page correct regardless of what the CMS holds. It does not replace
-// fixing the CMS value; it stops this route from publishing whatever that value happens to be.
-//
-// The image pair is deliberately left to the floor — this page has no image of its own.
+
+// Effective metadata: authored `home` override → Home's governed i18n copy → localized Settings
+// defaults → committed floor (doc 22 §3 F-D4, resolved by utils/page-seo-metadata). One text pair
+// feeds title + og + twitter; the social image overrides ONLY when Page SEO carries a descriptor
+// the existing shareable-format helper accepts — otherwise the keys are not registered at all and
+// the committed card in `app.vue` stays effective (an undefined-valued getter would DELETE it).
+const siteConfig = useSiteConfig()
+const effectiveHomeMeta = resolvePageSeoMetadata({
+  pageSeo: homePageSeo.value,
+  pageTitle: t('seo.home.titleFull'),
+  pageDescription: t('seo.home.description'),
+  settingsDefaultTitle: settings.value?.defaultMetaTitle ?? null,
+  settingsDefaultDescription: settings.value?.defaultMetaDescription ?? null,
+  fallbackTitle: t('seo.defaultTitle'),
+  fallbackDescription: t('seo.siteDescription'),
+  siteUrl: siteConfig.url
+})
+
+// The Twitter pair travels WITH the OG pair from the SAME effective values — one source, no
+// disagreement between previews of one URL. (History: this route once shipped og:* describing the
+// home while twitter:* carried the CMS defaults; see git history for the measured defect.)
+const homeImage = effectiveHomeMeta.socialImageOverride
 useSeoMeta({
-  title: () => t('seo.home.titleFull'),
-  description: () => t('seo.home.description'),
-  ogTitle: () => t('seo.home.titleFull'),
-  ogDescription: () => t('seo.home.description'),
-  twitterTitle: () => t('seo.home.titleFull'),
-  twitterDescription: () => t('seo.home.description')
+  title: () => effectiveHomeMeta.title,
+  description: () => effectiveHomeMeta.description,
+  ogTitle: () => effectiveHomeMeta.title,
+  ogDescription: () => effectiveHomeMeta.description,
+  twitterTitle: () => effectiveHomeMeta.title,
+  twitterDescription: () => effectiveHomeMeta.description,
+  ...(homeImage
+    ? {
+        ogImage: () => homeImage.url,
+        ogImageWidth: () => homeImage.width,
+        ogImageHeight: () => homeImage.height,
+        ogImageAlt: () => homeImage.alt,
+        twitterImage: () => homeImage.url,
+        twitterImageAlt: () => homeImage.alt
+      }
+    : {})
 })
 </script>
 

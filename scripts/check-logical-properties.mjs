@@ -37,6 +37,22 @@ async function collect(dir, exts) {
   return files
 }
 
+/**
+ * Physical `side` LITERALS on overlay components (D11-8).
+ *
+ * A component prop is not a class, so nothing above can see it — and that is exactly how
+ * `layouts/dashboard.vue` shipped a drawer hard-coded to `side="left"` while this gate reported the
+ * whole tree clean. It was defensible then (the dashboard was English-only LTR by a governed
+ * decision) and is a defect now that the dashboard is bilingual: a drawer entering from the
+ * inline-END of an RTL page is precisely what logical semantics exist to prevent.
+ *
+ * `side` has no logical form — its values are literally `left`/`right` — so the rule is not "never
+ * write left" but "never write it as a CONSTANT". A bound expression (`:side="…"`) can derive the
+ * physical side from the active direction; a literal cannot. `top`/`bottom` are direction-neutral
+ * and unrestricted.
+ */
+const PHYSICAL_SIDE_LITERAL = /\bside\s*=\s*(["'])(?:left|right)\1/
+
 function classAttributes(source) {
   const out = []
   const re = /(?::class|\bclass)\s*=\s*("|')([\s\S]*?)\1/g
@@ -49,6 +65,9 @@ const violations = new Set()
 
 for (const file of await collect(ROOT, ['.vue'])) {
   const source = await readFile(file, 'utf8')
+  if (PHYSICAL_SIDE_LITERAL.test(source)) {
+    violations.add(`${file}: literal side="left|right" — bind it and derive the side from the active direction (D11-8)`)
+  }
   for (const attr of classAttributes(source)) {
     // Drop `rtl:`/`ltr:`-prefixed tokens — those are intentional direction adjustments.
     const tokens = attr.split(/\s+/).filter(token => token && !/(?:^|:)(?:rtl|ltr):/.test(token))

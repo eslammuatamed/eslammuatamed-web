@@ -182,6 +182,71 @@ export const DASHBOARD_ROUTES = [
   // authoring surface the dashboard has (both content locales, the media picker and the technology
   // vocabulary on one page). All three are registered here rather than measuring the list alone —
   // the comment above is the rule, and an unmeasured editor is exactly the route a budget is for.
+  // The Articles module (FE-2c), registered under the owner decision of 2026-08-18 (D20-33). That
+  // decision governs all THREE Articles routes at the same 102,400 B cap; they are registered here
+  // as each becomes RENDERABLE, because this gate fetches every route it governs and a route whose
+  // page does not exist yet would be measured as an error shell. The editor's two routes join in
+  // the commit that creates them.
+  { route: '/dashboard/articles', pageModule: 'app/pages/dashboard/articles/index.vue' },
+  { route: '/dashboard/articles/new', pageModule: 'app/pages/dashboard/articles/new.vue' },
+  // A CONCRETE id, for the same reason the projects editor uses one: the gate FETCHES the route to
+  // read its closure, and `/dashboard/**` is `ssr: false`, so every id returns the same shell.
+  {
+    route: '/dashboard/articles/00000000-0000-0000-0000-000000000000',
+    pageModule: 'app/pages/dashboard/articles/[id].vue'
+  },
+  // The Experiences module (FE-3 module 1), registered as each route becomes RENDERABLE — the same
+  // rule the Articles comment above states. `M1·U2` ships the collection only; the editor's two
+  // routes join in the commit that creates them, and they will derive their OWN caps from their own
+  // measured baselines rather than inheriting this one. That is the D20-33 amendment's lesson
+  // applied in advance: inheriting a collection cap for an editor surface that does not exist yet is
+  // exactly what had to be corrected for Articles.
+  { route: '/dashboard/experiences', pageModule: 'app/pages/dashboard/experiences/index.vue' },
+  // `M1·U3` — the editor's two routes, joining in the commit that creates them, exactly as the
+  // paragraph above said they would. Their caps are DERIVED FROM THEIR OWN measured baselines under
+  // D20-29's formula; D20-34's standing instruction forbids inheriting the collection's 99,328 B,
+  // and the owner ratified measuring the real editor surfaces first.
+  { route: '/dashboard/experiences/new', pageModule: 'app/pages/dashboard/experiences/new.vue' },
+  // A CONCRETE id, for the reason the two comments above give: the gate FETCHES the route, and
+  // `/dashboard/**` is `ssr: false`, so every id returns the same shell.
+  {
+    route: '/dashboard/experiences/00000000-0000-0000-0000-000000000000',
+    pageModule: 'app/pages/dashboard/experiences/[id].vue'
+  },
+  // M2·U2 — register the collection for measurement. Its owner cap is deliberately absent until
+  // the batched Skills collection/editor decision; size:routes must report this as ungoverned.
+  { route: '/dashboard/skills', pageModule: 'app/pages/dashboard/skills/index.vue' },
+  // `M2·U3` — the editor's two routes, joining in the commit that creates them, exactly as every
+  // module before them did. Their caps arrive with the batched owner decision (D20-36), each
+  // derived from its OWN measured baseline rather than inherited from the collection or a sibling
+  // module's editors.
+  { route: '/dashboard/skills/new', pageModule: 'app/pages/dashboard/skills/new.vue' },
+  // A CONCRETE id, for the same reason the Articles/Experiences/Projects editors use one: the gate
+  // FETCHES the route, and `/dashboard/**` is `ssr: false`, so every id returns the same shell.
+  {
+    route: '/dashboard/skills/00000000-0000-0000-0000-000000000000',
+    pageModule: 'app/pages/dashboard/skills/[id].vue'
+  },
+  // T·U2 (FE-3 module 3) — register the Testimonials collection for measurement, following the
+  // M2·U2 rule verbatim: measured but deliberately UNGOVERNED until the owner derives its cap from
+  // its own measured baseline. No sibling number is inherited.
+  { route: '/dashboard/testimonials', pageModule: 'app/pages/dashboard/testimonials/index.vue' },
+  // `T·U3` — the editor's two routes, joining in the commit that creates them, exactly as every
+  // module before them did. They are registered MEASURED but deliberately UNGOVERNED: caps arrive
+  // with the batched owner decision, each derived from its OWN measured baseline — never inherited
+  // from the collection or a sibling module's editors (the D20-33 amendment's standing rule).
+  { route: '/dashboard/testimonials/new', pageModule: 'app/pages/dashboard/testimonials/new.vue' },
+  // A CONCRETE id, for the same reason every editor uses one: the gate FETCHES the route, and
+  // `/dashboard/**` is `ssr: false`, so every id returns the same shell.
+  {
+    route: '/dashboard/testimonials/00000000-0000-0000-0000-000000000000',
+    pageModule: 'app/pages/dashboard/testimonials/[id].vue'
+  },
+  // FE-3 Taxonomy — ONE destination hosting the Categories and Tags collections. Registered
+  // measured-but-ungoverned per the M2·U2/T·U2 rule; D20-39 governed the pre-overlay collection,
+  // and D20-40 RE-BASELINED the same route to 135,345 B / 155,648 B once U3b's approved overlays
+  // landed on it. No editor route exists or is planned.
+  { route: '/dashboard/taxonomy', pageModule: 'app/pages/dashboard/taxonomy/index.vue' },
   { route: '/dashboard/projects', pageModule: 'app/pages/dashboard/projects/index.vue' },
   { route: '/dashboard/projects/new', pageModule: 'app/pages/dashboard/projects/new.vue' },
   // A CONCRETE id, because the gate fetches each route to read the CSS out of its rendered shell.
@@ -190,5 +255,10 @@ export const DASHBOARD_ROUTES = [
   {
     route: '/dashboard/projects/00000000-0000-0000-0000-000000000000',
     pageModule: 'app/pages/dashboard/projects/[id].vue'
-  }
+  },
+  // FE-4 Static Page SEO (U1c destination + U1d editor) — ONE route editing the SEO of the seven
+  // static pages (`PAGE_SEO_PAGE_ORDER`). Measured at the completed U1f checkpoint via the §1.2
+  // closure workflow and governed from that OWN baseline by D20-41 — no sibling number inherited,
+  // no separate editor cap (there is no editor route; this IS the editing surface).
+  { route: '/dashboard/seo', pageModule: 'app/pages/dashboard/seo/index.vue' }
 ]

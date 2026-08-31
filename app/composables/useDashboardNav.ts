@@ -51,9 +51,22 @@ export function useDashboardNav() {
     // STILL NO `roles` PREDICATE, for the reason the header gives. Projects are permission-gated on
     // the API like everything else here, and the page answers that with its `forbidden` state
     // (D11-2) — a real answer, rather than an inference from a role name.
+    //
     {
       key: 'content',
-      items: [{ key: 'projects', to: '/dashboard/projects', icon: 'i-lucide-folder-kanban' }]
+      // Articles leads the Content group, matching doc 04's ordering rather than the order the
+      // modules happened to be built in. Both routes EXIST — neither is a placeholder destination.
+      // Experience joins the Content group with FE-3 module 1. `/dashboard/experiences` EXISTS as of
+      // that unit, so it is not a placeholder destination; its editor child routes are covered by
+      // the prefix match in `isNavItemActive` rather than by entries of their own.
+      items: [
+        { key: 'articles', to: '/dashboard/articles', icon: 'i-lucide-newspaper' },
+        { key: 'experiences', to: '/dashboard/experiences', icon: 'i-lucide-briefcase' },
+        { key: 'skills', to: '/dashboard/skills', icon: 'i-lucide-brain' },
+        { key: 'testimonials', to: '/dashboard/testimonials', icon: 'i-lucide-message-square-quote' },
+        { key: 'taxonomy', to: '/dashboard/taxonomy', icon: 'i-lucide-tags' },
+        { key: 'projects', to: '/dashboard/projects', icon: 'i-lucide-folder-kanban' }
+      ]
     },
     {
       key: 'communication',
@@ -73,7 +86,13 @@ export function useDashboardNav() {
     },
     {
       key: 'system',
-      items: [{ key: 'profile', to: '/dashboard/profile', icon: 'i-lucide-user-round' }]
+      items: [
+        { key: 'profile', to: '/dashboard/profile', icon: 'i-lucide-user-round' },
+        // Static Page SEO joins with FE4-U1c. `/dashboard/seo` EXISTS as of that unit, so it is not
+        // a placeholder destination. STILL no roles predicate — the API's `forbidden` state (D11-2)
+        // answers authorization, exactly as for every sibling here.
+        { key: 'seo', to: '/dashboard/seo', icon: 'i-lucide-search' }
+      ]
     }
   ])
 

@@ -24,6 +24,10 @@ const localePath = useLocalePath()
 // a nonexistent element. Every read below goes through a computed on the reactive ref.
 const { data: settings } = useSiteSettings()
 
+// Static Page SEO override (FR-DSH-051 consumption) — awaited so SSR renders the FINAL head.
+// Optional by design: a failure leaves `data` null and the resolver falls through (below).
+const { data: contactPageSeo } = await usePublicPageSeo('contact')
+
 // ── validation ────────────────────────────────────────────────────────────────────────────────
 // Mirrors the API (D10-15 trimming, D10-16 pair rule). `email` and `phone` are individually optional
 // but `superRefine` requires at least one — and a SUPPLIED value is still format-checked, so a
@@ -296,14 +300,38 @@ useSchemaOrg([
   }))
 ])
 
-// Title and description only. Canonical, hreflang/x-default, og:locale, og:url and <html lang/dir>
-// belong to @nuxtjs/i18n under strict SEO (D22-7). No `ogImage` of its own — it inherits the
-// branded committed card `app.vue` emits site-wide (web-013 closed finding F-1).
+// Effective metadata (doc 22 §3 F-D4 via utils/page-seo-metadata): ONE text pair for
+// title + og + twitter; image override only when the resolver accepts the descriptor — otherwise
+// the committed card stays effective. Canonical/hreflang belong to @nuxtjs/i18n under strict SEO
+// (D22-7); PageSeo canonicalUrl is storage-only and never read here. Form behavior untouched.
+const effectiveContactMeta = resolvePageSeoMetadata({
+  pageSeo: contactPageSeo.value,
+  pageTitle: t('seo.contact.title'),
+  pageDescription: t('seo.contact.description'),
+  settingsDefaultTitle: settings.value?.defaultMetaTitle ?? null,
+  settingsDefaultDescription: settings.value?.defaultMetaDescription ?? null,
+  fallbackTitle: t('seo.defaultTitle'),
+  fallbackDescription: t('seo.siteDescription'),
+  siteUrl: siteConfig.url
+})
+const contactImage = effectiveContactMeta.socialImageOverride
 useSeoMeta({
-  title: () => t('seo.contact.title'),
-  description: () => t('seo.contact.description'),
-  ogTitle: () => `${t('seo.contact.title')} — ${t('brand.name')}`,
-  ogDescription: () => t('seo.contact.description')
+  title: () => effectiveContactMeta.title,
+  description: () => effectiveContactMeta.description,
+  ogTitle: () => effectiveContactMeta.title,
+  ogDescription: () => effectiveContactMeta.description,
+  twitterTitle: () => effectiveContactMeta.title,
+  twitterDescription: () => effectiveContactMeta.description,
+  ...(contactImage
+    ? {
+        ogImage: () => contactImage.url,
+        ogImageWidth: () => contactImage.width,
+        ogImageHeight: () => contactImage.height,
+        ogImageAlt: () => contactImage.alt,
+        twitterImage: () => contactImage.url,
+        twitterImageAlt: () => contactImage.alt
+      }
+    : {})
 })
 </script>
 

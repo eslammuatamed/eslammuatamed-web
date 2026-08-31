@@ -27,11 +27,21 @@ const CONTRACT = JSON.parse(
 )
 const INDEX = readExampleIndex(CONTRACT)
 const SETTINGS = '/api/v1/settings/site'
+const PAGE_SEO = '/api/v1/seo/pages/{pageKey}'
+const PAGE_SEO_PAGES = ['home', 'experience', 'projects', 'blog', 'resume', 'contact']
+const PAGE_SEO_EXAMPLES = new Set([
+  'en', 'ar',
+  ...PAGE_SEO_PAGES.flatMap(pageKey => [`en-${pageKey}`, `ar-${pageKey}`])
+])
 const params = (query = '') => new URLSearchParams(query)
 
 describe('the committed contract', () => {
   it('declares named en/ar examples for the settings operation', () => {
     expect(INDEX.get(`GET ${SETTINGS}`)).toEqual(new Set(['en', 'ar']))
+  })
+
+  it('declares named en/ar examples for the public static-page SEO operation', () => {
+    expect(INDEX.get(`GET ${PAGE_SEO}`)).toEqual(PAGE_SEO_EXAMPLES)
   })
 })
 
@@ -42,6 +52,19 @@ describe('selectExample', () => {
 
   it('selects the Arabic example for an Arabic request', () => {
     expect(selectExample(INDEX, 'GET', SETTINGS, params('locale=ar'))).toBe('ar')
+  })
+
+  it('selects the Arabic Page SEO example for an Arabic request', () => {
+    expect(selectExample(INDEX, 'GET', '/api/v1/seo/pages/about', params('locale=ar'))).toBe('ar')
+  })
+
+  it('selects a page-specific Page SEO example for every other static page', () => {
+    for (const pageKey of PAGE_SEO_PAGES) {
+      expect(selectExample(INDEX, 'GET', `/api/v1/seo/pages/${pageKey}`, params('locale=en')))
+        .toBe(`en-${pageKey}`)
+      expect(selectExample(INDEX, 'GET', `/api/v1/seo/pages/${pageKey}`, params('locale=ar')))
+        .toBe(`ar-${pageKey}`)
+    }
   })
 
   // The API applies `en` when `?locale=` is absent (the parameter's documented default), so the

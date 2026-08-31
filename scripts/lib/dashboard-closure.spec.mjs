@@ -267,10 +267,40 @@ describe('dashboard closure — governed routes must always be measurable', () =
     expect(DASHBOARD_ROUTES.map(r => r.route)).toEqual([
       '/dashboard/login', '/dashboard', '/dashboard/messages',
       '/dashboard/media', '/dashboard/profile',
+      // The Articles module (D20-33). Its editor routes are governed by the same decision and are
+      // registered here when they exist — this gate fetches what it governs.
+      '/dashboard/articles', '/dashboard/articles/new',
+      '/dashboard/articles/00000000-0000-0000-0000-000000000000',
+      // The Experiences module (FE-3 module 1). D20-34 governs the collection; D20-35 governs the
+      // two editor routes, which were registered when `M1·U3` created them and which derive their
+      // OWN caps (120,832 B / 121,856 B) rather than inheriting the collection's — the correction
+      // D20-33 had to make retroactively for Articles, made prospectively here.
+      '/dashboard/experiences',
+      '/dashboard/experiences/new',
+      '/dashboard/experiences/00000000-0000-0000-0000-000000000000',
+      // The Skills module (FE-3 module 2). D20-36 governs all three routes as one batched decision;
+      // the collection was registered at M2·U2 deliberately ungoverned and the editors joined when
+      // `M2·U3` created them — caps derived from their OWN baselines, none inherited.
+      '/dashboard/skills', '/dashboard/skills/new',
+      '/dashboard/skills/00000000-0000-0000-0000-000000000000',
+      // The Testimonials module (FE-3 module 3). The collection was registered at T·U2 deliberately
+      // ungoverned and is now governed (D20-37); the editor's two routes joined when `T·U3` created
+      // them — measured but deliberately ungoverned until the owner derives their caps from their
+      // OWN baselines, none inherited.
+      '/dashboard/testimonials',
+      '/dashboard/testimonials/new',
+      '/dashboard/testimonials/00000000-0000-0000-0000-000000000000',
+      // The Taxonomy destination (FE-3 Categories + Tags): ONE route for BOTH collections, first
+      // registered measured-but-ungoverned like every FE-3 collection, governed by D20-39 at the
+      // pre-overlay baseline and re-baselined by D20-40 after U3b's overlays joined the route.
+      '/dashboard/taxonomy',
       // The Projects module. The editor is registered under a concrete id because the gate fetches
       // the route; `/dashboard/**` is `ssr: false`, so which id is used cannot change the shell.
       '/dashboard/projects', '/dashboard/projects/new',
-      '/dashboard/projects/00000000-0000-0000-0000-000000000000'
+      '/dashboard/projects/00000000-0000-0000-0000-000000000000',
+      // FE-4 Static Page SEO (U1c/U1d): ONE destination editing the seven static pages' SEO.
+      // Governed by D20-41 from its own U1f-measured baseline; measured-first like every module.
+      '/dashboard/seo'
     ])
   })
 

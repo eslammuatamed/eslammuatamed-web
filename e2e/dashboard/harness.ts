@@ -45,7 +45,7 @@ export const SINGLE_PAGE = [
 
 export async function setBackendState(
   page: Page,
-  state: { mode?: 'ok' | 'empty' | 'error' | 'forbidden', failNextPatch?: boolean }
+  state: { mode?: 'ok' | 'empty' | 'error' | 'forbidden', delayMs?: number, failNextPatch?: boolean }
 ): Promise<void> {
   const res = await page.request.post(`${CONTROL_BASE}/__e2e/state`, { data: state })
   expect(res.ok(), 'backend state change must succeed').toBe(true)
@@ -70,9 +70,9 @@ export async function signIn(page: Page): Promise<void> {
   await page.waitForURL('**/dashboard')
 }
 
-/** The sidebar/drawer link to Messages — structural, not copy-based. */
+/** The desktop sidebar's navigation-landmark link to Messages — structural, not copy-based. */
 export function messagesNavLink(page: Page) {
-  return page.locator('a[href="/dashboard/messages"]')
+  return page.locator('aside').getByRole('navigation').locator('a[href="/dashboard/messages"]')
 }
 
 /**

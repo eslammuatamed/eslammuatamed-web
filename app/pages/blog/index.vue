@@ -18,6 +18,12 @@ const { data, status, error, refresh } = await useArticlesList({
 })
 const { data: categories } = await useArticleCategories()
 
+// Static Page SEO override (FR-DSH-051 consumption) — awaited so SSR renders the FINAL head.
+// Optional by design; the Settings tier rides the SHARED public read — no second
+// `/settings/site` request. Article detail pages keep their entity-level SEO untouched.
+const { data: blogPageSeo } = await usePublicPageSeo('blog')
+const { data: blogSettings } = await useSiteSettings()
+
 // Split pending into initial-load (skeleton) vs a page change with content already on screen
 // (branded overlay, not a skeleton) — useAsyncData keeps the previous `data` while refetching.
 const hasData = computed(() => !!data.value)
@@ -78,11 +84,37 @@ const categoryOptions = computed(() =>
   (categories.value ?? []).map(item => ({ value: item.slug, label: item.name }))
 )
 
+// Effective metadata (doc 22 §3 F-D4 via utils/page-seo-metadata): ONE text pair for
+// title + og + twitter; image override only when the resolver accepts the descriptor.
+const siteConfig = useSiteConfig()
+const effectiveBlogMeta = resolvePageSeoMetadata({
+  pageSeo: blogPageSeo.value,
+  pageTitle: t('seo.blog.title'),
+  pageDescription: t('seo.blog.description'),
+  settingsDefaultTitle: blogSettings.value?.defaultMetaTitle ?? null,
+  settingsDefaultDescription: blogSettings.value?.defaultMetaDescription ?? null,
+  fallbackTitle: t('seo.defaultTitle'),
+  fallbackDescription: t('seo.siteDescription'),
+  siteUrl: siteConfig.url
+})
+const blogImage = effectiveBlogMeta.socialImageOverride
 useSeoMeta({
-  title: () => t('seo.blog.title'),
-  description: () => t('seo.blog.description'),
-  ogTitle: () => `${t('seo.blog.title')} — ${t('brand.name')}`,
-  ogDescription: () => t('seo.blog.description')
+  title: () => effectiveBlogMeta.title,
+  description: () => effectiveBlogMeta.description,
+  ogTitle: () => effectiveBlogMeta.title,
+  ogDescription: () => effectiveBlogMeta.description,
+  twitterTitle: () => effectiveBlogMeta.title,
+  twitterDescription: () => effectiveBlogMeta.description,
+  ...(blogImage
+    ? {
+        ogImage: () => blogImage.url,
+        ogImageWidth: () => blogImage.width,
+        ogImageHeight: () => blogImage.height,
+        ogImageAlt: () => blogImage.alt,
+        twitterImage: () => blogImage.url,
+        twitterImageAlt: () => blogImage.alt
+      }
+    : {})
 })
 </script>
 
