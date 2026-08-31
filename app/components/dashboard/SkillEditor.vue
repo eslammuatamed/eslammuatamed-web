@@ -285,7 +285,7 @@ useUnsavedChangesGuard({
               complete: t('dashboard.skills.editor.fill.complete')
             }"
           >
-            <template #panel="{ locale: fieldLocale }">
+            <template #panel="{ locale: fieldLocale, contentDir }">
               <UFormField
                 :name="`translations.${fieldLocale}.label`"
                 :error="serverFieldErrors[`translations.${fieldLocale}.label`]"
@@ -294,6 +294,7 @@ useUnsavedChangesGuard({
               >
                 <UInput
                   v-model="form.translations[fieldLocale].label"
+                  :dir="contentDir"
                   maxlength="120"
                   class="w-full"
                   :data-editor-label="fieldLocale"

@@ -216,12 +216,12 @@ color="neutral" variant="ghost" size="sm" icon="i-lucide-x" data-taxonomy-overla
             }"
             :invalid-label="t('dashboard.taxonomy.overlay.invalid')"
           >
-            <template #panel="{ locale: fieldLocale }">
+            <template #panel="{ locale: fieldLocale, contentDir }">
               <UFormField
 :label="t('dashboard.taxonomy.overlay.field.name')" :name="`translations.${fieldLocale}.name`"
                           :error="serverFieldErrors[`translations.${fieldLocale}.name`]">
                 <UInput
-v-model="form.translations[fieldLocale as TaxonomyLocale].name" dir="auto" class="w-full"
+v-model="form.translations[fieldLocale as TaxonomyLocale].name" :dir="contentDir" class="w-full"
                         :data-taxonomy-field="`name:${fieldLocale}`" />
               </UFormField>
               <UFormField

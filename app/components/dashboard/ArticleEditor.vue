@@ -500,11 +500,11 @@ const saveState = computed<'saving' | 'unsaved' | 'saved' | 'idle'>(() => {
               complete: t('dashboard.articles.editor.fill.complete')
             }"
           >
-            <template #panel="{ locale: fieldLocale }">
+            <template #panel="{ locale: fieldLocale, contentDir }">
             <UFormField
 :name="`translations.${fieldLocale}.title`"
               :error="serverFieldErrors[`translations.${fieldLocale}.title`]" :label="t('dashboard.articles.field.title')" required>
-              <UInput v-model="form.translations[fieldLocale].title" class="w-full" :data-editor-title="fieldLocale" />
+              <UInput v-model="form.translations[fieldLocale].title" :dir="contentDir" class="w-full" :data-editor-title="fieldLocale" />
             </UFormField>
 
             <UFormField
@@ -514,13 +514,13 @@ const saveState = computed<'saving' | 'unsaved' | 'saved' | 'idle'>(() => {
               :help="t('dashboard.articles.editor.slugHelp')"
               required
             >
-              <UInput v-model="form.translations[fieldLocale].slug" class="w-full" :data-editor-slug="fieldLocale" />
+              <UInput v-model="form.translations[fieldLocale].slug" dir="ltr" class="w-full" :data-editor-slug="fieldLocale" />
             </UFormField>
 
             <UFormField
 :name="`translations.${fieldLocale}.excerpt`"
               :error="serverFieldErrors[`translations.${fieldLocale}.excerpt`]" :label="t('dashboard.articles.field.excerpt')" required>
-              <UTextarea v-model="form.translations[fieldLocale].excerpt" :rows="3" class="w-full" :data-editor-excerpt="fieldLocale" />
+              <UTextarea v-model="form.translations[fieldLocale].excerpt" :dir="contentDir" :rows="3" class="w-full" :data-editor-excerpt="fieldLocale" />
             </UFormField>
 
             <!-- OD-3 — a plain Markdown textarea. The contract calls this field "Opaque
@@ -538,6 +538,7 @@ const saveState = computed<'saving' | 'unsaved' | 'saved' | 'idle'>(() => {
             >
               <UTextarea
                 v-model="form.translations[fieldLocale].body"
+                :dir="contentDir"
                 :rows="16"
                 class="w-full font-mono"
                 :data-editor-body="fieldLocale"

@@ -269,8 +269,9 @@ test.describe('shared translation tabs and unsaved navigation', () => {
     await editorSettled(page)
 
     await expect(tab(page, 'ar')).toHaveAttribute('aria-selected', 'true')
-    await expect(page.locator('[data-editor-panel="en"]')).toHaveAttribute('dir', 'ltr')
-    await expect(page.locator('[data-editor-panel="ar"]')).toHaveAttribute('dir', 'rtl')
+    await expect(page.locator('[data-editor-panel="en"]')).not.toHaveAttribute('dir')
+    await expect(page.locator('[data-editor-panel="ar"]')).not.toHaveAttribute('dir')
+    await expect(page.locator('[data-project-field="en.title"]')).toHaveAttribute('dir', 'ltr')
     await expect(page.locator('[data-project-field="ar.title"]')).toHaveAttribute('dir', 'rtl')
   })
 

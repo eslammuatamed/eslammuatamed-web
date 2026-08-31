@@ -518,10 +518,12 @@ test.describe('the editor — bilingual, at the narrowest supported width', () =
     await expect(shell(page)).toHaveAttribute('dir', 'rtl')
     await expectNoKeyPaths(page)
 
-    // Field direction is INDEPENDENT of chrome direction: the English panel stays LTR inside an
-    // Arabic dashboard. Asserting only the chrome would miss a panel that inherited it.
-    await expect(page.locator('[data-editor-panel="ar"]')).toHaveAttribute('dir', 'rtl')
-    await expect(page.locator('[data-editor-panel="en"]')).toHaveAttribute('dir', 'ltr')
+    // Field direction is independent of chrome: the panel follows Arabic chrome, while each
+    // authored translation field retains its own content locale direction.
+    await expect(page.locator('[data-editor-panel="ar"]')).not.toHaveAttribute('dir')
+    await expect(page.locator('[data-editor-panel="en"]')).not.toHaveAttribute('dir')
+    await expect(page.locator('[data-editor-role="ar"]')).toHaveAttribute('dir', 'rtl')
+    await expect(page.locator('[data-editor-role="en"]')).toHaveAttribute('dir', 'ltr')
   })
 
   test('renders English chrome LTR with no raw key paths', async ({ page, baseURL }) => {

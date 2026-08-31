@@ -496,9 +496,11 @@ for (const locale of ['en', 'ar'] as const) {
       expect(await page.evaluate(() => window.innerWidth)).toBe(NARROW.width)
       await expect(shell(page)).toHaveAttribute('dir', locale === 'ar' ? 'rtl' : 'ltr')
       await expectNoKeyPaths(page)
-      // Field direction is INDEPENDENT of chrome direction.
-      await expect(page.locator('[data-editor-panel="ar"]')).toHaveAttribute('dir', 'rtl')
-      await expect(page.locator('[data-editor-panel="en"]')).toHaveAttribute('dir', 'ltr')
+      // Field direction is independent of chrome; panels do not override the shell direction.
+      await expect(page.locator('[data-editor-panel="ar"]')).not.toHaveAttribute('dir')
+      await expect(page.locator('[data-editor-panel="en"]')).not.toHaveAttribute('dir')
+      await expect(page.locator('[data-editor-author="ar"]')).toHaveAttribute('dir', 'rtl')
+      await expect(page.locator('[data-editor-author="en"]')).toHaveAttribute('dir', 'ltr')
 
       const overflow = await page.evaluate(() => ({
         scrollWidth: document.documentElement.scrollWidth,

@@ -461,10 +461,12 @@ test.describe('§14.1 — multilingual authoring', () => {
     await expect(tab(page, 'ar')).toHaveAttribute('aria-selected', 'true')
   })
 
-  test('MIXED DIRECTION in one form — Arabic fields RTL, English fields LTR', async ({ page, baseURL }) => {
+  test('MIXED DIRECTION in one form — fields own content direction while panels keep chrome direction', async ({ page, baseURL }) => {
     await openEditor(page, baseURL as string, `/dashboard/articles/${DRAFT_ID}`)
-    await expect(page.locator('[data-editor-panel="en"]')).toHaveAttribute('dir', 'ltr')
-    await expect(page.locator('[data-editor-panel="ar"]')).toHaveAttribute('dir', 'rtl')
+    await expect(page.locator('[data-editor-panel="en"]')).not.toHaveAttribute('dir')
+    await expect(page.locator('[data-editor-panel="ar"]')).not.toHaveAttribute('dir')
+    await expect(page.locator('[data-editor-title="en"]')).toHaveAttribute('dir', 'ltr')
+    await expect(page.locator('[data-editor-title="ar"]')).toHaveAttribute('dir', 'rtl')
   })
 
   test('the completeness indicator reads the real translation state', async ({ page, baseURL }) => {

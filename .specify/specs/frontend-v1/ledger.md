@@ -5207,3 +5207,33 @@ All other PR gates were green before this decision. This is not FE5-U6, a D20-32
 final Frontend-v1 budget certification; it changes no other route, CSS, public, warning, measurement,
 Lighthouse, E2E, or product policy. **FE5-U6 remains solely responsible for final post-feedback
 recalibration from a clean baseline. This bridge MUST NOT be treated as the final D20-32 value.**
+
+---
+
+## Acceptance Feedback U1 — Translation-panel direction ownership · COMPLETE · 2026-08-31
+
+Starting committed HEAD: `c2d479ceab0dd06a60f6bbd7a5baa3640db01941`.
+
+Owner acceptance found that `DashboardTranslationTabs` applied the selected translation locale's
+`dir` to its complete panel. An Arabic tab could therefore reverse English Dashboard UI labels,
+technical values, slugs, controls, and metadata. The shared primitive now leaves panel direction to
+the Dashboard shell and exposes `contentDir` only through its translation-field slot. Authored
+Article, Experience, Skill, Testimonial, and Category/Tag fields bind that value explicitly; Project
+translation fields and Page SEO were already correctly locale-bound. Slugs and canonical URLs remain
+explicitly LTR.
+
+### Verification
+
+| Check | Result |
+| --- | --- |
+| Shared direction contract | 3/3, exit 0 — English shell/Arabic content, Arabic shell/English content, technical UI inheritance, and tab switching |
+| Directly affected Project editor | included in focused run; 53/53 total, exit 0 |
+| Negative control | Restoring panel-wide `dir` made all three shared assertions fail (`rtl`/`ltr` panel attributes where absence was required); restored immediately |
+| `npm run typecheck` | exit 0 |
+| `npm run lint` | exit 0 |
+| `git diff --check` | exit 0 |
+
+No API, Backend, navigation, CRUD, application-locale persistence, translation-state semantics, or
+budget changed. Focused browser E2E was deliberately not run; its stale panel-direction assertions
+were migrated to assert explicit field direction instead. **FE5-U6 remains blocked pending the
+remaining acceptance feedback; FE5-U7 was not started.**

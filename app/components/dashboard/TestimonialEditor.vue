@@ -260,9 +260,7 @@ useUnsavedChangesGuard({
               complete: t('dashboard.testimonials.editor.fill.complete')
             }"
           >
-            <template #panel="{ locale: fieldLocale }">
-              <!-- `dir="auto"` on authored prose: field content direction is independent of the
-                   panel's chrome direction, exactly as in the collection rows. -->
+            <template #panel="{ locale: fieldLocale, contentDir }">
               <UFormField
                 :name="`translations.${fieldLocale}.quote`"
                 :error="serverFieldErrors[`translations.${fieldLocale}.quote`]"
@@ -273,7 +271,7 @@ useUnsavedChangesGuard({
                   v-model="form.translations[fieldLocale].quote"
                   maxlength="4000"
                   :rows="4"
-                  dir="auto"
+                  :dir="contentDir"
                   class="w-full"
                   :data-editor-quote="fieldLocale"
                 />
@@ -287,7 +285,7 @@ useUnsavedChangesGuard({
                   <UInput
                     v-model="form.translations[fieldLocale].authorName"
                     maxlength="160"
-                    dir="auto"
+                    :dir="contentDir"
                     class="w-full"
                     :data-editor-author="fieldLocale"
                   />
@@ -300,7 +298,7 @@ useUnsavedChangesGuard({
                   <UInput
                     v-model="form.translations[fieldLocale].authorRole"
                     maxlength="160"
-                    dir="auto"
+                    :dir="contentDir"
                     class="w-full"
                     :data-editor-role="fieldLocale"
                   />

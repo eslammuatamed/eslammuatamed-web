@@ -658,10 +658,12 @@ test.describe('U3b · shared overlay behavior', () => {
       await expect(shell(page)).toHaveAttribute('dir', locale === 'ar' ? 'rtl' : 'ltr')
       await expectNoKeyPaths(page)
 
-      // Field direction is independent of chrome direction.
+      // Field direction is independent of chrome direction; the panel itself follows the shell.
       await fillField(page, 'name', 'ar', 'اتجاه')
-      await expect(page.locator('[data-editor-panel="ar"]')).toHaveAttribute('dir', 'rtl')
-      await expect(page.locator('[data-editor-panel="en"]')).toHaveAttribute('dir', 'ltr')
+      await expect(page.locator('[data-editor-panel="ar"]')).not.toHaveAttribute('dir')
+      await expect(page.locator('[data-editor-panel="en"]')).not.toHaveAttribute('dir')
+      await expect(page.locator('[data-taxonomy-field="name:ar"]')).toHaveAttribute('dir', 'rtl')
+      await expect(page.locator('[data-taxonomy-field="name:en"]')).toHaveAttribute('dir', 'ltr')
 
       const overflow = await page.evaluate(() => ({
         scrollWidth: document.documentElement.scrollWidth,
