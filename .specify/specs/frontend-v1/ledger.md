@@ -5263,3 +5263,36 @@ email truncation, and mobile visibility breakpoints remain unchanged.
 No routes, auth semantics, overview or CRUD behavior, API/backend contracts, budgets, dropdowns, or
 browser E2E changed. `typecheck:e2e` was not applicable because no E2E test or fixture type changed.
 **FE5-U6 remains blocked pending the remaining acceptance feedback; FE5-U7 was not started.**
+
+---
+
+## Acceptance Feedback U3 — Dashboard Overview hierarchy · COMPLETE · 2026-08-31
+
+Starting committed HEAD: `cb2e32cc5f4651387972631d6ee4e65932193979`.
+
+The owner found the Overview functional but visually fragmented by four independent content cards
+and a separate Messages card. The page now uses a single Content summary surface: Articles and
+Projects retain the only real totals; Skills and Testimonials remain explicit navigation-only rows,
+with no fabricated counts. Messages is a compact warning alert only when unread work exists, a
+neutral compact row at zero, and a local error/retry alert when unavailable. Existing quick actions
+remain together below. No analytics, historical data, derived metrics, or additional API reads were
+added.
+
+Articles, Projects, and Messages retain separate loading, error, 403 (where already applicable),
+and retry ownership. The layout stacks source-labelled rows on narrow viewports and aligns them from
+`sm`; it uses no physical direction assumptions, while Dashboard's existing EN/AR shell and
+unprefixed route behavior remain intact.
+
+### Verification
+
+| Check | Result |
+| --- | --- |
+| Focused Overview behavior tests | 6/6, exit 0 — totals, navigation-only modules, attention/zero state, source-local loading/errors/retries/403, quick actions, and Arabic rendering |
+| Negative control | Replacing the Skills/Testimonials action with inert text made the navigation contract fail; restored immediately. |
+| `npm run typecheck` | exit 0 |
+| `npm run lint` | exit 0 |
+| `git diff --check` | exit 0 |
+
+No header, navigation ownership, collection CRUD, backend/API contract, E2E fixture, or budget
+changed; `typecheck:e2e` was therefore not applicable. **FE5-U6 remains blocked by remaining
+acceptance feedback; FE5-U7 was not started.**
