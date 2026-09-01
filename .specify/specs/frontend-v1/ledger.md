@@ -5507,3 +5507,37 @@ No route-governance change was needed, and no unrelated route cap changed. The n
 its pre-existing D20-24 quality-target warning for Projects while D20-32 shared-floor, incremental,
 CSS, and frozen app-owned caps pass. **FE5-U6 remains blocked by remaining acceptance feedback;
 FE5-U7 was not started.**
+
+---
+
+## Acceptance Feedback U5E — Experience UTable collection · COMPLETE · 2026-09-01
+
+Starting committed HEAD: `eaa9d704919d3c1968362c903b5d1a1e2d38e0b2`. The plural
+`/dashboard/experiences` collection now renders one Experience-specific `UTable` in place of its
+card list. Its operational columns retain localized role/company identity, period/current state,
+employment type, translation completeness, linked-skill count, and the stable ID-based edit action.
+The responsive overflow wrapper preserves semantic table navigation at narrow widths; authored role
+and company content uses `dir="auto"` while the Dashboard shell remains responsible for EN/AR chrome
+direction.
+
+The unpaginated `useAdminExperiences` contract remains unchanged: `GET /admin/experiences` keeps
+`locale: false`, sends no query parameters, and consumes `{ data: [...] }` without metadata. API
+order remains the displayed order; no client sorting, slicing, pagination, search, filters, or
+backend/API changes were added. Existing create/edit routes and ExperienceEditor remain intact;
+deletion stays solely within the editor's existing two-step confirmation flow.
+
+### Verification
+
+| Check | Result |
+| --- | --- |
+| Focused Experience page, composable, and field units | 27/27, exit 0 — UTable rows/actions, load/empty/error/403/stale states, unpaginated request contract, API order, translations, and skill count |
+| UTable test-first control | The new table assertion failed against the card list, then passed after the migration. |
+| Browser negative control | Temporarily routing an edit action to `/dashboard/experiences/wrong-id` made the exact-action unit fail; the original ID route was restored immediately. |
+| Experience browser project | 36/36, exit 0 — table identity/order, states, EN/AR narrow layout, and all pre-existing editor/skill/delete workflows. |
+| Analysis build / normal size gate | `ANALYZE_BUNDLE=1 NUXT_PUBLIC_SITE_URL=https://example.com npm run build` and `npm run size:routes`, exit 0. `/dashboard/experiences` measured 90,829 B app-owned / 99,328 B frozen cap (8,499 B headroom). |
+| `npx nuxt typecheck` / `npm run typecheck:e2e` / `npm run lint` / `git diff --check` | exit 0 / exit 0 / exit 0 / exit 0 |
+
+No route-governance change was needed and no unrelated route cap changed. The normal gate retains
+only its pre-existing D20-24 quality-target warnings while the affected Experience collection passes
+the D20-32 shared-floor, incremental, CSS, and frozen app-owned caps. **FE5-U6 remains blocked by
+remaining acceptance feedback; FE5-U7 was not started.**

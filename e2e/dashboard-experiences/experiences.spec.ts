@@ -13,7 +13,8 @@ import {
   selectedSkillIds,
   setBackendState,
   shell,
-  signIn
+  signIn,
+  tableRowFor
 } from './harness'
 
 /**
@@ -38,6 +39,9 @@ test.describe('the collection', () => {
     await signIn(page, 'en', baseURL!)
     await page.goto('/dashboard/experiences')
     await listSettled(page)
+
+    await expect(page.locator('[data-experiences-table]')).toBeVisible()
+    await expect(page.locator(`[data-experience-role="${EXP.current}"]`)).toHaveText('Senior Frontend Engineer')
 
     /**
      * ⚠ THE FULL SEQUENCE, not just the head.
@@ -65,7 +69,7 @@ test.describe('the collection', () => {
     await page.goto('/dashboard/experiences')
     await listSettled(page)
 
-    const row = page.locator(`[data-experience-row="${EXP.enOnly}"]`)
+    const row = tableRowFor(page, EXP.enOnly)
     await expect(row.locator('[data-experience-translation="en:present"]')).toBeVisible()
     await expect(row.locator('[data-experience-translation="ar:missing"]')).toBeVisible()
   })
@@ -77,8 +81,8 @@ test.describe('the collection', () => {
 
     // `current` holds three skills; `noSkills` holds none — so "cleared" stays distinguishable
     // from "never had any" on the surface the operator reads.
-    await expect(page.locator(`[data-experience-row="${EXP.current}"] [data-experience-skills="3"]`)).toBeVisible()
-    await expect(page.locator(`[data-experience-row="${EXP.noSkills}"] [data-experience-skills="0"]`)).toBeVisible()
+    await expect(tableRowFor(page, EXP.current).locator('[data-experience-skills="3"]')).toBeVisible()
+    await expect(tableRowFor(page, EXP.noSkills).locator('[data-experience-skills="0"]')).toBeVisible()
   })
 })
 
@@ -97,7 +101,7 @@ test.describe('the request states, made observable by delayMs', () => {
     await expect(page.locator('[data-experiences-empty]')).toHaveCount(0)
 
     await listSettled(page)
-    await expect(rows(page).first()).toBeVisible()
+    await expect(rows(page)).not.toHaveCount(0)
   })
 
   test('shows the deliberate empty state, with its own create action', async ({ page, baseURL }) => {
@@ -454,7 +458,7 @@ test.describe('the editor — the request-state contract, criteria 3, 4 and 5', 
     await page.locator('[data-editor-delete-confirm]').click()
     await page.waitForURL('**/dashboard/experiences')
     await listSettled(page)
-    await expect(rows(page).filter({ has: page.locator(`[data-experience-row="${EXP.past}"]`) })).toHaveCount(0)
+    await expect(tableRowFor(page, EXP.past)).toHaveCount(0)
     await expect(rows(page)).toHaveCount(API_ORDER.length - 1)
   })
 

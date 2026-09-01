@@ -112,6 +112,17 @@ describe('the four request states render distinctly', () => {
 })
 
 describe('the rows', () => {
+  it('renders stable Experience rows through the UTable with their operational fields and exact actions', async () => {
+    const page = await mount({ rows: [experience()] })
+    expect(page.find('[data-experiences-table]').exists()).toBe(true)
+    expect(page.find('[data-experience-row="e-current"]').exists()).toBe(true)
+    expect(page.find('[data-experience-role="e-current"]').text()).toBe('Senior Frontend Engineer')
+    expect(page.find('[data-experience-company="e-current"]').text()).toBe('Findropica')
+    expect(page.find('[data-experience-period="e-current"]').text()).toContain('Present')
+    expect(page.find('[data-experience-edit="e-current"]').attributes('href')).toBe('/dashboard/experiences/e-current')
+    expect(page.find('[data-experiences-create]').attributes('href')).toBe('/dashboard/experiences/new')
+  })
+
   /**
    * ⚠ THE DISCRIMINATING ORDER ASSERTION, at the page level.
    *

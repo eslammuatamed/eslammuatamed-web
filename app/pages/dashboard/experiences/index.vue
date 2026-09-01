@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { TableColumn } from '@nuxt/ui'
 import {
   EXPERIENCE_LOCALES,
   experienceDisplayCompany,
@@ -65,6 +66,19 @@ const showStaleNotice = computed(() => failed.value && hasData.value)
 const isEmpty = computed(() =>
   !pending.value && !failed.value && !forbidden.value && items.value.length === 0
 )
+
+/**
+ * Experience-specific columns stay with this unpaginated collection: its server-owned order and
+ * translation-aware presentation do not belong in a generic table abstraction.
+ */
+const columns: TableColumn<AdminExperience>[] = [
+  { id: 'role', header: () => t('dashboard.experiences.field.role') },
+  { id: 'period', header: () => t('dashboard.experiences.field.period') },
+  { id: 'employment', header: () => t('dashboard.experiences.field.employmentType') },
+  { id: 'translations', header: () => t('dashboard.experiences.translationState.label') },
+  { id: 'skills', header: () => t('dashboard.experiences.field.skills') },
+  { id: 'actions', header: () => t('dashboard.experiences.edit') }
+]
 
 /* ── row presentation ──────────────────────────────────────────────────────────────────────────── */
 
@@ -185,111 +199,99 @@ void load()
             {{ t('dashboard.experiences.resultCount', { total: items.length }) }}
           </p>
 
-          <!-- ⚠ `items` IS RENDERED IN THE ORDER RECEIVED. No `.sort()` here, ever — see the header. -->
-          <ul class="flex flex-col gap-2">
-            <li v-for="experience in items" :key="experience.id">
-              <UCard as="article" :data-experience-row="experience.id">
-                <div class="flex flex-wrap items-start justify-between gap-3">
-                  <div class="min-w-0 flex-1">
-                    <!-- `dir="auto"` so an Arabic role reads correctly inside an English shell and
-                         the reverse — field content direction is independent of chrome direction. -->
-                    <h2 dir="auto" class="truncate font-medium text-highlighted" :data-experience-role="experience.id">
-                      {{ rowRole(experience) }}
-                    </h2>
-                    <p
-                      v-if="experienceDisplayCompany(experience, locale)"
-                      dir="auto"
-                      class="mt-1 truncate text-sm text-muted"
-                      :data-experience-company="experience.id"
-                    >
-                      {{ experienceDisplayCompany(experience, locale) }}
-                    </p>
-                  </div>
+          <!-- ⚠ `items` reaches the table in API order. No `.sort()` or pagination is introduced. -->
+          <div class="overflow-x-auto">
+            <UTable
+              :data="items"
+              :columns="columns"
+              :loading="refreshing"
+              :aria-label="t('dashboard.experiences.listRegionLabel')"
+              data-experiences-table
+            >
+              <template #role-cell="{ row }">
+                <div :data-experience-row="row.original.id" class="min-w-56 max-w-md">
+                  <!-- Authored content owns its own direction, independent of Dashboard chrome. -->
+                  <p dir="auto" class="break-words font-medium text-highlighted" :data-experience-role="row.original.id">
+                    {{ rowRole(row.original) }}
+                  </p>
+                  <p
+                    v-if="experienceDisplayCompany(row.original, locale)"
+                    dir="auto"
+                    class="mt-1 break-words text-sm text-muted"
+                    :data-experience-company="row.original.id"
+                  >
+                    {{ experienceDisplayCompany(row.original, locale) }}
+                  </p>
+                </div>
+              </template>
 
-                  <UButton
-                    :to="`/dashboard/experiences/${experience.id}`"
-                    color="neutral"
+              <template #period-cell="{ row }">
+                <div class="whitespace-nowrap text-xs" :data-experience-period="row.original.id">
+                  <!-- Read the stored flag directly; it is intentionally not inferred from endDate. -->
+                  <UBadge
+                    v-if="experienceIsCurrent(row.original)"
+                    color="success"
                     variant="subtle"
                     size="sm"
-                    icon="i-lucide-pencil"
-                    :data-experience-edit="experience.id"
-                    :aria-label="t('dashboard.experiences.editFor', { role: rowRole(experience) })"
+                    class="me-1.5"
+                    :data-experience-current="row.original.id"
                   >
-                    {{ t('dashboard.experiences.edit') }}
-                  </UButton>
+                    {{ t('dashboard.experiences.current') }}
+                  </UBadge>
+                  <span dir="auto">{{ periodLabel(row.original) }}</span>
                 </div>
+              </template>
 
-                <dl class="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs">
-                  <div class="flex items-center gap-1.5">
-                    <dt class="text-muted">{{ t('dashboard.experiences.field.period') }}</dt>
-                    <dd :data-experience-period="experience.id">
-                      <!-- Read straight off `isCurrent`, never re-derived from `endDate`: the two can
-                           legitimately disagree, because the API enforces no cross-field rule. -->
-                      <UBadge
-                        v-if="experienceIsCurrent(experience)"
-                        color="success"
-                        variant="subtle"
-                        size="sm"
-                        class="me-1.5"
-                        :data-experience-current="experience.id"
-                      >
-                        {{ t('dashboard.experiences.current') }}
-                      </UBadge>
-                      <span dir="auto">{{ periodLabel(experience) }}</span>
-                    </dd>
-                  </div>
+              <template #employment-cell="{ row }">
+                <UBadge color="neutral" variant="subtle" size="sm" :data-experience-employment="row.original.employmentType">
+                  {{ t(`dashboard.experiences.employmentType.${row.original.employmentType}`) }}
+                </UBadge>
+              </template>
 
-                  <div class="flex items-center gap-1.5">
-                    <dt class="text-muted">{{ t('dashboard.experiences.field.employmentType') }}</dt>
-                    <dd>
-                      <UBadge
-                        color="neutral"
-                        variant="subtle"
-                        size="sm"
-                        :data-experience-employment="experience.employmentType"
-                      >
-                        {{ t(`dashboard.experiences.employmentType.${experience.employmentType}`) }}
-                      </UBadge>
-                    </dd>
-                  </div>
+              <template #translations-cell="{ row }">
+                <!-- Completeness comes from the map; it never substitutes the other locale. -->
+                <div class="flex flex-wrap gap-1">
+                  <UBadge
+                    v-for="target in EXPERIENCE_LOCALES"
+                    :key="target"
+                    :color="experienceHasTranslation(row.original, target) ? 'success' : 'warning'"
+                    variant="subtle"
+                    size="sm"
+                    :icon="experienceHasTranslation(row.original, target) ? 'i-lucide-check' : 'i-lucide-circle-alert'"
+                    :data-experience-translation="`${target}:${experienceHasTranslation(row.original, target) ? 'present' : 'missing'}`"
+                  >
+                    {{ t(
+                      experienceHasTranslation(row.original, target)
+                        ? 'dashboard.experiences.translationState.present'
+                        : 'dashboard.experiences.translationState.missing',
+                      { locale: t(`dashboard.experiences.locale.${target}`) }
+                    ) }}
+                  </UBadge>
+                </div>
+              </template>
 
-                  <!-- Completeness, derived from which locales the translation MAP actually holds.
-                       Nothing substitutes one language for the other. -->
-                  <div class="flex items-center gap-1.5">
-                    <dt class="text-muted">{{ t('dashboard.experiences.translationState.label') }}</dt>
-                    <dd class="flex items-center gap-1.5">
-                      <UBadge
-                        v-for="target in EXPERIENCE_LOCALES"
-                        :key="target"
-                        :color="experienceHasTranslation(experience, target) ? 'success' : 'warning'"
-                        variant="subtle"
-                        size="sm"
-                        :icon="experienceHasTranslation(experience, target) ? 'i-lucide-check' : 'i-lucide-circle-alert'"
-                        :data-experience-translation="`${target}:${experienceHasTranslation(experience, target) ? 'present' : 'missing'}`"
-                      >
-                        {{ t(
-                          experienceHasTranslation(experience, target)
-                            ? 'dashboard.experiences.translationState.present'
-                            : 'dashboard.experiences.translationState.missing',
-                          { locale: t(`dashboard.experiences.locale.${target}`) }
-                        ) }}
-                      </UBadge>
-                    </dd>
-                  </div>
+              <template #skills-cell="{ row }">
+                <!-- A count describes the replace-wholesale relation without implying inline edits. -->
+                <span :data-experience-skills="row.original.technologyIds.length">
+                  {{ t('dashboard.experiences.skillCount', { count: row.original.technologyIds.length }) }}
+                </span>
+              </template>
 
-                  <!-- Skills are shown as a COUNT, not as chips: the relation is replace-wholesale
-                       and is edited in the editor, so a list row states how many are linked without
-                       implying they can be changed here. -->
-                  <div class="flex items-center gap-1.5">
-                    <dt class="text-muted">{{ t('dashboard.experiences.field.skills') }}</dt>
-                    <dd :data-experience-skills="experience.technologyIds.length">
-                      {{ t('dashboard.experiences.skillCount', { count: experience.technologyIds.length }) }}
-                    </dd>
-                  </div>
-                </dl>
-              </UCard>
-            </li>
-          </ul>
+              <template #actions-cell="{ row }">
+                <UButton
+                  :to="`/dashboard/experiences/${row.original.id}`"
+                  color="neutral"
+                  variant="subtle"
+                  size="sm"
+                  icon="i-lucide-pencil"
+                  :data-experience-edit="row.original.id"
+                  :aria-label="t('dashboard.experiences.editFor', { role: rowRole(row.original) })"
+                >
+                  {{ t('dashboard.experiences.edit') }}
+                </UButton>
+              </template>
+            </UTable>
+          </div>
         </div>
       </UiRequestState>
     </section>
