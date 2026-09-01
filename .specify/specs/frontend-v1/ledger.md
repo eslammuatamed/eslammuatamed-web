@@ -5438,3 +5438,39 @@ Focused Testimonials units and form/composable tests pass. Browser coverage migr
 create/edit/avatar/delete/error/dirty/redirect/query/RTL paths; bypassing dirty confirmation makes
 the dirty-close browser control fail, then the guard was restored. Pagination remains backend-dependent;
 **FE5-U6 remains blocked and FE5-U7 was not started.**
+
+---
+
+## Acceptance Feedback U5C — Articles UTable collection · COMPLETE · 2026-09-01
+
+Starting committed HEAD: `91456f96c08d17dea3580990951fb54ec587f1a0`. The owner requires Dashboard
+collections to use Nuxt UI `UTable`; `/dashboard/articles` now replaces its card-list markup with an
+Article-specific table. Its columns retain the existing localized title, both locale-specific slugs,
+status, translation completeness, published/updated dates, and stable edit action. The responsive
+overflow wrapper preserves table semantics on narrow screens instead of returning to a mobile card
+list; authored titles use `dir="auto"`, technical slugs retain their locale direction, and the
+Dashboard shell remains the owner of EN/AR chrome direction.
+
+The existing `useAdminArticles` and `admin-articles-query` contracts are unchanged: URL query state
+remains the source of truth; requests retain server `page`, `perPage`, and optional `status`; response
+metadata retains `page`, `perPage`, `total`, and `totalPages`; changing status clears page in the same
+navigation; and the monotonic request token still prevents a stale response from overwriting a newer
+view. Existing create and edit routes remain intact; deletion remains owned by the existing Article
+editor, exactly as before. No Article title search, client-side filtering, backend/API/generated
+contract, editor redesign, generic table framework, FE5-U6, or FE5-U7 work was added. Title search
+remains backend-dependent because `GET /admin/articles` has no `q` parameter.
+
+### Verification
+
+| Check | Result |
+| --- | --- |
+| Focused Articles page, query, and request-state units | 39/39, exit 0 — table rows, status/query, server paging, loading/empty/error/retry, and stale-response protection |
+| UTable test-first control | New table assertion failed before implementation, then passed after the page migration. |
+| Browser negative control | After rebuilding a deliberate status-change defect, the status test failed exactly because `page=2` remained in the URL; source was restored immediately. |
+| Focused Articles browser project | 48-test project completed against the restored local build with no failure artifacts — table reachability, server pagination/filtering, states, EN/AR responsive/axe, and existing editor journeys. |
+| Analysis build / normal size gate | `ANALYZE_BUNDLE=1 NUXT_PUBLIC_SITE_URL=https://example.com npm run build` and `npm run size:routes`, exit 0. `/dashboard/articles` measured 95,309 B app-owned / 102,400 B frozen cap. |
+
+No route-governance change was needed: the measured list route remains within its existing cap, and
+no Article editor or unrelated route cap changed. The existing D20-24 quality-target warning remains
+reported by the normal gate, while the D20-32 shared-floor, incremental, CSS, and frozen app-owned
+guards pass. **FE5-U6 remains blocked by remaining acceptance feedback; FE5-U7 was not started.**

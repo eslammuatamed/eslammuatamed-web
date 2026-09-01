@@ -296,6 +296,13 @@ describe('§14.9 criterion 7 — error, empty and forbidden are three different 
 })
 
 describe('row presentation', () => {
+  it('renders the collection through its Article-specific UTable', async () => {
+    const wrapper = await mount()
+
+    expect(wrapper.find('[data-articles-table]').exists()).toBe(true)
+    expect(wrapper.find('[data-article-row="a1"]').exists()).toBe(true)
+  })
+
   it('marks a missing translation as missing, from the translation map itself', async () => {
     const wrapper = await mount({ rows: [article({ id: 'en-only', translations: { en: translation() } })] })
 

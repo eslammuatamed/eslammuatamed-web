@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { TableColumn } from '@nuxt/ui'
 import {
   ADMIN_ARTICLES_PER_PAGE,
   ADMIN_ARTICLE_STATUS_FILTER,
@@ -108,6 +109,19 @@ const isEmpty = computed(() =>
 )
 
 const isFiltered = computed(() => parsed.value.status !== 'all')
+
+/**
+ * Article-specific column ownership stays with this page: Articles have server pagination and
+ * translation-aware presentation that do not belong in a cross-collection table abstraction.
+ */
+const columns: TableColumn<AdminArticle>[] = [
+  { id: 'title', header: () => t('dashboard.articles.field.title') },
+  { id: 'slug', header: () => t('dashboard.articles.field.slug') },
+  { id: 'status', header: () => t('dashboard.articles.field.status') },
+  { id: 'translations', header: () => t('dashboard.articles.translationState.label') },
+  { id: 'dates', header: () => t('dashboard.articles.field.updated') },
+  { id: 'actions', header: () => t('dashboard.articles.edit') }
+]
 
 /* ── row presentation ──────────────────────────────────────────────────────────────────────────── */
 
@@ -234,96 +248,94 @@ watch(parsed, value => void load(value), { immediate: true, deep: true })
             {{ t('dashboard.articles.resultCount', { total, page: parsed.page, pages: totalPages }) }}
           </p>
 
-          <ul class="flex flex-col gap-2">
-            <li v-for="article in items" :key="article.id">
-              <UCard as="article" :data-article-row="article.id">
-                <div class="flex flex-wrap items-start justify-between gap-3">
-                  <div class="min-w-0 flex-1">
-                    <!-- `dir="auto"` so an Arabic title reads correctly inside an English shell and
-                         the reverse — field content direction is independent of chrome direction. -->
-                    <h2 dir="auto" class="truncate font-medium text-highlighted" :data-article-title="article.id">
-                      {{ rowTitle(article) }}
-                    </h2>
+          <div class="overflow-x-auto">
+            <UTable
+              :data="items"
+              :columns="columns"
+              :aria-label="t('dashboard.articles.listRegionLabel')"
+              data-articles-table
+            >
+              <template #title-cell="{ row }">
+                <div :data-article-row="row.original.id" class="min-w-56 max-w-md">
+                  <!-- `dir="auto"` keeps authored content independent from Dashboard chrome. -->
+                  <p dir="auto" class="break-words font-medium text-highlighted" :data-article-title="row.original.id">
+                    {{ rowTitle(row.original) }}
+                  </p>
+                </div>
+              </template>
 
-                    <p class="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted">
-                      <span v-for="slugLocale in ARTICLE_LOCALES" :key="slugLocale" class="break-all">
-                        <span class="uppercase">{{ slugLocale }}</span>
-                        <span aria-hidden="true">&nbsp;/&nbsp;</span>
-                        <span :dir="slugLocale === 'ar' ? 'rtl' : 'ltr'">{{ articleSlug(article, slugLocale) ?? '—' }}</span>
-                      </span>
-                    </p>
-                  </div>
+              <template #slug-cell="{ row }">
+                <div class="space-y-1 text-xs text-muted">
+                  <p v-for="slugLocale in ARTICLE_LOCALES" :key="slugLocale" class="whitespace-nowrap">
+                    <span class="uppercase">{{ slugLocale }}</span>
+                    <span aria-hidden="true">&nbsp;/&nbsp;</span>
+                    <code :dir="slugLocale === 'ar' ? 'rtl' : 'ltr'">{{ articleSlug(row.original, slugLocale) ?? '—' }}</code>
+                  </p>
+                </div>
+              </template>
 
-                  <UButton
-                    :to="`/dashboard/articles/${article.id}`"
-                    color="neutral"
+              <template #status-cell="{ row }">
+                <!-- Status is never colour-only: the chip carries its own translated word. -->
+                <UBadge
+                  :color="articleStatusColor(row.original.status)"
+                  variant="subtle"
+                  size="sm"
+                  :data-article-status="row.original.status"
+                >
+                  {{ t(`dashboard.articles.status.${row.original.status}`) }}
+                </UBadge>
+              </template>
+
+              <template #translations-cell="{ row }">
+                <!-- Derived from the translation map: a missing locale never falls back here. -->
+                <div class="flex flex-wrap gap-1">
+                  <UBadge
+                    v-for="target in ARTICLE_LOCALES"
+                    :key="target"
+                    :color="articleHasTranslation(row.original, target) ? 'success' : 'warning'"
                     variant="subtle"
                     size="sm"
-                    icon="i-lucide-pencil"
-                    :data-article-edit="article.id"
-                    :aria-label="t('dashboard.articles.editFor', { title: rowTitle(article) })"
+                    :icon="articleHasTranslation(row.original, target) ? 'i-lucide-check' : 'i-lucide-circle-alert'"
+                    :data-article-translation="`${target}:${articleHasTranslation(row.original, target) ? 'present' : 'missing'}`"
                   >
-                    {{ t('dashboard.articles.edit') }}
-                  </UButton>
+                    {{ t(
+                      articleHasTranslation(row.original, target)
+                        ? 'dashboard.articles.translationState.present'
+                        : 'dashboard.articles.translationState.missing',
+                      { locale: t(`dashboard.articles.locale.${target}`) }
+                    ) }}
+                  </UBadge>
                 </div>
+              </template>
 
-                <dl class="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs">
-                  <div class="flex items-center gap-1.5">
-                    <dt class="text-muted">{{ t('dashboard.articles.field.status') }}</dt>
-                    <!-- Status is never colour-only: the chip carries its own translated word. -->
-                    <dd>
-                      <UBadge
-                        :color="articleStatusColor(article.status)"
-                        variant="subtle"
-                        size="sm"
-                        :data-article-status="article.status"
-                      >
-                        {{ t(`dashboard.articles.status.${article.status}`) }}
-                      </UBadge>
-                    </dd>
-                  </div>
+              <template #dates-cell="{ row }">
+                <div class="space-y-1 whitespace-nowrap text-xs text-muted">
+                  <p v-if="publishLabel(row.original)">
+                    <span>{{ t('dashboard.articles.field.publishAt') }}:</span>
+                    <time :datetime="row.original.publishAt ?? undefined">{{ publishLabel(row.original) }}</time>
+                  </p>
+                  <p>
+                    <span>{{ t('dashboard.articles.field.updated') }}:</span>
+                    <time :datetime="row.original.updatedAt">{{ dateFormatter.format(new Date(row.original.updatedAt)) }}</time>
+                  </p>
+                </div>
+              </template>
 
-                  <!-- Completeness, derived from which locales the translation MAP actually holds
-                       (FR-DSH-011). Nothing substitutes one language for the other. -->
-                  <div class="flex items-center gap-1.5">
-                    <dt class="text-muted">{{ t('dashboard.articles.translationState.label') }}</dt>
-                    <dd class="flex items-center gap-1.5">
-                      <UBadge
-                        v-for="target in ARTICLE_LOCALES"
-                        :key="target"
-                        :color="articleHasTranslation(article, target) ? 'success' : 'warning'"
-                        variant="subtle"
-                        size="sm"
-                        :icon="articleHasTranslation(article, target) ? 'i-lucide-check' : 'i-lucide-circle-alert'"
-                        :data-article-translation="`${target}:${articleHasTranslation(article, target) ? 'present' : 'missing'}`"
-                      >
-                        {{ t(
-                          articleHasTranslation(article, target)
-                            ? 'dashboard.articles.translationState.present'
-                            : 'dashboard.articles.translationState.missing',
-                          { locale: t(`dashboard.articles.locale.${target}`) }
-                        ) }}
-                      </UBadge>
-                    </dd>
-                  </div>
-
-                  <div v-if="publishLabel(article)" class="flex items-center gap-1.5">
-                    <dt class="text-muted">{{ t('dashboard.articles.field.publishAt') }}</dt>
-                    <dd>
-                      <time :datetime="article.publishAt ?? undefined">{{ publishLabel(article) }}</time>
-                    </dd>
-                  </div>
-
-                  <div class="flex items-center gap-1.5">
-                    <dt class="text-muted">{{ t('dashboard.articles.field.updated') }}</dt>
-                    <dd>
-                      <time :datetime="article.updatedAt">{{ dateFormatter.format(new Date(article.updatedAt)) }}</time>
-                    </dd>
-                  </div>
-                </dl>
-              </UCard>
-            </li>
-          </ul>
+              <template #actions-cell="{ row }">
+                <UButton
+                  :to="`/dashboard/articles/${row.original.id}`"
+                  color="neutral"
+                  variant="subtle"
+                  size="sm"
+                  icon="i-lucide-pencil"
+                  :data-article-edit="row.original.id"
+                  :aria-label="t('dashboard.articles.editFor', { title: rowTitle(row.original) })"
+                >
+                  {{ t('dashboard.articles.edit') }}
+                </UButton>
+              </template>
+            </UTable>
+          </div>
 
           <div v-if="totalPages > 1" class="mt-4 flex justify-center">
             <UPagination

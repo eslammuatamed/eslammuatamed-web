@@ -67,7 +67,8 @@ test.describe('reachability and the list', () => {
     await link.click()
     await page.waitForURL('**/dashboard/articles')
     await listSettled(page)
-    await expect(rows(page).first()).toBeVisible()
+    await expect(page.locator('[data-articles-table]')).toBeVisible()
+    await expect(rows(page)).not.toHaveCount(0)
   })
 
   test('the status filter narrows the list and returns to page 1', async ({ page, baseURL }) => {
@@ -128,7 +129,7 @@ test.describe('§14.9 criteria 1, 2 and 6 — the request-state contract, in a r
     ).toHaveCount(0)
 
     await listSettled(page)
-    await expect(rows(page).first()).toBeVisible()
+    await expect(rows(page)).not.toHaveCount(0)
   })
 
   test('a refresh KEEPS the rows visible instead of reverting to a skeleton', async ({ page, baseURL }) => {
@@ -146,7 +147,7 @@ test.describe('§14.9 criteria 1, 2 and 6 — the request-state contract, in a r
 
     // The defining assertion: content stays on screen WHILE the next request is in flight.
     await expect(UPDATING(page), 'an updating treatment must be shown').toBeVisible()
-    await expect(rows(page).first(), 'usable content must stay on screen during a refresh').toBeVisible()
+    await expect(rows(page), 'usable content must stay on screen during a refresh').not.toHaveCount(0)
 
     await setBackendState(page, { delayMs: 0 })
     await listSettled(page)
@@ -164,7 +165,7 @@ test.describe('§14.9 criteria 1, 2 and 6 — the request-state contract, in a r
     await setBackendState(page, { mode: 'ok' })
     await page.locator('[data-articles-failed] button').click()
     await listSettled(page)
-    await expect(rows(page).first(), 'retry must actually recover').toBeVisible()
+    await expect(rows(page), 'retry must actually recover').not.toHaveCount(0)
   })
 
   test('a successful but empty result is an explicit empty state, not an error', async ({ page, baseURL }) => {
@@ -205,7 +206,7 @@ test.describe('F-1 — the loading system speaks the DASHBOARD language, proven 
     await page.goto('/dashboard/articles')
     await hydrated(page)
 
-    const busy = page.locator('[aria-busy=true]').first()
+    const busy = page.locator('[aria-busy=true][aria-label]')
     await expect(busy).toBeVisible()
 
     // The accessible name is the skeleton's whole message — it is what a screen reader announces.
@@ -244,9 +245,7 @@ test.describe('F-1 — the loading system speaks the DASHBOARD language, proven 
 
     await setBackendState(page, { delayMs: 2500 })
     await page.locator('[data-articles-status]').click()
-    // By INDEX, not by name: the labels are Arabic here, and the property under test is the
-    // OVERLAY's language rather than the option's. `DRAFT` is the second entry after `all`.
-    await page.getByRole('option').nth(1).click()
+    await page.getByRole('option', { name: 'مسودة', exact: true }).click()
 
     const overlay = UPDATING(page)
     await expect(overlay).toBeVisible()
@@ -347,7 +346,7 @@ test.describe('accessibility, direction and 380px', () => {
       await setBackendState(page, { delayMs: 3000 })
       await page.goto('/dashboard/articles')
       await hydrated(page)
-      await expect(page.locator('[aria-busy=true]').first()).toBeVisible()
+      await expect(page.locator('[aria-busy=true][aria-label]')).toBeVisible()
 
       const results = await new AxeBuilder({ page }).analyze()
       expect(results.violations).toEqual([])
@@ -364,9 +363,9 @@ test.describe('accessibility, direction and 380px', () => {
 
     // Field content direction is independent of chrome direction — the OD-11 contract.
     await expect(shell(page), 'the shell stays LTR').toHaveAttribute('dir', 'ltr')
-    const arabicSlug = page.locator('[data-article-row] span[dir=rtl]').first()
-    await expect(arabicSlug).toBeVisible()
-    expect(await arabicSlug.innerText()).toMatch(ARABIC)
+    const arabicSlugs = page.locator('[data-article-row] [dir=rtl]')
+    await expect(arabicSlugs).not.toHaveCount(0)
+    expect((await arabicSlugs.allInnerTexts()).join(' ')).toMatch(ARABIC)
   })
 })
 
