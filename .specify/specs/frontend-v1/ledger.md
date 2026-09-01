@@ -5600,3 +5600,21 @@ preserve the EN/AR route and payload behavior, including the bilingual About val
 wrong-locale fixture control failed, then was restored. Full backend-to-frontend OpenAPI sync remains
 the next contract step, and U5G remains blocked until it is complete. **FE5-U6 remains blocked;
 FE5-U7 was not started.**
+
+---
+
+## Contract Governance Hygiene G1 — provenance and baseline rules · COMPLETE · 2026-09-01
+
+This corrects, rather than hides, two investigation root causes: frontend-owned Prism fixtures had
+been embedded in the vendored OpenAPI, and a historical Users/Roles lookup relied too heavily on one
+SHA instead of current semantic source, generated-contract, and history evidence. The backend export
+is now documented as the sole authoritative API ↔ web contract; the frontend copy is synchronized
+only, while frontend fixtures remain outside it and generated API types remain output-only.
+
+Contract adoption documentation now requires `git fetch origin --prune` before remote-baseline or
+ancestry conclusions, semantic fix discovery beyond a single commit identity, and the documented
+implementation branch rather than documentation/backup/runtime branches as the baseline. It also
+requires recording backend SHA plus backend/frontend OpenAPI SHA256 values for a normal sync, and a
+STOP plus provenance investigation for unexpected broad drift. No new sync tooling was forced because
+the repositories have no natural provenance-metadata boundary; the full authoritative contract sync
+remains next. **U5G remains blocked; FE5-U6 and FE5-U7 were not started.**
