@@ -23,7 +23,8 @@ export const PRJ = {
 export const SKILL = {
   typescript: '00000000-0000-4000-b000-000000000001',
   nest: '00000000-0000-4000-b000-000000000002',
-  postgres: '00000000-0000-4000-b000-000000000003'
+  postgres: '00000000-0000-4000-b000-000000000003',
+  added: '00000000-0000-4000-b000-000000000004'
 } as const
 
 export async function resetBackend(page: Page): Promise<void> {
@@ -41,6 +42,7 @@ export async function setBackendState(
     mode?: 'ok' | 'empty' | 'error' | 'forbidden'
     delayMs?: number
     nextWriteErrors?: Array<{ field: string, message: string }>
+    failNextSkillWrite?: boolean
   }
 ): Promise<void> {
   const res = await page.request.post(`${CONTROL_BASE}/__e2e/state`, { data: state })

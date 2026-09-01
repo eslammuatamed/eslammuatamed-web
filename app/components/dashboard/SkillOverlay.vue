@@ -12,22 +12,30 @@ const open = defineModel<boolean>('open', { required: true })
 const { t } = useDashboardI18n()
 const editorRef = useTemplateRef<{ dirty: boolean }>('editorRef')
 const isCreate = computed(() => props.id === null)
+const notifyClose = ref(false)
 
 function requestClose(): void {
   if (editorRef.value?.dirty && !window.confirm(t('dashboard.skills.overlay.unsavedConfirm'))) return
+  notifyClose.value = true
   open.value = false
-  emit('close')
 }
 
 function onSaved(skill: AdminSkill): void {
   emit('saved', skill)
+  notifyClose.value = true
   open.value = false
-  emit('close')
 }
 
 function onDeleted(): void {
   emit('deleted')
+  notifyClose.value = true
   open.value = false
+}
+
+/** Notify the owner only after Nuxt UI has completed its own focus-restoration lifecycle. */
+function onAfterLeave(): void {
+  if (!notifyClose.value) return
+  notifyClose.value = false
   emit('close')
 }
 </script>
@@ -41,6 +49,7 @@ function onDeleted(): void {
     :description="t('dashboard.skills.editor.description')"
     :ui="{ content: 'max-w-xl' }"
     @close:prevent="requestClose"
+    @after:leave="onAfterLeave"
   >
     <template #content>
       <header class="border-b border-default p-4" data-skill-overlay>

@@ -1095,6 +1095,7 @@
         "orderHelp": "Lower numbers come first within the same featured group.",
         "yearHelp": "Leave empty if the project has no single year.",
         "technologies": "Technologies",
+        "addTechnology": "Add technology",
         "technologiesHelp": "The set is replaced on save — whatever is ticked here is what the project will have.",
         "technologiesEmpty": "No skills are defined yet, so no technology can be linked.",
         "technologiesError": "The technology list could not be loaded, so the choices below are incomplete. This project keeps the technologies it already has — saving will not clear them.",

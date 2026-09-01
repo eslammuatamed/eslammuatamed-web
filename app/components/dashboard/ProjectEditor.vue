@@ -13,6 +13,7 @@ import {
 } from '~/composables/admin-project-form'
 import { toApiError } from '~/utils/api-error'
 import type { ApiError } from '~/utils/api-error'
+import type { AdminSkill } from '~/composables/admin-project-types'
 
 /**
  * The Projects editor — create and edit, one implementation.
@@ -70,6 +71,13 @@ const deleteError = ref(false)
 const bypassGuard = ref(false)
 
 const activeLocale = ref<ProjectLocale>('en')
+const skillCreateOpen = ref(false)
+const createdTechnologyId = ref<string | null>(null)
+const addTechnologyTrigger = useTemplateRef<HTMLButtonElement>('addTechnologyTrigger')
+const skillPickerRef = useTemplateRef<{
+  refresh: () => Promise<void>
+  focusTechnology: (id: string) => Promise<boolean>
+}>('skillPickerRef')
 
 /**
  * Seed the tab from the Dashboard locale once. From then on it belongs to this entity editor: a
@@ -191,6 +199,38 @@ function setOrder(raw: string): void {
   // An empty box is NOT zero. `NaN` keeps it invalid until a number is typed, which the validator
   // reports — silently substituting 0 would reorder the whole list behind the operator's back.
   patchForm({ order: raw.trim() === '' ? Number.NaN : Number(raw) })
+}
+
+/** The Project owns only this local overlay intent; the Skill form itself remains entity-owned. */
+function openTechnologyCreate(): void {
+  createdTechnologyId.value = null
+  skillCreateOpen.value = true
+}
+
+/** A created Skill persists independently; selecting its id is the Project's first real mutation. */
+function selectCreatedTechnology(skill: AdminSkill): void {
+  createdTechnologyId.value = skill.id
+  if (!form.value.technologyIds.includes(skill.id)) {
+    patchForm({ technologyIds: [...form.value.technologyIds, skill.id] })
+  }
+}
+
+async function onSkillCreateClose(): Promise<void> {
+  const createdId = createdTechnologyId.value
+  if (createdId) {
+    // Refresh rather than inventing local vocabulary state; existing and unknown selected ids stay
+    // owned by the picker while the returned id has already made the Project form dirty.
+    await skillPickerRef.value?.refresh()
+    await nextTick()
+    if (await skillPickerRef.value?.focusTechnology(createdId)) {
+      createdTechnologyId.value = null
+      return
+    }
+    createdTechnologyId.value = null
+  }
+
+  await nextTick()
+  addTechnologyTrigger.value?.focus()
 }
 
 async function save(): Promise<void> {
@@ -464,8 +504,24 @@ const saveState = computed<'saving' | 'unsaved' | 'saved' | 'idle'>(() => {
 
       <!-- ── technologies ─────────────────────────────────────────────────────────────────────── -->
       <section :aria-labelledby="'technologies-heading'" class="flex flex-col gap-3">
-        <h2 id="technologies-heading" class="text-h2 text-highlighted">{{ t('dashboard.projects.editor.technologies') }}</h2>
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <h2 id="technologies-heading" class="text-h2 text-highlighted">{{ t('dashboard.projects.editor.technologies') }}</h2>
+          <UButton
+            ref="addTechnologyTrigger"
+            type="button"
+            color="neutral"
+            variant="subtle"
+            size="sm"
+            icon="i-lucide-plus"
+            :disabled="saving"
+            data-project-add-technology
+            @click="openTechnologyCreate"
+          >
+            {{ t('dashboard.projects.editor.addTechnology') }}
+          </UButton>
+        </div>
         <DashboardSkillPicker
+          ref="skillPickerRef"
           :model-value="form.technologyIds"
           :disabled="saving"
           :labels="{
@@ -478,6 +534,12 @@ const saveState = computed<'saving' | 'unsaved' | 'saved' | 'idle'>(() => {
             selected: t('dashboard.projects.editor.technologiesSelected', { count: form.technologyIds.length })
           }"
           @update:model-value="patchForm({ technologyIds: $event })"
+        />
+        <LazyDashboardSkillOverlay
+          :id="null"
+          v-model:open="skillCreateOpen"
+          @saved="selectCreatedTechnology"
+          @close="onSkillCreateClose"
         />
       </section>
 

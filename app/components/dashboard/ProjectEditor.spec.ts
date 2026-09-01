@@ -300,6 +300,15 @@ describe('featured, order, year and the nullable URLs', () => {
 })
 
 describe('technologies', () => {
+  it('offers an inline, secondary Skill creation shortcut beside the technology picker', async () => {
+    const wrapper = await mount('p1')
+    const trigger = wrapper.find('[data-project-add-technology]')
+
+    expect(trigger.exists()).toBe(true)
+    expect(trigger.attributes('type')).toBe('button')
+    expect(trigger.text()).not.toMatch(/dashboard\.projects\./)
+  })
+
   it('seeds the ticked technologies from the project', async () => {
     const wrapper = await mount('p1', { project: project({ technologyIds: ['skill-a'] }) })
     expect(wrapper.find('[data-technology="skill-a"]').attributes('aria-checked')).toBe('true')

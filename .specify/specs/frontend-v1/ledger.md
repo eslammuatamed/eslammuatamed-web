@@ -5541,3 +5541,43 @@ No route-governance change was needed and no unrelated route cap changed. The no
 only its pre-existing D20-24 quality-target warnings while the affected Experience collection passes
 the D20-32 shared-floor, incremental, CSS, and frozen app-owned caps. **FE5-U6 remains blocked by
 remaining acceptance feedback; FE5-U7 was not started.**
+
+---
+
+## Acceptance Feedback U5F — inline Project Technology creation · COMPLETE · 2026-09-01
+
+Starting committed HEAD: `bb7cf600f2dcfccd6a80f1ba32e1add97d0fdeb7`. Project create and edit now
+place a secondary **Add technology** action beside the existing Technology heading. It opens the
+existing lazy `DashboardSkillOverlay` and entity-owned `DashboardSkillEditor`; no Project navigation,
+new full-page Skill route, production API endpoint, generated client, or generic CRUD abstraction was
+introduced. The Project owns only the composition: when the existing Skill create succeeds it appends
+the returned ID if absent, asks `DashboardSkillPicker` to reload the vocabulary, and focuses the new
+technology. The Project remains unsaved until its own existing Save action is chosen.
+
+The small picker extension exposes only its genuine shared responsibilities: `refresh()` and
+`focusTechnology(id)`. Existing unknown-ID preservation and duplicate prevention remain unchanged.
+The shared overlay now emits its close notification after Nuxt UI's `USlideover` leave transition,
+so Project success focuses the newly selected checkbox and cancellation restores the Add technology
+trigger without fighting the primitive's own focus restoration. Existing Skills close/dirty/RTL/axe
+coverage remains green. EN and AR use the translated labels “Add technology” and “إضافة تقنية”.
+
+Project browser fixtures add a mutable, Project-lane-only `/admin/skills` implementation; this is test
+infrastructure only and does not alter production backend/API behavior. Browser coverage proves clean
+and edited Project cancellation, create payload and persisted Skill, refresh and selected ID, success
+focus, no Project PATCH/navigation, create failure isolation and error focus, new-Project continuity,
+and retained vocabulary/unknown/relation behavior. The bounded negative control temporarily suppressed
+the Project technology-ID mutation: the created checkbox remained `aria-checked="false"` and the
+success test failed; restoration made it pass.
+
+### Verification
+
+| Check | Result |
+| --- | --- |
+| Focused Project and reusable Skill units | 61/61, exit 0 |
+| Skills browser lifecycle coverage | Existing create-close and dirty-edit focus cases passed; Arabic slideover RTL/axe case passed. |
+| Project browser lane | 33/33, exit 0, run as eight named suite groups because the local foreground runner terminates runs after 30 seconds; no retry or timeout change. |
+| `npx nuxt typecheck` / `npm run typecheck:e2e` / `npm run lint` / `git diff --check` | exit 0 / exit 0 / exit 0 / exit 0 |
+
+The final clean analyzed build and normal route-size gate are taken from the U5F implementation commit
+immediately following this checkpoint. No route-cap or route-governance change is expected unless that
+measurement proves otherwise. **FE5-U6 remains blocked; FE5-U7 was not started.**

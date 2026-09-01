@@ -55,6 +55,7 @@ const { locale } = useDashboardI18n()
 const { skills, pending, forbidden, failed, load } = useAdminSkills()
 
 const filter = ref('')
+const pickerRef = useTemplateRef<HTMLElement>('pickerRef')
 
 onMounted(() => void load())
 
@@ -83,10 +84,26 @@ function toggle(id: string, checked: boolean): void {
     : props.modelValue.filter(candidate => candidate !== id)
   emit('update:modelValue', next)
 }
+
+/** Reload the canonical vocabulary after a context-independent Skill mutation. */
+async function refresh(): Promise<void> {
+  await load()
+}
+
+/** Move focus to a newly available technology without requiring its consumer to know picker markup. */
+async function focusTechnology(id: string): Promise<boolean> {
+  await nextTick()
+  const option = [...(pickerRef.value?.querySelectorAll<HTMLElement>('[data-technology]') ?? [])]
+    .find(element => element.dataset.technology === id)
+  option?.focus()
+  return option !== undefined
+}
+
+defineExpose({ refresh, focusTechnology })
 </script>
 
 <template>
-  <div class="flex flex-col gap-3">
+  <div ref="pickerRef" class="flex flex-col gap-3">
     <p class="text-sm text-muted">{{ labels.help }}</p>
 
     <UAlert

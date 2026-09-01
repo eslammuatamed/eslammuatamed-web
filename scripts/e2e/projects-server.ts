@@ -44,7 +44,8 @@ export const PRJ = {
 export const SKILL = {
   typescript: '00000000-0000-4000-b000-000000000001',
   nest: '00000000-0000-4000-b000-000000000002',
-  postgres: '00000000-0000-4000-b000-000000000003'
+  postgres: '00000000-0000-4000-b000-000000000003',
+  added: '00000000-0000-4000-b000-000000000004'
 } as const
 
 /** The media asset `PRJ.main`'s English `ogImageId` points at; served by GET /admin/media/:id. */
@@ -82,6 +83,16 @@ interface SeedProject {
   /** Required on the entity; a row that lacks them throws `Invalid time value` in the list. */
   createdAt: string
   updatedAt: string
+}
+
+interface SeedSkill {
+  id: string
+  slug: string
+  group: string
+  order: number
+  brandColor: string | null
+  isPublic: boolean
+  translations: Record<string, { label: string }>
 }
 
 const narrative = (prefix: string) => ({
@@ -151,7 +162,7 @@ function seedProjects(): SeedProject[] {
   ]
 }
 
-function seedSkills() {
+function seedSkills(): SeedSkill[] {
   return [
     { id: SKILL.typescript, slug: 'typescript', group: 'LANGUAGE', order: 1, brandColor: null, isPublic: true, translations: { en: { label: 'TypeScript' } } },
     { id: SKILL.nest, slug: 'nestjs', group: 'BACKEND', order: 2, brandColor: null, isPublic: true, translations: { en: { label: 'NestJS' } } },
@@ -169,19 +180,24 @@ function seedMedia(id: string) {
 
 /** Mutable per-process state. Reset between specs through `POST /__e2e/reset`. */
 let projects = seedProjects()
+let skills = seedSkills()
 let mode: Mode = 'ok'
 let delayMs = 0
 /** The body of the last PATCH, for wire-level assertions through the control plane. */
 let lastPatchBody: Record<string, unknown> | null = null
 /** A one-shot RFC 7807 validation response, used only to prove client-side error routing. */
 let nextWriteErrors: Array<{ field: string, message: string }> | null = null
+/** One-shot non-validation Skill-create failure, so overlay error focus is browser-provable. */
+let failNextSkillWrite = false
 
 function reset(): void {
   projects = seedProjects()
+  skills = seedSkills()
   mode = 'ok'
   delayMs = 0
   lastPatchBody = null
   nextWriteErrors = null
+  failNextSkillWrite = false
 }
 
 const TOKEN = 'e2e-access-token'
@@ -293,6 +309,7 @@ const server = http.createServer((req, res) => {
       if (state.mode !== undefined) mode = state.mode as Mode
       if (state.delayMs !== undefined) delayMs = Number(state.delayMs)
       if (Array.isArray(state.nextWriteErrors)) nextWriteErrors = state.nextWriteErrors
+      if (state.failNextSkillWrite !== undefined) failNextSkillWrite = state.failNextSkillWrite === true
       json(res, 204, null)
       return
     }
@@ -353,7 +370,33 @@ const server = http.createServer((req, res) => {
     }
 
     if (path === '/admin/skills' && req.method === 'GET') {
-      json(res, 200, { data: seedSkills() })
+      json(res, 200, { data: skills })
+      return
+    }
+
+    if (path === '/admin/skills' && req.method === 'POST') {
+      if (failNextSkillWrite) {
+        failNextSkillWrite = false
+        json(res, 500, { title: 'Skill create failed', detail: 'The Skill write failed.' })
+        return
+      }
+      const body = await readBody(req)
+      const created = {
+        id: SKILL.added,
+        slug: String(body.slug),
+        group: String(body.group),
+        order: Number(body.order),
+        brandColor: typeof body.brandColor === 'string' ? body.brandColor : null,
+        isPublic: body.isPublic === true,
+        translations: Object.fromEntries(
+          (Array.isArray(body.translations) ? body.translations : []).map((translation: Record<string, unknown>) => [
+            String(translation.locale),
+            { label: String(translation.label ?? '') }
+          ])
+        )
+      }
+      skills = [...skills.filter(skill => skill.id !== created.id), created]
+      json(res, 201, { data: created })
       return
     }
 

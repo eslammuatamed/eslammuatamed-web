@@ -208,6 +208,102 @@ test.describe('request states, made observable by delayMs', () => {
 })
 
 test.describe('the technology picker', () => {
+  test('opens and cancels inline Skill creation without mutating a clean or edited Project', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL!)
+    await page.goto(`/dashboard/projects/${PRJ.main}`)
+    await editorSettled(page)
+
+    const addTechnology = page.locator('[data-project-add-technology]')
+    expect(await selectedTechnologyIds(page)).toEqual([SKILL.typescript])
+    await expect(page.locator('[data-editor-save-state="idle"]')).toHaveCount(1)
+
+    await addTechnology.click()
+    await expect(page.locator('[data-skill-overlay]')).toBeVisible()
+    await expect(page.locator('[data-skill-editor-ready]')).toBeVisible()
+    expect(await selectedTechnologyIds(page)).toEqual([SKILL.typescript])
+
+    await page.locator('[data-skill-overlay-close]').click()
+    await expect(page.locator('[data-skill-overlay]')).toBeHidden()
+    await expect(page.locator('[data-editor-save-state="idle"]')).toHaveCount(1)
+    await expect(addTechnology).toBeFocused()
+
+    await page.locator('[data-project-field="en.summary"]').fill('Project edit remains in progress')
+    await addTechnology.click()
+    await page.locator('[data-skill-overlay-close]').click()
+    await expect(page.locator('[data-project-field="en.summary"]')).toHaveValue('Project edit remains in progress')
+    await expect(page.locator('[data-editor-save-state="unsaved"]')).toBeVisible()
+  })
+
+  test('creates a Skill in place, reloads it into the picker, selects it, and does not save the Project', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL!)
+    await page.goto(`/dashboard/projects/${PRJ.main}`)
+    await editorSettled(page)
+
+    const beforeUrl = page.url()
+    const projectWrites: string[] = []
+    page.on('request', request => {
+      if (request.method() === 'PATCH' && request.url().includes('/admin/projects/')) projectWrites.push(request.url())
+    })
+
+    await page.locator('[data-project-add-technology]').click()
+    const overlay = page.getByRole('dialog')
+    await overlay.locator('[data-editor-slug]').fill('inline-technology')
+    await overlay.locator('[data-editor-label="en"]').fill('Inline Technology')
+    const skillPost = page.waitForRequest(request => request.method() === 'POST' && request.url().includes('/admin/skills'))
+    await overlay.locator('[data-editor-save]').click()
+
+    expect((await skillPost).postDataJSON()).toMatchObject({
+      slug: 'inline-technology',
+      translations: [{ locale: 'en', label: 'Inline Technology' }]
+    })
+    await expect(page.locator('[data-skill-overlay]')).toBeHidden()
+    const added = page.locator(`[data-technology="${SKILL.added}"]`)
+    await expect(added).toBeVisible()
+    await expect(added).toHaveAttribute('aria-checked', 'true')
+    await expect(added).toBeFocused()
+    expect(await selectedTechnologyIds(page).then(ids => ids.sort())).toEqual([SKILL.typescript, SKILL.added].sort())
+    expect(projectWrites).toEqual([])
+    expect(page.url()).toBe(beforeUrl)
+    await expect(page.locator('[data-editor-save-state="unsaved"]')).toBeVisible()
+  })
+
+  test('keeps the Project selection and edits intact when inline Skill creation fails', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL!)
+    await page.goto(`/dashboard/projects/${PRJ.main}`)
+    await editorSettled(page)
+
+    await page.locator('[data-project-field="en.summary"]').fill('Project edit survives Skill failure')
+    await page.locator('[data-project-add-technology]').click()
+    const overlay = page.getByRole('dialog')
+    await overlay.locator('[data-editor-slug]').fill('failing-inline-technology')
+    await overlay.locator('[data-editor-label="en"]').fill('Failing Inline Technology')
+    await setBackendState(page, { failNextSkillWrite: true })
+    await overlay.locator('[data-editor-save]').click()
+
+    await expect(page.locator('[data-skill-overlay]')).toBeVisible()
+    await expect(overlay.locator('[data-editor-save-error-container]')).toBeFocused()
+    expect(await selectedTechnologyIds(page)).toEqual([SKILL.typescript])
+    await expect(page.locator('[data-project-field="en.summary"]')).toHaveValue('Project edit survives Skill failure')
+    await expect(page.locator('#main-content [data-editor-save-state="unsaved"]')).toBeVisible()
+  })
+
+  test('selects a created Skill inside the new-Project flow without leaving it', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL!)
+    await page.goto('/dashboard/projects/new')
+    await editorSettled(page)
+
+    await page.locator('[data-project-add-technology]').click()
+    const overlay = page.getByRole('dialog')
+    await overlay.locator('[data-editor-slug]').fill('new-project-technology')
+    await overlay.locator('[data-editor-label="en"]').fill('New Project Technology')
+    await overlay.locator('[data-editor-save]').click()
+
+    await expect(page.locator('[data-skill-overlay]')).toBeHidden()
+    await expect(page.locator(`[data-technology="${SKILL.added}"]`)).toHaveAttribute('aria-checked', 'true')
+    await expect(page).toHaveURL(/\/dashboard\/projects\/new$/)
+    await expect(page.locator('[data-editor-save-state="unsaved"]')).toBeVisible()
+  })
+
   test('renders the vocabulary, keeps held selections selected, and filters by search', async ({ page, baseURL }) => {
     await signIn(page, 'en', baseURL!)
     await page.goto(`/dashboard/projects/${PRJ.main}`)
