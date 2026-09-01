@@ -5618,3 +5618,23 @@ requires recording backend SHA plus backend/frontend OpenAPI SHA256 values for a
 STOP plus provenance investigation for unexpected broad drift. No new sync tooling was forced because
 the repositories have no natural provenance-metadata boundary; the full authoritative contract sync
 remains next. **U5G remains blocked; FE5-U6 and FE5-U7 were not started.**
+
+---
+
+## Contract Reconciliation R3 — authoritative backend OpenAPI sync · COMPLETE · 2026-09-01
+
+Frontend started at `3eb9a7b69209c764ab88745706292b40ca6d63dd`. After `git fetch origin --prune`,
+the authoritative backend source was
+`741c3c5730eda96718b03e1dbad01d9a5b8f9266` (with Article `q` commit `6ec7418` still ancestral).
+The backend `openapi.json` SHA-256 was
+`70e3e3e5330a8e3b8ceb07ac214e60bbde254bcddccdb8f8fc029902c70110c4`; the frontend pre-sync
+artifact SHA-256 was `799d2ed98662ed755f1092c904986e760b6a537b845f0c7bedf5b678941f8a4d`.
+
+The pre-sync diff contained only expected backend-owned changes: Article admin `q`, Users/Roles
+array envelopes, Media 400/413/429 response metadata, and Message/Projects descriptions. The
+frontend artifact was replaced byte-for-byte and now has the identical backend SHA-256. The native
+`npm run api:types` generation updated only `app/types/api.d.ts` for those contract effects; its
+second pass was hash-identical. Focused Prism/contract tests reverified R2 fixture independence and
+all type/lint/diff checks passed. No product source or backend files changed, and no unexplained
+drift remains. **U5G is unblocked for its separate unit; Backend-B, FE5-U6, and FE5-U7 were not
+started.**

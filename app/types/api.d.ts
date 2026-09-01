@@ -2890,7 +2890,7 @@ export interface components {
         };
         CreateMessageReplyDto: {
             /**
-             * @description The plain-text reply body. Plain text only — no HTML representation exists (D02-13e).
+             * @description The plain-text reply body. Plain text only — no HTML representation exists (D02-13).
              * @example Thanks for reaching out — I can take a look at this next week.
              */
             body: string;
@@ -3360,6 +3360,15 @@ export interface operations {
                     };
                 };
             };
+            /** @description Missing or invalid multipart file part. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
             /** @description Missing or invalid access token. */
             401: {
                 headers: {
@@ -3378,6 +3387,15 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetailsDto"];
                 };
             };
+            /** @description Upload exceeds the 10 MiB multipart file-size limit. */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
             /** @description Unsupported type, spoofed content, oversized image, or malformed PDF. */
             422: {
                 headers: {
@@ -3387,9 +3405,11 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetailsDto"];
                 };
             };
-            /** @description Processing capacity reached; retry after the Retry-After delay. */
+            /** @description Rate limited (10 uploads/min per user+IP, or the 300/min admin tier), or processing capacity reached. */
             429: {
                 headers: {
+                    /** @description Seconds to wait before retrying (delta-seconds, never an HTTP-date). Exposed via CORS so browser clients can read it. */
+                    "Retry-After"?: number;
                     [name: string]: unknown;
                 };
                 content: {
@@ -4691,6 +4711,8 @@ export interface operations {
                 page?: number;
                 perPage?: number;
                 status?: "DRAFT" | "SCHEDULED" | "PUBLISHED" | "ARCHIVED";
+                /** @description Case-insensitive substring match on title across all authored translations. Blank or whitespace-only values are ignored. */
+                q?: string;
             };
             header?: never;
             path?: never;
@@ -5130,7 +5152,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        data: components["schemas"]["RoleEntity"];
+                        data: components["schemas"]["RoleEntity"][];
                     };
                 };
             };
@@ -5462,7 +5484,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        data: components["schemas"]["UserEntity"];
+                        data: components["schemas"]["UserEntity"][];
                     };
                 };
             };
@@ -6755,7 +6777,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Featured-first paginated published projects, plus the technology facets the filter should offer (D10-19). */
+            /** @description Featured-first paginated published projects, plus the technology facets the filter should offer. */
             200: {
                 headers: {
                     [name: string]: unknown;
