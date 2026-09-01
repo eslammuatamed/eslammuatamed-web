@@ -56,8 +56,8 @@ const BACKENDS = {
   //
   // Prism replays ONE body per operation, so with only schema-level (locale-blind) property
   // examples it answered `?locale=ar` with the English identity — every Arabic page in every gate
-  // rendered a Latin `h1` under an Arabic font stack. The contract now carries named `en`/`ar`
-  // response examples and the proxy selects between them per request with `Prefer: example=<name>`.
+  // rendered a Latin `h1` under an Arabic font stack. The proxy serves Page SEO from its explicit
+  // frontend-owned fixture, while remaining named examples stay contract-derived via `Prefer`.
   //
   // BOTH are direct children of this orchestrator, so the existing observed-shutdown path reaps
   // them unchanged — the same reason the resolved binary is invoked instead of the `npx` shim.

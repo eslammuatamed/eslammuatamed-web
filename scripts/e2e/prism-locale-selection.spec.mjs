@@ -1,12 +1,17 @@
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
+import {
+  PAGE_SEO_PRISM_FIXTURE_PAGES,
+  resolvePageSeoPrismFixture
+} from './page-seo-prism-fixtures.mjs'
 import { matchContractPath, readExampleIndex, selectExample } from './prism-locale-selection.mjs'
 
 /**
- * The contract mock answers `?locale=ar` with the Arabic identity only because these functions
- * choose the right named example. Two failure modes are worth real coverage, and both were measured
- * against Prism 5.x rather than assumed:
+ * Prism chooses named examples only where the authoritative OpenAPI declares them. Page SEO is the
+ * deliberate exception: its deterministic mock payloads are frontend fixtures, not API metadata.
+ * Two failure modes are worth real coverage, and both were measured against Prism 5.x rather than
+ * assumed:
  *
  * 1. SELECTING THE WRONG EXAMPLE is silent. Prism returns 200 with the other locale's body, the
  *    Arabic page renders `Eslam Muatamed`, and the only visible symptom is a layout-shift budget
@@ -18,8 +23,8 @@ import { matchContractPath, readExampleIndex, selectExample } from './prism-loca
  *    A blanket "every Arabic request gets the header" would take out `/experiences`, `/skills` and
  *    `/projects`. The header must therefore be CONTRACT-DERIVED, which is what these tests pin.
  *
- * The committed contract is used as the fixture, not a hand-written stub, so this suite fails if
- * the adopted artifact ever stops carrying the named examples.
+ * Settings remains contract-derived. Page SEO fixtures are separately tested so an authoritative
+ * OpenAPI replacement cannot silently turn a mock concern into contract drift again.
  */
 
 const CONTRACT = JSON.parse(
@@ -28,11 +33,6 @@ const CONTRACT = JSON.parse(
 const INDEX = readExampleIndex(CONTRACT)
 const SETTINGS = '/api/v1/settings/site'
 const PAGE_SEO = '/api/v1/seo/pages/{pageKey}'
-const PAGE_SEO_PAGES = ['home', 'experience', 'projects', 'blog', 'resume', 'contact']
-const PAGE_SEO_EXAMPLES = new Set([
-  'en', 'ar',
-  ...PAGE_SEO_PAGES.flatMap(pageKey => [`en-${pageKey}`, `ar-${pageKey}`])
-])
 const params = (query = '') => new URLSearchParams(query)
 
 describe('the committed contract', () => {
@@ -40,8 +40,8 @@ describe('the committed contract', () => {
     expect(INDEX.get(`GET ${SETTINGS}`)).toEqual(new Set(['en', 'ar']))
   })
 
-  it('declares named en/ar examples for the public static-page SEO operation', () => {
-    expect(INDEX.get(`GET ${PAGE_SEO}`)).toEqual(PAGE_SEO_EXAMPLES)
+  it('does not own Page SEO mock examples', () => {
+    expect(INDEX.get(`GET ${PAGE_SEO}`)).toBeUndefined()
   })
 })
 
@@ -54,17 +54,8 @@ describe('selectExample', () => {
     expect(selectExample(INDEX, 'GET', SETTINGS, params('locale=ar'))).toBe('ar')
   })
 
-  it('selects the Arabic Page SEO example for an Arabic request', () => {
-    expect(selectExample(INDEX, 'GET', '/api/v1/seo/pages/about', params('locale=ar'))).toBe('ar')
-  })
-
-  it('selects a page-specific Page SEO example for every other static page', () => {
-    for (const pageKey of PAGE_SEO_PAGES) {
-      expect(selectExample(INDEX, 'GET', `/api/v1/seo/pages/${pageKey}`, params('locale=en')))
-        .toBe(`en-${pageKey}`)
-      expect(selectExample(INDEX, 'GET', `/api/v1/seo/pages/${pageKey}`, params('locale=ar')))
-        .toBe(`ar-${pageKey}`)
-    }
+  it('does not select a Page SEO example from the contract index', () => {
+    expect(selectExample(INDEX, 'GET', '/api/v1/seo/pages/about', params('locale=ar'))).toBeNull()
   })
 
   // The API applies `en` when `?locale=` is absent (the parameter's documented default), so the
@@ -90,6 +81,43 @@ describe('selectExample', () => {
 
   it('does not select on a method the example is not declared for', () => {
     expect(selectExample(INDEX, 'POST', SETTINGS, params('locale=ar'))).toBeNull()
+  })
+})
+
+describe('Page SEO Prism fixtures', () => {
+  it('serves the existing English and Arabic payload for every known page key', () => {
+    for (const pageKey of PAGE_SEO_PRISM_FIXTURE_PAGES) {
+      for (const locale of ['en', 'ar']) {
+        expect(
+          resolvePageSeoPrismFixture('GET', `/api/v1/seo/pages/${pageKey}`, params(`locale=${locale}`))
+        ).toMatchObject({ data: { pageKey, locale } })
+      }
+    }
+  })
+
+  it('preserves the authored bilingual About payloads', () => {
+    expect(resolvePageSeoPrismFixture('GET', '/api/v1/seo/pages/about', params('locale=en')))
+      .toEqual({
+        data: {
+          pageKey: 'about', locale: 'en', metaTitle: 'About — Eslam Muatamed',
+          metaDescription: 'Engineering background, philosophy, and current focus.',
+          ogImageId: null, ogImage: null, canonicalUrl: null
+        }
+      })
+    expect(resolvePageSeoPrismFixture('GET', '/api/v1/seo/pages/about', params('locale=ar')))
+      .toEqual({
+        data: {
+          pageKey: 'about', locale: 'ar', metaTitle: 'نبذة — إسلام معتمد',
+          metaDescription: 'الخلفية الهندسية والفلسفة والتركيز الحالي.',
+          ogImageId: null, ogImage: null, canonicalUrl: null
+        }
+      })
+  })
+
+  it('returns no fixture for an invalid locale, method, or page key', () => {
+    expect(resolvePageSeoPrismFixture('GET', '/api/v1/seo/pages/about', params('locale=fr'))).toBeNull()
+    expect(resolvePageSeoPrismFixture('PATCH', '/api/v1/seo/pages/about', params('locale=ar'))).toBeNull()
+    expect(resolvePageSeoPrismFixture('GET', '/api/v1/seo/pages/unknown', params('locale=ar'))).toBeNull()
   })
 })
 

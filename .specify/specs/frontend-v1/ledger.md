@@ -5581,3 +5581,22 @@ success test failed; restoration made it pass.
 The final clean analyzed build and normal route-size gate are taken from the U5F implementation commit
 immediately following this checkpoint. No route-cap or route-governance change is expected unless that
 measurement proves otherwise. **FE5-U6 remains blocked; FE5-U7 was not started.**
+
+---
+
+## Contract Reconciliation R2 — Prism fixture extraction · COMPLETE · 2026-09-01
+
+Fresh git verification established that backend acceptance is based on current `origin/dev`
+(`23485209eee1d866ae1bd4d802d1cc943073b211`) and that the Users/Roles array-envelope correction
+already exists there as `fbf81002c49c8b2fee1500b85744b620b5f97655`; no backend reconciliation is
+required. The Page SEO named OpenAPI examples introduced by frontend commits `6e505af` and `79866ad`
+were classified as frontend-owned Prism test data and moved to
+`scripts/e2e/page-seo-prism-fixtures.mjs`. The locale proxy now serves that explicit fixture while
+all other named examples retain their contract-derived Prism behavior.
+
+The frontend-only Page SEO mutation was removed from `openapi/openapi.json`, restoring the
+authoritative backend-contract rule without regenerating API types. Focused locale selection tests
+preserve the EN/AR route and payload behavior, including the bilingual About values; the bounded
+wrong-locale fixture control failed, then was restored. Full backend-to-frontend OpenAPI sync remains
+the next contract step, and U5G remains blocked until it is complete. **FE5-U6 remains blocked;
+FE5-U7 was not started.**

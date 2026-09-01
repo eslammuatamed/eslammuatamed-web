@@ -2,15 +2,15 @@
 /**
  * Locale-selecting front end for the Prism contract mock.
  *
- * WHY THIS EXISTS. Prism replays ONE response body per operation. Until the contract carried named
- * examples, `/settings/site` had only schema-level property examples — which are locale-blind — so
- * `?locale=ar` was answered with the English identity (`siteName: "Eslam Muatamed"`). Every Arabic
- * page in every gate therefore rendered a Latin `h1` under an Arabic font stack, and `/ar/resume`'s
- * mobile CLS budget failed on a FIXTURE defect wearing the costume of a product regression.
+ * WHY THIS EXISTS. Prism replays ONE response body per operation. With only schema-level property
+ * examples, `/settings/site` would answer `?locale=ar` with the English identity (`siteName:
+ * "Eslam Muatamed"). Every Arabic page in every gate would then render a Latin `h1` under an Arabic
+ * font stack, and `/ar/resume`'s mobile CLS budget would fail on a FIXTURE defect wearing the costume
+ * of a product regression.
  *
- * The API contract now documents named `en` / `ar` response examples, and Prism selects between
- * them with `Prefer: example=<name>` (its documented mechanism). This process is the ONE place that
- * header is attached; the decision itself lives in `prism-locale-selection.mjs`.
+ * Named API examples remain contract-derived and Prism selects them with `Prefer: example=<name>`.
+ * Page SEO is different: its localized browser payloads are explicitly frontend-owned fixtures, so
+ * this proxy serves that one operation before forwarding every other request to Prism.
  *
  * WHY A PROXY AND NOT APPLICATION CODE. The selection is a property of the MOCK, not of the
  * product: the real API resolves `?locale=` from its database and needs no such header. Putting it
@@ -28,6 +28,7 @@ import { readFileSync } from 'node:fs'
 import net from 'node:net'
 import process from 'node:process'
 import { setTimeout as sleep } from 'node:timers/promises'
+import { resolvePageSeoPrismFixture } from './page-seo-prism-fixtures.mjs'
 import { readExampleIndex, selectExample } from './prism-locale-selection.mjs'
 
 const [, , listenPortArg, upstreamPortArg, contractPathArg] = process.argv
@@ -46,6 +47,17 @@ const EXAMPLE_INDEX = readExampleIndex(JSON.parse(readFileSync(CONTRACT_PATH, 'u
 
 const server = createServer((req, res) => {
   const url = new URL(req.url ?? '/', `http://127.0.0.1:${LISTEN_PORT}`)
+  const fixture = resolvePageSeoPrismFixture(req.method ?? 'GET', url.pathname, url.searchParams)
+  if (fixture) {
+    res.writeHead(200, {
+      'content-type': 'application/json',
+      'access-control-allow-origin': req.headers.origin ?? '*',
+      'access-control-allow-credentials': 'true'
+    })
+    res.end(JSON.stringify(fixture))
+    return
+  }
+
   const example = selectExample(EXAMPLE_INDEX, req.method ?? 'GET', url.pathname, url.searchParams)
 
   // `Prefer` is REPLACED, never appended to: a caller-supplied value would otherwise race with the
