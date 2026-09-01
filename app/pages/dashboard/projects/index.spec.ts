@@ -244,6 +244,13 @@ describe('clearing the filters', () => {
 })
 
 describe('what a row states about a project', () => {
+  it('renders the collection through the project UTable with a localized title per stable row', async () => {
+    const wrapper = await mount('/', { data: [project()] })
+    expect(wrapper.find('[data-projects-table]').exists()).toBe(true)
+    expect(wrapper.find('[data-project-row="p1"]').exists()).toBe(true)
+    expect(wrapper.find('[data-project-title="p1"]').text()).toBe('Content platform API')
+  })
+
   it('shows publication, featured state and the current order', async () => {
     const wrapper = await mount('/', {
       data: [project({ isPublished: true, featured: true, order: 7 })]

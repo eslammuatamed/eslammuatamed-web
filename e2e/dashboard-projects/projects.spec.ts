@@ -69,8 +69,10 @@ test.describe('collection and editor entry', () => {
     await page.goto('/dashboard/projects')
     await listSettled(page)
 
+    await expect(page.locator('[data-projects-table]')).toBeVisible()
     const ids = page.locator('[data-project-row]')
     await expect(ids).toHaveCount(2)
+    await expect(page.locator(`[data-project-title="${PRJ.main}"]`)).toHaveText('Content platform')
     await expect(page.locator(`[data-project-edit="${PRJ.main}"]`)).toBeVisible()
   })
 
@@ -142,7 +144,7 @@ test.describe('request states, made observable by delayMs', () => {
     await setBackendState(page, { delayMs: 2000 })
     await page.goto('/dashboard/projects')
 
-    await expect(page.locator('[aria-busy=true]').first()).toBeVisible()
+    await expect(page.locator('[aria-busy=true]')).toHaveCount(1)
     await listSettled(page)
     await expect(page.locator('[data-project-row]')).toHaveCount(2)
   })
@@ -158,7 +160,7 @@ test.describe('request states, made observable by delayMs', () => {
 
     // Retry through the surface's own control recovers into settled rows.
     await setBackendState(page, { mode: 'ok' })
-    await page.locator('[data-projects-failed] button').first().click()
+    await page.locator('[data-projects-failed] button').click()
     await listSettled(page)
     await expect(page.locator('[data-project-row]')).toHaveCount(2)
   })
@@ -173,7 +175,7 @@ test.describe('request states, made observable by delayMs', () => {
     // real route transition that used to replace this usable list with the initial skeleton.
     await setBackendState(page, { delayMs: 2000 })
     await page.locator('[data-projects-search]').fill('content')
-    await expect(page.locator('[aria-busy=true]').first()).toBeVisible()
+    await expect(page.locator('[aria-busy=true]')).toHaveCount(1)
     await expect(page.locator('[data-project-row]')).toHaveCount(2)
 
     await setBackendState(page, { mode: 'error' })

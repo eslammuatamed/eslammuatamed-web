@@ -65,9 +65,9 @@ const BUSY = '[aria-busy=true]'
 /** The collection has reached one of its terminal surfaces, and nothing is still loading. */
 export async function listSettled(page: Page): Promise<void> {
   // POSITIVE first (the Experiences harness records why an absence-only wait is vacuous).
-  await page.locator(
+  await expect(page.locator(
     '[data-project-row], [data-projects-empty], [data-projects-failed], [data-projects-forbidden]'
-  ).first().waitFor({ timeout: 15_000 })
+  )).not.toHaveCount(0)
   await expect(page.locator(BUSY)).toHaveCount(0, { timeout: 15_000 })
 }
 

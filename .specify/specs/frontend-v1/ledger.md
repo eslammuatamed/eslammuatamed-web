@@ -5474,3 +5474,36 @@ No route-governance change was needed: the measured list route remains within it
 no Article editor or unrelated route cap changed. The existing D20-24 quality-target warning remains
 reported by the normal gate, while the D20-32 shared-floor, incremental, CSS, and frozen app-owned
 guards pass. **FE5-U6 remains blocked by remaining acceptance feedback; FE5-U7 was not started.**
+
+---
+
+## Acceptance Feedback U5D — Projects UTable collection · COMPLETE · 2026-09-01
+
+Starting committed HEAD: `569cdc800d96327474b13476474eb8a1305091ea`. The Projects collection now
+uses a Projects-specific `UTable` in place of its card/list presentation. The table retains localized
+project identity with directionally correct EN/AR slugs, publication and featured state, translation
+coverage, order/year, updated date, and stable ID-based edit actions. The responsive overflow wrapper
+keeps one semantic table at narrow widths rather than restoring a second card presentation.
+
+`useAdminProjects` and `admin-projects-query` are unchanged: the URL remains the source of truth
+for server `page`, `perPage`, `q`, publication, featured, and sort requests; every filter/sort/search
+transition still returns to page 1 in one navigation; and the monotonic request sequence still blocks
+an earlier response from overwriting a newer query. Create and edit routes, ProjectEditor, the
+technology picker, API/generated contracts, and all backend behavior remain intentionally unchanged.
+Inline Add Technology/Skill creation remains deferred.
+
+### Verification
+
+| Check | Result |
+| --- | --- |
+| Focused Projects page, query, and request-state units | 46/46, exit 0 — UTable rows/title/state/actions, server query ownership, pagination, filtering, sorting, refresh/error behavior, and stale-response protection |
+| UTable test-first control | The new UTable assertion failed against the card list, then passed after the migration. |
+| Query-state negative control | Temporarily removing `page: undefined` from `setFilter` made the search-reset test fail with page 4 instead of page 1; restored immediately. |
+| Focused Projects browser project | 29/29, exit 0 — table/list identity, create/edit entry, collection loading/error/stale/403, narrow layout, and existing Projects editor journeys. |
+| Analysis build / normal size gate | `ANALYZE_BUNDLE=1 NUXT_PUBLIC_SITE_URL=https://example.com npm run build` and `npm run size:routes`, exit 0. `/dashboard/projects` measured 107,665 B app-owned / 109,568 B frozen cap (1,903 B headroom). |
+| `npm run typecheck` / `npm run typecheck:e2e` / `npm run lint` / `git diff --check` | exit 0 / exit 0 / exit 0 / exit 0 |
+
+No route-governance change was needed, and no unrelated route cap changed. The normal gate retains
+its pre-existing D20-24 quality-target warning for Projects while D20-32 shared-floor, incremental,
+CSS, and frozen app-owned caps pass. **FE5-U6 remains blocked by remaining acceptance feedback;
+FE5-U7 was not started.**
