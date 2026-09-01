@@ -3986,7 +3986,10 @@ export interface operations {
     };
     CategoriesAdminController_list_v1: {
         parameters: {
-            query?: never;
+            query?: {
+                page?: number;
+                perPage?: number;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -4000,6 +4003,7 @@ export interface operations {
                 content: {
                     "application/json": {
                         data: components["schemas"]["AdminCategoryEntity"][];
+                        meta: components["schemas"]["PageMeta"];
                     };
                 };
             };
@@ -4014,6 +4018,15 @@ export interface operations {
             };
             /** @description Missing the required permission. */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Malformed pagination query parameters: page must be at least 1, perPage must be 1 through 50, and unknown fields are rejected. */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -4293,7 +4306,10 @@ export interface operations {
     };
     TagsAdminController_list_v1: {
         parameters: {
-            query?: never;
+            query?: {
+                page?: number;
+                perPage?: number;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -4307,6 +4323,7 @@ export interface operations {
                 content: {
                     "application/json": {
                         data: components["schemas"]["AdminTagEntity"][];
+                        meta: components["schemas"]["PageMeta"];
                     };
                 };
             };
@@ -4321,6 +4338,15 @@ export interface operations {
             };
             /** @description Missing the required permission. */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Malformed pagination query parameters: page must be at least 1, perPage must be 1 through 50, and unknown fields are rejected. */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -5702,7 +5728,11 @@ export interface operations {
     };
     SkillsAdminController_list_v1: {
         parameters: {
-            query?: never;
+            query?: {
+                page?: number;
+                perPage?: number;
+                group?: "LANGUAGE" | "FRONTEND" | "BACKEND" | "DELIVERY";
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -5716,6 +5746,7 @@ export interface operations {
                 content: {
                     "application/json": {
                         data: components["schemas"]["AdminSkillEntity"][];
+                        meta: components["schemas"]["PageMeta"];
                     };
                 };
             };
@@ -5730,6 +5761,15 @@ export interface operations {
             };
             /** @description Missing the required permission. */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Malformed Skills list query parameters: page must be at least 1, perPage must be 1 through 50, group must be a valid SkillGroup, and unknown fields are rejected. */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -6075,7 +6115,10 @@ export interface operations {
     };
     ExperiencesAdminController_list_v1: {
         parameters: {
-            query?: never;
+            query?: {
+                page?: number;
+                perPage?: number;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -6089,6 +6132,7 @@ export interface operations {
                 content: {
                     "application/json": {
                         data: components["schemas"]["AdminExperienceEntity"][];
+                        meta: components["schemas"]["PageMeta"];
                     };
                 };
             };
@@ -6103,6 +6147,15 @@ export interface operations {
             };
             /** @description Missing the required permission. */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Malformed pagination query parameters: page must be at least 1, perPage must be 1 through 50, and unknown fields are rejected. */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -6440,7 +6493,10 @@ export interface operations {
     };
     TestimonialsAdminController_list_v1: {
         parameters: {
-            query?: never;
+            query?: {
+                page?: number;
+                perPage?: number;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -6454,6 +6510,7 @@ export interface operations {
                 content: {
                     "application/json": {
                         data: components["schemas"]["AdminTestimonialEntity"][];
+                        meta: components["schemas"]["PageMeta"];
                     };
                 };
             };
@@ -6468,6 +6525,15 @@ export interface operations {
             };
             /** @description Missing the required permission. */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Malformed pagination query parameters: page must be at least 1, perPage must be 1 through 50, and unknown fields are rejected. */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };

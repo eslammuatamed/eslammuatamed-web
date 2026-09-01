@@ -5638,3 +5638,36 @@ second pass was hash-identical. Focused Prism/contract tests reverified R2 fixtu
 all type/lint/diff checks passed. No product source or backend files changed, and no unexplained
 drift remains. **U5G is unblocked for its separate unit; Backend-B, FE5-U6, and FE5-U7 were not
 started.**
+
+---
+
+## Contract Reconciliation R4 — final Production backend OpenAPI sync · COMPLETE · 2026-09-02
+
+Campaign 027 backend acceptance is complete in Production. After `git fetch origin --prune`, the
+authoritative backend baseline was verified as `origin/main`
+`9da49f71d41f2275e588db479329df4998364fe4`, release
+`20260901T223954Z-9da49f7`. The exact backend `openapi.json` SHA-256 is
+`2a51438a443734d51c130349dc76d488e65bbf55a7c7ce0d2858a28db1d06be9`.
+
+Frontend pre-sync OpenAPI SHA-256 was
+`70e3e3e5330a8e3b8ceb07ac214e60bbde254bcddccdb8f8fc029902c70110c4`.
+The only semantic drift was the released admin-list pagination contract: Experiences, Testimonials,
+Categories, Tags, and Skills gained `page`/`perPage` plus `{ data, meta }`; Skills also gained the
+`group` enum. Admin Article `q` was already present. No public-list contract changed and no Page SEO
+Prism fixture entered OpenAPI.
+
+The vendored artifact was copied byte-for-byte from the exact backend Git object. Frontend post-sync
+SHA-256 is `2a51438a443734d51c130349dc76d488e65bbf55a7c7ce0d2858a28db1d06be9`, proving exact byte
+identity with Production. `npm run api:types` regenerated only `app/types/api.d.ts`; its second pass
+was deterministic. The focused Prism/contract-fixture suite passed 42/42, and `npm run typecheck`,
+`npm run typecheck:e2e`, and `npm run lint` passed. The final `git diff --check` is required before
+commit.
+
+Consumer audit records no present TypeScript fallout because current admin readers use local generic
+envelope aliases, but later product migration must update `useAdminExperiences`,
+`useAdminTestimonials`, `useAdminCategories`, `useAdminTags`, and `useAdminSkills`; the Article
+category/tag selectors in `useAdminArticles`; and the shared `SkillPicker` consumers in the Project
+and Experience editors. Article search integration remains owned by `admin-articles-query.ts` and
+`useAdminArticles.ts`. No product source changed in this unit. **Frontend implementation resumes from
+this final contract baseline; U5G remains not yet implemented, and FE5-U6 and FE5-U7 remain not
+started.**
