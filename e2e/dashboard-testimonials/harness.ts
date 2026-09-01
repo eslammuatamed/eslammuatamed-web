@@ -127,10 +127,10 @@ export const shell = (page: Page) => page.locator('[data-shell="dashboard"]')
  * `aria-busy` to disappear is vacuous before the request starts, because nothing is busy yet either.
  */
 export async function listSettled(page: Page): Promise<void> {
-  await page.locator(
+  await expect(page.locator(
     '[data-testimonial-row], [data-testimonials-empty], [data-testimonials-failed], [data-testimonials-forbidden]'
-  ).first().waitFor({ timeout: 15_000 })
-  await expect(page.locator('[aria-busy=true]')).toHaveCount(0, { timeout: 15_000 })
+  )).not.toHaveCount(0)
+  await expect(page.locator('[aria-busy=true]')).toHaveCount(0)
 }
 
 /** No raw i18n key path may reach the screen in either language. */

@@ -709,7 +709,7 @@ describe('dashboard app-owned caps — frozen, per route (D20-29)', () => {
       .toThrow(/measured but NOT governed.*\/dashboard\/seo/s)
   })
 
-  it('derives the D20-37 cap from its OWN recorded baseline, not from a sibling', () => {
+  it('derives the U5B Testimonials collection cap from its OWN recorded baseline', () => {
     for (const route of D20_37_ROUTES) {
       const baseline = DASHBOARD_APP_OWNED_BASELINE_BYTES[route]
       expect(baseline, `${route} must record the baseline its cap was derived from`).toBeTypeOf('number')
@@ -717,11 +717,11 @@ describe('dashboard app-owned caps — frozen, per route (D20-29)', () => {
         .toBe(DASHBOARD_APP_OWNED_CAP_BYTES[route])
     }
     // The owner's exact numbers, pinned so a later "tidy" cannot drift them silently.
-    expect(DASHBOARD_APP_OWNED_BASELINE_BYTES['/dashboard/testimonials']).toBe(86_069)
-    expect(DASHBOARD_APP_OWNED_CAP_BYTES['/dashboard/testimonials']).toBe(99_328)
+    expect(DASHBOARD_APP_OWNED_BASELINE_BYTES['/dashboard/testimonials']).toBe(91_758)
+    expect(DASHBOARD_APP_OWNED_CAP_BYTES['/dashboard/testimonials']).toBe(106_496)
   })
 
-  it('records the D20-37 equality with the Experiences collection cap as COINCIDENCE, not inheritance', () => {
+  it('keeps the U5B collection cap distinct from the Experiences collection', () => {
     // The two caps are numerically equal because the two BASELINES are close (86,069 vs 85,551 B)
     // and the formula is frozen — not because one number was copied. The derivation assertion above
     // is what makes that true; this pins the baselines' independence so a later edit cannot quietly
@@ -729,10 +729,10 @@ describe('dashboard app-owned caps — frozen, per route (D20-29)', () => {
     const baseline = DASHBOARD_APP_OWNED_BASELINE_BYTES['/dashboard/testimonials']
     const experiences = DASHBOARD_APP_OWNED_BASELINE_BYTES['/dashboard/experiences']
     expect(baseline).not.toBe(experiences)
-    expect(approvedAppLimitBytes(baseline)).toBe(approvedAppLimitBytes(experiences))
+    expect(approvedAppLimitBytes(baseline)).not.toBe(approvedAppLimitBytes(experiences))
   })
 
-  it('derives every D20-38 cap from its OWN recorded baseline, independently', () => {
+  it('derives every U5B redirect cap from its OWN recorded baseline, independently', () => {
     for (const route of D20_38_ROUTES) {
       const baseline = DASHBOARD_APP_OWNED_BASELINE_BYTES[route]
       expect(baseline, `${route} must record the baseline its cap was derived from`).toBeTypeOf('number')
@@ -740,17 +740,18 @@ describe('dashboard app-owned caps — frozen, per route (D20-29)', () => {
         .toBe(DASHBOARD_APP_OWNED_CAP_BYTES[route])
     }
     // The owner's exact numbers, pinned so a later "tidy" cannot drift them silently.
-    expect(DASHBOARD_APP_OWNED_BASELINE_BYTES['/dashboard/testimonials/new']).toBe(125_465)
+    expect(DASHBOARD_APP_OWNED_BASELINE_BYTES['/dashboard/testimonials/new']).toBe(66_752)
     expect(DASHBOARD_APP_OWNED_BASELINE_BYTES[
       '/dashboard/testimonials/00000000-0000-0000-0000-000000000000'
-    ]).toBe(125_573)
-    expect(DASHBOARD_APP_OWNED_CAP_BYTES['/dashboard/testimonials/new']).toBe(144_384)
+    ]).toBe(66_903)
+    expect(DASHBOARD_APP_OWNED_CAP_BYTES['/dashboard/testimonials/new']).toBe(76_800)
     expect(DASHBOARD_APP_OWNED_CAP_BYTES[
       '/dashboard/testimonials/00000000-0000-0000-0000-000000000000'
-    ]).toBe(145_408)
+    ]).toBe(77_824)
 
-    // TWO routes, TWO numbers: collapsing them into one common cap — or rounding either toward a
-    // sibling editor's — is a budget change made without a decision, so it must fail here.
+    // The create and edit redirects retain distinct, independently measured caps. A redirect may
+    // legitimately equal its corresponding Skills redirect when the frozen D20-29 formula rounds
+    // both independent baselines to the same KiB; equality is route-class evidence, not copying.
     const newCap = DASHBOARD_APP_OWNED_CAP_BYTES['/dashboard/testimonials/new']
     const editCap = DASHBOARD_APP_OWNED_CAP_BYTES[
       '/dashboard/testimonials/00000000-0000-0000-0000-000000000000'
@@ -760,16 +761,18 @@ describe('dashboard app-owned caps — frozen, per route (D20-29)', () => {
       '/dashboard/articles/new',
       '/dashboard/articles/00000000-0000-0000-0000-000000000000',
       '/dashboard/experiences/new',
-      '/dashboard/experiences/00000000-0000-0000-0000-000000000000',
-      '/dashboard/skills/new',
-      '/dashboard/skills/00000000-0000-0000-0000-000000000000'
+      '/dashboard/experiences/00000000-0000-0000-0000-000000000000'
     ]) {
       expect(newCap).not.toBe(DASHBOARD_APP_OWNED_CAP_BYTES[sibling])
       expect(editCap).not.toBe(DASHBOARD_APP_OWNED_CAP_BYTES[sibling])
     }
+    expect(newCap).toBe(DASHBOARD_APP_OWNED_CAP_BYTES['/dashboard/skills/new'])
+    expect(editCap).toBe(DASHBOARD_APP_OWNED_CAP_BYTES[
+      '/dashboard/skills/00000000-0000-0000-0000-000000000000'
+    ])
     // The collection's governed number was NOT re-derived by this decision.
-    expect(DASHBOARD_APP_OWNED_BASELINE_BYTES['/dashboard/testimonials']).toBe(86_069)
-    expect(DASHBOARD_APP_OWNED_CAP_BYTES['/dashboard/testimonials']).toBe(99_328)
+    expect(DASHBOARD_APP_OWNED_BASELINE_BYTES['/dashboard/testimonials']).toBe(91_758)
+    expect(DASHBOARD_APP_OWNED_CAP_BYTES['/dashboard/testimonials']).toBe(106_496)
   })
 
   it("derives each U4 cap from its OWN recorded baseline and pins the owner's exact bytes", () => {
@@ -933,13 +936,10 @@ describe('dashboard app-owned caps — frozen, per route (D20-29)', () => {
       '/dashboard/skills': 104_448,
       '/dashboard/skills/new': 76_800,
       '/dashboard/skills/00000000-0000-0000-0000-000000000000': 77_824,
-      // D20-37 — the Testimonials collection, from its own baseline (86,069 B). Numerically equal to
-      // the Experiences collection's cap by coincidence of close baselines, not by inheritance.
-      '/dashboard/testimonials': 99_328,
-      // D20-38 — the two editor routes, each from its own baseline (125,465 / 125,573 B), two
-      // deliberately different numbers.
-      '/dashboard/testimonials/new': 144_384,
-      '/dashboard/testimonials/00000000-0000-0000-0000-000000000000': 145_408,
+      // U5B — collection + retained redirects from 91,758 / 66,752 / 66,903 B.
+      '/dashboard/testimonials': 106_496,
+      '/dashboard/testimonials/new': 76_800,
+      '/dashboard/testimonials/00000000-0000-0000-0000-000000000000': 77_824,
       // U4 — independently measured split collections plus the legacy redirect.
       '/dashboard/categories': 130_048,
       '/dashboard/tags': 126_976,

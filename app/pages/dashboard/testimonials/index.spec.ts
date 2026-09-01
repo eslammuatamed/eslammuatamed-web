@@ -75,9 +75,10 @@ describe('the collection request-state contract', () => {
     expect(page.find('[data-testimonials-empty]').exists()).toBe(false)
   })
 
-  it('renders loaded rows as content', async () => {
+  it('renders loaded rows in the Testimonials UTable', async () => {
     const page = await mount({ rows: [testimonial()] })
     expect(page.find('[data-testimonials-loaded]').exists()).toBe(true)
+    expect(page.find('[data-testimonials-table]').exists()).toBe(true)
     expect(page.findAll('[data-testimonial-row]')).toHaveLength(1)
     expect(page.find('[data-testimonials-empty]').exists()).toBe(false)
     expect(page.find('[data-testimonials-failed]').exists()).toBe(false)

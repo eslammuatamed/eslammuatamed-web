@@ -5411,3 +5411,30 @@ closure, so the dashboard incremental delivery gate passes. No unrelated route c
 
 Skills pagination and durable group filtering remain backend-dependent acceptance work. **FE5-U6
 remains blocked; FE5-U7 was not started.**
+
+---
+
+## Acceptance Feedback U5B — Testimonials UTable + lightweight slideover CRUD · COMPLETE · 2026-09-01
+
+Starting HEAD: `8869394f9edc7ee19b42a86bbf97ca74fbfebabd`. Testimonials now uses a `UTable`
+with author/translation state, quote preview, role, order, avatar state, visibility, and row actions.
+Create/edit now use a lazy entity-owned `USlideover`; `TestimonialEditor.vue` remains the reusable
+form/controller for bilingual fields, validation, avatar state, payload shaping, API errors, loading,
+and delete confirmation, but no longer navigates or owns a route-leave guard. The page owns query
+intent, refresh, and originating-control focus restoration.
+
+The nested MediaPicker remains inside the form and its native `UModal` lifecycle restores focus to
+its picker trigger; the outer slideover then restores focus to the list trigger. Avatar PATCH remains
+exact: untouched omits `avatarId`, clear sends `null`, replacement sends the selected id. Omitted
+translations retain the API's upsert preservation semantics. Legacy `/new` and `/:id` routes redirect
+to `?create=1` and `?edit=<id>`; no pagination, backend/API, Skills, Project, generic CRUD, FE5-U6,
+or FE5-U7 work was added.
+
+Owner-authorized clean measurement from `f8892294c604a34c649eb7aec5bfa106ba95f991` records:
+`/dashboard/testimonials` 91,758 B → `ceil(91,758 × 115 / 102,400) × 1,024` = 106,496 B;
+`/new` redirect 66,752 B → 76,800 B; `/:id` redirect 66,903 B → 77,824 B. No unrelated cap changed.
+
+Focused Testimonials units and form/composable tests pass. Browser coverage migrated to table/overlay
+create/edit/avatar/delete/error/dirty/redirect/query/RTL paths; bypassing dirty confirmation makes
+the dirty-close browser control fail, then the guard was restored. Pagination remains backend-dependent;
+**FE5-U6 remains blocked and FE5-U7 was not started.**

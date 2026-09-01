@@ -855,7 +855,8 @@
         "avatar": "Avatar",
         "quote": "Quote",
         "author": "Author name",
-        "role": "Author role"
+        "role": "Author role",
+        "actions": "Actions"
       },
       "editor": {
         "createTitle": "New testimonial",
@@ -888,6 +889,10 @@
         "deleteConfirm": "Delete this testimonial",
         "deleteCancel": "Keep it",
         "deleteFailed": "The testimonial could not be deleted."
+      },
+      "overlay": {
+        "close": "Close testimonial editor",
+        "unsavedConfirm": "This testimonial has unsaved changes. Discard them?"
       },
       "validation": {
         "orderInteger": "The order must be a whole number.",

@@ -2,10 +2,5 @@
 defineI18nRoute(false)
 definePageMeta({ layout: 'dashboard', middleware: 'auth' })
 
-const { t } = useDashboardI18n()
-useHead({ title: () => `${t('dashboard.testimonials.editor.createTitle')} · ${t('dashboard.title')}` })
+await navigateTo('/dashboard/testimonials?create=1', { replace: true })
 </script>
-
-<template>
-  <DashboardTestimonialEditor :id="null" />
-</template>

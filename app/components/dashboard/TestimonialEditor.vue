@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { FormSubmitEvent } from '@nuxt/ui'
+import type { AdminTestimonial } from '~/composables/admin-testimonial-types'
 import { TESTIMONIAL_LOCALES, type TestimonialLocale } from '~/composables/admin-testimonial-fields'
 import {
   emptyTestimonialForm,
@@ -23,9 +24,9 @@ import { toApiError } from '~/utils/api-error'
  * implementation would get it wrong.
  */
 const props = defineProps<{ id: string | null }>()
+const emit = defineEmits<{ saved: [testimonial: AdminTestimonial]; deleted: [] }>()
 
 const { t, locale } = useDashboardI18n()
-const router = useRouter()
 const editor = useAdminTestimonial()
 const { testimonial, pending: loading, forbidden, notFound, failed: loadFailed } = editor
 
@@ -39,7 +40,6 @@ const saveError = ref<string | null>(null)
 const deleting = ref(false)
 const confirmingDelete = ref(false)
 const deleteError = ref<string | null>(null)
-const bypassGuard = ref(false)
 
 const isCreate = computed(() => props.id === null)
 const dirty = computed(() => isTestimonialFormDirty(form.value, initial.value))
@@ -103,12 +103,8 @@ async function onSubmit(_event: FormSubmitEvent<unknown>): Promise<void> {
       : await editor.update(props.id as string, testimonialUpdatePayload(form.value, initial.value))
 
     savedAt.value = Date.now()
-    if (isCreate.value) {
-      bypassGuard.value = true
-      await router.replace(`/dashboard/testimonials/${saved.id}`)
-    } else {
-      adopt()
-    }
+    adopt()
+    emit('saved', saved)
   } catch (error) {
     const apiError = toApiError(error)
     if (apiError.status === 422 && apiError.fieldErrors.length > 0) {
@@ -129,8 +125,7 @@ async function confirmDelete(): Promise<void> {
   deleteError.value = null
   try {
     await editor.remove(props.id)
-    bypassGuard.value = true
-    await router.replace('/dashboard/testimonials')
+    emit('deleted')
   } catch (error) {
     deleteError.value = toApiError(error).detail ?? t('dashboard.testimonials.editor.deleteFailed')
     confirmingDelete.value = false
@@ -139,18 +134,11 @@ async function confirmDelete(): Promise<void> {
   }
 }
 
-useUnsavedChangesGuard({
-  dirty,
-  bypass: bypassGuard,
-  message: () => t('dashboard.testimonials.editor.unsavedWarning')
-})
+defineExpose({ dirty })
 </script>
 
 <template>
-  <UContainer class="py-8" data-testimonial-editor>
-    <h1 class="text-h1 text-highlighted">
-      {{ isCreate ? t('dashboard.testimonials.editor.createTitle') : t('dashboard.testimonials.editor.editTitle') }}
-    </h1>
+  <div data-testimonial-editor>
 
     <UAlert
       v-if="unreadable"
@@ -172,21 +160,7 @@ useUnsavedChangesGuard({
     />
 
     <template v-else>
-      <div class="mt-2 mb-6 flex flex-wrap items-start justify-between gap-4">
-        <p class="min-w-0 text-muted">{{ t('dashboard.testimonials.editor.description') }}</p>
-        <UButton
-          to="/dashboard/testimonials"
-          color="neutral"
-          variant="ghost"
-          icon="i-lucide-arrow-left"
-          class="rtl:[--icon-rotate:180deg]"
-          data-editor-back
-        >
-          {{ t('dashboard.testimonials.editor.back') }}
-        </UButton>
-      </div>
-
-      <div v-if="saveError" ref="alertRef" tabindex="-1" role="alert" class="mb-6 outline-none">
+      <div v-if="saveError" ref="alertRef" tabindex="-1" role="alert" class="mb-6 outline-none" data-editor-save-error-container>
         <UAlert color="error" variant="subtle" icon="i-lucide-circle-alert" :title="saveError" data-editor-save-error />
       </div>
 
@@ -336,5 +310,5 @@ useUnsavedChangesGuard({
         {{ deleteError }}
       </p>
     </template>
-  </UContainer>
+  </div>
 </template>

@@ -831,15 +831,11 @@ export const DASHBOARD_APP_OWNED_BASELINE_BYTES = {
   '/dashboard/skills': 89_941,
   '/dashboard/skills/new': 66_734,
   '/dashboard/skills/00000000-0000-0000-0000-000000000000': 66_885,
-  // D20-37 — FE-3 module 3's Testimonials collection, measured at the `T·U2` checkpoint via the
-  // §1.2 closure workflow and REPRODUCED on a clean, stamped build of the governance commit before
-  // registration. One route, one number from one build.
-  '/dashboard/testimonials': 86_069,
-  // D20-38 — FE-3 module 3's two Testimonials EDITOR routes, measured at the completed integrated
-  // `T·U3` checkpoint via the §1.2 closure workflow and REPRODUCED on a clean, stamped build of the
-  // governance commit before registration. Two routes, two numbers, one build — one comparable batch.
-  '/dashboard/testimonials/new': 125_465,
-  '/dashboard/testimonials/00000000-0000-0000-0000-000000000000': 125_573,
+  // U5B owner-authorized clean measurement — Testimonials is now a UTable collection with a lazy
+  // entity-owned slideover; its former full-page editor URLs are redirect-only compatibility routes.
+  '/dashboard/testimonials': 91_758,
+  '/dashboard/testimonials/new': 66_752,
+  '/dashboard/testimonials/00000000-0000-0000-0000-000000000000': 66_903,
   // U4 owner-authorized clean measurement — the former combined Taxonomy baseline is retired.
   // Categories, Tags, and the app-owned legacy redirect each carry their own measured input.
   '/dashboard/categories': 112_895,
@@ -892,13 +888,10 @@ export const DASHBOARD_APP_OWNED_BASELINE_PROVENANCE = {
   '/dashboard/skills': '7b5be3683023e3bda2ed289db150585a2b58a9e0',
   '/dashboard/skills/new': '7b5be3683023e3bda2ed289db150585a2b58a9e0',
   '/dashboard/skills/00000000-0000-0000-0000-000000000000': '7b5be3683023e3bda2ed289db150585a2b58a9e0',
-  // D20-37 — `T·U2`, the commit that created the collection route. The checkpoint build's closure
-  // reading was reproduced byte-for-byte on a clean, stamped build of the governance commit.
-  '/dashboard/testimonials': '474b2501dbee7d0999b5e3a6292d2ed7556bd0b9',
-  // D20-38 — `T·U3`, the commit that created the two editor routes; same reproduction protocol as
-  // D20-37: checkpoint reading confirmed byte-for-byte on the clean, stamped governance build.
-  '/dashboard/testimonials/new': '7f22ce775e4cc96bad3f50fa605398d8ec692fcd',
-  '/dashboard/testimonials/00000000-0000-0000-0000-000000000000': '7f22ce775e4cc96bad3f50fa605398d8ec692fcd',
+  // U5B — clean implementation commit; this governance-only amendment changes no client input.
+  '/dashboard/testimonials': 'f8892294c604a34c649eb7aec5bfa106ba95f991',
+  '/dashboard/testimonials/new': 'f8892294c604a34c649eb7aec5bfa106ba95f991',
+  '/dashboard/testimonials/00000000-0000-0000-0000-000000000000': 'f8892294c604a34c649eb7aec5bfa106ba95f991',
   // U4 owner-authorized measurement build: clean, stamped implementation commit. The subsequent
   // governance-only amendment records this provenance and changes no client-bundle input.
   '/dashboard/categories': '23d77a8cb0357a4600fbdfb392a6124fabc39e9b',
@@ -1003,31 +996,12 @@ export const DASHBOARD_APP_OWNED_CAP_BYTES = {
   '/dashboard/skills': 102 * KB,
   '/dashboard/skills/new': 75 * KB,
   '/dashboard/skills/00000000-0000-0000-0000-000000000000': 76 * KB,
-  // D20-37 (owner decision, 2026-08-22) — FE-3 module 3's Testimonials COLLECTION, derived from its
-  // OWN measured baseline (86,069 B at `T·U2`, Web `474b2501`) by D20-29's formula, registered after
-  // measurement exactly as D20-34 did for the Experiences collection. Its editor routes are
-  // deliberately NOT registered here — they do not exist yet and will be measured first, per the
-  // standing instruction every module has followed since the D20-33 amendment.
-  //
-  // Explicitly NOT a waiver, NOT a shared-floor change, NOT a generic incremental-allowance change,
-  // and NOT a D20-32 recalibration. The resulting number, 99,328 B (97 KiB), is NUMERICALLY EQUAL to
-  // the Experiences collection's cap by COINCIDENCE of similar baselines (86,069 vs 85,551 B) — it
-  // is not inherited from it, not rounded toward it, and carries its own derivation; both numbers
-  // are just what the same frozen formula yields from two different measurements.
-  '/dashboard/testimonials': 97 * KB,
-  // D20-38 (owner decision, 2026-08-22) — FE-3 module 3's TWO Testimonials editor routes, each
-  // derived INDEPENDENTLY from its OWN measured baseline by D20-29's formula on the completed
-  // integrated T·U3 tree (`7f22ce775e4cc96bad3f50fa605398d8ec692fcd`). Measured FIRST and escalated
-  // as ONE batched decision — the D20-33 amendment's lesson, and the reason `T·U3` registered both
-  // routes as deliberately ungoverned instead of inheriting the collection's cap or a sibling's.
-  //
-  // Explicitly NOT a waiver, NOT a shared-floor change, NOT a generic incremental-allowance change,
-  // and NOT a D20-32 recalibration. The two caps are deliberately NOT one common number: the owner
-  // declined rounding either route toward the other or toward any sibling editor (Articles
-  // 122,880 B, Experiences 120,832/121,856 B, Skills 111,616 B). The collection's governed 99,328 B
-  // (D20-37) is untouched and was NOT re-derived.
-  '/dashboard/testimonials/new': 141 * KB,
-  '/dashboard/testimonials/00000000-0000-0000-0000-000000000000': 142 * KB,
+  // U5B owner-authorized recalibration via D20-29: 91,758 B -> 104 KiB; 66,752 B -> 75 KiB;
+  // 66,903 B -> 76 KiB. The lazy slideover keeps the form out of the initial collection closure,
+  // while retained bookmarks carry their measured redirect-only caps.
+  '/dashboard/testimonials': 104 * KB,
+  '/dashboard/testimonials/new': 75 * KB,
+  '/dashboard/testimonials/00000000-0000-0000-0000-000000000000': 76 * KB,
   // U4 owner decision — independent, clean §1.2 closure measurements. The former combined
   // Taxonomy baseline/cap is retired rather than transferred. The legacy route is still app-owned
   // and redirecting, so it has its own evidence-based cap until a future decision removes it.
