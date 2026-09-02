@@ -106,7 +106,7 @@ async function signOut(): Promise<void> {
                 :aria-label="t('dashboard.nav.openMenu')"
                 @click="() => { drawerOpen = true }"
               />
-              <span class="truncate font-semibold text-highlighted">{{ t('dashboard.title') }}</span>
+              <span class="max-[379px]:hidden truncate font-semibold text-highlighted">{{ t('dashboard.title') }}</span>
             </div>
 
             <div class="flex min-w-0 items-center gap-3" data-dashboard-header-actions>

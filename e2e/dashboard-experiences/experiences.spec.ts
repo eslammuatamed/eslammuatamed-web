@@ -539,7 +539,7 @@ test.describe('the editor — the request-state contract, criteria 3, 4 and 5', 
     await page.waitForURL('**/dashboard/experiences')
     await listSettled(page)
     await expect(tableRowFor(page, EXP.past)).toHaveCount(0)
-    await expect(rows(page)).toHaveCount(11)
+    await expect(rows(page)).toHaveCount(12)
   })
 
   test('answers a well-formed id that does not exist as NOT FOUND', async ({ page, baseURL }) => {
