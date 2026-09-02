@@ -370,11 +370,30 @@ describe('reset — the guarantee the single-spec-file rule rests on', () => {
 })
 
 describe('the skills option source', () => {
-  it('is unpaginated and includes a non-public skill, because the picker is an ADMIN surface', async () => {
+  it('is paginated and includes a non-public skill, because the picker is an ADMIN surface', async () => {
     const body = await (await api('/admin/skills')).json()
-    expect(body.meta).toBeUndefined()
+    expect(body.meta).toEqual({ page: 1, perPage: 12, total: 5, totalPages: 1 })
     expect(body.data).toHaveLength(5)
     expect(body.data.some((s: { isPublic: boolean }) => !s.isPublic)).toBe(true)
+  })
+
+  it('slices a later page from the requested perPage without a group query', async () => {
+    const page1 = await (await api('/admin/skills?page=1&perPage=2')).json()
+    const page2 = await (await api('/admin/skills?page=2&perPage=2')).json()
+
+    expect(page1.meta).toEqual({ page: 1, perPage: 2, total: 5, totalPages: 3 })
+    expect(page2.meta).toEqual({ page: 2, perPage: 2, total: 5, totalPages: 3 })
+    expect(page2.data).toHaveLength(2)
+    expect(page2.data[0].id).not.toBe(page1.data[0].id)
+
+    const skills = Array.from({ length: 51 }, (_, index) => ({
+      ...page1.data[0], id: `test-skill-${index + 1}`
+    }))
+    await setState({ skills })
+
+    const laterSkill = await (await api('/admin/skills?page=2&perPage=50')).json()
+    expect(laterSkill.meta).toEqual({ page: 2, perPage: 50, total: 51, totalPages: 2 })
+    expect(laterSkill.data.map((skill: { id: string }) => skill.id)).toEqual(['test-skill-51'])
   })
 
   it('carries per-locale labels, so the picker can be bilingual', async () => {

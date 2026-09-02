@@ -38,6 +38,38 @@ const api = (path: string, init: RequestInit = {}) =>
 const setState = (state: Record<string, unknown>) =>
   fetch(`${base}/__e2e/state`, { method: 'POST', body: JSON.stringify(state) })
 
+describe('admin taxonomy vocabulary pagination', () => {
+  it('slices Categories and Tags from the requested page and perPage', async () => {
+    const categoriesPage1 = await (await api('/admin/categories?page=1&perPage=1')).json()
+    const categoriesPage2 = await (await api('/admin/categories?page=2&perPage=1')).json()
+    const tagsPage1 = await (await api('/admin/tags?page=1&perPage=2')).json()
+    const tagsPage2 = await (await api('/admin/tags?page=2&perPage=2')).json()
+
+    expect(categoriesPage1.meta).toEqual({ page: 1, perPage: 1, total: 2, totalPages: 2 })
+    expect(categoriesPage2.meta).toEqual({ page: 2, perPage: 1, total: 2, totalPages: 2 })
+    expect(categoriesPage2.data[0].id).not.toBe(categoriesPage1.data[0].id)
+    expect(tagsPage1.meta).toEqual({ page: 1, perPage: 2, total: 3, totalPages: 2 })
+    expect(tagsPage2.meta).toEqual({ page: 2, perPage: 2, total: 3, totalPages: 2 })
+    expect(tagsPage2.data).toHaveLength(1)
+    expect(tagsPage2.data[0].id).not.toBe(tagsPage1.data[0].id)
+
+    const categories = Array.from({ length: 51 }, (_, index) => ({
+      ...categoriesPage1.data[0], id: `test-category-${index + 1}`
+    }))
+    const tags = Array.from({ length: 51 }, (_, index) => ({
+      ...tagsPage1.data[0], id: `test-tag-${index + 1}`
+    }))
+    await setState({ categories, tags })
+
+    const laterCategory = await (await api('/admin/categories?page=2&perPage=50')).json()
+    const laterTag = await (await api('/admin/tags?page=2&perPage=50')).json()
+    expect(laterCategory.meta).toEqual({ page: 2, perPage: 50, total: 51, totalPages: 2 })
+    expect(laterCategory.data.map((category: { id: string }) => category.id)).toEqual(['test-category-51'])
+    expect(laterTag.meta).toEqual({ page: 2, perPage: 50, total: 51, totalPages: 2 })
+    expect(laterTag.data.map((tag: { id: string }) => tag.id)).toEqual(['test-tag-51'])
+  })
+})
+
 describe('the hold — the capability six acceptance criteria depend on', () => {
   it('answers immediately by default, so no lane pays for latency it did not ask for', async () => {
     const started = Date.now()

@@ -107,6 +107,18 @@ const narrative = (prefix: string) => ({
   lessonsLearned: `${prefix} lessons.`
 })
 
+function vocabularyPage<T>(rows: T[], url: URL) {
+  const readPositiveInt = (value: string | null, fallback: number) => {
+    const parsed = Number(value)
+    return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback
+  }
+  const page = readPositiveInt(url.searchParams.get('page'), 1)
+  const perPage = readPositiveInt(url.searchParams.get('perPage'), 12)
+  const total = rows.length
+  const totalPages = Math.max(1, Math.ceil(total / perPage))
+  return { data: rows.slice((page - 1) * perPage, page * perPage), meta: { page, perPage, total, totalPages } }
+}
+
 function seedProjects(): SeedProject[] {
   return [
     {
@@ -189,6 +201,8 @@ let lastPatchBody: Record<string, unknown> | null = null
 let nextWriteErrors: Array<{ field: string, message: string }> | null = null
 /** One-shot non-validation Skill-create failure, so overlay error focus is browser-provable. */
 let failNextSkillWrite = false
+/** Fails one requested Skill page so exhaustive-load atomicity is browser-provable. */
+let failVocabularyPage: number | null = null
 
 function reset(): void {
   projects = seedProjects()
@@ -198,6 +212,7 @@ function reset(): void {
   lastPatchBody = null
   nextWriteErrors = null
   failNextSkillWrite = false
+  failVocabularyPage = null
 }
 
 const TOKEN = 'e2e-access-token'
@@ -308,6 +323,11 @@ const server = http.createServer((req, res) => {
       const state = await readBody(req)
       if (state.mode !== undefined) mode = state.mode as Mode
       if (state.delayMs !== undefined) delayMs = Number(state.delayMs)
+      if (Array.isArray(state.projects)) projects = state.projects as SeedProject[]
+      if (Array.isArray(state.skills)) skills = state.skills as SeedSkill[]
+      if (state.failVocabularyPage === null || typeof state.failVocabularyPage === 'number') {
+        failVocabularyPage = state.failVocabularyPage
+      }
       if (Array.isArray(state.nextWriteErrors)) nextWriteErrors = state.nextWriteErrors
       if (state.failNextSkillWrite !== undefined) failNextSkillWrite = state.failNextSkillWrite === true
       json(res, 204, null)
@@ -370,7 +390,11 @@ const server = http.createServer((req, res) => {
     }
 
     if (path === '/admin/skills' && req.method === 'GET') {
-      json(res, 200, { data: skills })
+      if (url.searchParams.get('page') === String(failVocabularyPage)) {
+        json(res, 500, { title: 'Vocabulary page failed' })
+        return
+      }
+      json(res, 200, vocabularyPage(skills, url))
       return
     }
 

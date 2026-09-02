@@ -17,6 +17,14 @@ import {
   tableRowFor
 } from './harness'
 
+const LATER_SKILL = '00000000-0000-4000-f000-000000000051'
+const skillsForPicker = () => Array.from({ length: 51 }, (_, index) => ({
+  id: index === 50 ? LATER_SKILL : `00000000-0000-4000-f000-${String(index + 1).padStart(12, '0')}`,
+  slug: index === 50 ? 'later-experience-skill' : `experience-skill-${index + 1}`,
+  group: 'FRAMEWORK', brandColor: null, isPublic: true, order: index,
+  translations: { en: { label: index === 50 ? 'Later Experience Skill' : `Experience Skill ${index + 1}` } }
+}))
+
 /**
  * The Experiences collection in a real browser (FE-3 module 1, `M1·U2`).
  *
@@ -224,6 +232,46 @@ test.describe('bilingual, at the narrowest supported width', () => {
    ══════════════════════════════════════════════════════════════════════════════════════════════ */
 
 test.describe('the editor — the skill relation, which fails SILENTLY when it fails', () => {
+  test('loads and restores a page-2 Skill without group or collection query leakage', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL!)
+    await setBackendState(page, { skills: skillsForPicker() })
+    const skillRequests: URL[] = []
+    page.on('request', request => {
+      const url = new URL(request.url())
+      if (url.pathname.endsWith('/admin/skills')) skillRequests.push(url)
+    })
+    await page.goto(`/dashboard/experiences/${EXP.noSkills}?page=7&group=FRAMEWORK`)
+    await editorSettled(page)
+    await expect.poll(() => skillRequests.map(url => url.searchParams.get('page')))
+      .toEqual(expect.arrayContaining(['1', '2']))
+    for (const url of skillRequests) {
+      expect(url.searchParams.get('perPage')).toBe('50')
+      expect(url.searchParams.get('group')).toBeNull()
+      expect([...url.searchParams.keys()].sort()).toEqual(['page', 'perPage'])
+    }
+    const later = page.locator(`[data-technology="${LATER_SKILL}"]`)
+    await expect(later).toBeVisible()
+    await later.click()
+    expect(await selectedSkillIds(page)).toContain(LATER_SKILL)
+    await page.locator('[data-editor-save]').click()
+    await page.reload()
+    await editorSettled(page)
+    expect(await selectedSkillIds(page)).toContain(LATER_SKILL)
+  })
+
+  test('does not expose a partial Skill vocabulary when page 2 fails, then retries completely', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL!)
+    await setBackendState(page, { skills: skillsForPicker(), failVocabularyPage: 2 })
+    await page.goto(`/dashboard/experiences/${EXP.noSkills}`)
+    await expect(page.locator('[data-technologies-error]')).toBeVisible()
+    await expect(page.locator('[data-technology]')).toHaveCount(0)
+    await setBackendState(page, { failVocabularyPage: null })
+    await page.reload()
+    await editorSettled(page)
+    await expect(page.locator(`[data-technology="${LATER_SKILL}"]`)).toBeVisible()
+    await expect(page.locator('[data-technologies-error]')).toHaveCount(0)
+  })
+
   /**
    * ⚠ THE NO-TOUCH INVARIANT, asserted on the REQUEST BODY and not only on the outcome.
    *

@@ -29,7 +29,7 @@ mockNuxtImport('useApi', () => () => async (path: string, options: Record<string
     await new Promise<void>(resolve => holder.releases.push(resolve))
   }
   if (holder.status) throw holder.makeError?.(holder.status) ?? new Error('failed')
-  return { data: response }
+  return { data: response, meta: { page: 1, perPage: 12, total: response.length, totalPages: 1 } }
 })
 
 holder.makeError = status => new ApiError({ type: 'about:blank', title: 'failed', status })
@@ -47,12 +47,12 @@ for (const [name, useComposable, endpoint] of [
   ['Tags', useAdminTags, '/admin/tags']
 ] as const) {
   describe(`the ${name} collection read`, () => {
-    it('reads the whole list with no query parameters and locale suppressed', async () => {
+    it('reads the first collection page with locale suppressed', async () => {
       reset()
       const source = useComposable()
-      expect(Object.keys(source).sort()).toEqual(['failed', 'forbidden', 'items', 'load', 'pending'])
+      expect(Object.keys(source).sort()).toEqual(['failed', 'forbidden', 'items', 'load', 'pending', 'total', 'totalPages'])
       await source.load()
-      expect(holder.calls).toEqual([{ path: endpoint, options: { locale: false } }])
+      expect(holder.calls).toEqual([{ path: endpoint, options: { locale: false, query: { page: 1, perPage: 12 } } }])
       expect(source.items.value).toHaveLength(1)
       expect(source.pending.value).toBe(false)
       expect(source.failed.value).toBe(false)

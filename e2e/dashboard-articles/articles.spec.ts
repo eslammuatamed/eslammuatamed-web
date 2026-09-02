@@ -545,6 +545,17 @@ const PUBLISHED_BOTH_ID = '00000000-0000-4000-a000-000000000001'
 const EN_ONLY_ID = '00000000-0000-4000-a000-000000000003'
 /** The Arabic slug fixture `articles-server.ts` already owns, so a collision can be provoked. */
 const TAKEN_AR = 'الهندسة-المعمارية-المعيارية'
+const LATER_CATEGORY = '00000000-0000-4000-c000-000000000051'
+const LATER_TAG = '00000000-0000-4000-d000-000000000051'
+
+const categoriesForPicker = () => Array.from({ length: 51 }, (_, index) => ({
+  id: index === 50 ? LATER_CATEGORY : `00000000-0000-4000-c000-${String(index + 1).padStart(12, '0')}`,
+  translations: { en: { name: index === 50 ? 'Later Category' : `Category ${index + 1}`, slug: `category-${index + 1}`, description: null } }
+}))
+const tagsForPicker = () => Array.from({ length: 51 }, (_, index) => ({
+  id: index === 50 ? LATER_TAG : `00000000-0000-4000-d000-${String(index + 1).padStart(12, '0')}`,
+  translations: { en: { name: index === 50 ? 'Later Tag' : `Tag ${index + 1}`, slug: `tag-${index + 1}` } }
+}))
 
 const tab = (page: import('@playwright/test').Page, locale: 'en' | 'ar') =>
   page.locator('[data-editor-tabs]').getByRole('tab').nth(locale === 'en' ? 0 : 1)
@@ -583,6 +594,46 @@ test.describe('§14.9 criterion 3 — the editor never shows blank fields before
     await openEditor(page, baseURL as string, '/dashboard/articles/00000000-0000-4000-a000-0000000000ff')
     await expect(page.locator('[data-editor-unreadable]')).toBeVisible()
     await expect(page.locator('[data-editor-title="en"]')).toHaveCount(0)
+  })
+})
+
+test.describe('U5K — exhaustive taxonomy picker vocabulary', () => {
+  test('loads later Category and Tag pages, saves them, and restores both without collection query leakage', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL as string)
+    await setBackendState(page, { categories: categoriesForPicker(), tags: tagsForPicker() })
+    const vocabularyRequests: URL[] = []
+    page.on('request', request => {
+      const url = new URL(request.url())
+      if (url.pathname.endsWith('/admin/categories') || url.pathname.endsWith('/admin/tags')) vocabularyRequests.push(url)
+    })
+
+    await page.goto('/dashboard/articles/new?page=7&status=PUBLISHED')
+    await hydrated(page)
+    await expect(page.locator('[data-editor-category]')).toBeVisible()
+    await expect.poll(() => vocabularyRequests.filter(url => url.pathname.endsWith('/admin/categories')).map(url => url.searchParams.get('page')))
+      .toEqual(['1', '2'])
+    await expect.poll(() => vocabularyRequests.filter(url => url.pathname.endsWith('/admin/tags')).map(url => url.searchParams.get('page')))
+      .toEqual(['1', '2'])
+    for (const url of vocabularyRequests) {
+      expect(url.searchParams.get('perPage')).toBe('50')
+      expect([...url.searchParams.keys()].sort()).toEqual(['page', 'perPage'])
+    }
+
+    await page.locator('[data-editor-category]').click()
+    await page.getByRole('option', { name: 'Later Category' }).click()
+    await page.locator(`[data-editor-tag="${LATER_TAG}"]`).click()
+    await page.locator('[data-editor-title="en"]').fill('Later vocabulary article')
+    await page.locator('[data-editor-slug="en"]').fill('later-vocabulary-article')
+    await page.locator('[data-editor-excerpt="en"]').fill('An excerpt.')
+    await page.locator('[data-editor-body="en"]').fill('# Body')
+    const write = page.waitForRequest(request => request.method() === 'POST' && request.url().includes('/admin/articles'))
+    await page.locator('[data-editor-save]').click()
+    const body = (await write).postDataJSON() as { categoryId: string, tagIds: string[] }
+    expect(body).toMatchObject({ categoryId: LATER_CATEGORY, tagIds: [LATER_TAG] })
+    await page.waitForURL(/\/dashboard\/articles\/[0-9a-f-]{36}$/)
+    await page.reload()
+    await expect(page.locator('[data-editor-category]')).toContainText('Later Category')
+    await expect(page.locator(`[data-editor-tag="${LATER_TAG}"]`)).toHaveAttribute('aria-checked', 'true')
   })
 })
 

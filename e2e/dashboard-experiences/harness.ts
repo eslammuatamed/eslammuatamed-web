@@ -56,7 +56,14 @@ export async function resetBackend(page: Page): Promise<void> {
  */
 export async function setBackendState(
   page: Page,
-  state: { mode?: 'ok' | 'empty' | 'error' | 'forbidden', delayMs?: number, failNextWrite?: boolean }
+  state: {
+    mode?: 'ok' | 'empty' | 'error' | 'forbidden'
+    delayMs?: number
+    failNextWrite?: boolean
+    experiences?: unknown[]
+    skills?: unknown[]
+    failVocabularyPage?: number | null
+  }
 ): Promise<void> {
   const res = await page.request.post(`${CONTROL_BASE}/__e2e/state`, { data: state })
   expect(res.ok(), 'backend state change must succeed').toBe(true)

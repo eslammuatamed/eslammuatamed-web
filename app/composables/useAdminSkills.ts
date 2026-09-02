@@ -1,4 +1,4 @@
-import type { Envelope } from '~/types/models'
+import type { Paginated } from '~/types/models'
 import type { AdminSkill } from '~/composables/admin-project-types'
 import type { DashboardLocale } from '~/utils/dashboard-locale'
 import { ApiError } from '~/utils/api-error'
@@ -12,10 +12,8 @@ import { ApiError } from '~/utils/api-error'
  * `isPublic: false` — hidden skills keep their project links — and the public listing would simply
  * not contain it, leaving a saved technology invisible and un-deselectable in the editor.
  *
- * THE LIST IS UNPAGINATED AND UNFILTERED, by contract: the endpoint declares no query parameters and
- * answers `{ data: [...] }` with no `meta`. So this is one request for the whole vocabulary, and the
- * picker narrows it in the browser — which is correct HERE and nowhere else in this module, because
- * this is a closed vocabulary the API hands over whole, not a paginated collection.
+ * The picker exhausts every server page with a fixed `perPage=50`. `meta.totalPages`, not the page
+ * size, proves completeness; group is collection-only and intentionally omitted here.
  *
  * `locale: false`, as every admin call must be — `forbidNonWhitelisted` turns an unsolicited
  * `?locale=` into a 422 (see `useApi`).
@@ -39,9 +37,20 @@ export function useAdminSkills() {
     forbidden.value = false
     failed.value = false
     try {
-      const res = await api<Envelope<AdminSkill[]>>('/admin/skills', { locale: false })
+      const rows: AdminSkill[] = []
+      let page = 1
+      let totalPages = 1
+      while (page <= totalPages) {
+        const res = await api<Paginated<AdminSkill>>('/admin/skills', {
+          locale: false,
+          query: { page, perPage: 50 }
+        })
+        rows.push(...res.data)
+        totalPages = res.meta.totalPages
+        page += 1
+      }
       if (seq !== loadSeq) return
-      skills.value = [...res.data]
+      skills.value = rows
     } catch (error) {
       if (seq !== loadSeq) return
       skills.value = []

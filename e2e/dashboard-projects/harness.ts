@@ -43,6 +43,9 @@ export async function setBackendState(
     delayMs?: number
     nextWriteErrors?: Array<{ field: string, message: string }>
     failNextSkillWrite?: boolean
+    projects?: unknown[]
+    skills?: unknown[]
+    failVocabularyPage?: number | null
   }
 ): Promise<void> {
   const res = await page.request.post(`${CONTROL_BASE}/__e2e/state`, { data: state })

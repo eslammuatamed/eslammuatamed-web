@@ -266,7 +266,7 @@ function seedSkills(): SeedSkill[] {
 
 /** Mutable per-process state. Reset between specs through `POST /__e2e/reset`. */
 let experiences = seedExperiences()
-const skills = seedSkills()
+let skills = seedSkills()
 let mode: ExperienceMode = 'ok'
 /**
  * Milliseconds every `/admin/experiences*` response is held open for.
@@ -277,6 +277,8 @@ let mode: ExperienceMode = 'ok'
 let delayMs = 0
 /** Makes one write fail with a server error, to prove a failed save preserves the operator's input. */
 let failNextWrite = false
+/** Fails one requested Skill page so exhaustive-load atomicity is browser-provable. */
+let failVocabularyPage: number | null = null
 
 const OWNER = { id: '018f9d3c-1a2b-7c3d-8e4f-5a6b7c8d9e0f', email: 'owner@example.com', role: { name: 'OWNER' } }
 const EMPLOYMENT_TYPES: readonly EmploymentType[] = ['FULL_TIME', 'PART_TIME', 'CONTRACT', 'FREELANCE']
@@ -496,6 +498,18 @@ function skillEntities() {
   }))
 }
 
+function vocabularyPage<T>(rows: T[], url: URL) {
+  const readPositiveInt = (value: string | null, fallback: number) => {
+    const parsed = Number(value)
+    return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback
+  }
+  const page = readPositiveInt(url.searchParams.get('page'), 1)
+  const perPage = readPositiveInt(url.searchParams.get('perPage'), 12)
+  const total = rows.length
+  const totalPages = Math.max(1, Math.ceil(total / perPage))
+  return { data: rows.slice((page - 1) * perPage, page * perPage), meta: { page, perPage, total, totalPages } }
+}
+
 /**
  * ⚠ THE HANDLER IS WRAPPED, BECAUSE AN `async` LISTENER'S REJECTION KILLS THE PROCESS.
  *
@@ -537,9 +551,11 @@ async function handleRequest(req: http.IncomingMessage, res: http.ServerResponse
   // ── test control plane ───────────────────────────────────────────────────────────────────────
   if (path === '/__e2e/reset' && req.method === 'POST') {
     experiences = seedExperiences()
+    skills = seedSkills()
     mode = 'ok'
     delayMs = 0
     failNextWrite = false
+    failVocabularyPage = null
     return json(res, 200, { ok: true })
   }
   if (path === '/__e2e/state' && req.method === 'POST') {
@@ -548,11 +564,17 @@ async function handleRequest(req: http.IncomingMessage, res: http.ServerResponse
       delayMs?: number
       failNextWrite?: boolean
       experiences?: SeedExperience[]
+      skills?: SeedSkill[]
+      failVocabularyPage?: number | null
     }
     if (body.mode) mode = body.mode
     if (typeof body.delayMs === 'number') delayMs = Math.max(0, body.delayMs)
     if (typeof body.failNextWrite === 'boolean') failNextWrite = body.failNextWrite
     if (body.experiences) experiences = body.experiences
+    if (body.skills) skills = body.skills
+    if (body.failVocabularyPage === null || typeof body.failVocabularyPage === 'number') {
+      failVocabularyPage = body.failVocabularyPage
+    }
     return json(res, 200, { ok: true, mode, delayMs })
   }
 
@@ -577,14 +599,13 @@ async function handleRequest(req: http.IncomingMessage, res: http.ServerResponse
     })
   }
 
-  // ── admin skills — the picker's option source, READ-ONLY here ────────────────────────────────
-  // Unpaginated, exactly as the contract declares it (zero query parameters). Read-only because
-  // Skills is FE-3 module 2: this lane must not become the place the Skills module is designed.
+  // ── admin skills — the released paginated picker vocabulary contract ───────────────────────────
   if (path === `${API_PREFIX}/admin/skills` && req.method === 'GET') {
     if (!authorized(req)) return problem(res, 401, 'Unauthorized')
+    if (url.searchParams.get('page') === String(failVocabularyPage)) return problem(res, 500, 'Vocabulary page failed')
     if (mode === 'forbidden') return problem(res, 403, 'Forbidden')
     if (delayMs > 0) await sleep(delayMs)
-    return json(res, 200, { data: skillEntities() })
+    return json(res, 200, vocabularyPage(skillEntities(), url))
   }
 
   // ── admin experiences ────────────────────────────────────────────────────────────────────────

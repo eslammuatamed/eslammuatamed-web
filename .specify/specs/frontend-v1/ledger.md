@@ -5752,6 +5752,45 @@ untouched. No deployment occurred.
 
 ---
 
+## Acceptance Feedback U5K — complete picker vocabularies · COMPLETE · 2026-09-02
+
+The independent picker owners now exhaust the released paginated admin vocabulary contracts.
+`useAdminTaxonomy` loads Categories and Tags at `perPage=50` until server `meta.totalPages`; the
+shared Project/Experience SkillPicker owner does the same for Skills without a `group` query. Page
+size is an efficiency choice only: `meta.totalPages` is the completeness authority. Collection
+owners remain isolated: Categories and Tags retain `perPage=12`; Skills retains `perPage=12` plus
+its server-side group filter and URL state.
+
+Deterministic Article, Project, and Experience backends now serve canonical `{ data, meta }`
+vocabulary pages and accept controlled fixture replacement. Browser acceptance supplied 51-record
+vocabularies, proving page-2-only Category, Tag, Project Skill, and Experience Skill visibility,
+selection, save persistence, and reload restoration. Picker requests contained only `page` and
+`perPage=50`; neither collection URL page state nor Skills `group` leaked into them.
+
+The Experience SkillPicker failure control made page one succeed and page two fail. It rendered the
+existing vocabulary error state with no partial choices exposed; clearing the one-page failure and
+reloading obtained the complete vocabulary. The required negative control temporarily stopped the
+Skill loader after page one: the Project proof failed exactly because its observed page requests
+were `["1", "1"]`, missing required page two. The exhaustive loop was restored and the same proof
+passed once.
+
+### Verification
+
+| Check | Result |
+| --- | --- |
+| Article picker browser acceptance | 1/1, exit 0 — Category/Tag pages 1→2, page-2 selection, save payload, restoration, and no collection-query leakage. |
+| Project SkillPicker browser acceptance | 1/1, exit 0 — Skills pages 1→2, page-2 selection/restoration, no `group`, no collection-query leakage. |
+| Experience SkillPicker browser acceptance + atomic retry | 2/2, exit 0 — independent page-2 selection/restoration and page-2 failure clears all options, then retry restores the complete list. |
+| Bounded collection regression | 13/13, exit 0 — Categories/Tags use `perPage=12`; Skills uses `perPage=12` with preserved server group behavior; picker tests prove `perPage=50` follows `meta.totalPages`. |
+| Negative control | Project page-2 proof failed as intended with only `["1", "1"]`; restored loop rerun passed 1/1. |
+| `npm run typecheck:e2e` / `npm run lint` / `git diff --check` | exit 0 / exit 0 / exit 0. |
+| Analyzed build / route-size gate | `ANALYZE_BUNDLE=1 NUXT_PUBLIC_SITE_URL=https://example.com npm run build` and `NUXT_PUBLIC_SITE_URL=https://example.com npm run size:routes`, exit 0. Article new/edit: 120,053 / 122,880 B and 120,161 / 122,880 B; Project new/edit: 171,688 / 175,104 B and 171,866 / 176,128 B; Experience new/edit: 115,544 / 120,832 B and 115,652 / 121,856 B. |
+
+No route caps changed. No backend, OpenAPI, or generated API type changed. All Campaign 027
+backend-contract frontend integrations are complete. FE5-U6 and FE5-U7 remain not started.
+
+---
+
 ## Acceptance Feedback U5I — server-side Categories + Tags pagination · COMPLETE · 2026-09-02
 
 Starting frontend SHA: `6b677e0517618a2cabbf96fcaed0d7c63992af94`. This frontend-only unit consumes

@@ -45,6 +45,13 @@ const REQUIRED_PROJECT_FIELDS = [
   'title', 'slug', 'summary', 'overview', 'businessProblem', 'solution',
   'role', 'architecture', 'challenges', 'features', 'lessonsLearned'
 ] as const
+const LATER_SKILL = '00000000-0000-4000-b000-000000000051'
+const skillsForPicker = () => Array.from({ length: 51 }, (_, index) => ({
+  id: index === 50 ? LATER_SKILL : `00000000-0000-4000-b000-${String(index + 1).padStart(12, '0')}`,
+  slug: index === 50 ? 'later-project-skill' : `project-skill-${index + 1}`,
+  group: 'FRAMEWORK', brandColor: null, isPublic: true, order: index,
+  translations: { en: { label: index === 50 ? 'Later Project Skill' : `Project Skill ${index + 1}` } }
+}))
 
 async function fillTranslation(page: import('@playwright/test').Page, locale: 'en' | 'ar', prefix: string): Promise<void> {
   for (const field of REQUIRED_PROJECT_FIELDS) {
@@ -208,6 +215,33 @@ test.describe('request states, made observable by delayMs', () => {
 })
 
 test.describe('the technology picker', () => {
+  test('loads and restores a page-2 Skill without group or collection query leakage', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL!)
+    await setBackendState(page, { skills: skillsForPicker() })
+    const skillRequests: URL[] = []
+    page.on('request', request => {
+      const url = new URL(request.url())
+      if (url.pathname.endsWith('/admin/skills')) skillRequests.push(url)
+    })
+    await page.goto(`/dashboard/projects/${PRJ.main}?page=7&group=BACKEND`)
+    await editorSettled(page)
+    await expect.poll(() => skillRequests.map(url => url.searchParams.get('page')))
+      .toEqual(expect.arrayContaining(['1', '2']))
+    for (const url of skillRequests) {
+      expect(url.searchParams.get('perPage')).toBe('50')
+      expect(url.searchParams.get('group')).toBeNull()
+      expect([...url.searchParams.keys()].sort()).toEqual(['page', 'perPage'])
+    }
+    const later = page.locator(`[data-technology="${LATER_SKILL}"]`)
+    await expect(later).toBeVisible()
+    await later.click()
+    expect(await selectedTechnologyIds(page)).toContain(LATER_SKILL)
+    await saveAndSettle(page)
+    await page.reload()
+    await editorSettled(page)
+    expect(await selectedTechnologyIds(page)).toContain(LATER_SKILL)
+  })
+
   test('opens and cancels inline Skill creation without mutating a clean or edited Project', async ({ page, baseURL }) => {
     await signIn(page, 'en', baseURL!)
     await page.goto(`/dashboard/projects/${PRJ.main}`)
