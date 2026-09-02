@@ -18,7 +18,7 @@ import type { AdminArticle } from '~/composables/admin-article-types'
 /**
  * Dashboard Articles — the collection (doc 11; plan §14.9 criteria 1, 2, 6, 7, 8, 9, 10).
  *
- * URL IS THE SINGLE SOURCE OF TRUTH for the page and the status filter, as it is for Projects,
+ * URL IS THE SINGLE SOURCE OF TRUTH for the page, title search and status filter, as it is for Projects,
  * Messages and Media. Back, Forward, a reload and a shared link all reproduce the same view because
  * the view is derived from the address and from nothing else.
  *
@@ -78,6 +78,29 @@ function setStatus(value: AdminArticleStatusFilter): void {
   setQuery({ status: value === 'all' ? undefined : value, page: undefined })
 }
 
+/* ── title search ─────────────────────────────────────────────────────────────────────────────── */
+
+/**
+ * The input is a draft; the URL is the committed view. Explicit submit keeps history readable and
+ * prevents a request per keystroke. Back/Forward and deep links replace the draft from the URL.
+ */
+const searchInput = ref(parsed.value.q ?? '')
+
+watch(() => parsed.value.q, q => {
+  searchInput.value = q ?? ''
+})
+
+function submitSearch(): void {
+  const q = searchInput.value.slice(0, 120).trim()
+  searchInput.value = q
+  setQuery({ q: q === '' ? undefined : q, page: undefined })
+}
+
+function clearSearch(): void {
+  searchInput.value = ''
+  setQuery({ q: undefined, page: undefined })
+}
+
 function goToPage(next: number): void {
   setQuery({ page: next === 1 ? undefined : String(next) })
 }
@@ -108,7 +131,7 @@ const isEmpty = computed(() =>
   !pending.value && !failed.value && !forbidden.value && items.value.length === 0
 )
 
-const isFiltered = computed(() => parsed.value.status !== 'all')
+const isFiltered = computed(() => parsed.value.status !== 'all' || parsed.value.q !== undefined)
 
 /**
  * Article-specific column ownership stays with this page: Articles have server pagination and
@@ -153,11 +176,38 @@ watch(parsed, value => void load(value), { immediate: true, deep: true })
       </UButton>
     </div>
 
-    <!-- A real <section> with a name, so the control is a landmark rather than a stray select.
-         ONE filter, because the admin list endpoint takes exactly one — see admin-articles-query.ts
-         for why no search box is invented here. -->
+    <!-- A named landmark keeps the submitted server-side title search and status filter discoverable. -->
     <section :aria-label="t('dashboard.articles.filters.heading')" class="mb-6">
-      <div class="grid gap-3 sm:max-w-xs">
+      <div class="grid gap-3 sm:grid-cols-2">
+        <form data-articles-search-form @submit.prevent="submitSearch">
+          <UFormField :label="t('dashboard.articles.filters.search')">
+            <div class="flex gap-2">
+              <UInput
+                v-model="searchInput"
+                dir="auto"
+                icon="i-lucide-search"
+                type="search"
+                :maxlength="120"
+                data-articles-search
+                class="min-w-0 flex-1"
+                :placeholder="t('dashboard.articles.filters.searchPlaceholder')"
+              />
+              <UButton type="submit" color="neutral" variant="subtle" data-articles-search-submit>
+                {{ t('dashboard.articles.filters.searchSubmit') }}
+              </UButton>
+              <UButton
+                v-if="searchInput !== '' || parsed.q !== undefined"
+                type="button"
+                color="neutral"
+                variant="ghost"
+                icon="i-lucide-x"
+                data-articles-search-clear
+                :aria-label="t('dashboard.articles.filters.clearSearch')"
+                @click="clearSearch"
+              />
+            </div>
+          </UFormField>
+        </form>
         <UFormField :label="t('dashboard.articles.filters.status')">
           <USelect
             :model-value="parsed.status"

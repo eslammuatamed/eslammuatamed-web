@@ -99,6 +99,19 @@ describe('a failure for a DIFFERENT view', () => {
     expect(list.items.value).toHaveLength(0)
   })
 
+  it('CLEARS when a different title search fails — prior rows do not describe the new search', async () => {
+    reset()
+    const list = useAdminArticles()
+    await list.load(query({ q: 'nest' }))
+    expect(list.items.value).toHaveLength(1)
+
+    holder.status = 500
+    await list.load(query({ q: 'nestjs' }))
+
+    expect(list.items.value).toHaveLength(0)
+    expect(list.failed.value).toBe(true)
+  })
+
   it('CLEARS when the very first load fails, since there is nothing to preserve', async () => {
     reset()
     holder.status = 500
@@ -147,6 +160,26 @@ describe('out-of-order responses', () => {
     expect(list.items.value, 'a superseded response must not overwrite the newest').toHaveLength(2)
   })
 
+  it('discards an old-q response after a newer title search wins', async () => {
+    reset([ROW])
+    const list = useAdminArticles()
+
+    holder.release = () => {}
+    const first = list.load(query({ q: 'nest' }))
+
+    const parked = holder.release as unknown as () => void
+    holder.release = null
+    holder.rows = [ROW, { ...ROW, id: 'nestjs' }]
+    holder.total = 2
+    await list.load(query({ q: 'nestjs' }))
+
+    holder.rows = [ROW]
+    parked()
+    await first
+
+    expect(list.items.value.map(row => row.id)).toEqual(['a1', 'nestjs'])
+  })
+
   it('a SUPERSEDED failure does not raise an error against the newer view', async () => {
     reset([ROW])
     const list = useAdminArticles()
@@ -179,6 +212,30 @@ describe('the request it actually issues', () => {
 
     await list.load(query({ status: 'ARCHIVED' }))
     expect(holder.calls.at(-1)?.query).toEqual({ page: 1, perPage: 12, status: 'ARCHIVED' })
+  })
+
+  it('sends q with the exact page and status the URL committed', async () => {
+    reset()
+    const list = useAdminArticles()
+    await list.load(query({ page: 2, status: 'PUBLISHED', q: 'nestjs' }))
+
+    expect(holder.calls.at(-1)?.query).toEqual({ page: 2, perPage: 12, status: 'PUBLISHED', q: 'nestjs' })
+  })
+
+  it('retries the same q, status and page without filtering its server response locally', async () => {
+    reset([{ ...ROW, id: 'server-result' }])
+    const list = useAdminArticles()
+    const searched = query({ page: 2, status: 'PUBLISHED', q: 'nestjs' })
+    await list.load(searched)
+
+    // The result is accepted as the server's authoritative filter outcome; no title predicate runs here.
+    expect(list.items.value.map(row => row.id)).toEqual(['server-result'])
+
+    holder.status = 500
+    await list.load(searched)
+    holder.status = 0
+    await list.load(searched)
+    expect(holder.calls.at(-1)?.query).toEqual({ page: 2, perPage: 12, status: 'PUBLISHED', q: 'nestjs' })
   })
 
   it('is locale-agnostic on every call', async () => {

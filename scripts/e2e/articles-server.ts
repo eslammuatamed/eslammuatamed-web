@@ -122,7 +122,7 @@ function translation(over: Partial<SeedTranslation> & { title: string, slug: str
 }
 
 /**
- * The fixture set. Sized so pagination is REAL: `perPage` is 12, so 17 rows guarantee a second page
+ * The fixture set. Sized so pagination is REAL: `perPage` is 12, so 18 rows guarantee a second page
  * with a distinguishable tail rather than a page 2 that happens to repeat page 1.
  */
 export function seedArticles(): SeedArticle[] {
@@ -205,7 +205,7 @@ export function seedArticles(): SeedArticle[] {
   })
 
   // Filler, so page 2 exists and is distinguishable.
-  for (let i = 1; i <= 12; i++) {
+  for (let i = 1; i <= 25; i++) {
     rows.push({
       id: listId(i),
       status: i % 3 === 0 ? 'DRAFT' : 'PUBLISHED',
@@ -662,14 +662,25 @@ const server = http.createServer(async (req, res) => {
 
     if (rest === '' && req.method === 'GET') {
       const status = url.searchParams.get('status')
+      const q = url.searchParams.get('q')?.trim()
       const page = Math.max(1, Number(url.searchParams.get('page') ?? '1') || 1)
       const perPage = Math.min(
         PER_PAGE_MAX,
         Math.max(1, Number(url.searchParams.get('perPage') ?? String(DEFAULT_PER_PAGE)) || DEFAULT_PER_PAGE)
       )
 
+      if (q && q.length > 120) return problem(res, 422, 'Validation failed', 'q must not exceed 120 characters.')
+
       let pool = mode === 'empty' ? [] : articles
       if (status) pool = pool.filter(a => a.status === status)
+      if (q) {
+        const needle = q.toLocaleLowerCase()
+        // Production owns the whole title-only predicate across every authored locale. Keeping it at
+        // the mock boundary lets browser tests prove query parameters and server metadata together.
+        pool = pool.filter(article =>
+          Object.values(article.translations).some(translation => translation.title.toLocaleLowerCase().includes(needle))
+        )
+      }
 
       const sorted = ordered(pool)
       const total = sorted.length

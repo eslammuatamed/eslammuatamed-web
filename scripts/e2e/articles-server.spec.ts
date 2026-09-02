@@ -254,6 +254,29 @@ describe('list shaping', () => {
     expect(archived.data.map((a: { id: string }) => a.id)).toEqual([ART.archived])
   })
 
+  it('filters title-only across authored locales, case-insensitively, and paginates the filtered set', async () => {
+    const english = await (await api('/admin/articles?q=LISTED%20ARTICLE&page=2')).json()
+    expect(english.meta).toMatchObject({ page: 2, perPage: 12, total: 25, totalPages: 3 })
+    expect(english.data).toHaveLength(12)
+    expect(english.data.every((article: { translations: { en: { title: string } } }) =>
+      article.translations.en.title.toLowerCase().includes('listed article')
+    )).toBe(true)
+
+    const arabic = await (await api('/admin/articles?q=%D9%85%D9%82%D8%A7%D9%84%D8%A9%20%D9%85%D8%AF%D8%B1%D8%AC%D8%A9%202')).json()
+    expect(arabic.data.map((article: { id: string }) => article.id)).toContain('00000000-0000-4000-a000-000000000102')
+    expect(arabic.data.every((article: { translations: { ar: { title: string } } }) =>
+      article.translations.ar.title.includes('مقالة مدرجة 2')
+    )).toBe(true)
+
+    const status = await (await api('/admin/articles?q=listed&status=DRAFT')).json()
+    expect(status.data).toHaveLength(8)
+    expect(status.data.every((article: { status: string }) => article.status === 'DRAFT')).toBe(true)
+  })
+
+  it('rejects a search longer than the Production contract permits', async () => {
+    expect((await api(`/admin/articles?q=${'x'.repeat(121)}`)).status).toBe(422)
+  })
+
   it('answers an EMPTY list distinctly from an error', async () => {
     await setState({ mode: 'empty' })
     const res = await api('/admin/articles')

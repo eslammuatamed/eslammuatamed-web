@@ -554,7 +554,7 @@
       "emptyTitle": "لا توجد مقالات بعد",
       "emptyBody": "اكتب أول مقالة وستظهر هنا.",
       "emptyFilteredTitle": "لا شيء يطابق هذا المرشّح",
-      "emptyFilteredBody": "غيِّر مرشّح الحالة لرؤية المزيد.",
+      "emptyFilteredBody": "غيِّر بحث العنوان أو مرشّح الحالة لرؤية المزيد.",
       "listRegionLabel": "المقالات",
       "resultCount": "{total} مقالة · صفحة {page} من {pages}",
       "untitled": "مقالة بلا عنوان",
@@ -563,6 +563,10 @@
       "editFor": "تحرير {title}",
       "filters": {
         "heading": "المرشّحات",
+        "search": "البحث في عناوين المقالات",
+        "searchPlaceholder": "ابحث في العناوين بأي لغة",
+        "searchSubmit": "بحث",
+        "clearSearch": "مسح بحث العنوان",
         "status": "الحالة",
         "allStatuses": "كل الحالات"
       },

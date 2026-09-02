@@ -554,7 +554,7 @@
       "emptyTitle": "No articles yet",
       "emptyBody": "Write the first article and it will appear here.",
       "emptyFilteredTitle": "Nothing matches this filter",
-      "emptyFilteredBody": "Change the status filter to see more.",
+      "emptyFilteredBody": "Change the title search or status filter to see more.",
       "listRegionLabel": "Articles",
       "resultCount": "{total} articles · page {page} of {pages}",
       "untitled": "Untitled article",
@@ -563,6 +563,10 @@
       "editFor": "Edit {title}",
       "filters": {
         "heading": "Filters",
+        "search": "Search article titles",
+        "searchPlaceholder": "Search titles in any language",
+        "searchSubmit": "Search",
+        "clearSearch": "Clear title search",
         "status": "Status",
         "allStatuses": "All statuses"
       },

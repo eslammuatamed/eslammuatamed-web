@@ -5671,3 +5671,43 @@ and Experience editors. Article search integration remains owned by `admin-artic
 `useAdminArticles.ts`. No product source changed in this unit. **Frontend implementation resumes from
 this final contract baseline; U5G remains not yet implemented, and FE5-U6 and FE5-U7 remain not
 started.**
+
+---
+
+## Acceptance Feedback U5G — server-side Article title search · COMPLETE · 2026-09-02
+
+Starting committed HEAD: `1c597259426870ccbe54820123a2cfde5cc47218`. This frontend-only continuation
+adopts the final Production contract from backend `origin/main`
+`9da49f71d41f2275e588db479329df4998364fe4` and R4's byte-identical OpenAPI artifact. The generated
+Article endpoint already declares optional `q`; neither the vendored OpenAPI nor `app/types/api.d.ts`
+changed here.
+
+`/dashboard/articles` now has an explicit title-search input with submit/Enter and clear controls.
+The committed URL is the one source of truth for `q`, `status`, and `page`; a draft input avoids
+requests per keystroke. Search trims input, clamps it to 120 characters, omits blank `q`, preserves
+status, resets pagination in the same router navigation, and restores input state through deep links
+and browser history. The request sends `q` exactly to `GET /admin/articles`; data is still wholly
+server-filtered, server-ordered, and server-paginated. Both EN and AR labels are localized, and the
+title input and authored title rows use `dir="auto"`.
+
+Stale-response handling now keys the displayed view by `[status, page, q]` as well as using the
+existing monotonic request sequence. Thus an old search result or a failed different search cannot
+overwrite or falsely remain beneath the newer title query. The deterministic Articles E2E backend
+models Production's case-insensitive title-only match across all authored locales, validates the
+120-character boundary, and supplies enough matching rows to exercise filtered pagination.
+
+### Verification
+
+| Check | Result |
+| --- | --- |
+| Focused query, composable, page, and deterministic-backend units | 76/76, exit 0 — parse/trim/clamp/URL transport, `q` identity, no local filtering, EN/AR, reset/clear/history, retry/error, stale order, and the mock contract |
+| `q` stale-identity negative control | Temporarily removing `q` from `adminArticlesQueryKey` made `CLEARS when a different title search fails` fail with one prior row; restoring it made the exact test pass. |
+| Focused U5G browser coverage | 9/9, exit 0 — keyboard submit, EN/AR results, URL/API parameters, status and pagination preservation, clear, deep/back/forward, stale response, empty, failure, and retry. |
+| Complete Dashboard Articles browser project | 57/57, exit 0 — U5G coverage plus existing list, request-state, bilingual direction/axe, and editor workflows. |
+| `npm run typecheck:e2e` / `npm run typecheck` / `npm run lint` / `git diff --check` | exit 0 / exit 0 / exit 0 / exit 0 |
+| Analysis build / normal route-size gate | `ANALYZE_BUNDLE=1 NUXT_PUBLIC_SITE_URL=https://example.com npm run build` and `NUXT_PUBLIC_SITE_URL=https://example.com npm run size:routes`, exit 0. `/dashboard/articles` measured 97,782 B app-owned / 102,400 B frozen cap (4,618 B headroom). |
+
+No route-governance or cap change was made. The ordinary D20-32 gate passes for Articles; the normal
+report retains its existing D20-24 quality-target warning for this route (335.0 KB gzip) while the
+shared-floor, incremental, CSS, and frozen app-owned cap pass. No backend/API/type change, unrelated
+product work, FE5-U6, or FE5-U7 was started.

@@ -54,6 +54,26 @@ import {
 const UPDATING = (page: import('@playwright/test').Page) =>
   page.locator('[role=status][aria-live="polite"][aria-busy="true"]')
 
+function waitForArticlesRequest(
+  page: import('@playwright/test').Page,
+  expected: Record<string, string | null>
+) {
+  return page.waitForRequest(request => {
+    if (request.method() !== 'GET') return false
+    const url = new URL(request.url())
+    if (url.pathname !== '/api/v1/admin/articles') return false
+    return Object.entries(expected).every(([key, value]) => url.searchParams.get(key) === value)
+  })
+}
+
+async function submitTitleSearch(page: import('@playwright/test').Page, q: string) {
+  const request = waitForArticlesRequest(page, { q })
+  await page.locator('[data-articles-search]').fill(q)
+  await page.locator('[data-articles-search]').press('Enter')
+  await request
+  await listSettled(page)
+}
+
 test.beforeEach(async ({ page }) => {
   await resetBackend(page)
   await page.setViewportSize(DESKTOP)
@@ -110,6 +130,153 @@ test.describe('reachability and the list', () => {
 
     expect(secondPageTitles.length).toBeGreaterThan(0)
     expect(secondPageTitles, 'page 2 must not repeat page 1').not.toEqual(firstPageTitles)
+  })
+})
+
+test.describe('U5G — server-side article title search', () => {
+  test('renders an explicit, keyboard-submittable search control', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL as string)
+    await page.goto('/dashboard/articles')
+    await hydrated(page)
+    await expect(page.locator('[data-articles-search]')).toBeVisible()
+    await expect(page.locator('[data-articles-search-form]')).toBeVisible()
+    await expect(page.locator('[data-articles-search]')).toHaveAttribute('dir', 'auto')
+  })
+
+  test('sends an English q and renders the server result without local filtering', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL as string)
+    await page.goto('/dashboard/articles')
+    await hydrated(page)
+    await submitTitleSearch(page, 'listed article 19')
+
+    const query = new URL(page.url()).searchParams
+    expect(query.get('q')).toBe('listed article 19')
+    await expect(page.locator('[data-article-title]')).toHaveText(['Listed article 19'])
+  })
+
+  test('sends Arabic q across authored locales and renders the Arabic server result', async ({ page, baseURL }) => {
+    await signIn(page, 'ar', baseURL as string)
+    await page.goto('/dashboard/articles')
+    await hydrated(page)
+    await submitTitleSearch(page, 'مقالة مدرجة 19')
+
+    await expect(page.locator('[data-article-title]')).toHaveText(['مقالة مدرجة 19'])
+  })
+
+  test('search resets page once, preserves status, and sends both query parameters', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL as string)
+    await page.goto('/dashboard/articles?page=2&status=PUBLISHED')
+    await hydrated(page)
+    await listSettled(page)
+
+    const request = waitForArticlesRequest(page, { q: 'listed', status: 'PUBLISHED', page: '1' })
+    await page.locator('[data-articles-search]').fill(' listed ')
+    await page.locator('[data-articles-search]').press('Enter')
+    await request
+    await listSettled(page)
+
+    const query = new URL(page.url()).searchParams
+    expect(query.get('q')).toBe('listed')
+    expect(query.get('status')).toBe('PUBLISHED')
+    expect(query.get('page')).toBeNull()
+  })
+
+  test('status and pagination preserve q', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL as string)
+    await page.goto('/dashboard/articles?q=listed')
+    await hydrated(page)
+    await listSettled(page)
+
+    const statusRequest = waitForArticlesRequest(page, { q: 'listed', status: 'PUBLISHED', page: '1' })
+    await page.locator('[data-articles-status]').click()
+    await page.getByRole('option', { name: 'Published', exact: true }).click()
+    await statusRequest
+    await listSettled(page)
+    expect(new URL(page.url()).searchParams.get('q')).toBe('listed')
+
+    await page.goto('/dashboard/articles?q=listed')
+    await hydrated(page)
+    await listSettled(page)
+    await expect(page.locator('[data-articles-count]')).toContainText('25')
+    await page.locator('[data-articles-pagination]').getByRole('button', { name: 'Page 2', exact: true }).click()
+    await page.waitForURL(/[?&]page=2/)
+    await listSettled(page)
+    expect(new URL(page.url()).searchParams.get('q')).toBe('listed')
+    expect(new URL(page.url()).searchParams.get('page')).toBe('2')
+  })
+
+  test('clearing removes q, returns to page 1, and makes an unfiltered request', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL as string)
+    await page.goto('/dashboard/articles?q=listed&page=2')
+    await hydrated(page)
+    await listSettled(page)
+
+    const request = waitForArticlesRequest(page, { q: null, page: '1' })
+    await page.locator('[data-articles-search-clear]').click()
+    await request
+    await listSettled(page)
+    const query = new URL(page.url()).searchParams
+    expect(query.get('q')).toBeNull()
+    expect(query.get('page')).toBeNull()
+  })
+
+  test('deep links and browser history restore the committed q without leaving Articles', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL as string)
+    const deepLinkRequest = waitForArticlesRequest(page, { q: 'listed', page: '2' })
+    await page.goto('/dashboard/articles?q=listed&page=2')
+    await deepLinkRequest
+    await hydrated(page)
+    await listSettled(page)
+    await expect(page.locator('[data-articles-search]')).toHaveValue('listed')
+
+    await submitTitleSearch(page, 'listed article 19')
+    await page.goBack()
+    await page.waitForURL(/q=listed&page=2/)
+    await expect(page.locator('[data-articles-search]')).toHaveValue('listed')
+    await page.goForward()
+    await page.waitForURL(/q=listed(?:%20|\+)article(?:%20|\+)19/)
+    await expect(page.locator('[data-articles-search]')).toHaveValue('listed article 19')
+    expect(new URL(page.url()).pathname).toBe('/dashboard/articles')
+  })
+
+  test('a slow old-q response cannot overwrite the newer result', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL as string)
+    await setBackendState(page, { delayMs: 1200 })
+    const oldRequest = waitForArticlesRequest(page, { q: 'listed' })
+    const oldResponse = page.waitForResponse(response => {
+      const url = new URL(response.url())
+      return url.pathname === '/api/v1/admin/articles' && url.searchParams.get('q') === 'listed'
+    })
+    await page.goto('/dashboard/articles?q=listed')
+    await oldRequest
+    await hydrated(page)
+
+    await setBackendState(page, { delayMs: 0 })
+    await submitTitleSearch(page, 'listed article 19')
+    await expect(page.locator('[data-article-title]')).toHaveText(['Listed article 19'])
+    await oldResponse
+    await expect(page.locator('[data-article-title]')).toHaveText(['Listed article 19'])
+  })
+
+  test('a no-match search is empty, while failure retry preserves q, status and page', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL as string)
+    await page.goto('/dashboard/articles?q=does-not-exist')
+    await hydrated(page)
+    await listSettled(page)
+    await expect(page.locator('[data-articles-empty]')).toBeVisible()
+    await expect(rows(page)).toHaveCount(0)
+
+    await setBackendState(page, { mode: 'error' })
+    await page.goto('/dashboard/articles?q=listed&status=PUBLISHED&page=2')
+    await hydrated(page)
+    await expect(page.locator('[data-articles-failed]')).toBeVisible()
+
+    await setBackendState(page, { mode: 'ok' })
+    const retryRequest = waitForArticlesRequest(page, { q: 'listed', status: 'PUBLISHED', page: '2' })
+    await page.locator('[data-articles-failed] button').click()
+    await retryRequest
+    await listSettled(page)
+    expect(new URL(page.url()).pathname).toBe('/dashboard/articles')
   })
 })
 
@@ -363,7 +530,7 @@ test.describe('accessibility, direction and 380px', () => {
 
     // Field content direction is independent of chrome direction — the OD-11 contract.
     await expect(shell(page), 'the shell stays LTR').toHaveAttribute('dir', 'ltr')
-    const arabicSlugs = page.locator('[data-article-row] [dir=rtl]')
+    const arabicSlugs = page.locator('[data-articles-table] code[dir=rtl]')
     await expect(arabicSlugs).not.toHaveCount(0)
     expect((await arabicSlugs.allInnerTexts()).join(' ')).toMatch(ARABIC)
   })
