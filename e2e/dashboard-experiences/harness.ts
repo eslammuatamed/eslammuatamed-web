@@ -56,7 +56,14 @@ export async function resetBackend(page: Page): Promise<void> {
  */
 export async function setBackendState(
   page: Page,
-  state: { mode?: 'ok' | 'empty' | 'error' | 'forbidden', delayMs?: number, failNextWrite?: boolean }
+  state: {
+    mode?: 'ok' | 'empty' | 'error' | 'forbidden'
+    delayMs?: number
+    failNextWrite?: boolean
+    experiences?: unknown[]
+    skills?: unknown[]
+    failVocabularyPage?: number | null
+  }
 ): Promise<void> {
   const res = await page.request.post(`${CONTROL_BASE}/__e2e/state`, { data: state })
   expect(res.ok(), 'backend state change must succeed').toBe(true)
@@ -73,6 +80,11 @@ export async function signIn(page: Page, locale: 'en' | 'ar', baseURL: string): 
 }
 
 export const rows = (page: Page) => page.locator('[data-experience-row]')
+
+/** A table row is anchored by the stable role identity rendered in its first cell. */
+export const tableRowFor = (page: Page, experienceId: string) => page.locator('tr').filter({
+  has: page.locator(`[data-experience-row="${experienceId}"]`)
+})
 
 /** The dashboard shell root. NOT `[dir]`, which resolves to `<html>` and lies (FE-2a finding). */
 export const shell = (page: Page) => page.locator('[data-shell="dashboard"]')
@@ -93,9 +105,9 @@ export const shell = (page: Page) => page.locator('[data-shell="dashboard"]')
  * only then require that nothing is still busy. An absence is not evidence of completion.
  */
 export async function listSettled(page: Page): Promise<void> {
-  await page.locator(
+  await expect(page.locator(
     '[data-experience-row], [data-experiences-empty], [data-experiences-failed], [data-experiences-forbidden]'
-  ).first().waitFor({ timeout: 15_000 })
+  )).not.toHaveCount(0)
   await expect(page.locator('[aria-busy=true]')).toHaveCount(0, { timeout: 15_000 })
 }
 

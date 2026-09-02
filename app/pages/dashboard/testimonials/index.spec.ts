@@ -9,6 +9,8 @@ import type { AdminTestimonial } from '~/composables/admin-testimonial-types'
 const holder = vi.hoisted(() => ({
   calls: [] as Array<{ path: string, options: Record<string, unknown> }>,
   rows: [] as unknown[],
+  total: 0,
+  totalPages: 1,
   status: 0,
   release: null as null | (() => void),
   makeError: null as null | ((status: number) => unknown)
@@ -18,7 +20,7 @@ mockNuxtImport('useApi', () => () => async (path: string, options: Record<string
   holder.calls.push({ path, options })
   if (holder.release !== null) await new Promise<void>(resolve => { holder.release = resolve })
   if (holder.status) throw holder.makeError?.(holder.status) ?? new Error('failed')
-  return { data: holder.rows }
+  return { data: holder.rows, meta: { page: 1, perPage: 12, total: holder.total, totalPages: holder.totalPages } }
 })
 
 holder.makeError = status => new ApiError({ type: 'about:blank', title: 'failed', status })
@@ -44,9 +46,11 @@ afterEach(() => {
   mounted = null
 })
 
-async function mount(options: { rows?: unknown[], status?: number, park?: boolean } = {}) {
+async function mount(options: { rows?: unknown[], total?: number, totalPages?: number, status?: number, park?: boolean } = {}) {
   holder.calls = []
   holder.rows = options.rows ?? [testimonial()]
+  holder.total = options.total ?? holder.rows.length
+  holder.totalPages = options.totalPages ?? 1
   holder.status = options.status ?? 0
   holder.release = options.park ? () => {} : null
   const wrapper = await mountSuspended(TestimonialsList)
@@ -75,9 +79,10 @@ describe('the collection request-state contract', () => {
     expect(page.find('[data-testimonials-empty]').exists()).toBe(false)
   })
 
-  it('renders loaded rows as content', async () => {
+  it('renders loaded rows in the Testimonials UTable', async () => {
     const page = await mount({ rows: [testimonial()] })
     expect(page.find('[data-testimonials-loaded]').exists()).toBe(true)
+    expect(page.find('[data-testimonials-table]').exists()).toBe(true)
     expect(page.findAll('[data-testimonial-row]')).toHaveLength(1)
     expect(page.find('[data-testimonials-empty]').exists()).toBe(false)
     expect(page.find('[data-testimonials-failed]').exists()).toBe(false)
@@ -92,9 +97,9 @@ describe('the collection request-state contract', () => {
 })
 
 describe('the contract-driven collection shape', () => {
-  it('requests the whole list with no query and locale suppressed', async () => {
+  it('requests the canonical first server page and locale is suppressed', async () => {
     await mount()
-    expect(holder.calls).toEqual([{ path: '/admin/testimonials', options: { locale: false } }])
+    expect(holder.calls).toEqual([{ path: '/admin/testimonials', options: { locale: false, query: { page: 1, perPage: 12 } } }])
   })
 
   it('renders rows in the received order even when order values run backwards', async () => {
@@ -110,6 +115,11 @@ describe('the contract-driven collection shape', () => {
     expect(page.find('[data-testimonial-order="first-sent"]').text()).toBe('10')
     expect(page.find('[data-testimonials-pagination]').exists()).toBe(false)
     expect(page.find('[data-testimonials-filter]').exists()).toBe(false)
+  })
+
+  it('renders the pagination control from server metadata', async () => {
+    const page = await mount({ rows: [testimonial()], total: 13, totalPages: 2 })
+    expect(page.find('[data-testimonials-pagination]').exists()).toBe(true)
   })
 
   it('reports one-locale testimonials as incomplete instead of substituting the other locale', async () => {

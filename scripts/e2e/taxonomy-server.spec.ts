@@ -11,7 +11,7 @@ import {
  * Calibration for the Taxonomy e2e instrument (Categories + Tags), not a product test.
  *
  * The load-bearing rules are negative-controlled by mutating this instrument's sibling source file,
- * running the targeted test, restoring byte-for-byte, and rerunning: array-shaped lists, PATCH
+ * running the targeted test, restoring byte-for-byte, and rerunning: paginated list reads, PATCH
  * upsert-without-replace, omission preserves, empty-array no-op, explicit-null description clears,
  * the documented category 409, and the ABSENCE of any fabricated tag relation conflict.
  */
@@ -53,9 +53,25 @@ const SEED_ORDER: Record<TaxonomyKind, string[]> = {
   tags: [TAG_IDS.oldest, TAG_IDS.enOnly, TAG_IDS.middle]
 }
 
+const PAGINATED_SEED_ORDER: Record<TaxonomyKind, string[]> = {
+  categories: [
+    ...SEED_ORDER.categories,
+    ...Array.from({ length: 9 }, (_, index) => `00000000-0000-4000-a100-1000000000${String(index + 1).padStart(2, '0')}`)
+  ],
+  tags: [
+    ...SEED_ORDER.tags,
+    ...Array.from({ length: 10 }, (_, index) => `00000000-0000-4000-a200-1000000000${String(index + 1).padStart(2, '0')}`)
+  ]
+}
+
+const listPage = async (kind: TaxonomyKind, page: number, perPage: number) =>
+  (await (await api(`/admin/${kind}?page=${page}&perPage=${perPage}`)).json()) as {
+    data: Row[]
+    meta: { page: number, perPage: number, total: number, totalPages: number }
+  }
+
 const listIds = async (kind: TaxonomyKind): Promise<string[]> => {
-  const body = await (await api(`/admin/${kind}`)).json()
-  return (body.data as Row[]).map(row => row.id)
+  return (await listPage(kind, 1, 50)).data.map(row => row.id)
 }
 
 /**
@@ -64,7 +80,7 @@ const listIds = async (kind: TaxonomyKind): Promise<string[]> => {
  * entities carry every field an edit flow needs.
  */
 const getRow = async (kind: TaxonomyKind, id: string): Promise<Row> => {
-  const row = (await (await api(`/admin/${kind}`)).json()).data.find((candidate: Row) => candidate.id === id)
+  const row = (await listPage(kind, 1, 50)).data.find(candidate => candidate.id === id)
   expect(row, `${kind}/${id} present in the list`).toBeDefined()
   return row as Row
 }
@@ -76,40 +92,39 @@ const workTarget: Record<TaxonomyKind, string> = {
   tags: TAG_IDS.oldest
 }
 
-describe('the list read contract — array-shaped, ordered, parameterless', () => {
+describe('the list read contract — paginated and server-ordered', () => {
   it.each<TaxonomyKind>(['categories', 'tags'])(
-    '%s: answers { data } with no pagination meta and preserves SERVER order',
+    '%s: answers page one with { data, meta } and preserves SERVER order',
     async kind => {
       const res = await api(`/admin/${kind}`)
       expect(res.status).toBe(200)
       const body = await res.json()
       expect(Array.isArray(body.data)).toBe(true)
-      expect(body.meta).toBeUndefined()
-      expect(body.data.map((row: Row) => row.id)).toEqual(SEED_ORDER[kind])
+      expect(body.meta).toEqual({ page: 1, perPage: 12, total: 13, totalPages: 2 })
+      expect(body.data.map((row: Row) => row.id)).toEqual(PAGINATED_SEED_ORDER[kind].slice(0, 12))
     }
   )
 
-  it.each<TaxonomyKind>(['categories', 'tags'])('%s: list is exactly the seeded rows in order', async kind => {
-    expect(await listIds(kind)).toEqual(SEED_ORDER[kind])
+  it.each<TaxonomyKind>(['categories', 'tags'])('%s: exposes the final seeded row on valid page two', async kind => {
+    const body = await listPage(kind, 2, 12)
+    expect(body.meta).toEqual({ page: 2, perPage: 12, total: 13, totalPages: 2 })
+    expect(body.data.map(row => row.id)).toEqual(PAGINATED_SEED_ORDER[kind].slice(12))
   })
 
   it.each<TaxonomyKind>(['categories', 'tags'])(
-    '%s: rejects unsolicited list query parameters instead of pretending to honour them',
+    '%s: honours requested page and perPage values when slicing server order',
     async kind => {
-      for (const query of ['page=2', 'search=systems', 'locale=en']) {
-        const res = await api(`/admin/${kind}?${query}`)
-        expect(res.status, query).toBe(422)
-        const body = await res.json()
-        expect(body.status).toBe(422)
-        expect(body.errors).toBeUndefined()
-      }
+      const body = await listPage(kind, 2, 2)
+      expect(body.meta).toEqual({ page: 2, perPage: 2, total: 13, totalPages: 7 })
+      expect(body.data.map(row => row.id)).toEqual(PAGINATED_SEED_ORDER[kind].slice(2, 4))
     }
   )
 
-  it.each<TaxonomyKind>(['categories', 'tags'])('%s: empty mode answers { data: [] }', async kind => {
+  it.each<TaxonomyKind>(['categories', 'tags'])('%s: empty mode answers an empty paginated envelope', async kind => {
     await setState({ mode: 'empty' })
     const body = await (await api(`/admin/${kind}`)).json()
     expect(body.data).toEqual([])
+    expect(body.meta).toEqual({ page: 1, perPage: 12, total: 0, totalPages: 1 })
   })
 })
 
@@ -163,11 +178,16 @@ describe('create — translations required, array becomes keyed map', () => {
     })
   })
 
-  it.each<TaxonomyKind>(['categories', 'tags'])('%s: create appends at the END of server order', async kind => {
+  it.each<TaxonomyKind>(['categories', 'tags'])('%s: create prepends to page one and shifts the remaining rows', async kind => {
     const created = await api(`/admin/${kind}`, { method: 'POST', body: JSON.stringify(valid[kind]) })
     expect(created.status).toBe(201)
-    const ids = await listIds(kind)
-    expect(ids[ids.length - 1]).toBe(((await created.json()).data as Row).id)
+    const entity = (await created.json()).data as Row
+    const pageOne = await listPage(kind, 1, 12)
+    const pageTwo = await listPage(kind, 2, 12)
+    expect(pageOne.meta).toEqual({ page: 1, perPage: 12, total: 14, totalPages: 2 })
+    expect(pageTwo.meta).toEqual({ page: 2, perPage: 12, total: 14, totalPages: 2 })
+    expect(pageOne.data.map(row => row.id)).toEqual([entity.id, ...PAGINATED_SEED_ORDER[kind].slice(0, 11)])
+    expect(pageTwo.data.map(row => row.id)).toEqual(PAGINATED_SEED_ORDER[kind].slice(11))
   })
 })
 
@@ -408,12 +428,14 @@ describe('delete — documented outcomes only', () => {
     expect(await listIds('categories')).toContain(CATEGORY_IDS.oldest)
   })
 
-  it('tags delete WITHOUT any relation case — every tag answers 204', async () => {
+  it('tags delete WITHOUT any relation case — removes only the explicitly deleted original rows', async () => {
     for (const id of [TAG_IDS.oldest, TAG_IDS.enOnly, TAG_IDS.middle]) {
       const res = await api(`/admin/tags/${id}`, { method: 'DELETE' })
       expect(res.status, id).toBe(204)
     }
-    expect(await listIds('tags')).toEqual([])
+    const remaining = await listPage('tags', 1, 50)
+    expect(remaining.meta).toEqual({ page: 1, perPage: 50, total: 10, totalPages: 1 })
+    expect(remaining.data.map(row => row.id)).toEqual(PAGINATED_SEED_ORDER.tags.slice(3))
   })
 })
 

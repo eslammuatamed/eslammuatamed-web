@@ -106,13 +106,17 @@ async function signOut(): Promise<void> {
                 :aria-label="t('dashboard.nav.openMenu')"
                 @click="() => { drawerOpen = true }"
               />
-              <span class="truncate font-semibold text-highlighted">{{ t('dashboard.title') }}</span>
+              <span class="max-[379px]:hidden truncate font-semibold text-highlighted">{{ t('dashboard.title') }}</span>
             </div>
 
-            <div class="flex items-center gap-2">
-              <!--
-                The owner's "View site" affordance — the fix for having to hand-edit the URL to
-                reach the public site.
+            <div class="flex min-w-0 items-center gap-3" data-dashboard-header-actions>
+              <div
+                class="flex shrink-0 items-center gap-1.5 border-e border-default pe-3"
+                data-dashboard-workspace-controls
+              >
+                <!--
+                  The owner's "View site" affordance — the fix for having to hand-edit the URL to
+                  reach the public site.
 
                 A NEW TAB, as a product decision rather than a default. The dashboard holds an
                 in-memory access token (D11-1) and, on an editor route, unsaved work; navigating away
@@ -121,25 +125,27 @@ async function signOut(): Promise<void> {
                 `rel="noopener"` because a new tab inherits `window.opener` otherwise, and the new-tab
                 behaviour is ANNOUNCED rather than left to be inferred from an icon.
 
-                Label hidden below `sm` so the four header controls still fit at 380px; the icon
-                keeps an accessible name either way.
-              -->
-              <UButton
-                :to="publicSiteHref"
-                target="_blank"
-                rel="noopener"
-                color="neutral"
-                variant="ghost"
-                size="sm"
-                icon="i-lucide-external-link"
-                :aria-label="t('dashboard.shell.viewSite')"
-              >
-                <span class="hidden sm:inline">{{ t('dashboard.shell.viewSite') }}</span>
-                <span class="sr-only">{{ t('a11y.opensInNewTab') }}</span>
-              </UButton>
+                  Label hidden below `sm` so the four header controls still fit at 380px; the icon
+                  keeps an accessible name either way.
+                -->
+                <UButton
+                  :to="publicSiteHref"
+                  target="_blank"
+                  rel="noopener"
+                  color="neutral"
+                  variant="ghost"
+                  size="sm"
+                  icon="i-lucide-external-link"
+                  :aria-label="t('dashboard.shell.viewSite')"
+                  data-dashboard-view-site
+                >
+                  <span class="hidden sm:inline">{{ t('dashboard.shell.viewSite') }}</span>
+                  <span class="sr-only">{{ t('a11y.opensInNewTab') }}</span>
+                </UButton>
 
-              <DashboardLangSwitch />
-              <LayoutThemeToggle :label="t('dashboard.shell.theme')" />
+                <DashboardLangSwitch />
+                <LayoutThemeToggle :label="t('dashboard.shell.theme')" />
+              </div>
 
               <!--
                 OPERATOR IDENTITY AS PLAIN TEXT, NOT A DROPDOWN — and the reason is measured, not
@@ -157,21 +163,25 @@ async function signOut(): Promise<void> {
                 every width. Revisit the presentation in the FE-5 coherence pass, with this number in
                 hand.
               -->
-              <span
-                v-if="auth.user"
-                class="hidden max-w-48 truncate text-sm text-muted sm:inline"
-                :title="auth.user.email"
-              >{{ auth.user.email }}</span>
-              <UButton
-                color="neutral"
-                variant="ghost"
-                size="sm"
-                icon="i-lucide-log-out"
-                :aria-label="t('dashboard.signOut')"
-                @click="signOut"
-              >
-                <span class="hidden md:inline">{{ t('dashboard.signOut') }}</span>
-              </UButton>
+              <div class="flex min-w-0 items-center gap-2" data-dashboard-account-controls>
+                <span
+                  v-if="auth.user"
+                  class="hidden max-w-48 truncate text-sm text-muted sm:inline"
+                  :title="auth.user.email"
+                  data-dashboard-account-identity
+                >{{ auth.user.email }}</span>
+                <UButton
+                  color="neutral"
+                  variant="ghost"
+                  size="sm"
+                  icon="i-lucide-log-out"
+                  :aria-label="t('dashboard.signOut')"
+                  data-dashboard-sign-out
+                  @click="signOut"
+                >
+                  <span class="hidden md:inline">{{ t('dashboard.signOut') }}</span>
+                </UButton>
+              </div>
             </div>
           </div>
         </header>

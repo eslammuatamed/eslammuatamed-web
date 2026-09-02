@@ -18,12 +18,12 @@
  *    would PASS against a broken implementation. The ERROR state is the half that would not survive,
  *    which is why the discriminating test drives a real 422 into a hidden tab.
  *
- * 2. **FIELD DIRECTION IS INDEPENDENT OF CHROME DIRECTION** (OD-11, doc 11 §6). An Arabic panel is
- *    RTL inside an English dashboard and an English panel is LTR inside an Arabic one. Set per
- *    panel here, never inherited from the shell. ⚠ `dashboardDir()` is deliberately NOT called: its
- *    own documentation scopes it to the CHROME and says to use the field's own locale for a field.
- *    The rule is identical today; borrowing the helper would blur the one distinction it exists to
- *    protect.
+ * 2. **FIELD DIRECTION IS INDEPENDENT OF CHROME DIRECTION** (OD-11, doc 11 §6). The panel itself
+ *    stays in the Dashboard shell's direction, so labels, controls and technical values never inherit
+ *    the selected content locale. The slot receives that locale's `contentDir` for its authored
+ *    fields only. ⚠ `dashboardDir()` is deliberately NOT called: its own documentation scopes it to
+ *    the CHROME and says to use the field's own locale for a field. The rule is identical today;
+ *    borrowing the helper would blur the one distinction it exists to protect.
  *
  * 3. **STATE IS NEVER COLOUR ALONE.** Both badges carry a word, so completeness and invalidity are
  *    legible to a screen reader and to anyone who does not distinguish the hues.
@@ -92,10 +92,13 @@ const fillColor = (fill: TranslationFill) =>
     <template #content="{ item }">
       <div
         class="flex flex-col gap-4 pt-4"
-        :dir="item.value === 'ar' ? 'rtl' : 'ltr'"
         :data-editor-panel="item.value"
       >
-        <slot name="panel" :locale="(item.value as L)" />
+        <slot
+          name="panel"
+          :locale="(item.value as L)"
+          :content-dir="item.value === 'ar' ? 'rtl' : 'ltr'"
+        />
       </div>
     </template>
   </UTabs>

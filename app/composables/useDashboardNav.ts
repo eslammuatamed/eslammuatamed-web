@@ -64,7 +64,8 @@ export function useDashboardNav() {
         { key: 'experiences', to: '/dashboard/experiences', icon: 'i-lucide-briefcase' },
         { key: 'skills', to: '/dashboard/skills', icon: 'i-lucide-brain' },
         { key: 'testimonials', to: '/dashboard/testimonials', icon: 'i-lucide-message-square-quote' },
-        { key: 'taxonomy', to: '/dashboard/taxonomy', icon: 'i-lucide-tags' },
+        { key: 'categories', to: '/dashboard/categories', icon: 'i-lucide-folder-tree' },
+        { key: 'tags', to: '/dashboard/tags', icon: 'i-lucide-tags' },
         { key: 'projects', to: '/dashboard/projects', icon: 'i-lucide-folder-kanban' }
       ]
     },

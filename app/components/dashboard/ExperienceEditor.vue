@@ -438,7 +438,7 @@ const saveState = computed<'saving' | 'unsaved' | 'saved' | 'idle'>(() => {
               complete: t('dashboard.experiences.editor.fill.complete')
             }"
           >
-            <template #panel="{ locale: fieldLocale }">
+            <template #panel="{ locale: fieldLocale, contentDir }">
             <UFormField
               :name="`translations.${fieldLocale}.role`"
               :error="serverFieldErrors[`translations.${fieldLocale}.role`]"
@@ -447,6 +447,7 @@ const saveState = computed<'saving' | 'unsaved' | 'saved' | 'idle'>(() => {
             >
               <UInput
                 v-model="form.translations[fieldLocale].role"
+                :dir="contentDir"
                 class="w-full"
                 :data-editor-role="fieldLocale"
               />
@@ -460,7 +461,8 @@ const saveState = computed<'saving' | 'unsaved' | 'saved' | 'idle'>(() => {
                 required
               >
                 <UInput
-                  v-model="form.translations[fieldLocale].company"
+                v-model="form.translations[fieldLocale].company"
+                :dir="contentDir"
                   class="w-full"
                   :data-editor-company="fieldLocale"
                 />
@@ -473,7 +475,8 @@ const saveState = computed<'saving' | 'unsaved' | 'saved' | 'idle'>(() => {
                 required
               >
                 <UInput
-                  v-model="form.translations[fieldLocale].location"
+                v-model="form.translations[fieldLocale].location"
+                :dir="contentDir"
                   class="w-full"
                   :data-editor-location="fieldLocale"
                 />
@@ -489,6 +492,7 @@ const saveState = computed<'saving' | 'unsaved' | 'saved' | 'idle'>(() => {
             >
               <UTextarea
                 v-model="form.translations[fieldLocale].impact"
+                :dir="contentDir"
                 :rows="8"
                 class="w-full font-mono"
                 :data-editor-impact="fieldLocale"

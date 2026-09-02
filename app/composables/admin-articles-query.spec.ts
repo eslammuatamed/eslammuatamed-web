@@ -43,6 +43,16 @@ describe('parsing is total — a malformed address degrades, never throws', () =
     expect(parseAdminArticlesQuery({ page: ['2', '9'] }).page).toBe(2)
     expect(parseAdminArticlesQuery({ status: ['DRAFT', 'PUBLISHED'] }).status).toBe('DRAFT')
   })
+
+  it('reads a trimmed title search from the URL and omits whitespace-only search', () => {
+    expect(parseAdminArticlesQuery({ q: '  nestjs  ' }) as { q?: string }).toMatchObject({ q: 'nestjs' })
+    expect((parseAdminArticlesQuery({ q: '   ' }) as { q?: string }).q).toBeUndefined()
+  })
+
+  it('takes the first repeated search value and clamps it to the backend maximum', () => {
+    expect(parseAdminArticlesQuery({ q: ['nest', 'ignored'] }) as { q?: string }).toMatchObject({ q: 'nest' })
+    expect((parseAdminArticlesQuery({ q: 'x'.repeat(121) }) as { q?: string }).q).toHaveLength(120)
+  })
 })
 
 describe('the request it builds', () => {
@@ -60,11 +70,13 @@ describe('the request it builds', () => {
       .toEqual({ page: 2, perPage: ADMIN_ARTICLES_PER_PAGE, status: 'DRAFT' })
   })
 
-  it('sends no search or sort parameter, because the admin endpoint has neither', () => {
+  it('sends a committed title search alongside status and pagination', () => {
+    expect(adminArticlesRequestQuery({ page: 2, status: 'PUBLISHED', q: 'nestjs' } as never))
+      .toEqual({ page: 2, perPage: ADMIN_ARTICLES_PER_PAGE, status: 'PUBLISHED', q: 'nestjs' })
+  })
+
+  it('sends no sort parameter; title search is the only supported text query', () => {
     const built = adminArticlesRequestQuery({ page: 1, status: 'PUBLISHED' })
-    // Guards against someone "restoring" parity with the public list or with Projects. Both take
-    // `q`/`sortBy`; `GET /admin/articles` does not, and under `forbidNonWhitelisted` either one is
-    // a 422 rather than an ignored extra.
     expect(Object.keys(built).sort()).toEqual(['page', 'perPage', 'status'])
   })
 })
@@ -75,5 +87,9 @@ describe('the view identity behind the keep-or-clear rule', () => {
     expect(key({ page: 1, status: 'all' })).toBe(key({ page: 1, status: 'all' }))
     expect(key({ page: 1, status: 'all' })).not.toBe(key({ page: 2, status: 'all' }))
     expect(key({ page: 1, status: 'all' })).not.toBe(key({ page: 1, status: 'DRAFT' }))
+    expect(
+      key({ page: 1, status: 'all', q: 'nest' } as never),
+      'different title searches must never share stale-response identity'
+    ).not.toBe(key({ page: 1, status: 'all', q: 'nestjs' } as never))
   })
 })

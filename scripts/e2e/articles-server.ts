@@ -122,7 +122,7 @@ function translation(over: Partial<SeedTranslation> & { title: string, slug: str
 }
 
 /**
- * The fixture set. Sized so pagination is REAL: `perPage` is 12, so 17 rows guarantee a second page
+ * The fixture set. Sized so pagination is REAL: `perPage` is 12, so 18 rows guarantee a second page
  * with a distinguishable tail rather than a page 2 that happens to repeat page 1.
  */
 export function seedArticles(): SeedArticle[] {
@@ -205,7 +205,7 @@ export function seedArticles(): SeedArticle[] {
   })
 
   // Filler, so page 2 exists and is distinguishable.
-  for (let i = 1; i <= 12; i++) {
+  for (let i = 1; i <= 25; i++) {
     rows.push({
       id: listId(i),
       status: i % 3 === 0 ? 'DRAFT' : 'PUBLISHED',
@@ -237,6 +237,8 @@ let mode: ArticleMode = 'ok'
 let delayMs = 0
 /** Makes one write fail with a server error, to prove a failed save preserves the operator's input. */
 let failNextWrite = false
+/** Fails one requested taxonomy page so exhaustive-load atomicity is browser-provable. */
+let failVocabularyPage: number | null = null
 
 const PER_PAGE_MAX = 50
 const DEFAULT_PER_PAGE = 12
@@ -430,7 +432,7 @@ function applyWrite(target: SeedArticle, body: WriteBody): void {
 
 // ── taxonomy + media fixtures the editor's pickers read ────────────────────────────────────────
 
-function categoryEntities() {
+function seedCategories() {
   return [
     {
       id: CATEGORY.engineering,
@@ -449,12 +451,27 @@ function categoryEntities() {
   ]
 }
 
-function tagEntities() {
+function seedTags() {
   return [
     { id: TAG.architecture, translations: { en: { name: 'Architecture', slug: 'architecture' }, ar: { name: 'العمارة', slug: 'العمارة' } } },
     { id: TAG.testing, translations: { en: { name: 'Testing', slug: 'testing' }, ar: { name: 'الاختبارات', slug: 'الاختبارات' } } },
     { id: TAG.nuxt, translations: { en: { name: 'Nuxt', slug: 'nuxt' }, ar: { name: 'Nuxt', slug: 'nuxt-ar' } } }
   ]
+}
+
+let categories = seedCategories()
+let tags = seedTags()
+
+function vocabularyPage<T>(rows: T[], url: URL) {
+  const readPositiveInt = (value: string | null, fallback: number) => {
+    const parsed = Number(value)
+    return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback
+  }
+  const page = readPositiveInt(url.searchParams.get('page'), 1)
+  const perPage = readPositiveInt(url.searchParams.get('perPage'), 12)
+  const total = rows.length
+  const totalPages = Math.max(1, Math.ceil(total / perPage))
+  return { data: rows.slice((page - 1) * perPage, page * perPage), meta: { page, perPage, total, totalPages } }
 }
 
 function mediaEntity(id: string, filename: string) {
@@ -495,9 +512,12 @@ const server = http.createServer(async (req, res) => {
   // ── test control plane ───────────────────────────────────────────────────────────────────────
   if (path === '/__e2e/reset' && req.method === 'POST') {
     articles = seedArticles()
+    categories = seedCategories()
+    tags = seedTags()
     mode = 'ok'
     delayMs = 0
     failNextWrite = false
+    failVocabularyPage = null
     return json(res, 200, { ok: true })
   }
   if (path === '/__e2e/state' && req.method === 'POST') {
@@ -506,11 +526,19 @@ const server = http.createServer(async (req, res) => {
       delayMs?: number
       failNextWrite?: boolean
       articles?: SeedArticle[]
+      categories?: ReturnType<typeof seedCategories>
+      tags?: ReturnType<typeof seedTags>
+      failVocabularyPage?: number | null
     }
     if (body.mode) mode = body.mode
     if (typeof body.delayMs === 'number') delayMs = Math.max(0, body.delayMs)
     if (typeof body.failNextWrite === 'boolean') failNextWrite = body.failNextWrite
     if (body.articles) articles = body.articles
+    if (body.categories) categories = body.categories
+    if (body.tags) tags = body.tags
+    if (body.failVocabularyPage === null || typeof body.failVocabularyPage === 'number') {
+      failVocabularyPage = body.failVocabularyPage
+    }
     return json(res, 200, { ok: true, mode, delayMs })
   }
 
@@ -535,14 +563,16 @@ const server = http.createServer(async (req, res) => {
     })
   }
 
-  // ── admin taxonomy (unpaginated, as the contract defines them) ───────────────────────────────
+  // ── admin taxonomy — the released paginated admin vocabulary contract ─────────────────────────
   if (path === `${API_PREFIX}/admin/categories` && req.method === 'GET') {
     if (!authorized(req)) return problem(res, 401, 'Unauthorized')
-    return json(res, 200, { data: categoryEntities() })
+    if (url.searchParams.get('page') === String(failVocabularyPage)) return problem(res, 500, 'Vocabulary page failed')
+    return json(res, 200, vocabularyPage(categories, url))
   }
   if (path === `${API_PREFIX}/admin/tags` && req.method === 'GET') {
     if (!authorized(req)) return problem(res, 401, 'Unauthorized')
-    return json(res, 200, { data: tagEntities() })
+    if (url.searchParams.get('page') === String(failVocabularyPage)) return problem(res, 500, 'Vocabulary page failed')
+    return json(res, 200, vocabularyPage(tags, url))
   }
 
   // ── admin media (read-only here — the editor picks, it does not manage the library) ──────────
@@ -662,14 +692,25 @@ const server = http.createServer(async (req, res) => {
 
     if (rest === '' && req.method === 'GET') {
       const status = url.searchParams.get('status')
+      const q = url.searchParams.get('q')?.trim()
       const page = Math.max(1, Number(url.searchParams.get('page') ?? '1') || 1)
       const perPage = Math.min(
         PER_PAGE_MAX,
         Math.max(1, Number(url.searchParams.get('perPage') ?? String(DEFAULT_PER_PAGE)) || DEFAULT_PER_PAGE)
       )
 
+      if (q && q.length > 120) return problem(res, 422, 'Validation failed', 'q must not exceed 120 characters.')
+
       let pool = mode === 'empty' ? [] : articles
       if (status) pool = pool.filter(a => a.status === status)
+      if (q) {
+        const needle = q.toLocaleLowerCase()
+        // Production owns the whole title-only predicate across every authored locale. Keeping it at
+        // the mock boundary lets browser tests prove query parameters and server metadata together.
+        pool = pool.filter(article =>
+          Object.values(article.translations).some(translation => translation.title.toLocaleLowerCase().includes(needle))
+        )
+      }
 
       const sorted = ordered(pool)
       const total = sorted.length

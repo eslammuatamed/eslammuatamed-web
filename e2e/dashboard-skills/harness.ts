@@ -20,7 +20,7 @@ export async function resetBackend(page: Page): Promise<void> {
 
 export async function setBackendState(
   page: Page,
-  state: { mode?: 'ok' | 'empty' | 'error' | 'forbidden', delayMs?: number }
+  state: { mode?: 'ok' | 'empty' | 'error' | 'forbidden', delayMs?: number, failNextWrite?: boolean }
 ): Promise<void> {
   const response = await page.request.post(`${CONTROL_BASE}/__e2e/state`, { data: state })
   expect(response.ok(), 'Skills backend state change must succeed').toBe(true)
@@ -41,9 +41,9 @@ export const shell = (page: Page) => page.locator('[data-shell="dashboard"]')
 /** Positive terminal-state barrier; absence of a spinner before the request starts is not settling. */
 export async function listSettled(page: Page): Promise<void> {
   await page.locator(
-    '[data-skill-row], [data-skills-empty], [data-skills-failed], [data-skills-forbidden]'
-  ).first().waitFor({ timeout: 15_000 })
-  await expect(page.locator('[aria-busy=true]')).toHaveCount(0, { timeout: 15_000 })
+    '[data-skills-loaded], [data-skills-empty], [data-skills-failed], [data-skills-forbidden]'
+  ).waitFor()
+  await expect(page.locator('[aria-busy=true]')).toHaveCount(0)
 }
 
 export async function expectNoKeyPaths(page: Page): Promise<void> {

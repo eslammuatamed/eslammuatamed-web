@@ -1,7 +1,12 @@
-import type { Envelope } from '~/types/models'
+import type { Envelope, Paginated, PaginationMeta } from '~/types/models'
 import type { components } from '~/types/api'
 import type { AdminTag } from '~/composables/admin-article-types'
 import { ApiError } from '~/utils/api-error'
+import {
+  adminTagsQueryKey,
+  adminTagsRequestQuery,
+  type AdminTagsQuery
+} from '~/composables/admin-tags-query'
 
 /**
  * `GET /admin/tags` — the Tags collection read (FE-3 Taxonomy, `U2`).
@@ -13,8 +18,7 @@ import { ApiError } from '~/utils/api-error'
  *
  * The contract facts are the module's, restated where they bind:
  *
- * - ZERO query parameters (an unsolicited query string is a 422) and NO `meta`;
- * - `{ data: [...] }` whole, in the server's order (`createdAt` ascending) — no `.sort()` anywhere;
+ * - canonical `page` and fixed `perPage=12`, with `{ data, meta }` from the server;
  * - `locale: false` on every call;
  * - ⚠ NO detail read exists — `/admin/tags/{id}` answers PATCH and DELETE only, so this composable
  *   deliberately offers no `load(id)`.
@@ -25,35 +29,50 @@ export function useAdminTags() {
   const api = useApi()
 
   const items = ref<AdminTag[]>([])
+  const total = ref(0)
+  const totalPages = ref(1)
   const pending = ref(false)
   const forbidden = ref(false)
   const failed = ref(false)
 
   let loadSeq = 0
-  let hasLoaded = false
+  let loadedKey: string | null = null
 
-  async function load(): Promise<void> {
+  async function load(query: AdminTagsQuery = { page: 1 }): Promise<PaginationMeta | null> {
     const seq = ++loadSeq
+    const key = adminTagsQueryKey(query)
     pending.value = true
     forbidden.value = false
     failed.value = false
     try {
-      const res = await api<Envelope<AdminTag[]>>('/admin/tags', { locale: false })
-      if (seq !== loadSeq) return
+      const res = await api<Paginated<AdminTag>>('/admin/tags', {
+        locale: false,
+        query: adminTagsRequestQuery(query)
+      })
+      if (seq !== loadSeq) return null
       // Rendered in the order received — see the header. No `.sort()` belongs on this line.
       items.value = [...res.data]
-      hasLoaded = true
+      total.value = res.meta.total
+      totalPages.value = res.meta.totalPages
+      loadedKey = key
+      return res.meta
     } catch (error) {
-      if (seq !== loadSeq) return
-      if (!hasLoaded) items.value = []
+      if (seq !== loadSeq) return null
+      if (loadedKey !== key) {
+        items.value = []
+        total.value = 0
+        totalPages.value = 1
+        loadedKey = null
+      }
       if (error instanceof ApiError && error.status === 403) forbidden.value = true
       else failed.value = true
+      return null
     } finally {
       if (seq === loadSeq) pending.value = false
     }
   }
 
-  return { items, pending, forbidden, failed, load }
+  return { items, total, totalPages, pending, forbidden, failed, load }
 }
 
 /**

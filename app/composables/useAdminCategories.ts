@@ -1,7 +1,12 @@
-import type { Envelope } from '~/types/models'
+import type { Envelope, Paginated, PaginationMeta } from '~/types/models'
 import type { components } from '~/types/api'
 import type { AdminCategory } from '~/composables/admin-article-types'
 import { ApiError } from '~/utils/api-error'
+import {
+  adminCategoriesQueryKey,
+  adminCategoriesRequestQuery,
+  type AdminCategoriesQuery
+} from '~/composables/admin-categories-query'
 
 /**
  * `GET /admin/categories` — the Categories collection read (FE-3 Taxonomy, `U2`).
@@ -10,10 +15,7 @@ import { ApiError } from '~/utils/api-error'
  * they are repeated HERE rather than imported, because each is a place a "shared" list composable
  * would silently diverge from its endpoint:
  *
- * - ZERO query parameters (an unsolicited query string is a 422) and NO `meta` — no pagination,
- *   no filter, no query state;
- * - `{ data: [...] }` whole — the collection arrives in one read because that is what the
- *   contract offers;
+ * - canonical `page` and fixed `perPage=12`, with `{ data, meta }` from the server;
  * - the server's order IS the contract (`createdAt` ascending); rows render in the order received,
  *   and no `.sort()` belongs anywhere near them;
  * - `locale: false` on every call: the admin DTOs are validated with `forbidNonWhitelisted` and
@@ -33,6 +35,8 @@ export function useAdminCategories() {
   const api = useApi()
 
   const items = ref<AdminCategory[]>([])
+  const total = ref(0)
+  const totalPages = ref(1)
   const pending = ref(false)
   /** `403` is not "no categories" — a different answer gets a different surface (D11-2). */
   const forbidden = ref(false)
@@ -42,33 +46,46 @@ export function useAdminCategories() {
   let loadSeq = 0
 
   /**
-   * Has anything ever loaded successfully? One endpoint view, no query parameters, so keep-or-clear
-   * on failure reduces to "is anything shown?" — the Experiences/Testimonials reasoning verbatim.
+   * The page identity of rendered rows. A failed refresh keeps same-page rows, while a failed
+   * different page clears stale rows rather than mislabelling them as the requested page.
    */
-  let hasLoaded = false
+  let loadedKey: string | null = null
 
-  async function load(): Promise<void> {
+  async function load(query: AdminCategoriesQuery = { page: 1 }): Promise<PaginationMeta | null> {
     const seq = ++loadSeq
+    const key = adminCategoriesQueryKey(query)
     pending.value = true
     forbidden.value = false
     failed.value = false
     try {
-      const res = await api<Envelope<AdminCategory[]>>('/admin/categories', { locale: false })
-      if (seq !== loadSeq) return
+      const res = await api<Paginated<AdminCategory>>('/admin/categories', {
+        locale: false,
+        query: adminCategoriesRequestQuery(query)
+      })
+      if (seq !== loadSeq) return null
       // Rendered in the order received — see the header. No `.sort()` belongs on this line.
       items.value = [...res.data]
-      hasLoaded = true
+      total.value = res.meta.total
+      totalPages.value = res.meta.totalPages
+      loadedKey = key
+      return res.meta
     } catch (error) {
-      if (seq !== loadSeq) return
-      if (!hasLoaded) items.value = []
+      if (seq !== loadSeq) return null
+      if (loadedKey !== key) {
+        items.value = []
+        total.value = 0
+        totalPages.value = 1
+        loadedKey = null
+      }
       if (error instanceof ApiError && error.status === 403) forbidden.value = true
       else failed.value = true
+      return null
     } finally {
       if (seq === loadSeq) pending.value = false
     }
   }
 
-  return { items, pending, forbidden, failed, load }
+  return { items, total, totalPages, pending, forbidden, failed, load }
 }
 
 /**

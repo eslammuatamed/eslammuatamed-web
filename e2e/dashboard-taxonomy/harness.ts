@@ -125,12 +125,9 @@ export const overlay = {
  * settling and get swallowed — a silent no-op that leaves the previous tab selected.
  */
 export async function clickTab(page: Page, locale: 'en' | 'ar'): Promise<void> {
-  const index = locale === 'ar' ? 1 : 0
-  const tab = page.locator('[data-editor-tabs] button').nth(index)
-  await expect(async () => {
-    await tab.click()
-    await expect(tab).toHaveAttribute('aria-selected', 'true')
-  }).toPass({ timeout: 15_000 })
+  const tab = page.getByRole('tab', { name: locale === 'ar' ? /Arabic|العربية/ : /English|الإنجليزية/ })
+  await tab.click()
+  await expect(tab).toHaveAttribute('aria-selected', 'true')
 }
 
 /**
@@ -159,12 +156,9 @@ export async function overlaySettled(page: Page, kind: 'categories' | 'tags'): P
   const dialog = page.locator('[role="dialog"][data-state="open"]', {
     has: page.locator(`[data-taxonomy-overlay-kind="${kind}"]`)
   })
-  await dialog.locator(overlay.title).waitFor({ timeout: 15_000 })
-  // data-state flips before Reka's entrance transition + initial focus pass finish; a tab click
-  // landing in that window gets swallowed when focus re-selects the first tab afterwards.
+  await dialog.locator(overlay.title).waitFor()
   await expect(dialog).toBeVisible()
-  await page.waitForTimeout(250)
-  await expect(page.locator('[aria-busy=true]')).toHaveCount(0, { timeout: 15_000 })
+  await expect(page.locator('[aria-busy=true]')).toHaveCount(0)
 }
 
 export async function signIn(page: Page, locale: 'en' | 'ar', baseURL: string): Promise<void> {
@@ -180,20 +174,13 @@ export const categoryRows = (page: Page) => page.locator('[data-category-row]')
 export const tagRows = (page: Page) => page.locator('[data-tag-row]')
 export const shell = (page: Page) => page.locator('[data-shell="dashboard"]')
 
-/**
- * Wait until BOTH sections have settled into one of their terminal surfaces.
- *
- * POSITIVE FIRST: waiting only for `aria-busy` to disappear is vacuous before any request starts.
- * Each section settles independently; a selector that exists in EITHER section satisfies its half.
- */
-export async function listSettled(page: Page): Promise<void> {
-  await page.locator(
-    '[data-category-row], [data-categories-empty], [data-categories-failed], [data-categories-forbidden]'
-  ).first().waitFor({ timeout: 15_000 })
-  await page.locator(
-    '[data-tag-row], [data-tags-empty], [data-tags-failed], [data-tags-forbidden]'
-  ).first().waitFor({ timeout: 15_000 })
-  await expect(page.locator('[aria-busy=true]')).toHaveCount(0, { timeout: 15_000 })
+/** Wait for the terminal surface of exactly one split collection route. */
+export async function listSettledFor(page: Page, kind: 'categories' | 'tags'): Promise<void> {
+  const terminal = kind === 'categories'
+    ? '[data-categories-loaded], [data-categories-empty], [data-categories-failed], [data-categories-forbidden]'
+    : '[data-tags-loaded], [data-tags-empty], [data-tags-failed], [data-tags-forbidden]'
+  await page.locator(terminal).waitFor()
+  await expect(page.locator('[aria-busy=true]')).toHaveCount(0)
 }
 
 /** No raw i18n key path may reach the screen in either language. */

@@ -13,8 +13,17 @@ import {
   selectedSkillIds,
   setBackendState,
   shell,
-  signIn
+  signIn,
+  tableRowFor
 } from './harness'
+
+const LATER_SKILL = '00000000-0000-4000-f000-000000000051'
+const skillsForPicker = () => Array.from({ length: 51 }, (_, index) => ({
+  id: index === 50 ? LATER_SKILL : `00000000-0000-4000-f000-${String(index + 1).padStart(12, '0')}`,
+  slug: index === 50 ? 'later-experience-skill' : `experience-skill-${index + 1}`,
+  group: 'FRAMEWORK', brandColor: null, isPublic: true, order: index,
+  translations: { en: { label: index === 50 ? 'Later Experience Skill' : `Experience Skill ${index + 1}` } }
+}))
 
 /**
  * The Experiences collection in a real browser (FE-3 module 1, `M1·U2`).
@@ -34,10 +43,13 @@ test.beforeEach(async ({ page }) => {
 })
 
 test.describe('the collection', () => {
-  test('renders every role in the API order, current-role-first', async ({ page, baseURL }) => {
+  test('renders the first server page in API order, current-role-first', async ({ page, baseURL }) => {
     await signIn(page, 'en', baseURL!)
     await page.goto('/dashboard/experiences')
     await listSettled(page)
+
+    await expect(page.locator('[data-experiences-table]')).toBeVisible()
+    await expect(page.locator(`[data-experience-role="${EXP.current}"]`)).toHaveText('Senior Frontend Engineer')
 
     /**
      * ⚠ THE FULL SEQUENCE, not just the head.
@@ -48,7 +60,39 @@ test.describe('the collection', () => {
      * further down, so the whole order is pinned.
      */
     const ids = await rows(page).evaluateAll(els => els.map(el => el.getAttribute('data-experience-row')))
-    expect(ids).toEqual([...API_ORDER])
+    expect(ids.slice(0, API_ORDER.length)).toEqual([...API_ORDER])
+    expect(ids).toHaveLength(12)
+    await expect(page.locator('[data-experiences-pagination]')).toBeVisible()
+  })
+
+  test('owns page in the URL, requests the deep-linked server page, and preserves history', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL!)
+    await page.goto('/dashboard/experiences')
+    await listSettled(page)
+    const pageTwo = page.waitForRequest(request => {
+      const url = new URL(request.url())
+      return url.pathname.endsWith('/admin/experiences') && url.searchParams.get('page') === '2' && url.searchParams.get('perPage') === '12'
+    })
+    await page.goto('/dashboard/experiences?page=2')
+    await pageTwo
+    await listSettled(page)
+    await expect(rows(page)).toHaveCount(1)
+    await page.goBack()
+    await listSettled(page)
+    await expect(page).toHaveURL(/\/dashboard\/experiences$/)
+    await expect(rows(page)).toHaveCount(12)
+  })
+
+  test('discards a late page-one response after page two becomes current', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL!)
+    await setBackendState(page, { delayMs: 1000 })
+    const pageOne = page.waitForRequest(request => new URL(request.url()).searchParams.get('page') === '1')
+    await page.goto('/dashboard/experiences')
+    await pageOne
+    await setBackendState(page, { delayMs: 0 })
+    await page.goto('/dashboard/experiences?page=2')
+    await listSettled(page)
+    await expect(rows(page)).toHaveCount(1)
   })
 
   test('marks the current role, and only that one', async ({ page, baseURL }) => {
@@ -65,7 +109,7 @@ test.describe('the collection', () => {
     await page.goto('/dashboard/experiences')
     await listSettled(page)
 
-    const row = page.locator(`[data-experience-row="${EXP.enOnly}"]`)
+    const row = tableRowFor(page, EXP.enOnly)
     await expect(row.locator('[data-experience-translation="en:present"]')).toBeVisible()
     await expect(row.locator('[data-experience-translation="ar:missing"]')).toBeVisible()
   })
@@ -77,8 +121,8 @@ test.describe('the collection', () => {
 
     // `current` holds three skills; `noSkills` holds none — so "cleared" stays distinguishable
     // from "never had any" on the surface the operator reads.
-    await expect(page.locator(`[data-experience-row="${EXP.current}"] [data-experience-skills="3"]`)).toBeVisible()
-    await expect(page.locator(`[data-experience-row="${EXP.noSkills}"] [data-experience-skills="0"]`)).toBeVisible()
+    await expect(tableRowFor(page, EXP.current).locator('[data-experience-skills="3"]')).toBeVisible()
+    await expect(tableRowFor(page, EXP.noSkills).locator('[data-experience-skills="0"]')).toBeVisible()
   })
 })
 
@@ -97,7 +141,7 @@ test.describe('the request states, made observable by delayMs', () => {
     await expect(page.locator('[data-experiences-empty]')).toHaveCount(0)
 
     await listSettled(page)
-    await expect(rows(page).first()).toBeVisible()
+    await expect(rows(page)).not.toHaveCount(0)
   })
 
   test('shows the deliberate empty state, with its own create action', async ({ page, baseURL }) => {
@@ -162,7 +206,7 @@ test.describe('bilingual, at the narrowest supported width', () => {
     await expectNoKeyPaths(page)
     // The order is a SERVER property and must not change with the chrome language.
     const ids = await rows(page).evaluateAll(els => els.map(el => el.getAttribute('data-experience-row')))
-    expect(ids).toEqual([...API_ORDER])
+    expect(ids.slice(0, API_ORDER.length)).toEqual([...API_ORDER])
   })
 
   test('renders English chrome LTR with no raw key paths', async ({ page, baseURL }) => {
@@ -188,6 +232,46 @@ test.describe('bilingual, at the narrowest supported width', () => {
    ══════════════════════════════════════════════════════════════════════════════════════════════ */
 
 test.describe('the editor — the skill relation, which fails SILENTLY when it fails', () => {
+  test('loads and restores a page-2 Skill without group or collection query leakage', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL!)
+    await setBackendState(page, { skills: skillsForPicker() })
+    const skillRequests: URL[] = []
+    page.on('request', request => {
+      const url = new URL(request.url())
+      if (url.pathname.endsWith('/admin/skills')) skillRequests.push(url)
+    })
+    await page.goto(`/dashboard/experiences/${EXP.noSkills}?page=7&group=FRAMEWORK`)
+    await editorSettled(page)
+    await expect.poll(() => skillRequests.map(url => url.searchParams.get('page')))
+      .toEqual(expect.arrayContaining(['1', '2']))
+    for (const url of skillRequests) {
+      expect(url.searchParams.get('perPage')).toBe('50')
+      expect(url.searchParams.get('group')).toBeNull()
+      expect([...url.searchParams.keys()].sort()).toEqual(['page', 'perPage'])
+    }
+    const later = page.locator(`[data-technology="${LATER_SKILL}"]`)
+    await expect(later).toBeVisible()
+    await later.click()
+    expect(await selectedSkillIds(page)).toContain(LATER_SKILL)
+    await page.locator('[data-editor-save]').click()
+    await page.reload()
+    await editorSettled(page)
+    expect(await selectedSkillIds(page)).toContain(LATER_SKILL)
+  })
+
+  test('does not expose a partial Skill vocabulary when page 2 fails, then retries completely', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL!)
+    await setBackendState(page, { skills: skillsForPicker(), failVocabularyPage: 2 })
+    await page.goto(`/dashboard/experiences/${EXP.noSkills}`)
+    await expect(page.locator('[data-technologies-error]')).toBeVisible()
+    await expect(page.locator('[data-technology]')).toHaveCount(0)
+    await setBackendState(page, { failVocabularyPage: null })
+    await page.reload()
+    await editorSettled(page)
+    await expect(page.locator(`[data-technology="${LATER_SKILL}"]`)).toBeVisible()
+    await expect(page.locator('[data-technologies-error]')).toHaveCount(0)
+  })
+
   /**
    * ⚠ THE NO-TOUCH INVARIANT, asserted on the REQUEST BODY and not only on the outcome.
    *
@@ -454,8 +538,8 @@ test.describe('the editor — the request-state contract, criteria 3, 4 and 5', 
     await page.locator('[data-editor-delete-confirm]').click()
     await page.waitForURL('**/dashboard/experiences')
     await listSettled(page)
-    await expect(rows(page).filter({ has: page.locator(`[data-experience-row="${EXP.past}"]`) })).toHaveCount(0)
-    await expect(rows(page)).toHaveCount(API_ORDER.length - 1)
+    await expect(tableRowFor(page, EXP.past)).toHaveCount(0)
+    await expect(rows(page)).toHaveCount(12)
   })
 
   test('answers a well-formed id that does not exist as NOT FOUND', async ({ page, baseURL }) => {
@@ -518,10 +602,12 @@ test.describe('the editor — bilingual, at the narrowest supported width', () =
     await expect(shell(page)).toHaveAttribute('dir', 'rtl')
     await expectNoKeyPaths(page)
 
-    // Field direction is INDEPENDENT of chrome direction: the English panel stays LTR inside an
-    // Arabic dashboard. Asserting only the chrome would miss a panel that inherited it.
-    await expect(page.locator('[data-editor-panel="ar"]')).toHaveAttribute('dir', 'rtl')
-    await expect(page.locator('[data-editor-panel="en"]')).toHaveAttribute('dir', 'ltr')
+    // Field direction is independent of chrome: the panel follows Arabic chrome, while each
+    // authored translation field retains its own content locale direction.
+    await expect(page.locator('[data-editor-panel="ar"]')).not.toHaveAttribute('dir')
+    await expect(page.locator('[data-editor-panel="en"]')).not.toHaveAttribute('dir')
+    await expect(page.locator('[data-editor-role="ar"]')).toHaveAttribute('dir', 'rtl')
+    await expect(page.locator('[data-editor-role="en"]')).toHaveAttribute('dir', 'ltr')
   })
 
   test('renders English chrome LTR with no raw key paths', async ({ page, baseURL }) => {

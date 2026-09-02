@@ -18,7 +18,10 @@ mockNuxtImport('useApi', () => () => async (path: string, options: Record<string
   holder.calls.push({ path, options })
   if (holder.release !== null) await new Promise<void>(resolve => { holder.release = resolve })
   if (holder.status) throw holder.makeError?.(holder.status) ?? new Error('failed')
-  return { data: holder.rows }
+  return {
+    data: holder.rows,
+    meta: { page: 1, perPage: 12, total: holder.rows.length, totalPages: 1 }
+  }
 })
 
 holder.makeError = status => new ApiError({ type: 'about:blank', title: 'failed', status })
@@ -74,9 +77,10 @@ describe('the collection request-state contract', () => {
     expect(page.find('[data-skills-empty]').exists()).toBe(false)
   })
 
-  it('renders loaded rows as content', async () => {
+  it('renders loaded rows in the Skills UTable', async () => {
     const page = await mount({ rows: [skill()] })
     expect(page.find('[data-skills-loaded]').exists()).toBe(true)
+    expect(page.find('[data-skills-table]').exists()).toBe(true)
     expect(page.findAll('[data-skill-row]')).toHaveLength(1)
     expect(page.find('[data-skills-empty]').exists()).toBe(false)
     expect(page.find('[data-skills-failed]').exists()).toBe(false)
@@ -91,16 +95,18 @@ describe('the collection request-state contract', () => {
 })
 
 describe('the contract-driven collection shape', () => {
-  it('requests the whole list with no query and locale suppressed', async () => {
+  it('requests the canonical first server page with locale suppressed', async () => {
     await mount()
-    expect(holder.calls).toEqual([{ path: '/admin/skills', options: { locale: false } }])
+    expect(holder.calls).toEqual([{
+      path: '/admin/skills', options: { locale: false, query: { page: 1, perPage: 12 } }
+    }])
   })
 
-  it('renders rows in the API order and has no pagination or filter controls', async () => {
+  it('renders rows in server order and exposes the server-backed group filter', async () => {
     const page = await mount({ rows: [skill({ id: 'second' }), skill({ id: 'first' })] })
     expect(page.findAll('[data-skill-row]').map(row => row.attributes('data-skill-row'))).toEqual(['second', 'first'])
     expect(page.find('[data-skills-pagination]').exists()).toBe(false)
-    expect(page.find('[data-skills-filter]').exists()).toBe(false)
+    expect(page.find('[data-skills-filter]').exists()).toBe(true)
   })
 
   it('reports one-locale Skills as incomplete instead of substituting the other locale', async () => {

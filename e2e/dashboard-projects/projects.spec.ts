@@ -45,6 +45,13 @@ const REQUIRED_PROJECT_FIELDS = [
   'title', 'slug', 'summary', 'overview', 'businessProblem', 'solution',
   'role', 'architecture', 'challenges', 'features', 'lessonsLearned'
 ] as const
+const LATER_SKILL = '00000000-0000-4000-b000-000000000051'
+const skillsForPicker = () => Array.from({ length: 51 }, (_, index) => ({
+  id: index === 50 ? LATER_SKILL : `00000000-0000-4000-b000-${String(index + 1).padStart(12, '0')}`,
+  slug: index === 50 ? 'later-project-skill' : `project-skill-${index + 1}`,
+  group: 'FRAMEWORK', brandColor: null, isPublic: true, order: index,
+  translations: { en: { label: index === 50 ? 'Later Project Skill' : `Project Skill ${index + 1}` } }
+}))
 
 async function fillTranslation(page: import('@playwright/test').Page, locale: 'en' | 'ar', prefix: string): Promise<void> {
   for (const field of REQUIRED_PROJECT_FIELDS) {
@@ -69,8 +76,10 @@ test.describe('collection and editor entry', () => {
     await page.goto('/dashboard/projects')
     await listSettled(page)
 
+    await expect(page.locator('[data-projects-table]')).toBeVisible()
     const ids = page.locator('[data-project-row]')
     await expect(ids).toHaveCount(2)
+    await expect(page.locator(`[data-project-title="${PRJ.main}"]`)).toHaveText('Content platform')
     await expect(page.locator(`[data-project-edit="${PRJ.main}"]`)).toBeVisible()
   })
 
@@ -142,7 +151,7 @@ test.describe('request states, made observable by delayMs', () => {
     await setBackendState(page, { delayMs: 2000 })
     await page.goto('/dashboard/projects')
 
-    await expect(page.locator('[aria-busy=true]').first()).toBeVisible()
+    await expect(page.locator('[aria-busy=true]')).toHaveCount(1)
     await listSettled(page)
     await expect(page.locator('[data-project-row]')).toHaveCount(2)
   })
@@ -158,7 +167,7 @@ test.describe('request states, made observable by delayMs', () => {
 
     // Retry through the surface's own control recovers into settled rows.
     await setBackendState(page, { mode: 'ok' })
-    await page.locator('[data-projects-failed] button').first().click()
+    await page.locator('[data-projects-failed] button').click()
     await listSettled(page)
     await expect(page.locator('[data-project-row]')).toHaveCount(2)
   })
@@ -173,7 +182,7 @@ test.describe('request states, made observable by delayMs', () => {
     // real route transition that used to replace this usable list with the initial skeleton.
     await setBackendState(page, { delayMs: 2000 })
     await page.locator('[data-projects-search]').fill('content')
-    await expect(page.locator('[aria-busy=true]').first()).toBeVisible()
+    await expect(page.locator('[aria-busy=true]')).toHaveCount(1)
     await expect(page.locator('[data-project-row]')).toHaveCount(2)
 
     await setBackendState(page, { mode: 'error' })
@@ -206,6 +215,129 @@ test.describe('request states, made observable by delayMs', () => {
 })
 
 test.describe('the technology picker', () => {
+  test('loads and restores a page-2 Skill without group or collection query leakage', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL!)
+    await setBackendState(page, { skills: skillsForPicker() })
+    const skillRequests: URL[] = []
+    page.on('request', request => {
+      const url = new URL(request.url())
+      if (url.pathname.endsWith('/admin/skills')) skillRequests.push(url)
+    })
+    await page.goto(`/dashboard/projects/${PRJ.main}?page=7&group=BACKEND`)
+    await editorSettled(page)
+    await expect.poll(() => skillRequests.map(url => url.searchParams.get('page')))
+      .toEqual(expect.arrayContaining(['1', '2']))
+    for (const url of skillRequests) {
+      expect(url.searchParams.get('perPage')).toBe('50')
+      expect(url.searchParams.get('group')).toBeNull()
+      expect([...url.searchParams.keys()].sort()).toEqual(['page', 'perPage'])
+    }
+    const later = page.locator(`[data-technology="${LATER_SKILL}"]`)
+    await expect(later).toBeVisible()
+    await later.click()
+    expect(await selectedTechnologyIds(page)).toContain(LATER_SKILL)
+    await saveAndSettle(page)
+    await page.reload()
+    await editorSettled(page)
+    expect(await selectedTechnologyIds(page)).toContain(LATER_SKILL)
+  })
+
+  test('opens and cancels inline Skill creation without mutating a clean or edited Project', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL!)
+    await page.goto(`/dashboard/projects/${PRJ.main}`)
+    await editorSettled(page)
+
+    const addTechnology = page.locator('[data-project-add-technology]')
+    expect(await selectedTechnologyIds(page)).toEqual([SKILL.typescript])
+    await expect(page.locator('[data-editor-save-state="idle"]')).toHaveCount(1)
+
+    await addTechnology.click()
+    await expect(page.locator('[data-skill-overlay]')).toBeVisible()
+    await expect(page.locator('[data-skill-editor-ready]')).toBeVisible()
+    expect(await selectedTechnologyIds(page)).toEqual([SKILL.typescript])
+
+    await page.locator('[data-skill-overlay-close]').click()
+    await expect(page.locator('[data-skill-overlay]')).toBeHidden()
+    await expect(page.locator('[data-editor-save-state="idle"]')).toHaveCount(1)
+    await expect(addTechnology).toBeFocused()
+
+    await page.locator('[data-project-field="en.summary"]').fill('Project edit remains in progress')
+    await addTechnology.click()
+    await page.locator('[data-skill-overlay-close]').click()
+    await expect(page.locator('[data-project-field="en.summary"]')).toHaveValue('Project edit remains in progress')
+    await expect(page.locator('[data-editor-save-state="unsaved"]')).toBeVisible()
+  })
+
+  test('creates a Skill in place, reloads it into the picker, selects it, and does not save the Project', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL!)
+    await page.goto(`/dashboard/projects/${PRJ.main}`)
+    await editorSettled(page)
+
+    const beforeUrl = page.url()
+    const projectWrites: string[] = []
+    page.on('request', request => {
+      if (request.method() === 'PATCH' && request.url().includes('/admin/projects/')) projectWrites.push(request.url())
+    })
+
+    await page.locator('[data-project-add-technology]').click()
+    const overlay = page.getByRole('dialog')
+    await overlay.locator('[data-editor-slug]').fill('inline-technology')
+    await overlay.locator('[data-editor-label="en"]').fill('Inline Technology')
+    const skillPost = page.waitForRequest(request => request.method() === 'POST' && request.url().includes('/admin/skills'))
+    await overlay.locator('[data-editor-save]').click()
+
+    expect((await skillPost).postDataJSON()).toMatchObject({
+      slug: 'inline-technology',
+      translations: [{ locale: 'en', label: 'Inline Technology' }]
+    })
+    await expect(page.locator('[data-skill-overlay]')).toBeHidden()
+    const added = page.locator(`[data-technology="${SKILL.added}"]`)
+    await expect(added).toBeVisible()
+    await expect(added).toHaveAttribute('aria-checked', 'true')
+    await expect(added).toBeFocused()
+    expect(await selectedTechnologyIds(page).then(ids => ids.sort())).toEqual([SKILL.typescript, SKILL.added].sort())
+    expect(projectWrites).toEqual([])
+    expect(page.url()).toBe(beforeUrl)
+    await expect(page.locator('[data-editor-save-state="unsaved"]')).toBeVisible()
+  })
+
+  test('keeps the Project selection and edits intact when inline Skill creation fails', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL!)
+    await page.goto(`/dashboard/projects/${PRJ.main}`)
+    await editorSettled(page)
+
+    await page.locator('[data-project-field="en.summary"]').fill('Project edit survives Skill failure')
+    await page.locator('[data-project-add-technology]').click()
+    const overlay = page.getByRole('dialog')
+    await overlay.locator('[data-editor-slug]').fill('failing-inline-technology')
+    await overlay.locator('[data-editor-label="en"]').fill('Failing Inline Technology')
+    await setBackendState(page, { failNextSkillWrite: true })
+    await overlay.locator('[data-editor-save]').click()
+
+    await expect(page.locator('[data-skill-overlay]')).toBeVisible()
+    await expect(overlay.locator('[data-editor-save-error-container]')).toBeFocused()
+    expect(await selectedTechnologyIds(page)).toEqual([SKILL.typescript])
+    await expect(page.locator('[data-project-field="en.summary"]')).toHaveValue('Project edit survives Skill failure')
+    await expect(page.locator('#main-content [data-editor-save-state="unsaved"]')).toBeVisible()
+  })
+
+  test('selects a created Skill inside the new-Project flow without leaving it', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL!)
+    await page.goto('/dashboard/projects/new')
+    await editorSettled(page)
+
+    await page.locator('[data-project-add-technology]').click()
+    const overlay = page.getByRole('dialog')
+    await overlay.locator('[data-editor-slug]').fill('new-project-technology')
+    await overlay.locator('[data-editor-label="en"]').fill('New Project Technology')
+    await overlay.locator('[data-editor-save]').click()
+
+    await expect(page.locator('[data-skill-overlay]')).toBeHidden()
+    await expect(page.locator(`[data-technology="${SKILL.added}"]`)).toHaveAttribute('aria-checked', 'true')
+    await expect(page).toHaveURL(/\/dashboard\/projects\/new$/)
+    await expect(page.locator('[data-editor-save-state="unsaved"]')).toBeVisible()
+  })
+
   test('renders the vocabulary, keeps held selections selected, and filters by search', async ({ page, baseURL }) => {
     await signIn(page, 'en', baseURL!)
     await page.goto(`/dashboard/projects/${PRJ.main}`)
@@ -269,8 +401,9 @@ test.describe('shared translation tabs and unsaved navigation', () => {
     await editorSettled(page)
 
     await expect(tab(page, 'ar')).toHaveAttribute('aria-selected', 'true')
-    await expect(page.locator('[data-editor-panel="en"]')).toHaveAttribute('dir', 'ltr')
-    await expect(page.locator('[data-editor-panel="ar"]')).toHaveAttribute('dir', 'rtl')
+    await expect(page.locator('[data-editor-panel="en"]')).not.toHaveAttribute('dir')
+    await expect(page.locator('[data-editor-panel="ar"]')).not.toHaveAttribute('dir')
+    await expect(page.locator('[data-project-field="en.title"]')).toHaveAttribute('dir', 'ltr')
     await expect(page.locator('[data-project-field="ar.title"]')).toHaveAttribute('dir', 'rtl')
   })
 

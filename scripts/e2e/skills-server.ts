@@ -29,9 +29,8 @@
  *    detail-only problem with NO `errors` array. An editor that assumes every 422 is field-addressed
  *    will swallow the latter.
  *
- * 5. THE LIST IS WHOLE. `GET /admin/skills` accepts no query parameters and answers `{ data }` with
- *    no `meta`. An unsolicited query key receives 422, matching `forbidNonWhitelisted`; a permissive
- *    mock that ignored `?locale=` would conceal an admin call missing `locale: false`.
+ * 5. THE LIST IS PAGINATED. `GET /admin/skills` accepts `page`, `perPage`, and optional `group`,
+ *    and answers `{ data, meta }`. Unknown or malformed query values receive 422.
  *
  * ── A DOCUMENTED LIMIT THIS INSTRUMENT CANNOT DISCOVER FOR ITSELF ─────────────────────────────────────
  * DELETE models ONLY the contract's stated conflict: "Skill is linked to a project." A project-linked
@@ -96,7 +95,7 @@ const EXPERIENCE = {
 } as const
 
 function seedSkills(): SeedAdminSkill[] {
-  return [
+  const seeded: SeedAdminSkill[] = [
     {
       id: SKILL_IDS.typescript,
       slug: 'typescript',
@@ -153,6 +152,30 @@ function seedSkills(): SeedAdminSkill[] {
       experienceIds: [EXPERIENCE.current]
     }
   ]
+  const fillerCounts: Array<[AdminSkillGroup, number]> = [
+    ['LANGUAGE', 12],
+    ['FRONTEND', 12],
+    ['BACKEND', 12],
+    ['DELIVERY', 11]
+  ]
+  let index = 6
+  for (const [group, count] of fillerCounts) {
+    for (let offset = 0; offset < count; offset += 1) {
+      seeded.push({
+        id: `00000000-0000-4000-f100-0000000000${String(index).padStart(2, '0')}`,
+        slug: `fixture-skill-${index}`,
+        group,
+        order: index,
+        brandColor: null,
+        isPublic: true,
+        translations: { en: { label: `Fixture skill ${index}` }, ar: { label: `مهارة تجريبية ${index}` } },
+        projectIds: [],
+        experienceIds: []
+      })
+      index += 1
+    }
+  }
+  return seeded
 }
 
 let skills = seedSkills()
@@ -401,18 +424,31 @@ async function handleRequest(req: http.IncomingMessage, res: http.ServerResponse
 
     const rest = path.slice(`${API_PREFIX}/admin/skills`.length)
 
-    // There is no admin list-query DTO. In particular, `?locale=` is not harmless.
-    if (rest === '' && url.searchParams.size > 0) {
-      return problem(res, 422, 'Unprocessable Entity', 'Admin skills does not accept query parameters.')
-    }
-
     // THE HOLD covers every entity read and mutation. Without it loading and double-submit tests are
     // assertions against states too brief to observe.
     if (delayMs > 0) await sleep(delayMs)
 
     if (rest === '' && req.method === 'GET') {
+      const allowed = new Set(['page', 'perPage', 'group'])
+      if ([...url.searchParams.keys()].some(key => !allowed.has(key))) {
+        return problem(res, 422, 'Unprocessable Entity', 'Unknown Skills list query parameter.')
+      }
+      const rawPage = url.searchParams.get('page') ?? '1'
+      const rawPerPage = url.searchParams.get('perPage') ?? '12'
+      const page = Number(rawPage)
+      const perPage = Number(rawPerPage)
+      const group = url.searchParams.get('group')
+      if (!Number.isInteger(page) || page < 1 || !Number.isInteger(perPage) || perPage < 1 || perPage > 50 || (group !== null && !GROUPS.includes(group as AdminSkillGroup))) {
+        return problem(res, 422, 'Unprocessable Entity', 'Invalid Skills list query parameters.')
+      }
       const pool = mode === 'empty' ? [] : skills
-      return json(res, 200, { data: pool.map(toEntity) })
+      const filtered = group === null ? pool : pool.filter(skill => skill.group === group)
+      const total = filtered.length
+      const totalPages = Math.max(1, Math.ceil(total / perPage))
+      return json(res, 200, {
+        data: filtered.slice((page - 1) * perPage, page * perPage).map(toEntity),
+        meta: { page, perPage, total, totalPages }
+      })
     }
 
     if (rest === '' && req.method === 'POST') {
@@ -453,7 +489,7 @@ async function handleRequest(req: http.IncomingMessage, res: http.ServerResponse
         experienceIds: []
       }
       applyWrite(created, body)
-      skills.push(created)
+      skills.unshift(created)
       return json(res, 201, { data: toEntity(created) })
     }
 

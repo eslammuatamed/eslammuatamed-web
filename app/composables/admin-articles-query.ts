@@ -11,18 +11,9 @@ import type { LocationQuery } from 'vue-router'
  * PURE, AND IT NEVER REWRITES THE URL. Normalisation happens on read only: a parser that
  * "corrected" the address bar would re-trigger the watcher that called it and loop.
  *
- * ## Why there is no search box and no sort control here
- *
- * Because `GET /admin/articles` has neither. Its whole query surface is `page`, `perPage` and
- * `status` — verified against the committed contract, and deliberately NOT worked around. The
- * public `GET /articles` does take `q`, `category` and `tag`, which makes the absence look like an
- * oversight; it is not this module's to correct. A client-side search would have to fetch the whole
- * library to filter twelve rows, and would then print a `meta.total` that describes the server's
- * result set rather than the rows underneath it — the page count and the list would disagree, and
- * the disagreement would grow with the library.
- *
- * If search over drafts is wanted, it is an API change with an owner decision behind it, not a
- * browser-side filter added quietly here.
+ * `q` is the Production-owned title search. It remains a query parameter rather than a browser
+ * filter so the server's `meta.total` and pagination describe the same filtered collection as the
+ * rows on screen. No sort parameter exists, so none is invented here.
  *
  * ## Why `status` is an enum with an `all` member rather than an optional
  *
@@ -39,6 +30,12 @@ import type { LocationQuery } from 'vue-router'
  */
 const firstValue = (value: unknown): unknown => (Array.isArray(value) ? value[0] : value)
 
+/** The backend caps title search at 120 characters; preserve a valid, useful prefix from deep links. */
+const clampQ = (value: unknown): unknown => {
+  const first = firstValue(value)
+  return typeof first === 'string' ? first.slice(0, 120) : first
+}
+
 /** The API default; max 50. Explicit rather than implicit so the URL and the request agree. */
 export const ADMIN_ARTICLES_PER_PAGE = 12
 
@@ -51,6 +48,11 @@ export const adminArticlesQuerySchema = z.object({
   // `.catch(1)`, and strict about integrality and sign so `page=0` and `page=-3` fall back rather
   // than reaching the API as an out-of-range offset.
   page: z.preprocess(firstValue, z.coerce.number().int().positive().catch(1)),
+  /** Blank search has one spelling: an absent key, never `?q=`. */
+  q: z.preprocess(
+    clampQ,
+    z.string().trim().transform(value => (value.length > 0 ? value : undefined)).optional().catch(undefined)
+  ),
   status: z.preprocess(firstValue, z.enum(ADMIN_ARTICLE_STATUS_FILTER).catch('all'))
 })
 
@@ -75,6 +77,7 @@ export function adminArticlesRequestQuery(query: AdminArticlesQuery): Record<str
   return {
     page: query.page,
     perPage: ADMIN_ARTICLES_PER_PAGE,
+    ...(query.q ? { q: query.q } : {}),
     ...(query.status === 'all' ? {} : { status: query.status })
   }
 }
@@ -87,5 +90,5 @@ export function adminArticlesRequestQuery(query: AdminArticlesQuery): Record<str
  * must clear them. Page is part of the identity: page 2's rows are not a usable stand-in for page 3.
  */
 export function adminArticlesQueryKey(query: AdminArticlesQuery): string {
-  return `${query.status}:${query.page}`
+  return JSON.stringify([query.status, query.page, query.q ?? null])
 }

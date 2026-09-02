@@ -5207,3 +5207,659 @@ All other PR gates were green before this decision. This is not FE5-U6, a D20-32
 final Frontend-v1 budget certification; it changes no other route, CSS, public, warning, measurement,
 Lighthouse, E2E, or product policy. **FE5-U6 remains solely responsible for final post-feedback
 recalibration from a clean baseline. This bridge MUST NOT be treated as the final D20-32 value.**
+
+---
+
+## Acceptance Feedback U1 — Translation-panel direction ownership · COMPLETE · 2026-08-31
+
+Starting committed HEAD: `c2d479ceab0dd06a60f6bbd7a5baa3640db01941`.
+
+Owner acceptance found that `DashboardTranslationTabs` applied the selected translation locale's
+`dir` to its complete panel. An Arabic tab could therefore reverse English Dashboard UI labels,
+technical values, slugs, controls, and metadata. The shared primitive now leaves panel direction to
+the Dashboard shell and exposes `contentDir` only through its translation-field slot. Authored
+Article, Experience, Skill, Testimonial, and Category/Tag fields bind that value explicitly; Project
+translation fields and Page SEO were already correctly locale-bound. Slugs and canonical URLs remain
+explicitly LTR.
+
+### Verification
+
+| Check | Result |
+| --- | --- |
+| Shared direction contract | 3/3, exit 0 — English shell/Arabic content, Arabic shell/English content, technical UI inheritance, and tab switching |
+| Directly affected Project editor | included in focused run; 53/53 total, exit 0 |
+| Negative control | Restoring panel-wide `dir` made all three shared assertions fail (`rtl`/`ltr` panel attributes where absence was required); restored immediately |
+| `npm run typecheck` | exit 0 |
+| `npm run lint` | exit 0 |
+| `git diff --check` | exit 0 |
+
+No API, Backend, navigation, CRUD, application-locale persistence, translation-state semantics, or
+budget changed. Focused browser E2E was deliberately not run; its stale panel-direction assertions
+were migrated to assert explicit field direction instead. **FE5-U6 remains blocked pending the
+remaining acceptance feedback; FE5-U7 was not started.**
+
+---
+
+## Acceptance Feedback U2 — Dashboard header action grouping · COMPLETE · 2026-08-31
+
+Starting committed HEAD: `bdc9be4e2765fe7ec73b4c9ff276f72e93041c5b`.
+
+The Dashboard header now uses two local, non-generic groups: workspace controls (View site, locale,
+and theme) and account controls (operator identity and sign out). A logical inline-end divider
+separates the groups, so it follows shell direction in both English and Arabic. Existing control
+components, destinations, new-tab protection, persistence behavior, no-dropdown bundle decision,
+email truncation, and mobile visibility breakpoints remain unchanged.
+
+### Verification
+
+| Check | Result |
+| --- | --- |
+| Focused Dashboard layout/header tests | 7/7, exit 0 — grouping membership, View site new-tab contract, identity/sign-out, RTL shell, and mobile trigger/identity behavior |
+| Negative control | Replacing the workspace wrapper with a transparent template removed the grouping relationship; both focused assertions failed as expected. Restored immediately. |
+| `npm run typecheck` | exit 0 |
+| `npm run lint` | exit 0 |
+| `git diff --check` | exit 0 |
+
+No routes, auth semantics, overview or CRUD behavior, API/backend contracts, budgets, dropdowns, or
+browser E2E changed. `typecheck:e2e` was not applicable because no E2E test or fixture type changed.
+**FE5-U6 remains blocked pending the remaining acceptance feedback; FE5-U7 was not started.**
+
+---
+
+## Acceptance Feedback U3 — Dashboard Overview hierarchy · COMPLETE · 2026-08-31
+
+Starting committed HEAD: `cb2e32cc5f4651387972631d6ee4e65932193979`.
+
+The owner found the Overview functional but visually fragmented by four independent content cards
+and a separate Messages card. The page now uses a single Content summary surface: Articles and
+Projects retain the only real totals; Skills and Testimonials remain explicit navigation-only rows,
+with no fabricated counts. Messages is a compact warning alert only when unread work exists, a
+neutral compact row at zero, and a local error/retry alert when unavailable. Existing quick actions
+remain together below. No analytics, historical data, derived metrics, or additional API reads were
+added.
+
+Articles, Projects, and Messages retain separate loading, error, 403 (where already applicable),
+and retry ownership. The layout stacks source-labelled rows on narrow viewports and aligns them from
+`sm`; it uses no physical direction assumptions, while Dashboard's existing EN/AR shell and
+unprefixed route behavior remain intact.
+
+### Verification
+
+| Check | Result |
+| --- | --- |
+| Focused Overview behavior tests | 6/6, exit 0 — totals, navigation-only modules, attention/zero state, source-local loading/errors/retries/403, quick actions, and Arabic rendering |
+| Negative control | Replacing the Skills/Testimonials action with inert text made the navigation contract fail; restored immediately. |
+| `npm run typecheck` | exit 0 |
+| `npm run lint` | exit 0 |
+| `git diff --check` | exit 0 |
+
+No header, navigation ownership, collection CRUD, backend/API contract, E2E fixture, or budget
+changed; `typecheck:e2e` was therefore not applicable. **FE5-U6 remains blocked by remaining
+acceptance feedback; FE5-U7 was not started.**
+
+---
+
+## Acceptance Feedback U4 — Categories and Tags route split · COMPLETE · 2026-08-31
+
+Starting committed HEAD: `c17799e7d1e7f13a4220cd56cb16ab0fc11c53a1`.
+
+The former combined `/dashboard/taxonomy` collection page is split into authenticated
+`/dashboard/categories` and `/dashboard/tags` list pages. Each uses `UTable`, keeps its existing
+entity-specific lightweight overlay for create/edit/delete, retains its own pending/error/stale/403/
+retry state, translations and in-place refresh contract, and adds no pagination, filter, search, or
+new API contract. The Content navigation now names Categories and Tags separately. The legacy
+`/dashboard/taxonomy` route is deliberately retained as an authenticated `replace` redirect to
+`/dashboard/categories`; it remains governed so existing bookmarks cannot become an unmeasured
+application route.
+
+### Owner-authorized clean route measurements
+
+The analyzed production build used the existing dashboard static-closure and Rollup
+`renderedLength` attribution machinery. The old combined Taxonomy baseline/cap is retired, not
+transferred. The frozen formula is `ceil(measured × 115 / 102400) × 1024`.
+
+| Route | App-owned measured bytes | Formula cap | Closure files |
+| --- | ---: | ---: | ---: |
+| `/dashboard/categories` | 112,895 B | 130,048 B (127 KiB) | 68 |
+| `/dashboard/tags` | 110,367 B | 126,976 B (124 KiB) | 67 |
+| `/dashboard/taxonomy` redirect | 66,748 B | 76,800 B (75 KiB) | 56 |
+
+All three page chunks resolved from the same analyzed build and each ordinary app-owned verdict
+passed. The normal size gate also passed. It emitted D20-24 quality-target warnings for Categories
+and Tags at 323.3 KiB and 320.4 KiB gzip route total respectively; under the existing D20-32 model
+these are explicitly non-blocking because the shared-floor, incremental, CSS, and frozen app-owned
+caps pass. This decision is a topology-specific measurement registration, not FE5-U6, a general
+recalibration, a budget framework, a cap waiver, or a change to the frozen floor set.
+
+### Verification
+
+| Check | Result |
+| --- | --- |
+| Focused Categories, Tags, legacy redirect, and navigation units | 19/19, exit 0 |
+| Focused route-governance units | 185/185, exit 0 |
+| Migrated Categories, Tags, and authenticated legacy-redirect browser lane | 14/14, exit 0 — separate route ownership, table/list reads, CRUD, validation, errors/retries/403, delete confirmation, focus restoration, RTL, and axe coverage |
+| Browser negative control | Temporarily expecting the legacy redirect to land on Tags failed: the authenticated browser received `/dashboard/categories`; restored immediately. |
+| `npm run typecheck` | exit 0 |
+| `npm run typecheck:e2e` | exit 0 |
+| `npm run lint` / `git diff --check` | exit 0 / exit 0 |
+| Clean provenance build (`23d77a8cb0357a4600fbdfb392a6124fabc39e9b`) | `ANALYZE_BUNDLE=1 NUXT_PUBLIC_SITE_URL=https://example.com npm run build`, exit 0; clean stamped analysis produced the three registered values |
+| `NUXT_PUBLIC_SITE_URL=https://example.com npm run size:routes` | exit 0 on the clean provenance build; Categories 112,895 B / 130,048 B, Tags 110,367 B / 126,976 B, Taxonomy redirect 66,748 B / 76,800 B |
+
+The old browser suite's combined-page assumption (two lists, two request states, and both overlays on
+`/dashboard/taxonomy`) is removed. The mutable backend lane stays one spec file by existing lane
+isolation policy, but it now exercises separate route journeys and one authenticated legacy redirect
+assertion. No CRUD behavior was removed. **FE5-U6 remains blocked by remaining acceptance feedback;
+FE5-U7 was not started.**
+
+The final amendment records the exact clean measurement SHA above in route governance and changes no
+client-bundle input. A final clean rebuild of the amended commit is required before push to reproduce
+the same values. **FE5-U6 remains blocked by remaining acceptance feedback; FE5-U7 was not started.**
+
+**Next three actions.**
+
+1. Reproduce the clean build and normal size gate on this final, provenance-recording commit.
+2. Push only the resulting U4 commit after remote state is rechecked and the owner-approved normal-push boundary is confirmed.
+3. Do not start FE5-U6 or FE5-U7.
+
+---
+
+## Acceptance Feedback U5A — Skills UTable + lightweight slideover CRUD · COMPLETE · 2026-09-01
+
+Starting committed HEAD: `4337573c0f820eda908daab8f164fbd219cb1e51`. The Skills collection now
+uses `UTable` for name/translation state, group, slug, order, optional brand color, visibility, and
+row actions. Create and edit open an entity-owned lazy `USlideover`; no pagination, group filter,
+backend/API contract, generic CRUD framework, or Project integration was added.
+
+`SkillEditor.vue` is now route-independent: it retains the existing schema/state, bilingual field
+rendering, validation, API mutation/error mapping, loading, pending state, and two-step delete
+confirmation, while emitting saved/deleted outcomes. `SkillOverlay.vue` owns close interception and
+the page owns query intent, collection refresh, and trigger-focus restoration. This leaves the
+creation boundary ready for future Project use: create a Skill, receive its returned entity, refresh
+the picker, append its id — without Skills routing, page chrome, table state, or route-leave guards.
+That future Project work remains explicitly out of scope.
+
+`/dashboard/skills/new` now redirects to `/dashboard/skills?create=1`; `/dashboard/skills/:id`
+redirects to `/dashboard/skills?edit=<id>`. Closing clears only the relevant query key and preserves
+unrelated query state. Dirty close and Escape require confirmation; confirmed close returns focus to
+the original Create or Edit control. Existing validation, server 422 field mapping, mutation-error
+focus, translation tabs/direction, and delete-conflict behavior remain browser-proven.
+
+### Route governance
+
+The owner-authorized U4 methodology was applied to the materially changed collection and both
+redirect-only compatibility closures using the clean analyzed implementation commit
+`7b5be3683023e3bda2ed289db150585a2b58a9e0`:
+
+| Route | App-owned bytes | D20-29 arithmetic | Cap |
+| --- | ---: | --- | ---: |
+| `/dashboard/skills` | 89,941 B | `ceil(89,941 × 115 / 102,400) × 1,024` | 104,448 B (102 KiB) |
+| `/dashboard/skills/new` redirect | 66,734 B | `ceil(66,734 × 115 / 102,400) × 1,024` | 76,800 B (75 KiB) |
+| `/dashboard/skills/:id` redirect | 66,885 B | `ceil(66,885 × 115 / 102,400) × 1,024` | 77,824 B (76 KiB) |
+
+The lazy overlay is intentional: it keeps the editor and Zod out of the collection's initial
+closure, so the dashboard incremental delivery gate passes. No unrelated route cap changed.
+
+### Focused evidence
+
+| Check | Result |
+| --- | --- |
+| Skills page unit | 9/9, exit 0 |
+| Skills browser lane | 12/12, exit 0 — table/list states, create/edit/delete, validation/errors, dirty/focus, redirects/query state, EN/AR responsive axe coverage |
+| Browser negative control | Temporarily bypassing dirty-close confirmation made the dirty-close test fail because its first close discarded the editor; guard restored and focused test passed. |
+| Clean provenance analysis | `ANALYZE_BUNDLE=1 NUXT_PUBLIC_SITE_URL=https://example.com npm run build`, exit 0 |
+| Route gate | `npm run size:routes`, exit 0 with the pre-registration limits; final clean rerun is required after the governance-only amendment. |
+
+Skills pagination and durable group filtering remain backend-dependent acceptance work. **FE5-U6
+remains blocked; FE5-U7 was not started.**
+
+---
+
+## Acceptance Feedback U5B — Testimonials UTable + lightweight slideover CRUD · COMPLETE · 2026-09-01
+
+Starting HEAD: `8869394f9edc7ee19b42a86bbf97ca74fbfebabd`. Testimonials now uses a `UTable`
+with author/translation state, quote preview, role, order, avatar state, visibility, and row actions.
+Create/edit now use a lazy entity-owned `USlideover`; `TestimonialEditor.vue` remains the reusable
+form/controller for bilingual fields, validation, avatar state, payload shaping, API errors, loading,
+and delete confirmation, but no longer navigates or owns a route-leave guard. The page owns query
+intent, refresh, and originating-control focus restoration.
+
+The nested MediaPicker remains inside the form and its native `UModal` lifecycle restores focus to
+its picker trigger; the outer slideover then restores focus to the list trigger. Avatar PATCH remains
+exact: untouched omits `avatarId`, clear sends `null`, replacement sends the selected id. Omitted
+translations retain the API's upsert preservation semantics. Legacy `/new` and `/:id` routes redirect
+to `?create=1` and `?edit=<id>`; no pagination, backend/API, Skills, Project, generic CRUD, FE5-U6,
+or FE5-U7 work was added.
+
+Owner-authorized clean measurement from `f8892294c604a34c649eb7aec5bfa106ba95f991` records:
+`/dashboard/testimonials` 91,758 B → `ceil(91,758 × 115 / 102,400) × 1,024` = 106,496 B;
+`/new` redirect 66,752 B → 76,800 B; `/:id` redirect 66,903 B → 77,824 B. No unrelated cap changed.
+
+Focused Testimonials units and form/composable tests pass. Browser coverage migrated to table/overlay
+create/edit/avatar/delete/error/dirty/redirect/query/RTL paths; bypassing dirty confirmation makes
+the dirty-close browser control fail, then the guard was restored. Pagination remains backend-dependent;
+**FE5-U6 remains blocked and FE5-U7 was not started.**
+
+---
+
+## Acceptance Feedback U5C — Articles UTable collection · COMPLETE · 2026-09-01
+
+Starting committed HEAD: `91456f96c08d17dea3580990951fb54ec587f1a0`. The owner requires Dashboard
+collections to use Nuxt UI `UTable`; `/dashboard/articles` now replaces its card-list markup with an
+Article-specific table. Its columns retain the existing localized title, both locale-specific slugs,
+status, translation completeness, published/updated dates, and stable edit action. The responsive
+overflow wrapper preserves table semantics on narrow screens instead of returning to a mobile card
+list; authored titles use `dir="auto"`, technical slugs retain their locale direction, and the
+Dashboard shell remains the owner of EN/AR chrome direction.
+
+The existing `useAdminArticles` and `admin-articles-query` contracts are unchanged: URL query state
+remains the source of truth; requests retain server `page`, `perPage`, and optional `status`; response
+metadata retains `page`, `perPage`, `total`, and `totalPages`; changing status clears page in the same
+navigation; and the monotonic request token still prevents a stale response from overwriting a newer
+view. Existing create and edit routes remain intact; deletion remains owned by the existing Article
+editor, exactly as before. No Article title search, client-side filtering, backend/API/generated
+contract, editor redesign, generic table framework, FE5-U6, or FE5-U7 work was added. Title search
+remains backend-dependent because `GET /admin/articles` has no `q` parameter.
+
+### Verification
+
+| Check | Result |
+| --- | --- |
+| Focused Articles page, query, and request-state units | 39/39, exit 0 — table rows, status/query, server paging, loading/empty/error/retry, and stale-response protection |
+| UTable test-first control | New table assertion failed before implementation, then passed after the page migration. |
+| Browser negative control | After rebuilding a deliberate status-change defect, the status test failed exactly because `page=2` remained in the URL; source was restored immediately. |
+| Focused Articles browser project | 48-test project completed against the restored local build with no failure artifacts — table reachability, server pagination/filtering, states, EN/AR responsive/axe, and existing editor journeys. |
+| Analysis build / normal size gate | `ANALYZE_BUNDLE=1 NUXT_PUBLIC_SITE_URL=https://example.com npm run build` and `npm run size:routes`, exit 0. `/dashboard/articles` measured 95,309 B app-owned / 102,400 B frozen cap. |
+
+No route-governance change was needed: the measured list route remains within its existing cap, and
+no Article editor or unrelated route cap changed. The existing D20-24 quality-target warning remains
+reported by the normal gate, while the D20-32 shared-floor, incremental, CSS, and frozen app-owned
+guards pass. **FE5-U6 remains blocked by remaining acceptance feedback; FE5-U7 was not started.**
+
+---
+
+## Acceptance Feedback U5D — Projects UTable collection · COMPLETE · 2026-09-01
+
+Starting committed HEAD: `569cdc800d96327474b13476474eb8a1305091ea`. The Projects collection now
+uses a Projects-specific `UTable` in place of its card/list presentation. The table retains localized
+project identity with directionally correct EN/AR slugs, publication and featured state, translation
+coverage, order/year, updated date, and stable ID-based edit actions. The responsive overflow wrapper
+keeps one semantic table at narrow widths rather than restoring a second card presentation.
+
+`useAdminProjects` and `admin-projects-query` are unchanged: the URL remains the source of truth
+for server `page`, `perPage`, `q`, publication, featured, and sort requests; every filter/sort/search
+transition still returns to page 1 in one navigation; and the monotonic request sequence still blocks
+an earlier response from overwriting a newer query. Create and edit routes, ProjectEditor, the
+technology picker, API/generated contracts, and all backend behavior remain intentionally unchanged.
+Inline Add Technology/Skill creation remains deferred.
+
+### Verification
+
+| Check | Result |
+| --- | --- |
+| Focused Projects page, query, and request-state units | 46/46, exit 0 — UTable rows/title/state/actions, server query ownership, pagination, filtering, sorting, refresh/error behavior, and stale-response protection |
+| UTable test-first control | The new UTable assertion failed against the card list, then passed after the migration. |
+| Query-state negative control | Temporarily removing `page: undefined` from `setFilter` made the search-reset test fail with page 4 instead of page 1; restored immediately. |
+| Focused Projects browser project | 29/29, exit 0 — table/list identity, create/edit entry, collection loading/error/stale/403, narrow layout, and existing Projects editor journeys. |
+| Analysis build / normal size gate | `ANALYZE_BUNDLE=1 NUXT_PUBLIC_SITE_URL=https://example.com npm run build` and `npm run size:routes`, exit 0. `/dashboard/projects` measured 107,665 B app-owned / 109,568 B frozen cap (1,903 B headroom). |
+| `npm run typecheck` / `npm run typecheck:e2e` / `npm run lint` / `git diff --check` | exit 0 / exit 0 / exit 0 / exit 0 |
+
+No route-governance change was needed, and no unrelated route cap changed. The normal gate retains
+its pre-existing D20-24 quality-target warning for Projects while D20-32 shared-floor, incremental,
+CSS, and frozen app-owned caps pass. **FE5-U6 remains blocked by remaining acceptance feedback;
+FE5-U7 was not started.**
+
+---
+
+## Acceptance Feedback U5E — Experience UTable collection · COMPLETE · 2026-09-01
+
+Starting committed HEAD: `eaa9d704919d3c1968362c903b5d1a1e2d38e0b2`. The plural
+`/dashboard/experiences` collection now renders one Experience-specific `UTable` in place of its
+card list. Its operational columns retain localized role/company identity, period/current state,
+employment type, translation completeness, linked-skill count, and the stable ID-based edit action.
+The responsive overflow wrapper preserves semantic table navigation at narrow widths; authored role
+and company content uses `dir="auto"` while the Dashboard shell remains responsible for EN/AR chrome
+direction.
+
+The unpaginated `useAdminExperiences` contract remains unchanged: `GET /admin/experiences` keeps
+`locale: false`, sends no query parameters, and consumes `{ data: [...] }` without metadata. API
+order remains the displayed order; no client sorting, slicing, pagination, search, filters, or
+backend/API changes were added. Existing create/edit routes and ExperienceEditor remain intact;
+deletion stays solely within the editor's existing two-step confirmation flow.
+
+### Verification
+
+| Check | Result |
+| --- | --- |
+| Focused Experience page, composable, and field units | 27/27, exit 0 — UTable rows/actions, load/empty/error/403/stale states, unpaginated request contract, API order, translations, and skill count |
+| UTable test-first control | The new table assertion failed against the card list, then passed after the migration. |
+| Browser negative control | Temporarily routing an edit action to `/dashboard/experiences/wrong-id` made the exact-action unit fail; the original ID route was restored immediately. |
+| Experience browser project | 36/36, exit 0 — table identity/order, states, EN/AR narrow layout, and all pre-existing editor/skill/delete workflows. |
+| Analysis build / normal size gate | `ANALYZE_BUNDLE=1 NUXT_PUBLIC_SITE_URL=https://example.com npm run build` and `npm run size:routes`, exit 0. `/dashboard/experiences` measured 90,829 B app-owned / 99,328 B frozen cap (8,499 B headroom). |
+| `npx nuxt typecheck` / `npm run typecheck:e2e` / `npm run lint` / `git diff --check` | exit 0 / exit 0 / exit 0 / exit 0 |
+
+No route-governance change was needed and no unrelated route cap changed. The normal gate retains
+only its pre-existing D20-24 quality-target warnings while the affected Experience collection passes
+the D20-32 shared-floor, incremental, CSS, and frozen app-owned caps. **FE5-U6 remains blocked by
+remaining acceptance feedback; FE5-U7 was not started.**
+
+---
+
+## Acceptance Feedback U5F — inline Project Technology creation · COMPLETE · 2026-09-01
+
+Starting committed HEAD: `bb7cf600f2dcfccd6a80f1ba32e1add97d0fdeb7`. Project create and edit now
+place a secondary **Add technology** action beside the existing Technology heading. It opens the
+existing lazy `DashboardSkillOverlay` and entity-owned `DashboardSkillEditor`; no Project navigation,
+new full-page Skill route, production API endpoint, generated client, or generic CRUD abstraction was
+introduced. The Project owns only the composition: when the existing Skill create succeeds it appends
+the returned ID if absent, asks `DashboardSkillPicker` to reload the vocabulary, and focuses the new
+technology. The Project remains unsaved until its own existing Save action is chosen.
+
+The small picker extension exposes only its genuine shared responsibilities: `refresh()` and
+`focusTechnology(id)`. Existing unknown-ID preservation and duplicate prevention remain unchanged.
+The shared overlay now emits its close notification after Nuxt UI's `USlideover` leave transition,
+so Project success focuses the newly selected checkbox and cancellation restores the Add technology
+trigger without fighting the primitive's own focus restoration. Existing Skills close/dirty/RTL/axe
+coverage remains green. EN and AR use the translated labels “Add technology” and “إضافة تقنية”.
+
+Project browser fixtures add a mutable, Project-lane-only `/admin/skills` implementation; this is test
+infrastructure only and does not alter production backend/API behavior. Browser coverage proves clean
+and edited Project cancellation, create payload and persisted Skill, refresh and selected ID, success
+focus, no Project PATCH/navigation, create failure isolation and error focus, new-Project continuity,
+and retained vocabulary/unknown/relation behavior. The bounded negative control temporarily suppressed
+the Project technology-ID mutation: the created checkbox remained `aria-checked="false"` and the
+success test failed; restoration made it pass.
+
+### Verification
+
+| Check | Result |
+| --- | --- |
+| Focused Project and reusable Skill units | 61/61, exit 0 |
+| Skills browser lifecycle coverage | Existing create-close and dirty-edit focus cases passed; Arabic slideover RTL/axe case passed. |
+| Project browser lane | 33/33, exit 0, run as eight named suite groups because the local foreground runner terminates runs after 30 seconds; no retry or timeout change. |
+| `npx nuxt typecheck` / `npm run typecheck:e2e` / `npm run lint` / `git diff --check` | exit 0 / exit 0 / exit 0 / exit 0 |
+
+The final clean analyzed build and normal route-size gate are taken from the U5F implementation commit
+immediately following this checkpoint. No route-cap or route-governance change is expected unless that
+measurement proves otherwise. **FE5-U6 remains blocked; FE5-U7 was not started.**
+
+---
+
+## Contract Reconciliation R2 — Prism fixture extraction · COMPLETE · 2026-09-01
+
+Fresh git verification established that backend acceptance is based on current `origin/dev`
+(`23485209eee1d866ae1bd4d802d1cc943073b211`) and that the Users/Roles array-envelope correction
+already exists there as `fbf81002c49c8b2fee1500b85744b620b5f97655`; no backend reconciliation is
+required. The Page SEO named OpenAPI examples introduced by frontend commits `6e505af` and `79866ad`
+were classified as frontend-owned Prism test data and moved to
+`scripts/e2e/page-seo-prism-fixtures.mjs`. The locale proxy now serves that explicit fixture while
+all other named examples retain their contract-derived Prism behavior.
+
+The frontend-only Page SEO mutation was removed from `openapi/openapi.json`, restoring the
+authoritative backend-contract rule without regenerating API types. Focused locale selection tests
+preserve the EN/AR route and payload behavior, including the bilingual About values; the bounded
+wrong-locale fixture control failed, then was restored. Full backend-to-frontend OpenAPI sync remains
+the next contract step, and U5G remains blocked until it is complete. **FE5-U6 remains blocked;
+FE5-U7 was not started.**
+
+---
+
+## Contract Governance Hygiene G1 — provenance and baseline rules · COMPLETE · 2026-09-01
+
+This corrects, rather than hides, two investigation root causes: frontend-owned Prism fixtures had
+been embedded in the vendored OpenAPI, and a historical Users/Roles lookup relied too heavily on one
+SHA instead of current semantic source, generated-contract, and history evidence. The backend export
+is now documented as the sole authoritative API ↔ web contract; the frontend copy is synchronized
+only, while frontend fixtures remain outside it and generated API types remain output-only.
+
+Contract adoption documentation now requires `git fetch origin --prune` before remote-baseline or
+ancestry conclusions, semantic fix discovery beyond a single commit identity, and the documented
+implementation branch rather than documentation/backup/runtime branches as the baseline. It also
+requires recording backend SHA plus backend/frontend OpenAPI SHA256 values for a normal sync, and a
+STOP plus provenance investigation for unexpected broad drift. No new sync tooling was forced because
+the repositories have no natural provenance-metadata boundary; the full authoritative contract sync
+remains next. **U5G remains blocked; FE5-U6 and FE5-U7 were not started.**
+
+---
+
+## Contract Reconciliation R3 — authoritative backend OpenAPI sync · COMPLETE · 2026-09-01
+
+Frontend started at `3eb9a7b69209c764ab88745706292b40ca6d63dd`. After `git fetch origin --prune`,
+the authoritative backend source was
+`741c3c5730eda96718b03e1dbad01d9a5b8f9266` (with Article `q` commit `6ec7418` still ancestral).
+The backend `openapi.json` SHA-256 was
+`70e3e3e5330a8e3b8ceb07ac214e60bbde254bcddccdb8f8fc029902c70110c4`; the frontend pre-sync
+artifact SHA-256 was `799d2ed98662ed755f1092c904986e760b6a537b845f0c7bedf5b678941f8a4d`.
+
+The pre-sync diff contained only expected backend-owned changes: Article admin `q`, Users/Roles
+array envelopes, Media 400/413/429 response metadata, and Message/Projects descriptions. The
+frontend artifact was replaced byte-for-byte and now has the identical backend SHA-256. The native
+`npm run api:types` generation updated only `app/types/api.d.ts` for those contract effects; its
+second pass was hash-identical. Focused Prism/contract tests reverified R2 fixture independence and
+all type/lint/diff checks passed. No product source or backend files changed, and no unexplained
+drift remains. **U5G is unblocked for its separate unit; Backend-B, FE5-U6, and FE5-U7 were not
+started.**
+
+---
+
+## Contract Reconciliation R4 — final Production backend OpenAPI sync · COMPLETE · 2026-09-02
+
+Campaign 027 backend acceptance is complete in Production. After `git fetch origin --prune`, the
+authoritative backend baseline was verified as `origin/main`
+`9da49f71d41f2275e588db479329df4998364fe4`, release
+`20260901T223954Z-9da49f7`. The exact backend `openapi.json` SHA-256 is
+`2a51438a443734d51c130349dc76d488e65bbf55a7c7ce0d2858a28db1d06be9`.
+
+Frontend pre-sync OpenAPI SHA-256 was
+`70e3e3e5330a8e3b8ceb07ac214e60bbde254bcddccdb8f8fc029902c70110c4`.
+The only semantic drift was the released admin-list pagination contract: Experiences, Testimonials,
+Categories, Tags, and Skills gained `page`/`perPage` plus `{ data, meta }`; Skills also gained the
+`group` enum. Admin Article `q` was already present. No public-list contract changed and no Page SEO
+Prism fixture entered OpenAPI.
+
+The vendored artifact was copied byte-for-byte from the exact backend Git object. Frontend post-sync
+SHA-256 is `2a51438a443734d51c130349dc76d488e65bbf55a7c7ce0d2858a28db1d06be9`, proving exact byte
+identity with Production. `npm run api:types` regenerated only `app/types/api.d.ts`; its second pass
+was deterministic. The focused Prism/contract-fixture suite passed 42/42, and `npm run typecheck`,
+`npm run typecheck:e2e`, and `npm run lint` passed. The final `git diff --check` is required before
+commit.
+
+Consumer audit records no present TypeScript fallout because current admin readers use local generic
+envelope aliases, but later product migration must update `useAdminExperiences`,
+`useAdminTestimonials`, `useAdminCategories`, `useAdminTags`, and `useAdminSkills`; the Article
+category/tag selectors in `useAdminArticles`; and the shared `SkillPicker` consumers in the Project
+and Experience editors. Article search integration remains owned by `admin-articles-query.ts` and
+`useAdminArticles.ts`. No product source changed in this unit. **Frontend implementation resumes from
+this final contract baseline; U5G remains not yet implemented, and FE5-U6 and FE5-U7 remain not
+started.**
+
+---
+
+## Acceptance Feedback U5G — server-side Article title search · COMPLETE · 2026-09-02
+
+Starting committed HEAD: `1c597259426870ccbe54820123a2cfde5cc47218`. This frontend-only continuation
+adopts the final Production contract from backend `origin/main`
+`9da49f71d41f2275e588db479329df4998364fe4` and R4's byte-identical OpenAPI artifact. The generated
+Article endpoint already declares optional `q`; neither the vendored OpenAPI nor `app/types/api.d.ts`
+changed here.
+
+`/dashboard/articles` now has an explicit title-search input with submit/Enter and clear controls.
+The committed URL is the one source of truth for `q`, `status`, and `page`; a draft input avoids
+requests per keystroke. Search trims input, clamps it to 120 characters, omits blank `q`, preserves
+status, resets pagination in the same router navigation, and restores input state through deep links
+and browser history. The request sends `q` exactly to `GET /admin/articles`; data is still wholly
+server-filtered, server-ordered, and server-paginated. Both EN and AR labels are localized, and the
+title input and authored title rows use `dir="auto"`.
+
+Stale-response handling now keys the displayed view by `[status, page, q]` as well as using the
+existing monotonic request sequence. Thus an old search result or a failed different search cannot
+overwrite or falsely remain beneath the newer title query. The deterministic Articles E2E backend
+models Production's case-insensitive title-only match across all authored locales, validates the
+120-character boundary, and supplies enough matching rows to exercise filtered pagination.
+
+### Verification
+
+| Check | Result |
+| --- | --- |
+| Focused query, composable, page, and deterministic-backend units | 76/76, exit 0 — parse/trim/clamp/URL transport, `q` identity, no local filtering, EN/AR, reset/clear/history, retry/error, stale order, and the mock contract |
+| `q` stale-identity negative control | Temporarily removing `q` from `adminArticlesQueryKey` made `CLEARS when a different title search fails` fail with one prior row; restoring it made the exact test pass. |
+| Focused U5G browser coverage | 9/9, exit 0 — keyboard submit, EN/AR results, URL/API parameters, status and pagination preservation, clear, deep/back/forward, stale response, empty, failure, and retry. |
+| Complete Dashboard Articles browser project | 57/57, exit 0 — U5G coverage plus existing list, request-state, bilingual direction/axe, and editor workflows. |
+| `npm run typecheck:e2e` / `npm run typecheck` / `npm run lint` / `git diff --check` | exit 0 / exit 0 / exit 0 / exit 0 |
+| Analysis build / normal route-size gate | `ANALYZE_BUNDLE=1 NUXT_PUBLIC_SITE_URL=https://example.com npm run build` and `NUXT_PUBLIC_SITE_URL=https://example.com npm run size:routes`, exit 0. `/dashboard/articles` measured 97,782 B app-owned / 102,400 B frozen cap (4,618 B headroom). |
+
+No route-governance or cap change was made. The ordinary D20-32 gate passes for Articles; the normal
+report retains its existing D20-24 quality-target warning for this route (335.0 KB gzip) while the
+shared-floor, incremental, CSS, and frozen app-owned cap pass. No backend/API/type change, unrelated
+product work, FE5-U6, or FE5-U7 was started.
+
+---
+
+## Acceptance Feedback U5H — server-side Experiences + Testimonials pagination · COMPLETE · 2026-09-02
+
+Starting frontend SHA: `2c3f878def31cec2819ac11c9704a0805105c703`. This frontend-only unit consumes
+the final Production backend contract from `origin/main`
+`9da49f71d41f2275e588db479329df4998364fe4` and R4's byte-identical generated contract. No backend,
+vendored OpenAPI, or generated API type changed.
+
+`/dashboard/experiences` and `/dashboard/testimonials` now own `page` in the URL. Missing, invalid,
+or repeated values parse to page one; page one is omitted when navigating through the pager; page
+changes push browser history and direct `?page=2` requests that server page. Both resources send the
+fixed Production `perPage=12`, receive `{ data, meta }`, and render server order without client-side
+slicing or sorting. Their request identity includes the page, so stale responses cannot replace a
+newer page; same-page refresh failures keep usable rows while a failed different page clears them.
+
+Testimonials preserves its entity-owned slideover and MediaPicker lifecycle. Overlay create/edit
+query keys coexist with `page`; create/update/delete refresh authoritative server state and an
+out-of-range post-mutation page is replaced with the server's last valid page. Experiences retains
+its table, row actions, and editor navigation. The deterministic servers now implement the released
+page envelope and provide 13 fixed rows each, making page two observable in real-browser tests.
+
+### Verification
+
+| Check | Result |
+| --- | --- |
+| Focused composable and collection-page tests | 33/33, exit 0 — canonical request inputs, server metadata, request-state surfaces, server order, page identity, stale handling, and pagers. |
+| Experiences negative control | Temporarily removing page from `adminExperiencesQueryKey` made the different-page failure test retain page-one rows; restoring the key made the exact test pass. |
+| Testimonials negative control | Temporarily removing page from `adminTestimonialsQueryKey` made the different-page failure test retain page-one rows; restoring the key made the exact test pass. |
+| Complete dashboard browser projects | Experiences + Testimonials ran against fresh production builds and isolated deterministic servers: direct page-two URLs, back navigation, canonical `page`/`perPage` requests, delayed stale-page protection, request states, existing table/editor/slideover/MediaPicker journeys, narrow layout, and axe coverage. |
+| `npm run typecheck:e2e` / `npx nuxt typecheck` / `npm run lint` / `git diff --check` | exit 0 / exit 0 / exit 0 / exit 0. |
+| Analysis build / route-size gate | `ANALYZE_BUNDLE=1 NUXT_PUBLIC_SITE_URL=https://example.com npm run build` and `NUXT_PUBLIC_SITE_URL=https://example.com npm run size:routes`, exit 0. Experiences: 93,124 B / 99,328 B. Testimonials: 94,036 B / 106,496 B. |
+
+No route cap or governance entry changed. The normal route gate retains its existing D20-24
+quality-target warnings; both affected collection routes pass their shared-floor, incremental, CSS,
+and frozen app-owned limits. Categories, Tags, Skills, picker aggregation, FE5-U6, and FE5-U7 remain
+untouched. No deployment occurred.
+
+---
+
+## Acceptance Feedback U5K — complete picker vocabularies · COMPLETE · 2026-09-02
+
+The independent picker owners now exhaust the released paginated admin vocabulary contracts.
+`useAdminTaxonomy` loads Categories and Tags at `perPage=50` until server `meta.totalPages`; the
+shared Project/Experience SkillPicker owner does the same for Skills without a `group` query. Page
+size is an efficiency choice only: `meta.totalPages` is the completeness authority. Collection
+owners remain isolated: Categories and Tags retain `perPage=12`; Skills retains `perPage=12` plus
+its server-side group filter and URL state.
+
+Deterministic Article, Project, and Experience backends now serve canonical `{ data, meta }`
+vocabulary pages and accept controlled fixture replacement. Browser acceptance supplied 51-record
+vocabularies, proving page-2-only Category, Tag, Project Skill, and Experience Skill visibility,
+selection, save persistence, and reload restoration. Picker requests contained only `page` and
+`perPage=50`; neither collection URL page state nor Skills `group` leaked into them.
+
+The Experience SkillPicker failure control made page one succeed and page two fail. It rendered the
+existing vocabulary error state with no partial choices exposed; clearing the one-page failure and
+reloading obtained the complete vocabulary. The required negative control temporarily stopped the
+Skill loader after page one: the Project proof failed exactly because its observed page requests
+were `["1", "1"]`, missing required page two. The exhaustive loop was restored and the same proof
+passed once.
+
+### Verification
+
+| Check | Result |
+| --- | --- |
+| Article picker browser acceptance | 1/1, exit 0 — Category/Tag pages 1→2, page-2 selection, save payload, restoration, and no collection-query leakage. |
+| Project SkillPicker browser acceptance | 1/1, exit 0 — Skills pages 1→2, page-2 selection/restoration, no `group`, no collection-query leakage. |
+| Experience SkillPicker browser acceptance + atomic retry | 2/2, exit 0 — independent page-2 selection/restoration and page-2 failure clears all options, then retry restores the complete list. |
+| Bounded collection regression | 13/13, exit 0 — Categories/Tags use `perPage=12`; Skills uses `perPage=12` with preserved server group behavior; picker tests prove `perPage=50` follows `meta.totalPages`. |
+| Negative control | Project page-2 proof failed as intended with only `["1", "1"]`; restored loop rerun passed 1/1. |
+| `npm run typecheck:e2e` / `npm run lint` / `git diff --check` | exit 0 / exit 0 / exit 0. |
+| Analyzed build / route-size gate | `ANALYZE_BUNDLE=1 NUXT_PUBLIC_SITE_URL=https://example.com npm run build` and `NUXT_PUBLIC_SITE_URL=https://example.com npm run size:routes`, exit 0. Article new/edit: 120,053 / 122,880 B and 120,161 / 122,880 B; Project new/edit: 171,688 / 175,104 B and 171,866 / 176,128 B; Experience new/edit: 115,544 / 120,832 B and 115,652 / 121,856 B. |
+
+No route caps changed. No backend, OpenAPI, or generated API type changed. All Campaign 027
+backend-contract frontend integrations are complete. FE5-U6 and FE5-U7 remain not started.
+
+---
+
+## Acceptance Feedback U5I — server-side Categories + Tags pagination · COMPLETE · 2026-09-02
+
+Starting frontend SHA: `6b677e0517618a2cabbf96fcaed0d7c63992af94`. This frontend-only unit consumes
+the final Production backend contract from `origin/main`
+`9da49f71d41f2275e588db479329df4998364fe4`; no backend, vendored OpenAPI, or generated API type
+changed.
+
+**Picker safety decision: A — collection owners are independent.** The Categories and Tags
+collection pages each own their own request composable. `ArticleEditor` continues to obtain selector
+data through `useAdminTaxonomy` in `useAdminArticles`, which directly owns its `/admin/categories`
+and `/admin/tags` reads. U5I therefore changes no picker request or picker state. The direct-owner
+regression remains green, but Production pagination means the complete-vocabulary picker migration
+is still a dedicated pending unit; U5I deliberately implements no all-page aggregation.
+
+`/dashboard/categories` and `/dashboard/tags` now own `page` in their URLs. Missing, repeated, or
+invalid values parse to page one; page one is canonicalized without a query when the pager/history
+returns there. Both send the fixed released `perPage=12`, consume `{ data, meta }`, use server rows
+without client slicing, and key their displayed page identity by `page`. A monotonic request sequence
+prevents stale page one from overwriting page two. Create/edit/delete keep server state authoritative,
+refresh the current page, and replace an out-of-range page with the server-reported final page.
+
+The mutable taxonomy fixture now exposes 13 records per resource and serves the released page
+envelope. Browser coverage proves actual `page=1&perPage=12` and `page=2&perPage=12` requests,
+URL/history/deep-link behavior, metadata clamping, retries on page two, stale-response protection,
+existing overlay CRUD/focus behavior, delete-last-row clamping, and narrow EN/AR axe coverage.
+
+### Verification
+
+| Check | Result |
+| --- | --- |
+| Focused Categories + Tags composable/page + Article editor tests | 26/26, exit 0 — request transport, metadata, page identity, no local slicing, stale protection, and the independent Article selector owner. |
+| Categories stale-response negative control | Temporarily removed the `++loadSeq` advance; the focused test failed by rendering `old` after `new`. Restored immediately; exact focused test passed. |
+| Tags stale-response negative control | Same bounded defect on the independent Tags owner failed by rendering `old` after `new`; restored immediately; exact focused test passed. |
+| Categories browser coverage | 12/12, exit 0 — paged URL/API contract, delayed stale response, deep-link/retry/delete clamps, overlay CRUD, focus, and EN/AR axe. |
+| Tags browser coverage | 11/11, exit 0 — equivalent page contract, stale/deep-link/retry/delete behavior, CRUD, and EN/AR axe. |
+| Legacy taxonomy redirect | 1/1, exit 0 — `/dashboard/taxonomy` remains an authenticated redirect to Categories. |
+| `npm run typecheck:e2e` / `npm run typecheck` / `npm run lint` / `git diff --check` | exit 0 / exit 0 / exit 0 / exit 0. |
+| Analysis build / route-size gate | `ANALYZE_BUNDLE=1 NUXT_PUBLIC_SITE_URL=https://example.com npm run build` and `NUXT_PUBLIC_SITE_URL=https://example.com npm run size:routes`, exit 0. Categories: 115,188 B / 130,048 B. Tags: 112,589 B / 126,976 B. |
+
+No route caps changed. Both routes pass the D20-32 shared-floor, incremental, CSS, and frozen
+app-owned caps; the normal report retains their existing D20-24 quality-target warnings (326.4 KB gz
+Categories, 323.5 KB gz Tags). Skills pagination, Article Category/Tag all-page picker aggregation,
+FE5-U6, and FE5-U7 remain unstarted. No deployment occurred.
+
+---
+
+## Acceptance Feedback U5J — server-side Skills pagination + group filter · COMPLETE · 2026-09-02
+
+Starting frontend SHA: `86c6d295d3c97aa8d8efdae0c51e60c485c84284`. The Skills collection now owns
+page and optional group in its URL and sends the released fixed `perPage=12` request shape to
+`GET /admin/skills`. Server `data` and `meta` exclusively determine rows, totals, pagination, and
+final-page clamps; there is no client-side slicing or group filtering. Changing group clears the
+page, page navigation preserves group, and sequence plus `[group, page]` identity prevents stale
+page/group responses from replacing the latest view. CRUD clears its overlay intent before the
+route-driven refresh, preventing a delete clamp from reopening a stale editor.
+
+**Picker safety decision: B — a small ownership separation was required.** The old `useAdminSkills`
+remains the independent Project/Experience `DashboardSkillPicker` owner. U5J introduces the narrowly
+named `useAdminSkillsCollection` only for `/dashboard/skills`, so collection page/group state cannot
+leak into picker requests or state. Complete admin Skill vocabulary aggregation remains pending; no
+picker aggregation is claimed or implemented. Article Category/Tag aggregation remains pending;
+FE5-U6 and FE5-U7 remain unstarted. No backend, OpenAPI, or generated API type changed.
+
+### Verification
+
+| Check | Result |
+| --- | --- |
+| Focused query/composable/page, backend calibration, and Project picker unit coverage | 102/102, exit 0 — URL parsing/request transport, all group enums, server meta, stale page/group, no local filtering/slicing, and bounded Project picker opening/render/selection. |
+| Group identity negative control | Temporarily omitting `group` from `adminSkillsQueryKey` made the focused different-group failure test retain the prior Frontend row; restored immediately. |
+| Focused Skills browser checks | Passing isolated checks cover actual page/group requests, deep-link/history restoration, retry preservation, overlay CRUD, and filtered final-page delete clamp. |
+| `npm run typecheck:e2e` / `npx nuxt typecheck` / `git diff --check` | exit 0 / exit 0 / exit 0 before final validation pass. |
+| Analysis build / route-size gate | `/dashboard/skills`: 93,918 B app-owned / 104,448 B frozen cap; cap unchanged. The D20-32 delivery and CSS gates pass; the existing D20-24 332.0 KB gzip quality-target warning remains. |

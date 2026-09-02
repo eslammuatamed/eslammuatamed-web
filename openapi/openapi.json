@@ -694,6 +694,16 @@
               }
             }
           },
+          "400": {
+            "description": "Missing or invalid multipart file part.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetailsDto"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Missing or invalid access token.",
             "content": {
@@ -714,6 +724,16 @@
               }
             }
           },
+          "413": {
+            "description": "Upload exceeds the 10 MiB multipart file-size limit.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetailsDto"
+                }
+              }
+            }
+          },
           "422": {
             "description": "Unsupported type, spoofed content, oversized image, or malformed PDF.",
             "content": {
@@ -725,7 +745,18 @@
             }
           },
           "429": {
-            "description": "Processing capacity reached; retry after the Retry-After delay.",
+            "description": "Rate limited (10 uploads/min per user+IP, or the 300/min admin tier), or processing capacity reached.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying (delta-seconds, never an HTTP-date). Exposed via CORS so browser clients can read it.",
+                "schema": {
+                  "type": "integer",
+                  "format": "int32",
+                  "minimum": 1,
+                  "example": 3600
+                }
+              }
+            },
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -1301,204 +1332,6 @@
                       "$ref": "#/components/schemas/PublicPageSeoEntity"
                     }
                   }
-                },
-                "examples": {
-                  "en": {
-                    "summary": "English (?locale=en) — the resolved English static-page SEO.",
-                    "value": {
-                      "data": {
-                        "pageKey": "about",
-                        "locale": "en",
-                        "metaTitle": "About — Eslam Muatamed",
-                        "metaDescription": "Engineering background, philosophy, and current focus.",
-                        "ogImageId": null,
-                        "ogImage": null,
-                        "canonicalUrl": null
-                      }
-                    }
-                  },
-                  "ar": {
-                    "summary": "Arabic (?locale=ar) — the resolved Arabic static-page SEO.",
-                    "value": {
-                      "data": {
-                        "pageKey": "about",
-                        "locale": "ar",
-                        "metaTitle": "نبذة — إسلام معتمد",
-                        "metaDescription": "الخلفية الهندسية والفلسفة والتركيز الحالي.",
-                        "ogImageId": null,
-                        "ogImage": null,
-                        "canonicalUrl": null
-                      }
-                    }
-                  },
-                  "en-home": {
-                    "summary": "English home page with no authored SEO override.",
-                    "value": {
-                      "data": {
-                        "pageKey": "home",
-                        "locale": "en",
-                        "metaTitle": null,
-                        "metaDescription": null,
-                        "ogImageId": null,
-                        "ogImage": null,
-                        "canonicalUrl": null
-                      }
-                    }
-                  },
-                  "ar-home": {
-                    "summary": "Arabic home page with no authored SEO override.",
-                    "value": {
-                      "data": {
-                        "pageKey": "home",
-                        "locale": "ar",
-                        "metaTitle": null,
-                        "metaDescription": null,
-                        "ogImageId": null,
-                        "ogImage": null,
-                        "canonicalUrl": null
-                      }
-                    }
-                  },
-                  "en-experience": {
-                    "summary": "English experience page with no authored SEO override.",
-                    "value": {
-                      "data": {
-                        "pageKey": "experience",
-                        "locale": "en",
-                        "metaTitle": null,
-                        "metaDescription": null,
-                        "ogImageId": null,
-                        "ogImage": null,
-                        "canonicalUrl": null
-                      }
-                    }
-                  },
-                  "ar-experience": {
-                    "summary": "Arabic experience page with no authored SEO override.",
-                    "value": {
-                      "data": {
-                        "pageKey": "experience",
-                        "locale": "ar",
-                        "metaTitle": null,
-                        "metaDescription": null,
-                        "ogImageId": null,
-                        "ogImage": null,
-                        "canonicalUrl": null
-                      }
-                    }
-                  },
-                  "en-projects": {
-                    "summary": "English projects page with no authored SEO override.",
-                    "value": {
-                      "data": {
-                        "pageKey": "projects",
-                        "locale": "en",
-                        "metaTitle": null,
-                        "metaDescription": null,
-                        "ogImageId": null,
-                        "ogImage": null,
-                        "canonicalUrl": null
-                      }
-                    }
-                  },
-                  "ar-projects": {
-                    "summary": "Arabic projects page with no authored SEO override.",
-                    "value": {
-                      "data": {
-                        "pageKey": "projects",
-                        "locale": "ar",
-                        "metaTitle": null,
-                        "metaDescription": null,
-                        "ogImageId": null,
-                        "ogImage": null,
-                        "canonicalUrl": null
-                      }
-                    }
-                  },
-                  "en-blog": {
-                    "summary": "English blog page with no authored SEO override.",
-                    "value": {
-                      "data": {
-                        "pageKey": "blog",
-                        "locale": "en",
-                        "metaTitle": null,
-                        "metaDescription": null,
-                        "ogImageId": null,
-                        "ogImage": null,
-                        "canonicalUrl": null
-                      }
-                    }
-                  },
-                  "ar-blog": {
-                    "summary": "Arabic blog page with no authored SEO override.",
-                    "value": {
-                      "data": {
-                        "pageKey": "blog",
-                        "locale": "ar",
-                        "metaTitle": null,
-                        "metaDescription": null,
-                        "ogImageId": null,
-                        "ogImage": null,
-                        "canonicalUrl": null
-                      }
-                    }
-                  },
-                  "en-resume": {
-                    "summary": "English resume page with no authored SEO override.",
-                    "value": {
-                      "data": {
-                        "pageKey": "resume",
-                        "locale": "en",
-                        "metaTitle": null,
-                        "metaDescription": null,
-                        "ogImageId": null,
-                        "ogImage": null,
-                        "canonicalUrl": null
-                      }
-                    }
-                  },
-                  "ar-resume": {
-                    "summary": "Arabic resume page with no authored SEO override.",
-                    "value": {
-                      "data": {
-                        "pageKey": "resume",
-                        "locale": "ar",
-                        "metaTitle": null,
-                        "metaDescription": null,
-                        "ogImageId": null,
-                        "ogImage": null,
-                        "canonicalUrl": null
-                      }
-                    }
-                  },
-                  "en-contact": {
-                    "summary": "English contact page with no authored SEO override.",
-                    "value": {
-                      "data": {
-                        "pageKey": "contact",
-                        "locale": "en",
-                        "metaTitle": null,
-                        "metaDescription": null,
-                        "ogImageId": null,
-                        "ogImage": null,
-                        "canonicalUrl": null
-                      }
-                    }
-                  },
-                  "ar-contact": {
-                    "summary": "Arabic contact page with no authored SEO override.",
-                    "value": {
-                      "data": {
-                        "pageKey": "contact",
-                        "locale": "ar",
-                        "metaTitle": null,
-                        "metaDescription": null,
-                        "ogImageId": null,
-                        "ogImage": null,
-                        "canonicalUrl": null
-                      }
-                    }
-                  }
                 }
               }
             }
@@ -1884,7 +1717,31 @@
     "/api/v1/admin/categories": {
       "get": {
         "operationId": "CategoriesAdminController_list_v1",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "example": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "perPage",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 50,
+              "default": 12,
+              "example": 12,
+              "type": "number"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "",
@@ -1893,7 +1750,8 @@
                 "schema": {
                   "type": "object",
                   "required": [
-                    "data"
+                    "data",
+                    "meta"
                   ],
                   "properties": {
                     "data": {
@@ -1901,6 +1759,9 @@
                       "items": {
                         "$ref": "#/components/schemas/AdminCategoryEntity"
                       }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PageMeta"
                     }
                   }
                 }
@@ -1919,6 +1780,16 @@
           },
           "403": {
             "description": "Missing the required permission.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetailsDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Malformed pagination query parameters: page must be at least 1, perPage must be 1 through 50, and unknown fields are rejected.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -2301,7 +2172,31 @@
     "/api/v1/admin/tags": {
       "get": {
         "operationId": "TagsAdminController_list_v1",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "example": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "perPage",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 50,
+              "default": 12,
+              "example": 12,
+              "type": "number"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "",
@@ -2310,7 +2205,8 @@
                 "schema": {
                   "type": "object",
                   "required": [
-                    "data"
+                    "data",
+                    "meta"
                   ],
                   "properties": {
                     "data": {
@@ -2318,6 +2214,9 @@
                       "items": {
                         "$ref": "#/components/schemas/AdminTagEntity"
                       }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PageMeta"
                     }
                   }
                 }
@@ -2336,6 +2235,16 @@
           },
           "403": {
             "description": "Missing the required permission.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetailsDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Malformed pagination query parameters: page must be at least 1, perPage must be 1 through 50, and unknown fields are rejected.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -2970,6 +2879,17 @@
                 "ARCHIVED"
               ]
             }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Case-insensitive substring match on title across all authored translations. Blank or whitespace-only values are ignored.",
+            "schema": {
+              "maxLength": 120,
+              "example": "modular monolith",
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -3569,7 +3489,10 @@
                   ],
                   "properties": {
                     "data": {
-                      "$ref": "#/components/schemas/RoleEntity"
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/RoleEntity"
+                      }
                     }
                   }
                 }
@@ -4010,7 +3933,10 @@
                   ],
                   "properties": {
                     "data": {
-                      "$ref": "#/components/schemas/UserEntity"
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/UserEntity"
+                      }
                     }
                   }
                 }
@@ -4323,7 +4249,46 @@
     "/api/v1/admin/skills": {
       "get": {
         "operationId": "SkillsAdminController_list_v1",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "example": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "perPage",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 50,
+              "default": 12,
+              "example": 12,
+              "type": "number"
+            }
+          },
+          {
+            "name": "group",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": "FRONTEND",
+              "type": "string",
+              "enum": [
+                "LANGUAGE",
+                "FRONTEND",
+                "BACKEND",
+                "DELIVERY"
+              ]
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "",
@@ -4332,7 +4297,8 @@
                 "schema": {
                   "type": "object",
                   "required": [
-                    "data"
+                    "data",
+                    "meta"
                   ],
                   "properties": {
                     "data": {
@@ -4340,6 +4306,9 @@
                       "items": {
                         "$ref": "#/components/schemas/AdminSkillEntity"
                       }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PageMeta"
                     }
                   }
                 }
@@ -4358,6 +4327,16 @@
           },
           "403": {
             "description": "Missing the required permission.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetailsDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Malformed Skills list query parameters: page must be at least 1, perPage must be 1 through 50, group must be a valid SkillGroup, and unknown fields are rejected.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -4827,7 +4806,31 @@
     "/api/v1/admin/experiences": {
       "get": {
         "operationId": "ExperiencesAdminController_list_v1",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "example": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "perPage",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 50,
+              "default": 12,
+              "example": 12,
+              "type": "number"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "",
@@ -4836,7 +4839,8 @@
                 "schema": {
                   "type": "object",
                   "required": [
-                    "data"
+                    "data",
+                    "meta"
                   ],
                   "properties": {
                     "data": {
@@ -4844,6 +4848,9 @@
                       "items": {
                         "$ref": "#/components/schemas/AdminExperienceEntity"
                       }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PageMeta"
                     }
                   }
                 }
@@ -4862,6 +4869,16 @@
           },
           "403": {
             "description": "Missing the required permission.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetailsDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Malformed pagination query parameters: page must be at least 1, perPage must be 1 through 50, and unknown fields are rejected.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -5322,7 +5339,31 @@
     "/api/v1/admin/testimonials": {
       "get": {
         "operationId": "TestimonialsAdminController_list_v1",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "example": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "perPage",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 50,
+              "default": 12,
+              "example": 12,
+              "type": "number"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "",
@@ -5331,7 +5372,8 @@
                 "schema": {
                   "type": "object",
                   "required": [
-                    "data"
+                    "data",
+                    "meta"
                   ],
                   "properties": {
                     "data": {
@@ -5339,6 +5381,9 @@
                       "items": {
                         "$ref": "#/components/schemas/AdminTestimonialEntity"
                       }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PageMeta"
                     }
                   }
                 }
@@ -5357,6 +5402,16 @@
           },
           "403": {
             "description": "Missing the required permission.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetailsDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Malformed pagination query parameters: page must be at least 1, perPage must be 1 through 50, and unknown fields are rejected.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -5801,7 +5856,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Featured-first paginated published projects, plus the technology facets the filter should offer (D10-19).",
+            "description": "Featured-first paginated published projects, plus the technology facets the filter should offer.",
             "content": {
               "application/json": {
                 "schema": {
@@ -11715,7 +11770,7 @@
         "properties": {
           "body": {
             "type": "string",
-            "description": "The plain-text reply body. Plain text only — no HTML representation exists (D02-13e).",
+            "description": "The plain-text reply body. Plain text only — no HTML representation exists (D02-13).",
             "minLength": 1,
             "maxLength": 5000,
             "example": "Thanks for reaching out — I can take a look at this next week."

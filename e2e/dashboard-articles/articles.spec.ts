@@ -54,6 +54,38 @@ import {
 const UPDATING = (page: import('@playwright/test').Page) =>
   page.locator('[role=status][aria-live="polite"][aria-busy="true"]')
 
+function waitForArticlesRequest(
+  page: import('@playwright/test').Page,
+  expected: Record<string, string | null>
+) {
+  return page.waitForRequest(request => {
+    if (request.method() !== 'GET') return false
+    const url = new URL(request.url())
+    if (url.pathname !== '/api/v1/admin/articles') return false
+    return Object.entries(expected).every(([key, value]) => url.searchParams.get(key) === value)
+  })
+}
+
+function waitForArticlesResponse(
+  page: import('@playwright/test').Page,
+  expected: Record<string, string | null>
+) {
+  return page.waitForResponse(response => {
+    if (response.request().method() !== 'GET' || response.status() !== 200) return false
+    const url = new URL(response.url())
+    if (url.pathname !== '/api/v1/admin/articles') return false
+    return Object.entries(expected).every(([key, value]) => url.searchParams.get(key) === value)
+  })
+}
+
+async function submitTitleSearch(page: import('@playwright/test').Page, q: string) {
+  const request = waitForArticlesRequest(page, { q })
+  await page.locator('[data-articles-search]').fill(q)
+  await page.locator('[data-articles-search]').press('Enter')
+  await request
+  await listSettled(page)
+}
+
 test.beforeEach(async ({ page }) => {
   await resetBackend(page)
   await page.setViewportSize(DESKTOP)
@@ -67,7 +99,8 @@ test.describe('reachability and the list', () => {
     await link.click()
     await page.waitForURL('**/dashboard/articles')
     await listSettled(page)
-    await expect(rows(page).first()).toBeVisible()
+    await expect(page.locator('[data-articles-table]')).toBeVisible()
+    await expect(rows(page)).not.toHaveCount(0)
   })
 
   test('the status filter narrows the list and returns to page 1', async ({ page, baseURL }) => {
@@ -112,6 +145,153 @@ test.describe('reachability and the list', () => {
   })
 })
 
+test.describe('U5G — server-side article title search', () => {
+  test('renders an explicit, keyboard-submittable search control', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL as string)
+    await page.goto('/dashboard/articles')
+    await hydrated(page)
+    await expect(page.locator('[data-articles-search]')).toBeVisible()
+    await expect(page.locator('[data-articles-search-form]')).toBeVisible()
+    await expect(page.locator('[data-articles-search]')).toHaveAttribute('dir', 'auto')
+  })
+
+  test('sends an English q and renders the server result without local filtering', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL as string)
+    await page.goto('/dashboard/articles')
+    await hydrated(page)
+    await submitTitleSearch(page, 'listed article 19')
+
+    const query = new URL(page.url()).searchParams
+    expect(query.get('q')).toBe('listed article 19')
+    await expect(page.locator('[data-article-title]')).toHaveText(['Listed article 19'])
+  })
+
+  test('sends Arabic q across authored locales and renders the Arabic server result', async ({ page, baseURL }) => {
+    await signIn(page, 'ar', baseURL as string)
+    await page.goto('/dashboard/articles')
+    await hydrated(page)
+    await submitTitleSearch(page, 'مقالة مدرجة 19')
+
+    await expect(page.locator('[data-article-title]')).toHaveText(['مقالة مدرجة 19'])
+  })
+
+  test('search resets page once, preserves status, and sends both query parameters', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL as string)
+    await page.goto('/dashboard/articles?page=2&status=PUBLISHED')
+    await hydrated(page)
+    await listSettled(page)
+
+    const request = waitForArticlesRequest(page, { q: 'listed', status: 'PUBLISHED', page: '1' })
+    await page.locator('[data-articles-search]').fill(' listed ')
+    await page.locator('[data-articles-search]').press('Enter')
+    await request
+    await listSettled(page)
+
+    const query = new URL(page.url()).searchParams
+    expect(query.get('q')).toBe('listed')
+    expect(query.get('status')).toBe('PUBLISHED')
+    expect(query.get('page')).toBeNull()
+  })
+
+  test('status and pagination preserve q', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL as string)
+    await page.goto('/dashboard/articles?q=listed')
+    await hydrated(page)
+    await listSettled(page)
+
+    const statusRequest = waitForArticlesRequest(page, { q: 'listed', status: 'PUBLISHED', page: '1' })
+    await page.locator('[data-articles-status]').click()
+    await page.getByRole('option', { name: 'Published', exact: true }).click()
+    await statusRequest
+    await listSettled(page)
+    expect(new URL(page.url()).searchParams.get('q')).toBe('listed')
+
+    await page.goto('/dashboard/articles?q=listed')
+    await hydrated(page)
+    await listSettled(page)
+    await expect(page.locator('[data-articles-count]')).toContainText('25')
+    await page.locator('[data-articles-pagination]').getByRole('button', { name: 'Page 2', exact: true }).click()
+    await page.waitForURL(/[?&]page=2/)
+    await listSettled(page)
+    expect(new URL(page.url()).searchParams.get('q')).toBe('listed')
+    expect(new URL(page.url()).searchParams.get('page')).toBe('2')
+  })
+
+  test('clearing removes q, returns to page 1, and makes an unfiltered request', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL as string)
+    await page.goto('/dashboard/articles?q=listed&page=2')
+    await hydrated(page)
+    await listSettled(page)
+
+    const request = waitForArticlesRequest(page, { q: null, page: '1' })
+    await page.locator('[data-articles-search-clear]').click()
+    await request
+    await listSettled(page)
+    const query = new URL(page.url()).searchParams
+    expect(query.get('q')).toBeNull()
+    expect(query.get('page')).toBeNull()
+  })
+
+  test('deep links and browser history restore the committed q without leaving Articles', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL as string)
+    const deepLinkRequest = waitForArticlesRequest(page, { q: 'listed', page: '2' })
+    await page.goto('/dashboard/articles?q=listed&page=2')
+    await deepLinkRequest
+    await hydrated(page)
+    await listSettled(page)
+    await expect(page.locator('[data-articles-search]')).toHaveValue('listed')
+
+    await submitTitleSearch(page, 'listed article 19')
+    await page.goBack()
+    await page.waitForURL(/q=listed&page=2/)
+    await expect(page.locator('[data-articles-search]')).toHaveValue('listed')
+    await page.goForward()
+    await page.waitForURL(/q=listed(?:%20|\+)article(?:%20|\+)19/)
+    await expect(page.locator('[data-articles-search]')).toHaveValue('listed article 19')
+    expect(new URL(page.url()).pathname).toBe('/dashboard/articles')
+  })
+
+  test('a slow old-q response cannot overwrite the newer result', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL as string)
+    await setBackendState(page, { delayMs: 1200 })
+    const oldRequest = waitForArticlesRequest(page, { q: 'listed' })
+    const oldResponse = page.waitForResponse(response => {
+      const url = new URL(response.url())
+      return url.pathname === '/api/v1/admin/articles' && url.searchParams.get('q') === 'listed'
+    })
+    await page.goto('/dashboard/articles?q=listed')
+    await oldRequest
+    await hydrated(page)
+
+    await setBackendState(page, { delayMs: 0 })
+    await submitTitleSearch(page, 'listed article 19')
+    await expect(page.locator('[data-article-title]')).toHaveText(['Listed article 19'])
+    await oldResponse
+    await expect(page.locator('[data-article-title]')).toHaveText(['Listed article 19'])
+  })
+
+  test('a no-match search is empty, while failure retry preserves q, status and page', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL as string)
+    await page.goto('/dashboard/articles?q=does-not-exist')
+    await hydrated(page)
+    await listSettled(page)
+    await expect(page.locator('[data-articles-empty]')).toBeVisible()
+    await expect(rows(page)).toHaveCount(0)
+
+    await setBackendState(page, { mode: 'error' })
+    await page.goto('/dashboard/articles?q=listed&status=PUBLISHED&page=2')
+    await hydrated(page)
+    await expect(page.locator('[data-articles-failed]')).toBeVisible()
+
+    await setBackendState(page, { mode: 'ok' })
+    const retryRequest = waitForArticlesRequest(page, { q: 'listed', status: 'PUBLISHED', page: '2' })
+    await page.locator('[data-articles-failed] button').click()
+    await retryRequest
+    await listSettled(page)
+    expect(new URL(page.url()).pathname).toBe('/dashboard/articles')
+  })
+})
+
 test.describe('§14.9 criteria 1, 2 and 6 — the request-state contract, in a real browser', () => {
   test('a first load shows a skeleton and NO empty state, then the rows', async ({ page, baseURL }) => {
     await signIn(page, 'en', baseURL as string)
@@ -128,7 +308,7 @@ test.describe('§14.9 criteria 1, 2 and 6 — the request-state contract, in a r
     ).toHaveCount(0)
 
     await listSettled(page)
-    await expect(rows(page).first()).toBeVisible()
+    await expect(rows(page)).not.toHaveCount(0)
   })
 
   test('a refresh KEEPS the rows visible instead of reverting to a skeleton', async ({ page, baseURL }) => {
@@ -146,7 +326,7 @@ test.describe('§14.9 criteria 1, 2 and 6 — the request-state contract, in a r
 
     // The defining assertion: content stays on screen WHILE the next request is in flight.
     await expect(UPDATING(page), 'an updating treatment must be shown').toBeVisible()
-    await expect(rows(page).first(), 'usable content must stay on screen during a refresh').toBeVisible()
+    await expect(rows(page), 'usable content must stay on screen during a refresh').not.toHaveCount(0)
 
     await setBackendState(page, { delayMs: 0 })
     await listSettled(page)
@@ -164,7 +344,7 @@ test.describe('§14.9 criteria 1, 2 and 6 — the request-state contract, in a r
     await setBackendState(page, { mode: 'ok' })
     await page.locator('[data-articles-failed] button').click()
     await listSettled(page)
-    await expect(rows(page).first(), 'retry must actually recover').toBeVisible()
+    await expect(rows(page), 'retry must actually recover').not.toHaveCount(0)
   })
 
   test('a successful but empty result is an explicit empty state, not an error', async ({ page, baseURL }) => {
@@ -205,7 +385,7 @@ test.describe('F-1 — the loading system speaks the DASHBOARD language, proven 
     await page.goto('/dashboard/articles')
     await hydrated(page)
 
-    const busy = page.locator('[aria-busy=true]').first()
+    const busy = page.locator('[aria-busy=true][aria-label]')
     await expect(busy).toBeVisible()
 
     // The accessible name is the skeleton's whole message — it is what a screen reader announces.
@@ -240,13 +420,17 @@ test.describe('F-1 — the loading system speaks the DASHBOARD language, proven 
     await signIn(page, 'ar', baseURL as string)
     await page.goto('/dashboard/articles')
     await hydrated(page)
+    await expect(rows(page), 'the initial list must render before the refresh delay is enabled').not.toHaveCount(
+      0
+    )
     await listSettled(page)
 
     await setBackendState(page, { delayMs: 2500 })
+    const refreshRequest = waitForArticlesRequest(page, { status: 'DRAFT' })
+    const refreshResponse = waitForArticlesResponse(page, { status: 'DRAFT' })
     await page.locator('[data-articles-status]').click()
-    // By INDEX, not by name: the labels are Arabic here, and the property under test is the
-    // OVERLAY's language rather than the option's. `DRAFT` is the second entry after `all`.
-    await page.getByRole('option').nth(1).click()
+    await page.getByRole('option', { name: 'مسودة', exact: true }).click()
+    await refreshRequest
 
     const overlay = UPDATING(page)
     await expect(overlay).toBeVisible()
@@ -255,8 +439,10 @@ test.describe('F-1 — the loading system speaks the DASHBOARD language, proven 
       'the updating treatment must speak the dashboard language, not the route locale'
     ).toMatch(ARABIC)
 
+    await refreshResponse
     await setBackendState(page, { delayMs: 0 })
     await listSettled(page)
+    await expect(overlay).toHaveCount(0)
   })
 
   /**
@@ -347,7 +533,7 @@ test.describe('accessibility, direction and 380px', () => {
       await setBackendState(page, { delayMs: 3000 })
       await page.goto('/dashboard/articles')
       await hydrated(page)
-      await expect(page.locator('[aria-busy=true]').first()).toBeVisible()
+      await expect(page.locator('[aria-busy=true][aria-label]')).toBeVisible()
 
       const results = await new AxeBuilder({ page }).analyze()
       expect(results.violations).toEqual([])
@@ -364,9 +550,9 @@ test.describe('accessibility, direction and 380px', () => {
 
     // Field content direction is independent of chrome direction — the OD-11 contract.
     await expect(shell(page), 'the shell stays LTR').toHaveAttribute('dir', 'ltr')
-    const arabicSlug = page.locator('[data-article-row] span[dir=rtl]').first()
-    await expect(arabicSlug).toBeVisible()
-    expect(await arabicSlug.innerText()).toMatch(ARABIC)
+    const arabicSlugs = page.locator('[data-articles-table] code[dir=rtl]')
+    await expect(arabicSlugs).not.toHaveCount(0)
+    expect((await arabicSlugs.allInnerTexts()).join(' ')).toMatch(ARABIC)
   })
 })
 
@@ -379,6 +565,17 @@ const PUBLISHED_BOTH_ID = '00000000-0000-4000-a000-000000000001'
 const EN_ONLY_ID = '00000000-0000-4000-a000-000000000003'
 /** The Arabic slug fixture `articles-server.ts` already owns, so a collision can be provoked. */
 const TAKEN_AR = 'الهندسة-المعمارية-المعيارية'
+const LATER_CATEGORY = '00000000-0000-4000-c000-000000000051'
+const LATER_TAG = '00000000-0000-4000-d000-000000000051'
+
+const categoriesForPicker = () => Array.from({ length: 51 }, (_, index) => ({
+  id: index === 50 ? LATER_CATEGORY : `00000000-0000-4000-c000-${String(index + 1).padStart(12, '0')}`,
+  translations: { en: { name: index === 50 ? 'Later Category' : `Category ${index + 1}`, slug: `category-${index + 1}`, description: null } }
+}))
+const tagsForPicker = () => Array.from({ length: 51 }, (_, index) => ({
+  id: index === 50 ? LATER_TAG : `00000000-0000-4000-d000-${String(index + 1).padStart(12, '0')}`,
+  translations: { en: { name: index === 50 ? 'Later Tag' : `Tag ${index + 1}`, slug: `tag-${index + 1}` } }
+}))
 
 const tab = (page: import('@playwright/test').Page, locale: 'en' | 'ar') =>
   page.locator('[data-editor-tabs]').getByRole('tab').nth(locale === 'en' ? 0 : 1)
@@ -417,6 +614,46 @@ test.describe('§14.9 criterion 3 — the editor never shows blank fields before
     await openEditor(page, baseURL as string, '/dashboard/articles/00000000-0000-4000-a000-0000000000ff')
     await expect(page.locator('[data-editor-unreadable]')).toBeVisible()
     await expect(page.locator('[data-editor-title="en"]')).toHaveCount(0)
+  })
+})
+
+test.describe('U5K — exhaustive taxonomy picker vocabulary', () => {
+  test('loads later Category and Tag pages, saves them, and restores both without collection query leakage', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL as string)
+    await setBackendState(page, { categories: categoriesForPicker(), tags: tagsForPicker() })
+    const vocabularyRequests: URL[] = []
+    page.on('request', request => {
+      const url = new URL(request.url())
+      if (url.pathname.endsWith('/admin/categories') || url.pathname.endsWith('/admin/tags')) vocabularyRequests.push(url)
+    })
+
+    await page.goto('/dashboard/articles/new?page=7&status=PUBLISHED')
+    await hydrated(page)
+    await expect(page.locator('[data-editor-category]')).toBeVisible()
+    await expect.poll(() => vocabularyRequests.filter(url => url.pathname.endsWith('/admin/categories')).map(url => url.searchParams.get('page')))
+      .toEqual(['1', '2'])
+    await expect.poll(() => vocabularyRequests.filter(url => url.pathname.endsWith('/admin/tags')).map(url => url.searchParams.get('page')))
+      .toEqual(['1', '2'])
+    for (const url of vocabularyRequests) {
+      expect(url.searchParams.get('perPage')).toBe('50')
+      expect([...url.searchParams.keys()].sort()).toEqual(['page', 'perPage'])
+    }
+
+    await page.locator('[data-editor-category]').click()
+    await page.getByRole('option', { name: 'Later Category' }).click()
+    await page.locator(`[data-editor-tag="${LATER_TAG}"]`).click()
+    await page.locator('[data-editor-title="en"]').fill('Later vocabulary article')
+    await page.locator('[data-editor-slug="en"]').fill('later-vocabulary-article')
+    await page.locator('[data-editor-excerpt="en"]').fill('An excerpt.')
+    await page.locator('[data-editor-body="en"]').fill('# Body')
+    const write = page.waitForRequest(request => request.method() === 'POST' && request.url().includes('/admin/articles'))
+    await page.locator('[data-editor-save]').click()
+    const body = (await write).postDataJSON() as { categoryId: string, tagIds: string[] }
+    expect(body).toMatchObject({ categoryId: LATER_CATEGORY, tagIds: [LATER_TAG] })
+    await page.waitForURL(/\/dashboard\/articles\/[0-9a-f-]{36}$/)
+    await page.reload()
+    await expect(page.locator('[data-editor-category]')).toContainText('Later Category')
+    await expect(page.locator(`[data-editor-tag="${LATER_TAG}"]`)).toHaveAttribute('aria-checked', 'true')
   })
 })
 
@@ -461,10 +698,12 @@ test.describe('§14.1 — multilingual authoring', () => {
     await expect(tab(page, 'ar')).toHaveAttribute('aria-selected', 'true')
   })
 
-  test('MIXED DIRECTION in one form — Arabic fields RTL, English fields LTR', async ({ page, baseURL }) => {
+  test('MIXED DIRECTION in one form — fields own content direction while panels keep chrome direction', async ({ page, baseURL }) => {
     await openEditor(page, baseURL as string, `/dashboard/articles/${DRAFT_ID}`)
-    await expect(page.locator('[data-editor-panel="en"]')).toHaveAttribute('dir', 'ltr')
-    await expect(page.locator('[data-editor-panel="ar"]')).toHaveAttribute('dir', 'rtl')
+    await expect(page.locator('[data-editor-panel="en"]')).not.toHaveAttribute('dir')
+    await expect(page.locator('[data-editor-panel="ar"]')).not.toHaveAttribute('dir')
+    await expect(page.locator('[data-editor-title="en"]')).toHaveAttribute('dir', 'ltr')
+    await expect(page.locator('[data-editor-title="ar"]')).toHaveAttribute('dir', 'rtl')
   })
 
   test('the completeness indicator reads the real translation state', async ({ page, baseURL }) => {

@@ -159,7 +159,14 @@ function seedTestimonials(): SeedAdminTestimonial[] {
       translations: {
         en: { quote: 'They made the complex feel manageable.', authorName: 'Taylor Reed', authorRole: 'Director, Atlas' }
       }
-    }
+    },
+    ...Array.from({ length: 9 }, (_, index): SeedAdminTestimonial => ({
+      id: `00000000-0000-4000-a300-1000000000${String(index + 1).padStart(2, '0')}`,
+      avatarId: null,
+      order: 10 + index,
+      isVisible: true,
+      translations: { en: { quote: `Archived testimonial ${index + 1}.`, authorName: `Archive ${index + 1}`, authorRole: 'Client' } }
+    }))
   ]
 }
 
@@ -408,15 +415,18 @@ async function handleRequest(req: http.IncomingMessage, res: http.ServerResponse
 
     const rest = path.slice(`${API_PREFIX}/admin/testimonials`.length)
 
-    if (rest === '' && url.searchParams.size > 0) {
-      return problem(res, 422, 'Unprocessable Entity', 'Admin testimonials does not accept query parameters.')
-    }
-
     if (delayMs > 0) await sleep(delayMs)
 
     if (rest === '' && req.method === 'GET') {
       const pool = mode === 'empty' ? [] : testimonials
-      return json(res, 200, { data: pool.map(toEntity) })
+      const page = Math.max(1, Number(url.searchParams.get('page') ?? '1') || 1)
+      const perPage = Math.min(50, Math.max(1, Number(url.searchParams.get('perPage') ?? '12') || 12))
+      const total = pool.length
+      const totalPages = Math.max(1, Math.ceil(total / perPage))
+      return json(res, 200, {
+        data: pool.slice((page - 1) * perPage, page * perPage).map(toEntity),
+        meta: { page, perPage, total, totalPages }
+      })
     }
 
     if (rest === '' && req.method === 'POST') {
@@ -445,7 +455,7 @@ async function handleRequest(req: http.IncomingMessage, res: http.ServerResponse
         translations: {}
       }
       applyWrite(created, body)
-      testimonials.push(created)
+      testimonials.unshift(created)
       return json(res, 201, { data: toEntity(created) })
     }
 

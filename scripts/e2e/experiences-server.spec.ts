@@ -55,7 +55,13 @@ interface Entity {
   translations: Record<string, { role: string, company: string, location: string, impact: string }>
 }
 
-const list = async () => (await (await api('/admin/experiences')).json()).data as Entity[]
+const ARCHIVED_EXPERIENCE_IDS = Array.from(
+  { length: 8 },
+  (_, index) => `00000000-0000-4000-e000-1000000000${String(8 - index).padStart(2, '0')}`
+)
+const ORDERED_EXPERIENCE_IDS = [EXP.current, EXP.endedLater, EXP.past, EXP.enOnly, EXP.noSkills, ...ARCHIVED_EXPERIENCE_IDS]
+
+const list = async () => (await (await api('/admin/experiences?page=1&perPage=50')).json()).data as Entity[]
 const get = async (id: string) => (await (await api(`/admin/experiences/${id}`)).json()).data as Entity
 
 // ── the three clearing semantics ────────────────────────────────────────────────────────────────
@@ -248,7 +254,7 @@ describe('list order — current first, and the defect that proves it', () => {
   it('orders the ended roles by most-recent startDate', async () => {
     const rows = await list()
     const ended = rows.filter(r => !r.isCurrent).map(r => r.id)
-    expect(ended).toEqual([EXP.endedLater, EXP.past, EXP.enOnly, EXP.noSkills])
+    expect(ended).toEqual(ORDERED_EXPERIENCE_IDS.slice(1))
   })
 
   it('is TOTAL — two rows sharing startDate and order still have a stable relative order', async () => {
@@ -264,21 +270,24 @@ describe('list order — current first, and the defect that proves it', () => {
   })
 })
 
-// ── the list envelope, which is NOT the Articles envelope ───────────────────────────────────────
+// ── the paginated collection envelope ───────────────────────────────────────────────────────────
 
 describe('the collection envelope', () => {
-  it('answers { data } with NO pagination meta, exactly as the contract declares', async () => {
-    // `GET /admin/experiences` takes zero query parameters. A mock that volunteered `meta` would let
-    // a collection built on Articles' paginated shape read a field the real API never sends.
+  it('answers the default page with { data, meta }, exactly as the contract declares', async () => {
     const body = await (await api('/admin/experiences')).json()
     expect(Array.isArray(body.data)).toBe(true)
-    expect(body.meta).toBeUndefined()
+    expect(body.meta).toEqual({ page: 1, perPage: 12, total: 13, totalPages: 2 })
+    expect(body.data.map((row: Entity) => row.id)).toEqual(ORDERED_EXPERIENCE_IDS.slice(0, 12))
   })
 
-  it('ignores query parameters instead of pretending to honour them', async () => {
-    const all = await list()
-    const body = await (await api('/admin/experiences?page=2&perPage=1&status=DRAFT')).json()
-    expect(body.data).toHaveLength(all.length)
+  it('honours page and perPage rather than ignoring pagination query parameters', async () => {
+    const pageOne = await (await api('/admin/experiences?page=1&perPage=2')).json()
+    const pageTwo = await (await api('/admin/experiences?page=2&perPage=2')).json()
+
+    expect(pageOne.meta).toEqual({ page: 1, perPage: 2, total: 13, totalPages: 7 })
+    expect(pageTwo.meta).toEqual({ page: 2, perPage: 2, total: 13, totalPages: 7 })
+    expect(pageOne.data.map((row: Entity) => row.id)).toEqual(ORDERED_EXPERIENCE_IDS.slice(0, 2))
+    expect(pageTwo.data.map((row: Entity) => row.id)).toEqual(ORDERED_EXPERIENCE_IDS.slice(2, 4))
   })
 })
 
@@ -370,11 +379,30 @@ describe('reset — the guarantee the single-spec-file rule rests on', () => {
 })
 
 describe('the skills option source', () => {
-  it('is unpaginated and includes a non-public skill, because the picker is an ADMIN surface', async () => {
+  it('is paginated and includes a non-public skill, because the picker is an ADMIN surface', async () => {
     const body = await (await api('/admin/skills')).json()
-    expect(body.meta).toBeUndefined()
+    expect(body.meta).toEqual({ page: 1, perPage: 12, total: 5, totalPages: 1 })
     expect(body.data).toHaveLength(5)
     expect(body.data.some((s: { isPublic: boolean }) => !s.isPublic)).toBe(true)
+  })
+
+  it('slices a later page from the requested perPage without a group query', async () => {
+    const page1 = await (await api('/admin/skills?page=1&perPage=2')).json()
+    const page2 = await (await api('/admin/skills?page=2&perPage=2')).json()
+
+    expect(page1.meta).toEqual({ page: 1, perPage: 2, total: 5, totalPages: 3 })
+    expect(page2.meta).toEqual({ page: 2, perPage: 2, total: 5, totalPages: 3 })
+    expect(page2.data).toHaveLength(2)
+    expect(page2.data[0].id).not.toBe(page1.data[0].id)
+
+    const skills = Array.from({ length: 51 }, (_, index) => ({
+      ...page1.data[0], id: `test-skill-${index + 1}`
+    }))
+    await setState({ skills })
+
+    const laterSkill = await (await api('/admin/skills?page=2&perPage=50')).json()
+    expect(laterSkill.meta).toEqual({ page: 2, perPage: 50, total: 51, totalPages: 2 })
+    expect(laterSkill.data.map((skill: { id: string }) => skill.id)).toEqual(['test-skill-51'])
   })
 
   it('carries per-locale labels, so the picker can be bilingual', async () => {

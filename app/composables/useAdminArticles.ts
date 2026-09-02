@@ -194,8 +194,8 @@ export function useAdminArticle() {
 /**
  * The taxonomy vocabularies the editor's category and tag controls read.
  *
- * Both endpoints are UNPAGINATED by contract, so this is one read each and the whole vocabulary is
- * in memory — the same shape `useAdminSkills` already uses for the project technology picker.
+ * Both endpoints are paginated admin vocabularies. This owner exhausts their server pages for the
+ * editor only; collection URL state is deliberately not an input.
  *
  * A failure here is deliberately NOT fatal to the editor: it degrades the two pickers, and an
  * article's text is worth more than its taxonomy. The caller decides what to show.
@@ -207,23 +207,40 @@ export function useAdminTaxonomy() {
   const tags = ref<AdminTag[]>([])
   const pending = ref(false)
   const failed = ref(false)
+  let loadSeq = 0
+
+  async function loadAll<T>(path: '/admin/categories' | '/admin/tags'): Promise<T[]> {
+    const rows: T[] = []
+    let page = 1
+    let totalPages = 1
+    while (page <= totalPages) {
+      const res = await api<Paginated<T>>(path, { locale: false, query: { page, perPage: 50 } })
+      rows.push(...res.data)
+      totalPages = res.meta.totalPages
+      page += 1
+    }
+    return rows
+  }
 
   async function load(): Promise<void> {
+    const seq = ++loadSeq
     pending.value = true
     failed.value = false
     try {
       const [categoryRes, tagRes] = await Promise.all([
-        api<Envelope<readonly AdminCategory[]>>('/admin/categories', { locale: false }),
-        api<Envelope<readonly AdminTag[]>>('/admin/tags', { locale: false })
+        loadAll<AdminCategory>('/admin/categories'),
+        loadAll<AdminTag>('/admin/tags')
       ])
-      categories.value = [...categoryRes.data]
-      tags.value = [...tagRes.data]
+      if (seq !== loadSeq) return
+      categories.value = categoryRes
+      tags.value = tagRes
     } catch {
+      if (seq !== loadSeq) return
       categories.value = []
       tags.value = []
       failed.value = true
     } finally {
-      pending.value = false
+      if (seq === loadSeq) pending.value = false
     }
   }
 

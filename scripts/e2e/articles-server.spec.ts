@@ -38,6 +38,38 @@ const api = (path: string, init: RequestInit = {}) =>
 const setState = (state: Record<string, unknown>) =>
   fetch(`${base}/__e2e/state`, { method: 'POST', body: JSON.stringify(state) })
 
+describe('admin taxonomy vocabulary pagination', () => {
+  it('slices Categories and Tags from the requested page and perPage', async () => {
+    const categoriesPage1 = await (await api('/admin/categories?page=1&perPage=1')).json()
+    const categoriesPage2 = await (await api('/admin/categories?page=2&perPage=1')).json()
+    const tagsPage1 = await (await api('/admin/tags?page=1&perPage=2')).json()
+    const tagsPage2 = await (await api('/admin/tags?page=2&perPage=2')).json()
+
+    expect(categoriesPage1.meta).toEqual({ page: 1, perPage: 1, total: 2, totalPages: 2 })
+    expect(categoriesPage2.meta).toEqual({ page: 2, perPage: 1, total: 2, totalPages: 2 })
+    expect(categoriesPage2.data[0].id).not.toBe(categoriesPage1.data[0].id)
+    expect(tagsPage1.meta).toEqual({ page: 1, perPage: 2, total: 3, totalPages: 2 })
+    expect(tagsPage2.meta).toEqual({ page: 2, perPage: 2, total: 3, totalPages: 2 })
+    expect(tagsPage2.data).toHaveLength(1)
+    expect(tagsPage2.data[0].id).not.toBe(tagsPage1.data[0].id)
+
+    const categories = Array.from({ length: 51 }, (_, index) => ({
+      ...categoriesPage1.data[0], id: `test-category-${index + 1}`
+    }))
+    const tags = Array.from({ length: 51 }, (_, index) => ({
+      ...tagsPage1.data[0], id: `test-tag-${index + 1}`
+    }))
+    await setState({ categories, tags })
+
+    const laterCategory = await (await api('/admin/categories?page=2&perPage=50')).json()
+    const laterTag = await (await api('/admin/tags?page=2&perPage=50')).json()
+    expect(laterCategory.meta).toEqual({ page: 2, perPage: 50, total: 51, totalPages: 2 })
+    expect(laterCategory.data.map((category: { id: string }) => category.id)).toEqual(['test-category-51'])
+    expect(laterTag.meta).toEqual({ page: 2, perPage: 50, total: 51, totalPages: 2 })
+    expect(laterTag.data.map((tag: { id: string }) => tag.id)).toEqual(['test-tag-51'])
+  })
+})
+
 describe('the hold — the capability six acceptance criteria depend on', () => {
   it('answers immediately by default, so no lane pays for latency it did not ask for', async () => {
     const started = Date.now()
@@ -252,6 +284,29 @@ describe('list shaping', () => {
   it('filters by status, reaching a state the first page does not show', async () => {
     const archived = await (await api('/admin/articles?status=ARCHIVED')).json()
     expect(archived.data.map((a: { id: string }) => a.id)).toEqual([ART.archived])
+  })
+
+  it('filters title-only across authored locales, case-insensitively, and paginates the filtered set', async () => {
+    const english = await (await api('/admin/articles?q=LISTED%20ARTICLE&page=2')).json()
+    expect(english.meta).toMatchObject({ page: 2, perPage: 12, total: 25, totalPages: 3 })
+    expect(english.data).toHaveLength(12)
+    expect(english.data.every((article: { translations: { en: { title: string } } }) =>
+      article.translations.en.title.toLowerCase().includes('listed article')
+    )).toBe(true)
+
+    const arabic = await (await api('/admin/articles?q=%D9%85%D9%82%D8%A7%D9%84%D8%A9%20%D9%85%D8%AF%D8%B1%D8%AC%D8%A9%202')).json()
+    expect(arabic.data.map((article: { id: string }) => article.id)).toContain('00000000-0000-4000-a000-000000000102')
+    expect(arabic.data.every((article: { translations: { ar: { title: string } } }) =>
+      article.translations.ar.title.includes('مقالة مدرجة 2')
+    )).toBe(true)
+
+    const status = await (await api('/admin/articles?q=listed&status=DRAFT')).json()
+    expect(status.data).toHaveLength(8)
+    expect(status.data.every((article: { status: string }) => article.status === 'DRAFT')).toBe(true)
+  })
+
+  it('rejects a search longer than the Production contract permits', async () => {
+    expect((await api(`/admin/articles?q=${'x'.repeat(121)}`)).status).toBe(422)
   })
 
   it('answers an EMPTY list distinctly from an error', async () => {

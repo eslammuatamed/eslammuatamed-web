@@ -347,6 +347,8 @@
       "experiences": "Experience",
       "skills": "Skills",
       "testimonials": "Testimonials",
+      "categories": "Categories",
+      "tags": "Tags",
       "taxonomy": "Taxonomy"
     },
     "messages": {
@@ -552,7 +554,7 @@
       "emptyTitle": "No articles yet",
       "emptyBody": "Write the first article and it will appear here.",
       "emptyFilteredTitle": "Nothing matches this filter",
-      "emptyFilteredBody": "Change the status filter to see more.",
+      "emptyFilteredBody": "Change the title search or status filter to see more.",
       "listRegionLabel": "Articles",
       "resultCount": "{total} articles · page {page} of {pages}",
       "untitled": "Untitled article",
@@ -561,6 +563,10 @@
       "editFor": "Edit {title}",
       "filters": {
         "heading": "Filters",
+        "search": "Search article titles",
+        "searchPlaceholder": "Search titles in any language",
+        "searchSubmit": "Search",
+        "clearSearch": "Clear title search",
         "status": "Status",
         "allStatuses": "All statuses"
       },
@@ -738,6 +744,7 @@
       "title": "Skills",
       "description": "The vocabulary used across the site and dashboard.",
       "retry": "Try again",
+      "staleNotice": "This list may be out of date — the last refresh did not complete.",
       "errorTitle": "Skills could not be loaded",
       "forbiddenTitle": "You do not have access to skills",
       "forbiddenBody": "This account is not permitted to manage skills.",
@@ -745,6 +752,7 @@
       "emptyBody": "Create the first skill and it will appear here.",
       "listRegionLabel": "Skills",
       "resultCount": "{total} skills",
+      "filters": { "group": "Filter by group", "allGroups": "All groups" },
       "create": "New skill",
       "edit": "Edit",
       "editFor": "Edit {label}",
@@ -763,7 +771,8 @@
         "group": "Group",
         "order": "Order",
         "visibility": "Visibility",
-        "brandColor": "Brand color"
+        "brandColor": "Brand color",
+        "actions": "Actions"
       },
       "group": {
         "LANGUAGE": "Language",
@@ -806,6 +815,10 @@
         "deleteCancel": "Keep it",
         "deleteFailed": "The skill could not be deleted."
       },
+      "overlay": {
+        "close": "Close skill editor",
+        "unsavedConfirm": "This skill has unsaved changes. Discard them?"
+      },
       "validation": {
         "slugRequired": "A slug is required.",
         "slugTooLong": "The slug must be 60 characters or fewer.",
@@ -847,7 +860,8 @@
         "avatar": "Avatar",
         "quote": "Quote",
         "author": "Author name",
-        "role": "Author role"
+        "role": "Author role",
+        "actions": "Actions"
       },
       "editor": {
         "createTitle": "New testimonial",
@@ -881,6 +895,10 @@
         "deleteCancel": "Keep it",
         "deleteFailed": "The testimonial could not be deleted."
       },
+      "overlay": {
+        "close": "Close testimonial editor",
+        "unsavedConfirm": "This testimonial has unsaved changes. Discard them?"
+      },
       "validation": {
         "orderInteger": "The order must be a whole number.",
         "orderNegative": "The order must not be less than 0.",
@@ -898,6 +916,8 @@
       "description": "Categories and tags that organize articles, in both languages.",
       "retry": "Try again",
       "staleNotice": "This list may be out of date — the last refresh did not complete.",
+      "slug": "Slug",
+      "actions": "Actions",
       "translationState": {
         "label": "Translations",
         "present": "{locale} written",
@@ -1080,6 +1100,7 @@
         "orderHelp": "Lower numbers come first within the same featured group.",
         "yearHelp": "Leave empty if the project has no single year.",
         "technologies": "Technologies",
+        "addTechnology": "Add technology",
         "technologiesHelp": "The set is replaced on save — whatever is ticked here is what the project will have.",
         "technologiesEmpty": "No skills are defined yet, so no technology can be linked.",
         "technologiesError": "The technology list could not be loaded, so the choices below are incomplete. This project keeps the technologies it already has — saving will not clear them.",

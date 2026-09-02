@@ -103,9 +103,11 @@ let mounted: Awaited<ReturnType<typeof mountSuspended>> | null = null
  * watching that router, so the next test's navigation re-runs the previous test's watcher and the
  * request an assertion reads may be one nobody in this test asked for.
  */
-afterEach(() => {
+afterEach(async () => {
+  const router = mounted?.vm.$router
   mounted?.unmount()
   mounted = null
+  await router?.replace({ query: {} })
 })
 
 async function mount(options: { rows?: unknown[], total?: number, totalPages?: number, status?: number, park?: boolean } = {}) {
@@ -166,6 +168,40 @@ describe('the address becomes the request', () => {
     await wrapper.vm.$router.push({ query: { page: '3' } })
     await settle()
     expect(lastQuery()).toMatchObject({ page: 3 })
+  })
+
+  it('restores a deep-linked title search into the control and request', async () => {
+    const wrapper = await mount()
+    await wrapper.vm.$router.push({ query: { q: 'nestjs', status: 'PUBLISHED', page: '2' } })
+    await settle()
+
+    expect((wrapper.get('[data-articles-search]').element as HTMLInputElement).value).toBe('nestjs')
+    expect(lastQuery()).toEqual({ page: 2, perPage: 12, status: 'PUBLISHED', q: 'nestjs' })
+  })
+
+  it('submits a trimmed title search in one page-reset navigation while preserving status', async () => {
+    const wrapper = await mount()
+    await wrapper.vm.$router.push({ query: { status: 'PUBLISHED', page: '3' } })
+    await settle()
+    expect(lastQuery()).toEqual({ page: 3, perPage: 12, status: 'PUBLISHED' })
+
+    await wrapper.get('[data-articles-search]').setValue('  nestjs  ')
+    await flushPromises()
+    await wrapper.get('[data-articles-search-form]').trigger('submit')
+    await settle()
+
+    expect(lastQuery()).toEqual({ page: 1, perPage: 12, status: 'PUBLISHED', q: 'nestjs' })
+  })
+
+  it('clears q from the URL and returns to page 1', async () => {
+    const wrapper = await mount()
+    await wrapper.vm.$router.push({ query: { q: 'nestjs', page: '2' } })
+    await settle()
+
+    await wrapper.get('[data-articles-search-clear]').trigger('click')
+    await settle()
+
+    expect(lastQuery()).toEqual({ page: 1, perPage: 12 })
   })
 
   // The "changing the status returns to page 1" behaviour is asserted in the BROWSER lane, not
@@ -296,6 +332,13 @@ describe('§14.9 criterion 7 — error, empty and forbidden are three different 
 })
 
 describe('row presentation', () => {
+  it('renders the collection through its Article-specific UTable', async () => {
+    const wrapper = await mount()
+
+    expect(wrapper.find('[data-articles-table]').exists()).toBe(true)
+    expect(wrapper.find('[data-article-row="a1"]').exists()).toBe(true)
+  })
+
   it('marks a missing translation as missing, from the translation map itself', async () => {
     const wrapper = await mount({ rows: [article({ id: 'en-only', translations: { en: translation() } })] })
 

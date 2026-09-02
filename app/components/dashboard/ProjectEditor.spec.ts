@@ -36,10 +36,18 @@ mockNuxtImport('useApi', () => () => (path: string, options: Record<string, unkn
   const method = String(options.method ?? 'GET').toUpperCase()
 
   if (path === '/admin/skills') {
-    return Promise.resolve({ data: [
+    const skills = [
       { id: 'skill-a', slug: 'typescript', group: 'LANGUAGE', order: 1, brandColor: null, isPublic: true, translations: { en: { label: 'TypeScript' } } },
       { id: 'skill-b', slug: 'nestjs', group: 'BACKEND', order: 2, brandColor: null, isPublic: true, translations: { en: { label: 'NestJS' } } }
-    ] })
+    ]
+    const query = options.query as { page?: number, perPage?: number } | undefined
+    const page = query?.page ?? 1
+    const perPage = query?.perPage ?? 50
+    const totalPages = Math.ceil(skills.length / perPage)
+    return Promise.resolve({
+      data: skills.slice((page - 1) * perPage, page * perPage),
+      meta: { page, perPage, total: skills.length, totalPages }
+    })
   }
 
   // The media picker resolves each stored reference through `GET /admin/media/:id`. Without this
@@ -207,8 +215,8 @@ describe('EN and AR are both editable, and neither borrows from the other', () =
       project: project({ translations: { en: translation(), ar: translation({ title: 'منصة المحتوى', slug: 'mnsah' }) } })
     })
     expect(wrapper.find('[data-editor-tabs]').exists()).toBe(true)
-    expect(wrapper.find('[data-editor-panel="en"]').attributes('dir')).toBe('ltr')
-    expect(wrapper.find('[data-editor-panel="ar"]').attributes('dir')).toBe('rtl')
+    expect(wrapper.find('[data-editor-panel="en"]').attributes('dir')).toBeUndefined()
+    expect(wrapper.find('[data-editor-panel="ar"]').attributes('dir')).toBeUndefined()
     expect(field(wrapper, 'en.title').attributes('dir')).toBe('ltr')
     expect(field(wrapper, 'ar.title').attributes('dir')).toBe('rtl')
   })
@@ -300,6 +308,15 @@ describe('featured, order, year and the nullable URLs', () => {
 })
 
 describe('technologies', () => {
+  it('offers an inline, secondary Skill creation shortcut beside the technology picker', async () => {
+    const wrapper = await mount('p1')
+    const trigger = wrapper.find('[data-project-add-technology]')
+
+    expect(trigger.exists()).toBe(true)
+    expect(trigger.attributes('type')).toBe('button')
+    expect(trigger.text()).not.toMatch(/dashboard\.projects\./)
+  })
+
   it('seeds the ticked technologies from the project', async () => {
     const wrapper = await mount('p1', { project: project({ technologyIds: ['skill-a'] }) })
     expect(wrapper.find('[data-technology="skill-a"]').attributes('aria-checked')).toBe('true')

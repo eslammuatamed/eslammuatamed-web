@@ -20,7 +20,7 @@ mockNuxtImport('useApi', () => () => async (path: string, options: Record<string
     await new Promise<void>(resolve => holder.releases.push(resolve))
   }
   if (holder.status) throw holder.makeError?.(holder.status) ?? new Error('failed')
-  return { data: response }
+  return { data: response, meta: { page: 1, perPage: 50, total: response.length, totalPages: 1 } }
 })
 
 holder.makeError = status => new ApiError({ type: 'about:blank', title: 'failed', status })
@@ -34,12 +34,12 @@ function reset(rows: unknown[] = [{ id: 's1' }]) {
 }
 
 describe('the absorbed useAdminSkills surface', () => {
-  it('keeps the picker contract and sends no list query or locale', async () => {
+  it('requests the first picker vocabulary page without a group filter', async () => {
     reset()
     const source = useAdminSkills()
     expect(Object.keys(source).sort()).toEqual(['failed', 'forbidden', 'load', 'pending', 'skills'])
     await source.load()
-    expect(holder.calls).toEqual([{ path: '/admin/skills', options: { locale: false } }])
+    expect(holder.calls).toEqual([{ path: '/admin/skills', options: { locale: false, query: { page: 1, perPage: 50 } } }])
     expect(source.skills.value).toHaveLength(1)
   })
 

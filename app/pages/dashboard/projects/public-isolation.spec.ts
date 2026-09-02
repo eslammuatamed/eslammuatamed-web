@@ -112,6 +112,7 @@ const OTHER_DASHBOARD_MODULE_FILES = [
   'composables/admin-skill-form.ts',
   'composables/useAdminSkills.ts',
   'composables/useAdminSkill.ts',
+  'composables/useAdminSkillsCollection.ts',
   'composables/admin-testimonial-fields.ts',
   'composables/admin-testimonial-form.ts',
   'composables/admin-testimonial-types.ts',

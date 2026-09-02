@@ -60,14 +60,20 @@ const get = async (id: string) => (await (await api(`/admin/skills/${id}`)).json
 const links = async (id: string) => (await (await fetch(`${base}/__e2e/links/${id}`)).json()) as Links
 
 describe('the collection envelope and query contract', () => {
-  it('answers { data } with no pagination meta', async () => {
+  it('answers a paginated collection envelope with the documented defaults', async () => {
     const body = await (await api('/admin/skills')).json()
     expect(Array.isArray(body.data)).toBe(true)
-    expect(body.meta).toBeUndefined()
+    expect(body.data).toHaveLength(12)
+    expect(body.meta).toEqual({ page: 1, perPage: 12, total: 52, totalPages: 5 })
   })
 
-  it('rejects every unsolicited list query parameter instead of pretending to honour it', async () => {
-    for (const query of ['locale=en', 'page=2', 'search=vue']) {
+  it('honours only valid pagination and group query parameters', async () => {
+    const filtered = await (await api('/admin/skills?page=2&perPage=12&group=BACKEND')).json()
+    expect(filtered.meta).toEqual({ page: 2, perPage: 12, total: 13, totalPages: 2 })
+    expect(filtered.data).toHaveLength(1)
+    expect(filtered.data[0]?.group).toBe('BACKEND')
+
+    for (const query of ['locale=en', 'page=0', 'perPage=51', 'group=OTHER', 'search=vue']) {
       const res = await api(`/admin/skills?${query}`)
       expect(res.status, query).toBe(422)
       const body = await res.json()

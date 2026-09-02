@@ -45,30 +45,39 @@ interface Entity {
   translations: Record<string, { quote: string, authorName: string, authorRole: string }>
 }
 
-const list = async () => (await (await api('/admin/testimonials')).json()).data as Entity[]
+const TESTIMONIAL_SEED_ORDER = [
+  TESTIMONIAL_IDS.featured,
+  TESTIMONIAL_IDS.hidden,
+  TESTIMONIAL_IDS.enOnly,
+  TESTIMONIAL_IDS.noAvatar,
+  ...Array.from({ length: 9 }, (_, index) => `00000000-0000-4000-a300-1000000000${String(index + 1).padStart(2, '0')}`)
+]
+
+const listPage = async (page: number, perPage: number) =>
+  (await (await api(`/admin/testimonials?page=${page}&perPage=${perPage}`)).json()) as {
+    data: Entity[]
+    meta: { page: number, perPage: number, total: number, totalPages: number }
+  }
+
+const list = async () => (await listPage(1, 50)).data
 const get = async (id: string) =>
   (await (await api(`/admin/testimonials/${id}`)).json()).data as Entity
 
 describe('the collection and detail read contract', () => {
-  it('answers { data } with no pagination meta and preserves fixture order', async () => {
+  it('answers the default page with { data, meta } and preserves fixture order', async () => {
     const body = await (await api('/admin/testimonials')).json()
-    expect(body.data.map((item: Entity) => item.id)).toEqual([
-      TESTIMONIAL_IDS.featured,
-      TESTIMONIAL_IDS.hidden,
-      TESTIMONIAL_IDS.enOnly,
-      TESTIMONIAL_IDS.noAvatar
-    ])
-    expect(body.meta).toBeUndefined()
+    expect(body.meta).toEqual({ page: 1, perPage: 12, total: 13, totalPages: 2 })
+    expect(body.data.map((item: Entity) => item.id)).toEqual(TESTIMONIAL_SEED_ORDER.slice(0, 12))
   })
 
-  it('rejects unsolicited list query parameters instead of pretending to honour them', async () => {
-    for (const query of ['locale=en', 'page=2', 'search=alex']) {
-      const res = await api(`/admin/testimonials?${query}`)
-      expect(res.status, query).toBe(422)
-      const body = await res.json()
-      expect(body.status).toBe(422)
-      expect(body.errors).toBeUndefined()
-    }
+  it('honours page and perPage rather than ignoring pagination query parameters', async () => {
+    const pageOne = await listPage(1, 2)
+    const pageTwo = await listPage(2, 2)
+
+    expect(pageOne.meta).toEqual({ page: 1, perPage: 2, total: 13, totalPages: 7 })
+    expect(pageTwo.meta).toEqual({ page: 2, perPage: 2, total: 13, totalPages: 7 })
+    expect(pageOne.data.map(item => item.id)).toEqual(TESTIMONIAL_SEED_ORDER.slice(0, 2))
+    expect(pageTwo.data.map(item => item.id)).toEqual(TESTIMONIAL_SEED_ORDER.slice(2, 4))
   })
 
   it('returns locale-keyed translation maps', async () => {
@@ -369,7 +378,9 @@ describe('reset — every mutable fixture and flag returns to its seed', () => {
     expect((await get(TESTIMONIAL_IDS.featured)).avatarId).toBe(AVATAR_IDS.featured)
     expect((await get(TESTIMONIAL_IDS.featured)).isVisible).toBe(true)
     expect((await get(TESTIMONIAL_IDS.hidden)).id).toBe(TESTIMONIAL_IDS.hidden)
-    expect((await list()).map(item => item.id)).toHaveLength(4)
+    const restored = await listPage(1, 50)
+    expect(restored.meta).toEqual({ page: 1, perPage: 50, total: 13, totalPages: 1 })
+    expect(restored.data.map(item => item.id)).toEqual(TESTIMONIAL_SEED_ORDER)
   })
 
   it('restores mode, delay, and the one-shot failure flag', async () => {

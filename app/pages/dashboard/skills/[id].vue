@@ -3,12 +3,10 @@ defineI18nRoute(false)
 definePageMeta({ layout: 'dashboard', middleware: 'auth' })
 
 const route = useRoute()
-const { t } = useDashboardI18n()
 const id = computed(() => String(route.params.id))
 
-useHead({ title: () => `${t('dashboard.skills.editor.editTitle')} · ${t('dashboard.title')}` })
+await navigateTo({
+  path: '/dashboard/skills',
+  query: { ...route.query, edit: id.value }
+}, { replace: true })
 </script>
-
-<template>
-  <DashboardSkillEditor :id="id" />
-</template>

@@ -1,26 +1,21 @@
-import type { Envelope } from '~/types/models'
+import type { Envelope, Paginated, PaginationMeta } from '~/types/models'
 import type {
   AdminExperience,
   CreateExperiencePayload,
   UpdateExperiencePayload
 } from '~/composables/admin-experience-types'
 import { ApiError } from '~/utils/api-error'
+import {
+  adminExperiencesQueryKey,
+  adminExperiencesRequestQuery,
+  type AdminExperiencesQuery
+} from '~/composables/admin-experiences-query'
 
 /**
  * `GET /admin/experiences` — the Experiences collection read (FE-3 module 1).
  *
- * ── THIS IS NOT A PAGINATED LIST, AND THAT IS A CONTRACT FACT ───────────────────────────────────
- * The endpoint declares ZERO query parameters and answers `{ data: [...] }` with NO `meta`. So:
- *
- *   · no `page`, no `total`, no `totalPages`, and no `Paginated<T>` — reading `res.meta.total`
- *     here would read `undefined` off a response that never carries it;
- *   · no status filter, no search, and therefore NO `admin-experiences-query.ts`. Articles has
- *     `admin-articles-query.ts` because its endpoint takes real parameters; inventing one here
- *     would build a URL contract the API does not honour.
- *
- * The whole collection arrives in one read, which is correct HERE and is not a licence to fetch
- * other collections wholesale — it is what the contract offers, the same way `useAdminSkills`
- * reads a closed vocabulary whole.
+ * The production endpoint is paginated. `page` and the fixed canonical `perPage=12` are sent on
+ * every list request; received rows are rendered as-is, never sliced or sorted in the browser.
  *
  * ── ⚠ THE CLIENT NEVER RE-SORTS ─────────────────────────────────────────────────────────────────
  * The API's order is four-key: `isCurrent` DESC, then `startDate` DESC, then the owner-controlled
@@ -41,67 +36,63 @@ export function useAdminExperiences() {
   const api = useApi()
 
   const items = ref<AdminExperience[]>([])
+  const total = ref(0)
+  const totalPages = ref(1)
   const pending = ref(false)
   /** `403` is not "no experiences" — a different answer gets a different surface (D11-2). */
   const forbidden = ref(false)
   const failed = ref(false)
 
   /**
-   * Monotonic request token, kept even though this endpoint takes no parameters.
-   *
-   * Two loads can still overlap — the operator retries a slow request, or a refresh fires while the
-   * first is in flight — and responses are not guaranteed to return in order. Without this, a slow
-   * EARLIER response can land after a fast later one and overwrite fresher rows with staler ones.
-   * That is a real race here, unlike the filter/page race Articles guards, and it survives the
-   * absence of query parameters.
+   * Only the newest request may write. A late page-one response must never replace page two.
    */
   let loadSeq = 0
 
   /**
-   * Has anything ever loaded successfully?
-   *
-   * ── WHY THIS IS A BOOLEAN AND NOT A QUERY KEY ───────────────────────────────────────────────
-   * §10.3 rule 2 (keep-or-clear on failure) says: compare the failed request's view identity to
-   * what is on screen — a failed REFRESH keeps the rows, a failed request for a DIFFERENT view
-   * clears them. `useAdminArticles` expresses that with a query key, because its view identity is
-   * the status filter plus the page.
-   *
-   * Experiences has exactly ONE view. With no query parameters there is no second view to request,
-   * so "is this a refresh of what is shown?" is answered by "is anything shown?". The rule is
-   * unchanged and still applied — its discriminating case simply does not exist on this endpoint.
-   * A query key here would be a constant string dressed up as a variable.
+   * The request identity of the data on screen. A failed refresh keeps same-page rows; a failed
+   * different page clears them instead of presenting the previous page as the requested one.
    */
-  let hasLoaded = false
+  let loadedKey: string | null = null
 
-  async function load(): Promise<void> {
+  async function load(query: AdminExperiencesQuery = { page: 1 }): Promise<PaginationMeta | null> {
     const seq = ++loadSeq
+    const key = adminExperiencesQueryKey(query)
     pending.value = true
     forbidden.value = false
     failed.value = false
     try {
-      const res = await api<Envelope<AdminExperience[]>>('/admin/experiences', { locale: false })
-      if (seq !== loadSeq) return
+      const res = await api<Paginated<AdminExperience>>('/admin/experiences', {
+        locale: false,
+        query: adminExperiencesRequestQuery(query)
+      })
+      if (seq !== loadSeq) return null
       // Rendered in the order received — see the header. No `.sort()` belongs on this line.
       items.value = [...res.data]
-      hasLoaded = true
+      total.value = res.meta.total
+      totalPages.value = res.meta.totalPages
+      loadedKey = key
+      return res.meta
     } catch (error) {
       // A superseded request's failure is not the current request's failure — it must not clear the
       // newer request's rows or raise an error the operator would attach to the wrong list.
-      if (seq !== loadSeq) return
+      if (seq !== loadSeq) return null
 
-      // A failed FIRST load has nothing usable underneath it, so there is nothing to keep and the
-      // error surface is the only thing that can be shown. A failed REFRESH keeps the rows, which
-      // is what makes the stale notice expressible rather than blanking a working list.
-      if (!hasLoaded) items.value = []
+      if (loadedKey !== key) {
+        items.value = []
+        total.value = 0
+        totalPages.value = 1
+        loadedKey = null
+      }
 
       if (error instanceof ApiError && error.status === 403) forbidden.value = true
       else failed.value = true
+      return null
     } finally {
       if (seq === loadSeq) pending.value = false
     }
   }
 
-  return { items, pending, forbidden, failed, load }
+  return { items, total, totalPages, pending, forbidden, failed, load }
 }
 
 /**

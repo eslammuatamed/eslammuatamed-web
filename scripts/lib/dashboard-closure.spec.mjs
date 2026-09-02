@@ -290,9 +290,10 @@ describe('dashboard closure — governed routes must always be measurable', () =
       '/dashboard/testimonials',
       '/dashboard/testimonials/new',
       '/dashboard/testimonials/00000000-0000-0000-0000-000000000000',
-      // The Taxonomy destination (FE-3 Categories + Tags): ONE route for BOTH collections, first
-      // registered measured-but-ungoverned like every FE-3 collection, governed by D20-39 at the
-      // pre-overlay baseline and re-baselined by D20-40 after U3b's overlays joined the route.
+      // U4 replaces the one combined Taxonomy destination with independent Categories and Tags
+      // collections; the legacy route remains governed while it redirects existing bookmarks.
+      '/dashboard/categories',
+      '/dashboard/tags',
       '/dashboard/taxonomy',
       // The Projects module. The editor is registered under a concrete id because the gate fetches
       // the route; `/dashboard/**` is `ssr: false`, so which id is used cannot change the shell.

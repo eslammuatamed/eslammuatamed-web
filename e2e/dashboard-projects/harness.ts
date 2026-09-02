@@ -23,7 +23,8 @@ export const PRJ = {
 export const SKILL = {
   typescript: '00000000-0000-4000-b000-000000000001',
   nest: '00000000-0000-4000-b000-000000000002',
-  postgres: '00000000-0000-4000-b000-000000000003'
+  postgres: '00000000-0000-4000-b000-000000000003',
+  added: '00000000-0000-4000-b000-000000000004'
 } as const
 
 export async function resetBackend(page: Page): Promise<void> {
@@ -41,6 +42,10 @@ export async function setBackendState(
     mode?: 'ok' | 'empty' | 'error' | 'forbidden'
     delayMs?: number
     nextWriteErrors?: Array<{ field: string, message: string }>
+    failNextSkillWrite?: boolean
+    projects?: unknown[]
+    skills?: unknown[]
+    failVocabularyPage?: number | null
   }
 ): Promise<void> {
   const res = await page.request.post(`${CONTROL_BASE}/__e2e/state`, { data: state })
@@ -65,9 +70,9 @@ const BUSY = '[aria-busy=true]'
 /** The collection has reached one of its terminal surfaces, and nothing is still loading. */
 export async function listSettled(page: Page): Promise<void> {
   // POSITIVE first (the Experiences harness records why an absence-only wait is vacuous).
-  await page.locator(
+  await expect(page.locator(
     '[data-project-row], [data-projects-empty], [data-projects-failed], [data-projects-forbidden]'
-  ).first().waitFor({ timeout: 15_000 })
+  )).not.toHaveCount(0)
   await expect(page.locator(BUSY)).toHaveCount(0, { timeout: 15_000 })
 }
 
