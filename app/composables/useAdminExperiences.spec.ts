@@ -24,15 +24,14 @@ const holder = vi.hoisted(() => ({
 
 mockNuxtImport('useApi', () => () => async (path: string, options: Record<string, unknown> = {}) => {
   holder.calls.push({ path, ...options })
+  const response = holder.rows
   if (holder.release !== null) {
     await new Promise<void>((resolve) => { holder.release = resolve })
   }
   if (holder.status !== 0) {
     throw new ApiError({ type: 'about:blank', title: 'Request failed', status: holder.status })
   }
-  // DELIBERATELY NO `meta` — this is the contract's real shape, and a composable that reads one
-  // must fail here rather than in production.
-  return { data: holder.rows }
+  return { data: response, meta: { page: 1, perPage: 12, total: response.length, totalPages: 1 } }
 })
 
 /**
@@ -52,22 +51,23 @@ function reset(rows: unknown[] = [CURRENT, ENDED_LATER]) {
 }
 
 describe('useAdminExperiences', () => {
-  it('requests the admin collection with NO query and with locale suppressed', async () => {
+  it('requests the canonical first server page with locale suppressed', async () => {
     reset()
     const { load } = useAdminExperiences()
     await load()
     expect(holder.calls).toHaveLength(1)
     expect(holder.calls[0]!.path).toBe('/admin/experiences')
     expect(holder.calls[0]!.locale).toBe(false)
-    // A `query` key at all would be building a URL contract the endpoint does not declare.
-    expect(holder.calls[0]!.query).toBeUndefined()
+    expect(holder.calls[0]!.query).toEqual({ page: 1, perPage: 12 })
   })
 
-  it('reads an envelope with NO meta and reports the count from the rows themselves', async () => {
+  it('reads the server pagination metadata with its rows', async () => {
     reset()
-    const { items, load } = useAdminExperiences()
+    const { items, total, totalPages, load } = useAdminExperiences()
     await load()
     expect(items.value).toHaveLength(2)
+    expect(total.value).toBe(2)
+    expect(totalPages.value).toBe(1)
   })
 
   /**
@@ -105,7 +105,7 @@ describe('useAdminExperiences', () => {
    * Keep-or-clear (§10.3 rule 2). The rows survive a failed REFRESH, so the page can report
    * staleness instead of blanking a list that is still usable.
    */
-  it('KEEPS the rows when a refresh fails after a successful load', async () => {
+  it('KEEPS the rows when a same-page refresh fails after a successful load', async () => {
     reset()
     const { items, failed, load } = useAdminExperiences()
     await load()
@@ -115,6 +115,16 @@ describe('useAdminExperiences', () => {
     await load()
     expect(failed.value).toBe(true)
     expect(items.value).toHaveLength(2)
+  })
+
+  it('CLEARS rows when a different page fails instead of mislabelling the previous page', async () => {
+    reset()
+    const { items, failed, load } = useAdminExperiences()
+    await load({ page: 1 })
+    holder.status = 500
+    await load({ page: 2 })
+    expect(failed.value).toBe(true)
+    expect(items.value).toEqual([])
   })
 
   /**
@@ -127,12 +137,12 @@ describe('useAdminExperiences', () => {
     const composable = useAdminExperiences()
 
     holder.release = () => {}
-    const slow = composable.load()
+    const slow = composable.load({ page: 1 })
     const releaseSlow = holder.release
 
     holder.release = null
     holder.rows = [ENDED_LATER]
-    await composable.load()
+    await composable.load({ page: 2 })
     expect(composable.items.value.map(r => r.id)).toEqual(['endedLater'])
 
     releaseSlow?.()

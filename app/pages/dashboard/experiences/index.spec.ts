@@ -10,14 +10,15 @@ import type { AdminExperience, AdminExperienceTranslation } from '~/composables/
  * The Experience list, asserted through the REAL rendered page.
  *
  * `admin-experience-fields.spec.ts` proves the field rules and `useAdminExperiences.spec.ts` proves
- * the request rules. This file proves the PAGE renders the four states distinctly, and that the two
- * shape differences from Articles are real in the markup: no pagination control, and rows in the
- * order received.
+ * the request rules. This file proves the PAGE renders the four states distinctly, server page
+ * metadata drives the pager, and received rows retain the API's order.
  */
 
 const holder = vi.hoisted(() => ({
   calls: [] as Array<{ path: string, options: Record<string, unknown> }>,
   data: [] as unknown[],
+  total: 0,
+  totalPages: 1,
   status: 0,
   release: null as null | (() => void),
   makeError: null as null | ((status: number) => unknown)
@@ -29,8 +30,7 @@ mockNuxtImport('useApi', () => () => async (path: string, options: Record<string
     await new Promise<void>((resolve) => { holder.release = resolve })
   }
   if (holder.status !== 0) throw holder.makeError?.(holder.status) ?? new Error('failed')
-  // No `meta`, exactly as the contract answers.
-  return { data: holder.data }
+  return { data: holder.data, meta: { page: 1, perPage: 12, total: holder.total, totalPages: holder.totalPages } }
 })
 
 holder.makeError = (status: number) => new ApiError({ type: 'about:blank', title: 'Request failed', status })
@@ -72,9 +72,11 @@ afterEach(() => {
   mounted = null
 })
 
-async function mount(options: { rows?: unknown[], status?: number, park?: boolean } = {}) {
+async function mount(options: { rows?: unknown[], total?: number, totalPages?: number, status?: number, park?: boolean } = {}) {
   holder.calls = []
   holder.data = options.rows ?? [experience()]
+  holder.total = options.total ?? holder.data.length
+  holder.totalPages = options.totalPages ?? 1
   holder.status = options.status ?? 0
   holder.release = options.park ? () => {} : null
   const wrapper = await mountSuspended(ExperiencesList)
@@ -152,13 +154,9 @@ describe('the rows', () => {
     expect(page.find('[data-experience-skills="3"]').exists()).toBe(true)
   })
 
-  /**
-   * The contract sends no `meta`, so there is nothing to paginate WITH. Asserting the control's
-   * absence keeps a copied `UPagination` from arriving with fields that would read `undefined`.
-   */
-  it('renders no pagination control, because the endpoint is not paginated', async () => {
-    const page = await mount({ rows: [experience(), ENDED_LATER] })
-    expect(page.find('[data-experiences-pagination]').exists()).toBe(false)
-    expect(page.text()).not.toContain('undefined')
+  it('renders the server pagination control only when more than one page exists', async () => {
+    const page = await mount({ rows: [experience()], total: 13, totalPages: 2 })
+    expect(page.find('[data-experiences-pagination]').exists()).toBe(true)
+    expect(holder.calls[0]).toEqual({ path: '/admin/experiences', options: { locale: false, query: { page: 1, perPage: 12 } } })
   })
 })

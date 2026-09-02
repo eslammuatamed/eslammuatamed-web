@@ -5711,3 +5711,41 @@ No route-governance or cap change was made. The ordinary D20-32 gate passes for 
 report retains its existing D20-24 quality-target warning for this route (335.0 KB gzip) while the
 shared-floor, incremental, CSS, and frozen app-owned cap pass. No backend/API/type change, unrelated
 product work, FE5-U6, or FE5-U7 was started.
+
+---
+
+## Acceptance Feedback U5H — server-side Experiences + Testimonials pagination · COMPLETE · 2026-09-02
+
+Starting frontend SHA: `2c3f878def31cec2819ac11c9704a0805105c703`. This frontend-only unit consumes
+the final Production backend contract from `origin/main`
+`9da49f71d41f2275e588db479329df4998364fe4` and R4's byte-identical generated contract. No backend,
+vendored OpenAPI, or generated API type changed.
+
+`/dashboard/experiences` and `/dashboard/testimonials` now own `page` in the URL. Missing, invalid,
+or repeated values parse to page one; page one is omitted when navigating through the pager; page
+changes push browser history and direct `?page=2` requests that server page. Both resources send the
+fixed Production `perPage=12`, receive `{ data, meta }`, and render server order without client-side
+slicing or sorting. Their request identity includes the page, so stale responses cannot replace a
+newer page; same-page refresh failures keep usable rows while a failed different page clears them.
+
+Testimonials preserves its entity-owned slideover and MediaPicker lifecycle. Overlay create/edit
+query keys coexist with `page`; create/update/delete refresh authoritative server state and an
+out-of-range post-mutation page is replaced with the server's last valid page. Experiences retains
+its table, row actions, and editor navigation. The deterministic servers now implement the released
+page envelope and provide 13 fixed rows each, making page two observable in real-browser tests.
+
+### Verification
+
+| Check | Result |
+| --- | --- |
+| Focused composable and collection-page tests | 33/33, exit 0 — canonical request inputs, server metadata, request-state surfaces, server order, page identity, stale handling, and pagers. |
+| Experiences negative control | Temporarily removing page from `adminExperiencesQueryKey` made the different-page failure test retain page-one rows; restoring the key made the exact test pass. |
+| Testimonials negative control | Temporarily removing page from `adminTestimonialsQueryKey` made the different-page failure test retain page-one rows; restoring the key made the exact test pass. |
+| Complete dashboard browser projects | Experiences + Testimonials ran against fresh production builds and isolated deterministic servers: direct page-two URLs, back navigation, canonical `page`/`perPage` requests, delayed stale-page protection, request states, existing table/editor/slideover/MediaPicker journeys, narrow layout, and axe coverage. |
+| `npm run typecheck:e2e` / `npx nuxt typecheck` / `npm run lint` / `git diff --check` | exit 0 / exit 0 / exit 0 / exit 0. |
+| Analysis build / route-size gate | `ANALYZE_BUNDLE=1 NUXT_PUBLIC_SITE_URL=https://example.com npm run build` and `NUXT_PUBLIC_SITE_URL=https://example.com npm run size:routes`, exit 0. Experiences: 93,124 B / 99,328 B. Testimonials: 94,036 B / 106,496 B. |
+
+No route cap or governance entry changed. The normal route gate retains its existing D20-24
+quality-target warnings; both affected collection routes pass their shared-floor, incremental, CSS,
+and frozen app-owned limits. Categories, Tags, Skills, picker aggregation, FE5-U6, and FE5-U7 remain
+untouched. No deployment occurred.

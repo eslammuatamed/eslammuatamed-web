@@ -2,13 +2,17 @@
 import type { TableColumn } from '@nuxt/ui'
 import { TESTIMONIAL_LOCALES, testimonialDisplayAuthor, testimonialDisplayQuote, testimonialHasTranslation } from '~/composables/admin-testimonial-fields'
 import type { AdminTestimonial } from '~/composables/admin-testimonial-types'
+import {
+  ADMIN_TESTIMONIALS_PER_PAGE,
+  parseAdminTestimonialsQuery
+} from '~/composables/admin-testimonials-query'
 
 defineI18nRoute(false)
 definePageMeta({ layout: 'dashboard', middleware: 'auth' })
 const { t, locale } = useDashboardI18n()
 const route = useRoute()
 const router = useRouter()
-const { items, pending, forbidden, failed, load } = useAdminTestimonials()
+const { items, total, totalPages, pending, forbidden, failed, load } = useAdminTestimonials()
 useHead({ title: () => `${t('dashboard.testimonials.title')} · ${t('dashboard.title')}` })
 
 const editingId = ref<string | null>(null)
@@ -18,7 +22,8 @@ const hasData = computed(() => items.value.length > 0)
 const { initialPending, refreshing } = useRequestState(pending, hasData, failed)
 const showErrorState = computed(() => failed.value && !hasData.value)
 const showStaleNotice = computed(() => failed.value && hasData.value)
-const isEmpty = computed(() => !pending.value && !failed.value && !forbidden.value && !hasData.value)
+const isEmpty = computed(() => !pending.value && !failed.value && !forbidden.value && total.value === 0)
+const parsedQuery = computed(() => parseAdminTestimonialsQuery(route.query))
 const columns = computed<TableColumn<AdminTestimonial>[]>(() => [
   { id: 'author', header: () => t('dashboard.testimonials.field.author') },
   { id: 'quote', header: () => t('dashboard.testimonials.field.quote') },
@@ -31,6 +36,14 @@ const columns = computed<TableColumn<AdminTestimonial>[]>(() => [
 const rowAuthor = (item: AdminTestimonial) => testimonialDisplayAuthor(item, locale.value, t('dashboard.testimonials.untitled'))
 const rowQuote = (item: AdminTestimonial) => testimonialDisplayQuote(item, locale.value)
 function setIntent(query: Record<string, string | undefined>): void { void router.replace({ query: { ...route.query, ...query } }) }
+function queryWithPage(page: number): Record<string, string | undefined> { return { ...route.query, page: page === 1 ? undefined : String(page) } }
+function goToPage(page: number): void { void router.push({ query: queryWithPage(page) }) }
+async function loadCurrentPage(): Promise<void> {
+  const query = parsedQuery.value
+  const meta = await load(query)
+  if (!meta || query.page !== parsedQuery.value.page || query.page <= meta.totalPages) return
+  await router.replace({ query: queryWithPage(meta.totalPages) })
+}
 function openCreate(event: Event): void { lastTrigger.value = event.currentTarget as HTMLElement; setIntent({ create: '1', edit: undefined }) }
 function openEdit(id: string, event: Event): void { lastTrigger.value = event.currentTarget as HTMLElement; setIntent({ edit: id, create: undefined }) }
 async function closeOverlay(): Promise<void> {
@@ -41,12 +54,12 @@ async function closeOverlay(): Promise<void> {
   await nextTick()
   lastTrigger.value?.focus()
 }
-async function refreshAfterMutation(): Promise<void> { await load() }
+async function refreshAfterMutation(): Promise<void> { await loadCurrentPage() }
 watch(() => route.query, query => {
   editingId.value = typeof query.edit === 'string' ? query.edit : null
   overlayOpen.value = editingId.value !== null || query.create === '1'
 }, { immediate: true })
-void load()
+watch(parsedQuery, () => { void loadCurrentPage() }, { immediate: true, deep: true })
 </script>
 
 <template>
@@ -58,13 +71,13 @@ void load()
     <UAlert v-if="forbidden" color="error" variant="subtle" icon="i-lucide-lock" data-testimonials-forbidden :title="t('dashboard.testimonials.forbiddenTitle')" :description="t('dashboard.testimonials.forbiddenBody')" />
     <section v-else :aria-label="t('dashboard.testimonials.listRegionLabel')">
       <p v-if="showStaleNotice" role="status" data-testimonials-stale class="mb-3 rounded-control border border-warning/40 bg-warning/10 px-3 py-2 text-sm text-highlighted">
-        {{ t('dashboard.testimonials.staleNotice') }} <UButton class="ms-2" size="xs" color="neutral" variant="subtle" data-testimonials-stale-retry @click="load()">{{ t('dashboard.testimonials.retry') }}</UButton>
+        {{ t('dashboard.testimonials.staleNotice') }} <UButton class="ms-2" size="xs" color="neutral" variant="subtle" data-testimonials-stale-retry @click="loadCurrentPage()">{{ t('dashboard.testimonials.retry') }}</UButton>
       </p>
-      <UiRequestState :pending="initialPending" :refreshing="refreshing" :error="showErrorState" :empty="isEmpty" skeleton="rows" :count="5" @retry="load()">
-        <template #error><UiStateError data-testimonials-failed :message="t('dashboard.testimonials.errorTitle')" @retry="load()" /></template>
+      <UiRequestState :pending="initialPending" :refreshing="refreshing" :error="showErrorState" :empty="isEmpty" skeleton="rows" :count="5" @retry="loadCurrentPage()">
+        <template #error><UiStateError data-testimonials-failed :message="t('dashboard.testimonials.errorTitle')" @retry="loadCurrentPage()" /></template>
         <template #empty><div class="rounded-control border border-default p-10 text-center" data-testimonials-empty><p class="font-medium text-highlighted">{{ t('dashboard.testimonials.emptyTitle') }}</p><p class="mt-1 text-sm text-muted">{{ t('dashboard.testimonials.emptyBody') }}</p><UButton class="mt-4" icon="i-lucide-plus" data-testimonials-empty-create @click="openCreate">{{ t('dashboard.testimonials.create') }}</UButton></div></template>
         <div data-testimonials-loaded>
-          <p class="mb-3 text-sm text-muted" data-testimonials-count>{{ t('dashboard.testimonials.resultCount', { total: items.length }) }}</p>
+          <p class="mb-3 text-sm text-muted" data-testimonials-count>{{ t('dashboard.testimonials.resultCount', { total }) }}</p>
           <div class="overflow-x-auto"><UTable :data="items" :columns="columns" :loading="refreshing" :aria-label="t('dashboard.testimonials.listRegionLabel')" data-testimonials-table>
             <template #author-cell="{ row }"><div :data-testimonial-row="row.original.id" class="min-w-44 max-w-xs"><p dir="auto" class="break-words font-medium text-highlighted" :data-testimonial-author="row.original.id">{{ rowAuthor(row.original) }}</p><div class="mt-1 flex flex-wrap gap-1"><UBadge v-for="target in TESTIMONIAL_LOCALES" :key="target" :color="testimonialHasTranslation(row.original, target) ? 'success' : 'warning'" variant="subtle" size="sm" :data-testimonial-translation="`${target}:${testimonialHasTranslation(row.original, target) ? 'present' : 'missing'}`">{{ t(testimonialHasTranslation(row.original, target) ? 'dashboard.testimonials.translationState.present' : 'dashboard.testimonials.translationState.missing', { locale: t(`dashboard.testimonials.locale.${target}`) }) }}</UBadge></div></div></template>
             <template #quote-cell="{ row }"><p dir="auto" class="max-w-md truncate text-sm text-muted" :data-testimonial-quote="row.original.id">{{ rowQuote(row.original) }}</p></template>
@@ -74,6 +87,7 @@ void load()
             <template #visibility-cell="{ row }"><UBadge :color="row.original.isVisible ? 'success' : 'neutral'" variant="subtle" :data-testimonial-visible="String(row.original.isVisible)">{{ t(row.original.isVisible ? 'dashboard.testimonials.visible' : 'dashboard.testimonials.hidden') }}</UBadge></template>
             <template #actions-cell="{ row }"><UButton color="neutral" variant="subtle" size="sm" icon="i-lucide-pencil" :data-testimonial-edit="row.original.id" :aria-label="t('dashboard.testimonials.editFor', { author: rowAuthor(row.original) })" @click="openEdit(row.original.id, $event)">{{ t('dashboard.testimonials.edit') }}</UButton></template>
           </UTable></div>
+          <div v-if="totalPages > 1" class="mt-4 flex justify-end" data-testimonials-pagination><UPagination :page="parsedQuery.page" :total="total" :items-per-page="ADMIN_TESTIMONIALS_PER_PAGE" @update:page="goToPage" /></div>
         </div>
       </UiRequestState>
     </section>

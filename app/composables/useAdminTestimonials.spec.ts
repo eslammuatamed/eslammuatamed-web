@@ -20,7 +20,7 @@ mockNuxtImport('useApi', () => () => async (path: string, options: Record<string
     await new Promise<void>(resolve => holder.releases.push(resolve))
   }
   if (holder.status) throw holder.makeError?.(holder.status) ?? new Error('failed')
-  return { data: response }
+  return { data: response, meta: { page: 1, perPage: 12, total: response.length, totalPages: 1 } }
 })
 
 holder.makeError = status => new ApiError({ type: 'about:blank', title: 'failed', status })
@@ -34,14 +34,24 @@ function reset(rows: unknown[] = [{ id: 't1' }]) {
 }
 
 describe('the Testimonials collection read', () => {
-  it('reads the whole list with no query parameters and locale suppressed', async () => {
+  it('reads the canonical first server page with locale suppressed', async () => {
     reset()
     const source = useAdminTestimonials()
-    expect(Object.keys(source).sort()).toEqual(['failed', 'forbidden', 'items', 'load', 'pending'])
+    expect(Object.keys(source).sort()).toEqual(['failed', 'forbidden', 'items', 'load', 'pending', 'total', 'totalPages'])
     await source.load()
-    expect(holder.calls).toEqual([{ path: '/admin/testimonials', options: { locale: false } }])
+    expect(holder.calls).toEqual([{ path: '/admin/testimonials', options: { locale: false, query: { page: 1, perPage: 12 } } }])
     expect(source.items.value).toHaveLength(1)
     expect(source.pending.value).toBe(false)
+  })
+
+  it('clears page-one rows when page two fails', async () => {
+    reset()
+    const source = useAdminTestimonials()
+    await source.load({ page: 1 })
+    holder.status = 500
+    await source.load({ page: 2 })
+    expect(source.failed.value).toBe(true)
+    expect(source.items.value).toEqual([])
   })
 
   it('distinguishes forbidden from generic failure and clears unusable rows', async () => {
@@ -72,9 +82,9 @@ describe('the Testimonials collection read', () => {
     reset([{ id: 'old' }])
     const source = useAdminTestimonials()
     holder.parkNext = true
-    const slow = source.load()
+    const slow = source.load({ page: 1 })
     holder.rows = [{ id: 'new' }]
-    await source.load()
+    await source.load({ page: 2 })
     expect(source.items.value.map(item => item.id)).toEqual(['new'])
     holder.releases[0]?.()
     await slow

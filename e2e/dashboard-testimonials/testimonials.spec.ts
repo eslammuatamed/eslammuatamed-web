@@ -16,13 +16,45 @@ async function openEdit(page: Page, baseURL: string, id: string = TESTIMONIAL.fe
 }
 
 test.describe('the Testimonials collection', () => {
-  test('renders the complete unpaginated response in API order inside a UTable', async ({ page, baseURL }) => {
+  test('renders the first server page in API order inside a UTable', async ({ page, baseURL }) => {
     await signIn(page, 'en', baseURL!); await visit(page)
     await expect(page.locator('[data-testimonials-table]')).toBeVisible()
-    expect(await rows(page).evaluateAll(elements => elements.map(element => element.getAttribute('data-testimonial-row')))).toEqual([...API_ORDER])
-    await expect(page.locator('[data-testimonials-pagination], [data-testimonials-filter]')).toHaveCount(0)
+    const ids = await rows(page).evaluateAll(elements => elements.map(element => element.getAttribute('data-testimonial-row')))
+    expect(ids.slice(0, API_ORDER.length)).toEqual([...API_ORDER])
+    expect(ids).toHaveLength(12)
+    await expect(page.locator('[data-testimonials-pagination]')).toBeVisible()
     await expect(page.locator(`[data-testimonial-avatar="${AVATAR.featured}"]`)).toBeVisible()
     await expect(page.locator(`[data-testimonial-row="${TESTIMONIAL.enOnly}"] [data-testimonial-translation="ar:missing"]`)).toBeVisible()
+  })
+
+  test('deep-links page two through the server, and back restores page one', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL!)
+    await page.goto('/dashboard/testimonials')
+    await listSettled(page)
+    const pageTwo = page.waitForRequest(request => {
+      const url = new URL(request.url())
+      return url.pathname.endsWith('/admin/testimonials') && url.searchParams.get('page') === '2' && url.searchParams.get('perPage') === '12'
+    })
+    await page.goto('/dashboard/testimonials?page=2')
+    await pageTwo
+    await listSettled(page)
+    await expect(rows(page)).toHaveCount(1)
+    await page.goBack()
+    await listSettled(page)
+    await expect(page).toHaveURL(/\/dashboard\/testimonials$/)
+    await expect(rows(page)).toHaveCount(12)
+  })
+
+  test('keeps page two visible when the delayed page-one response arrives late', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL!)
+    await setBackendState(page, { delayMs: 1000 })
+    const pageOne = page.waitForRequest(request => new URL(request.url()).searchParams.get('page') === '1')
+    await page.goto('/dashboard/testimonials')
+    await pageOne
+    await setBackendState(page, { delayMs: 0 })
+    await page.goto('/dashboard/testimonials?page=2')
+    await listSettled(page)
+    await expect(rows(page)).toHaveCount(1)
   })
 
   test('keeps server ordering and loading, empty, error/retry, and forbidden local to the collection', async ({ page, baseURL }) => {

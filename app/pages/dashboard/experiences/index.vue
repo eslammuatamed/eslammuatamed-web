@@ -8,6 +8,10 @@ import {
   experienceIsCurrent
 } from '~/composables/admin-experience-fields'
 import type { AdminExperience } from '~/composables/admin-experience-types'
+import {
+  ADMIN_EXPERIENCES_PER_PAGE,
+  parseAdminExperiencesQuery
+} from '~/composables/admin-experiences-query'
 
 /**
  * Dashboard Experience — the collection (FE-3 module 1, `M1·U2`).
@@ -16,14 +20,9 @@ import type { AdminExperience } from '~/composables/admin-experience-types'
  * than a fresh interpretation. What differs from Articles is contract-driven and is called out
  * where it happens, because each difference is a place a copied implementation would be wrong.
  *
- * ── THREE THINGS ARTICLES HAS THAT THIS DELIBERATELY DOES NOT ───────────────────────────────────
- * 1. NO URL QUERY STATE. `GET /admin/experiences` declares ZERO query parameters, so there is no
- *    page and no filter to put in the address. Articles' "URL is the single source of truth" rule
- *    is not weakened here — it has nothing to be true about. `useAdminExperiences` therefore takes
- *    no argument and `load()` is called once.
- * 2. NO PAGINATION. The response is `{ data: [...] }` with NO `meta`, so there is no `total`,
- *    `page` or `totalPages`. A `UPagination` here would be driven by fields that do not exist.
- * 3. NO STATUS. Experiences have no `status` and no `publishAt` — publishing and scheduling are not
+ * ── TWO THINGS ARTICLES HAS THAT THIS DELIBERATELY DOES NOT ────────────────────────────────────
+ * 1. NO FILTERS. This resource owns only `page` in its route query; the server owns all ordering.
+ * 2. NO STATUS. Experiences have no `status` and no `publishAt` — publishing and scheduling are not
  *    concepts in this shape — so there is no status chip and no empty-FILTERED state, because no
  *    filter can produce one.
  *
@@ -40,7 +39,9 @@ defineI18nRoute(false)
 definePageMeta({ layout: 'dashboard', middleware: 'auth' })
 
 const { t, locale } = useDashboardI18n()
-const { items, pending, forbidden, failed, load } = useAdminExperiences()
+const route = useRoute()
+const router = useRouter()
+const { items, total, totalPages, pending, forbidden, failed, load } = useAdminExperiences()
 
 useHead({ title: () => `${t('dashboard.experiences.title')} · ${t('dashboard.title')}` })
 
@@ -63,12 +64,27 @@ const showErrorState = computed(() => failed.value && !hasData.value)
  */
 const showStaleNotice = computed(() => failed.value && hasData.value)
 
-const isEmpty = computed(() =>
-  !pending.value && !failed.value && !forbidden.value && items.value.length === 0
-)
+const isEmpty = computed(() => !pending.value && !failed.value && !forbidden.value && total.value === 0)
+
+const parsedQuery = computed(() => parseAdminExperiencesQuery(route.query))
+
+function queryWithPage(page: number): Record<string, string | undefined> {
+  return { ...route.query, page: page === 1 ? undefined : String(page) }
+}
+
+function goToPage(page: number): void {
+  void router.push({ query: queryWithPage(page) })
+}
+
+async function loadCurrentPage(): Promise<void> {
+  const query = parsedQuery.value
+  const meta = await load(query)
+  if (!meta || query.page !== parsedQuery.value.page || query.page <= meta.totalPages) return
+  await router.replace({ query: queryWithPage(meta.totalPages) })
+}
 
 /**
- * Experience-specific columns stay with this unpaginated collection: its server-owned order and
+ * Experience-specific columns stay with this collection: its server-owned order and
  * translation-aware presentation do not belong in a generic table abstraction.
  */
 const columns: TableColumn<AdminExperience>[] = [
@@ -107,17 +123,10 @@ function periodLabel(experience: AdminExperience): string {
 }
 
 /**
- * ONE load, called directly — NOT `watch(..., { immediate: true })`.
- *
- * Articles watches its parsed route query because a filter or page change must re-request. This
- * endpoint takes no parameters, so there is nothing whose change could require a second request,
- * and a watcher over a constant would be a re-request that can never fire dressed up as reactivity.
- *
- * `/dashboard/**` is `ssr: false`, so this runs on the client's first render. The promise is
- * deliberately not awaited in setup: awaiting it would suspend the page and delay the SKELETON,
- * which is the very state the request-state contract exists to show while this is in flight.
+ * The URL is the page-state source of truth. Page one is omitted, clicks push history entries, and
+ * an out-of-range server response is corrected with replace so a delete cannot strand the operator.
  */
-void load()
+watch(parsedQuery, () => { void loadCurrentPage() }, { immediate: true, deep: true })
 </script>
 
 <template>
@@ -156,7 +165,7 @@ void load()
         class="mb-3 rounded-control border border-warning/40 bg-warning/10 px-3 py-2 text-sm text-highlighted"
       >
         {{ t('dashboard.experiences.staleNotice') }}
-        <UButton class="ms-2" size="xs" color="neutral" variant="subtle" data-experiences-stale-retry @click="load()">
+        <UButton class="ms-2" size="xs" color="neutral" variant="subtle" data-experiences-stale-retry @click="loadCurrentPage()">
           {{ t('dashboard.experiences.retry') }}
         </UButton>
       </p>
@@ -168,7 +177,7 @@ void load()
         :empty="isEmpty"
         skeleton="rows"
         :count="5"
-        @retry="load()"
+        @retry="loadCurrentPage()"
       >
         <!-- The SHARED error component, reused rather than re-implemented. Only its MESSAGE is
              supplied; its retry LABEL is deliberately NOT overridden, because that string resolves
@@ -178,7 +187,7 @@ void load()
           <UiStateError
             data-experiences-failed
             :message="t('dashboard.experiences.errorTitle')"
-            @retry="load()"
+            @retry="loadCurrentPage()"
           />
         </template>
 
@@ -196,10 +205,10 @@ void load()
 
         <div>
           <p class="mb-3 text-sm text-muted" data-experiences-count>
-            {{ t('dashboard.experiences.resultCount', { total: items.length }) }}
+            {{ t('dashboard.experiences.resultCount', { total }) }}
           </p>
 
-          <!-- ⚠ `items` reaches the table in API order. No `.sort()` or pagination is introduced. -->
+          <!-- ⚠ `items` reaches the table in API order. No client-side `.sort()` or slicing occurs. -->
           <div class="overflow-x-auto">
             <UTable
               :data="items"
@@ -291,6 +300,14 @@ void load()
                 </UButton>
               </template>
             </UTable>
+          </div>
+          <div v-if="totalPages > 1" class="mt-4 flex justify-end" data-experiences-pagination>
+            <UPagination
+              :page="parsedQuery.page"
+              :total="total"
+              :items-per-page="ADMIN_EXPERIENCES_PER_PAGE"
+              @update:page="goToPage"
+            />
           </div>
         </div>
       </UiRequestState>

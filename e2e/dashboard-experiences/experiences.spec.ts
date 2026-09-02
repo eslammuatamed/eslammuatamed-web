@@ -35,7 +35,7 @@ test.beforeEach(async ({ page }) => {
 })
 
 test.describe('the collection', () => {
-  test('renders every role in the API order, current-role-first', async ({ page, baseURL }) => {
+  test('renders the first server page in API order, current-role-first', async ({ page, baseURL }) => {
     await signIn(page, 'en', baseURL!)
     await page.goto('/dashboard/experiences')
     await listSettled(page)
@@ -52,7 +52,39 @@ test.describe('the collection', () => {
      * further down, so the whole order is pinned.
      */
     const ids = await rows(page).evaluateAll(els => els.map(el => el.getAttribute('data-experience-row')))
-    expect(ids).toEqual([...API_ORDER])
+    expect(ids.slice(0, API_ORDER.length)).toEqual([...API_ORDER])
+    expect(ids).toHaveLength(12)
+    await expect(page.locator('[data-experiences-pagination]')).toBeVisible()
+  })
+
+  test('owns page in the URL, requests the deep-linked server page, and preserves history', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL!)
+    await page.goto('/dashboard/experiences')
+    await listSettled(page)
+    const pageTwo = page.waitForRequest(request => {
+      const url = new URL(request.url())
+      return url.pathname.endsWith('/admin/experiences') && url.searchParams.get('page') === '2' && url.searchParams.get('perPage') === '12'
+    })
+    await page.goto('/dashboard/experiences?page=2')
+    await pageTwo
+    await listSettled(page)
+    await expect(rows(page)).toHaveCount(1)
+    await page.goBack()
+    await listSettled(page)
+    await expect(page).toHaveURL(/\/dashboard\/experiences$/)
+    await expect(rows(page)).toHaveCount(12)
+  })
+
+  test('discards a late page-one response after page two becomes current', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL!)
+    await setBackendState(page, { delayMs: 1000 })
+    const pageOne = page.waitForRequest(request => new URL(request.url()).searchParams.get('page') === '1')
+    await page.goto('/dashboard/experiences')
+    await pageOne
+    await setBackendState(page, { delayMs: 0 })
+    await page.goto('/dashboard/experiences?page=2')
+    await listSettled(page)
+    await expect(rows(page)).toHaveCount(1)
   })
 
   test('marks the current role, and only that one', async ({ page, baseURL }) => {
@@ -166,7 +198,7 @@ test.describe('bilingual, at the narrowest supported width', () => {
     await expectNoKeyPaths(page)
     // The order is a SERVER property and must not change with the chrome language.
     const ids = await rows(page).evaluateAll(els => els.map(el => el.getAttribute('data-experience-row')))
-    expect(ids).toEqual([...API_ORDER])
+    expect(ids.slice(0, API_ORDER.length)).toEqual([...API_ORDER])
   })
 
   test('renders English chrome LTR with no raw key paths', async ({ page, baseURL }) => {
@@ -459,7 +491,7 @@ test.describe('the editor — the request-state contract, criteria 3, 4 and 5', 
     await page.waitForURL('**/dashboard/experiences')
     await listSettled(page)
     await expect(tableRowFor(page, EXP.past)).toHaveCount(0)
-    await expect(rows(page)).toHaveCount(API_ORDER.length - 1)
+    await expect(rows(page)).toHaveCount(11)
   })
 
   test('answers a well-formed id that does not exist as NOT FOUND', async ({ page, baseURL }) => {

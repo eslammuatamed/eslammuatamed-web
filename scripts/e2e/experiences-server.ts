@@ -15,10 +15,9 @@
  * Articles. Four differences are modelled here deliberately, because each one is a place a shared
  * abstraction could be wrong and a permissive mock would hide it:
  *
- * 1. NO PAGINATION ENVELOPE. `GET /admin/experiences` takes zero query parameters and answers
- *    `{ data: [...] }` with NO `meta` — verified against the committed contract. A mock that
- *    helpfully returned `meta` would let a collection built on Articles' paginated shape pass while
- *    reading a field the real API never sends.
+ * 1. SERVER PAGINATION. `GET /admin/experiences` accepts canonical `page`/`perPage` and answers
+ *    `{ data, meta }`; the fixture contains a second page so a browser test cannot pass by slicing
+ *    a short local array.
  *
  * 2. `technologyIds` REPLACES THE FULL SET, and `[]` CLEARS IT — while `translations` UPSERTS and
  *    never deletes, and `endDate` clears on an explicit `null` (D10-23). THREE different clearing
@@ -231,7 +230,17 @@ function seedExperiences(): SeedExperience[] {
           impact: '- تعلّمت أمام الجميع.'
         }
       }
-    }
+    },
+    ...Array.from({ length: 8 }, (_, index): SeedExperience => ({
+      id: `00000000-0000-4000-e000-1000000000${String(index + 1).padStart(2, '0')}`,
+      startDate: `201${index}-01-01`,
+      endDate: `201${index}-12-31`,
+      isCurrent: false,
+      employmentType: 'CONTRACT',
+      order: 10 + index,
+      technologyIds: [],
+      translations: { en: { role: `Archived role ${index + 1}`, company: 'Archive', location: 'Remote', impact: '- Archived.' } }
+    }))
   ]
 }
 
@@ -672,10 +681,16 @@ async function handleRequest(req: http.IncomingMessage, res: http.ServerResponse
     }
 
     if (rest === '' && req.method === 'GET') {
-      // NO `meta`. The contract declares `{ data: [...] }` and zero query parameters; a mock that
-      // volunteered a pagination envelope would let a collection read a field that does not exist.
       const pool = mode === 'empty' ? [] : experiences
-      return json(res, 200, { data: [...pool].sort(compareExperiences).map(toEntity) })
+      const page = Math.max(1, Number(url.searchParams.get('page') ?? '1') || 1)
+      const perPage = Math.min(50, Math.max(1, Number(url.searchParams.get('perPage') ?? '12') || 12))
+      const ordered = [...pool].sort(compareExperiences)
+      const total = ordered.length
+      const totalPages = Math.max(1, Math.ceil(total / perPage))
+      return json(res, 200, {
+        data: ordered.slice((page - 1) * perPage, page * perPage).map(toEntity),
+        meta: { page, perPage, total, totalPages }
+      })
     }
   }
 
