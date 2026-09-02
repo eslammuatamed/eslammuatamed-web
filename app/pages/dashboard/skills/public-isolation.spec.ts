@@ -25,6 +25,7 @@ const OTHER_DASHBOARD_FILES = [
   'composables/admin-project-types.ts',
   'composables/admin-projects-query.ts',
   'composables/useAdminProjects.ts',
+  'composables/useAdminSkillsCollection.ts',
   // FE-3 module 3 and Taxonomy — registered for the same reason as every sibling above.
   'composables/admin-testimonial-fields.ts',
   'composables/admin-testimonial-form.ts',

@@ -36,10 +36,18 @@ mockNuxtImport('useApi', () => () => (path: string, options: Record<string, unkn
   const method = String(options.method ?? 'GET').toUpperCase()
 
   if (path === '/admin/skills') {
-    return Promise.resolve({ data: [
+    const skills = [
       { id: 'skill-a', slug: 'typescript', group: 'LANGUAGE', order: 1, brandColor: null, isPublic: true, translations: { en: { label: 'TypeScript' } } },
       { id: 'skill-b', slug: 'nestjs', group: 'BACKEND', order: 2, brandColor: null, isPublic: true, translations: { en: { label: 'NestJS' } } }
-    ] })
+    ]
+    const query = options.query as { page?: number, perPage?: number } | undefined
+    const page = query?.page ?? 1
+    const perPage = query?.perPage ?? 50
+    const totalPages = Math.ceil(skills.length / perPage)
+    return Promise.resolve({
+      data: skills.slice((page - 1) * perPage, page * perPage),
+      meta: { page, perPage, total: skills.length, totalPages }
+    })
   }
 
   // The media picker resolves each stored reference through `GET /admin/media/:id`. Without this
