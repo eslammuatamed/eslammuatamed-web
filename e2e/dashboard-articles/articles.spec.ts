@@ -66,6 +66,18 @@ function waitForArticlesRequest(
   })
 }
 
+function waitForArticlesResponse(
+  page: import('@playwright/test').Page,
+  expected: Record<string, string | null>
+) {
+  return page.waitForResponse(response => {
+    if (response.request().method() !== 'GET' || response.status() !== 200) return false
+    const url = new URL(response.url())
+    if (url.pathname !== '/api/v1/admin/articles') return false
+    return Object.entries(expected).every(([key, value]) => url.searchParams.get(key) === value)
+  })
+}
+
 async function submitTitleSearch(page: import('@playwright/test').Page, q: string) {
   const request = waitForArticlesRequest(page, { q })
   await page.locator('[data-articles-search]').fill(q)
@@ -408,11 +420,17 @@ test.describe('F-1 — the loading system speaks the DASHBOARD language, proven 
     await signIn(page, 'ar', baseURL as string)
     await page.goto('/dashboard/articles')
     await hydrated(page)
+    await expect(rows(page), 'the initial list must render before the refresh delay is enabled').not.toHaveCount(
+      0
+    )
     await listSettled(page)
 
     await setBackendState(page, { delayMs: 2500 })
+    const refreshRequest = waitForArticlesRequest(page, { status: 'DRAFT' })
+    const refreshResponse = waitForArticlesResponse(page, { status: 'DRAFT' })
     await page.locator('[data-articles-status]').click()
     await page.getByRole('option', { name: 'مسودة', exact: true }).click()
+    await refreshRequest
 
     const overlay = UPDATING(page)
     await expect(overlay).toBeVisible()
@@ -421,8 +439,10 @@ test.describe('F-1 — the loading system speaks the DASHBOARD language, proven 
       'the updating treatment must speak the dashboard language, not the route locale'
     ).toMatch(ARABIC)
 
+    await refreshResponse
     await setBackendState(page, { delayMs: 0 })
     await listSettled(page)
+    await expect(overlay).toHaveCount(0)
   })
 
   /**
