@@ -43,7 +43,7 @@ test.describe('legacy Taxonomy navigation', () => {
     await page.goto('/dashboard/taxonomy')
     await expect(page).toHaveURL(/\/dashboard\/categories$/)
     await listSettledFor(page, 'categories')
-    await expect(categoryRows(page)).toHaveCount(4)
+    await expect(categoryRows(page)).toHaveCount(12)
     await expect(tagRows(page)).toHaveCount(0)
   })
 })
@@ -57,12 +57,50 @@ test.describe('Categories route', () => {
 
     await expect(page.locator('[data-categories-table]')).toBeVisible()
     const ids = await categoryRows(page).evaluateAll(rows => rows.map(row => row.getAttribute('data-category-row')))
-    expect(ids).toEqual([...CATEGORY_API_ORDER])
+    expect(ids.slice(0, CATEGORY_API_ORDER.length)).toEqual([...CATEGORY_API_ORDER])
     await expect(tagRows(page)).toHaveCount(0)
-    await expect(page.locator('[data-taxonomy-pagination], [data-taxonomy-filter]')).toHaveCount(0)
+    await expect(page.locator('[data-categories-pagination]')).toBeVisible()
     expect(detailRequests).toEqual([])
     expect(listRequests.map(line => new URL(line.split(' ')[1]!).pathname)).toEqual(['/api/v1/admin/categories'])
+    expect(new URL(listRequests[0]!.split(' ')[1]!).searchParams.toString()).toBe('page=1&perPage=12')
     expect(publicRequests).toEqual([])
+  })
+
+  test('owns page in the URL, requests page two, and restores page one through history', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL!)
+    await visit(page, 'categories')
+    const pageTwo = page.waitForRequest(request => {
+      const url = new URL(request.url())
+      return url.pathname.endsWith('/admin/categories') && url.searchParams.get('page') === '2' && url.searchParams.get('perPage') === '12'
+    })
+    await page.goto('/dashboard/categories?page=2')
+    await pageTwo
+    await listSettledFor(page, 'categories')
+    await expect(categoryRows(page)).toHaveCount(1)
+    await page.goBack()
+    await listSettledFor(page, 'categories')
+    await expect(page).toHaveURL(/\/dashboard\/categories$/)
+    await expect(categoryRows(page)).toHaveCount(12)
+  })
+
+  test('keeps page two visible after a delayed page-one response', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL!)
+    await setBackendState(page, { delayMs: 1000 })
+    const pageOne = page.waitForRequest(request => new URL(request.url()).searchParams.get('page') === '1')
+    await page.goto('/dashboard/categories')
+    await pageOne
+    await setBackendState(page, { delayMs: 0 })
+    await page.goto('/dashboard/categories?page=2')
+    await listSettledFor(page, 'categories')
+    await expect(categoryRows(page)).toHaveCount(1)
+  })
+
+  test('clamps an out-of-range Category deep link from server metadata', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL!)
+    await page.goto('/dashboard/categories?page=999')
+    await expect(page).toHaveURL(/\/dashboard\/categories\?page=2$/)
+    await listSettledFor(page, 'categories')
+    await expect(categoryRows(page)).toHaveCount(1)
   })
 
   test('keeps loading, empty, error/retry, and forbidden state local to Categories', async ({ page, baseURL }) => {
@@ -85,13 +123,28 @@ test.describe('Categories route', () => {
     await setBackendState(page, { mode: 'ok' })
     await page.locator('[data-categories-failed]').getByRole('button').click()
     await listSettledFor(page, 'categories')
-    await expect(categoryRows(page)).toHaveCount(4)
+    await expect(categoryRows(page)).toHaveCount(12)
 
     await setBackendState(page, { mode: 'forbidden' })
     await page.reload()
     await listSettledFor(page, 'categories')
     await expect(page.locator('[data-categories-forbidden]')).toBeVisible()
     await expect(page.locator('[data-categories-failed], [data-categories-empty]')).toHaveCount(0)
+  })
+
+  test('retries the current Category page instead of reverting to page one', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL!)
+    await page.goto('/dashboard/categories?page=2')
+    await listSettledFor(page, 'categories')
+    await setBackendState(page, { mode: 'error' })
+    await page.reload()
+    await listSettledFor(page, 'categories')
+    await expect(page.locator('[data-categories-failed]')).toBeVisible()
+    await setBackendState(page, { mode: 'ok' })
+    await page.locator('[data-categories-failed]').getByRole('button').click()
+    await listSettledFor(page, 'categories')
+    await expect(page).toHaveURL(/\/dashboard\/categories\?page=2$/)
+    await expect(categoryRows(page)).toHaveCount(1)
   })
 
   test('creates, blocks empty validation, and restores focus after a clean close', async ({ page, baseURL }) => {
@@ -151,7 +204,7 @@ test.describe('Categories route', () => {
     await page.locator(overlay.deleteConfirm).click()
     await expect(page.locator(overlay.root('categories'))).toBeHidden()
     await listSettledFor(page, 'categories')
-    await expect(categoryRows(page)).toHaveCount(3)
+    await expect(categoryRows(page)).toHaveCount(12)
 
     await setBackendState(page, { articleReferencedCategoryIds: [CATEGORY.oldest] })
     await page.reload()
@@ -163,6 +216,21 @@ test.describe('Categories route', () => {
     await expect(page.locator(overlay.deleteError)).toBeVisible()
     await expect(page.locator(`[data-category-row="${CATEGORY.oldest}"]`)).toBeVisible()
   })
+
+  test('clamps Category page two after deleting its final row', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL!)
+    await page.goto('/dashboard/categories?page=2')
+    await listSettledFor(page, 'categories')
+    const id = await categoryRows(page).first().getAttribute('data-category-row')
+    expect(id).toBeTruthy()
+    await page.locator(`[data-taxonomy-delete="${id}"]`).click()
+    await overlaySettled(page, 'categories')
+    await page.locator(overlay.delete).click()
+    await page.locator(overlay.deleteConfirm).click()
+    await expect(page).toHaveURL(/\/dashboard\/categories$/)
+    await listSettledFor(page, 'categories')
+    await expect(categoryRows(page)).toHaveCount(12)
+  })
 })
 
 test.describe('Tags route', () => {
@@ -173,11 +241,49 @@ test.describe('Tags route', () => {
     })
     await expect(page.locator('[data-tags-table]')).toBeVisible()
     const ids = await tagRows(page).evaluateAll(rows => rows.map(row => row.getAttribute('data-tag-row')))
-    expect(ids).toEqual([...TAG_API_ORDER])
+    expect(ids.slice(0, TAG_API_ORDER.length)).toEqual([...TAG_API_ORDER])
     await expect(categoryRows(page)).toHaveCount(0)
     expect(detailRequests).toEqual([])
     expect(listRequests.map(line => new URL(line.split(' ')[1]!).pathname)).toEqual(['/api/v1/admin/tags'])
+    expect(new URL(listRequests[0]!.split(' ')[1]!).searchParams.toString()).toBe('page=1&perPage=12')
     expect(publicRequests).toEqual([])
+  })
+
+  test('owns page in the URL, requests page two, and restores page one through history', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL!)
+    await visit(page, 'tags')
+    const pageTwo = page.waitForRequest(request => {
+      const url = new URL(request.url())
+      return url.pathname.endsWith('/admin/tags') && url.searchParams.get('page') === '2' && url.searchParams.get('perPage') === '12'
+    })
+    await page.goto('/dashboard/tags?page=2')
+    await pageTwo
+    await listSettledFor(page, 'tags')
+    await expect(tagRows(page)).toHaveCount(1)
+    await page.goBack()
+    await listSettledFor(page, 'tags')
+    await expect(page).toHaveURL(/\/dashboard\/tags$/)
+    await expect(tagRows(page)).toHaveCount(12)
+  })
+
+  test('keeps page two visible after a delayed page-one response', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL!)
+    await setBackendState(page, { delayMs: 1000 })
+    const pageOne = page.waitForRequest(request => new URL(request.url()).searchParams.get('page') === '1')
+    await page.goto('/dashboard/tags')
+    await pageOne
+    await setBackendState(page, { delayMs: 0 })
+    await page.goto('/dashboard/tags?page=2')
+    await listSettledFor(page, 'tags')
+    await expect(tagRows(page)).toHaveCount(1)
+  })
+
+  test('clamps an out-of-range Tag deep link from server metadata', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL!)
+    await page.goto('/dashboard/tags?page=999')
+    await expect(page).toHaveURL(/\/dashboard\/tags\?page=2$/)
+    await listSettledFor(page, 'tags')
+    await expect(tagRows(page)).toHaveCount(1)
   })
 
   test('keeps empty, error/retry, and forbidden state local to Tags', async ({ page, baseURL }) => {
@@ -192,11 +298,26 @@ test.describe('Tags route', () => {
     await setBackendState(page, { mode: 'ok' })
     await page.locator('[data-tags-failed]').getByRole('button').click()
     await listSettledFor(page, 'tags')
-    await expect(tagRows(page)).toHaveCount(3)
+    await expect(tagRows(page)).toHaveCount(12)
     await setBackendState(page, { mode: 'forbidden' })
     await page.reload()
     await listSettledFor(page, 'tags')
     await expect(page.locator('[data-tags-forbidden]')).toBeVisible()
+  })
+
+  test('retries the current Tag page instead of reverting to page one', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL!)
+    await page.goto('/dashboard/tags?page=2')
+    await listSettledFor(page, 'tags')
+    await setBackendState(page, { mode: 'error' })
+    await page.reload()
+    await listSettledFor(page, 'tags')
+    await expect(page.locator('[data-tags-failed]')).toBeVisible()
+    await setBackendState(page, { mode: 'ok' })
+    await page.locator('[data-tags-failed]').getByRole('button').click()
+    await listSettledFor(page, 'tags')
+    await expect(page).toHaveURL(/\/dashboard\/tags\?page=2$/)
+    await expect(tagRows(page)).toHaveCount(1)
   })
 
   test('creates, validates an empty form, and edits with no detail GET before refreshing', async ({ page, baseURL }) => {
@@ -248,7 +369,23 @@ test.describe('Tags route', () => {
       await expect(page.locator(overlay.root('tags'))).toBeHidden()
       await listSettledFor(page, 'tags')
     }
-    await expect(page.locator('[data-tags-empty]')).toBeVisible()
+    await expect(tagRows(page)).toHaveCount(10)
+    await expect(page.locator('[data-tags-empty]')).toHaveCount(0)
+  })
+
+  test('clamps Tag page two after deleting its final row', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL!)
+    await page.goto('/dashboard/tags?page=2')
+    await listSettledFor(page, 'tags')
+    const id = await tagRows(page).first().getAttribute('data-tag-row')
+    expect(id).toBeTruthy()
+    await page.locator(`[data-taxonomy-delete="${id}"]`).click()
+    await overlaySettled(page, 'tags')
+    await page.locator(overlay.delete).click()
+    await page.locator(overlay.deleteConfirm).click()
+    await expect(page).toHaveURL(/\/dashboard\/tags$/)
+    await listSettledFor(page, 'tags')
+    await expect(tagRows(page)).toHaveCount(12)
   })
 })
 
@@ -259,7 +396,7 @@ for (const [kind, rowSelector] of [['categories', '[data-category-row]'], ['tags
       await signIn(page, locale, baseURL!)
       await visit(page, kind)
       await expect(shell(page)).toHaveAttribute('dir', locale === 'ar' ? 'rtl' : 'ltr')
-      await expect(page.locator(rowSelector)).toHaveCount(kind === 'categories' ? 4 : 3)
+      await expect(page.locator(rowSelector)).toHaveCount(12)
       await expectNoKeyPaths(page)
       await hydrated(page)
       let results = await new AxeBuilder({ page }).analyze()

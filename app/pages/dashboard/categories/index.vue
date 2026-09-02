@@ -9,6 +9,10 @@ import {
   type TaxonomyRowLike
 } from '~/composables/admin-taxonomy-fields'
 import type { components } from '~/types/api'
+import {
+  ADMIN_CATEGORIES_PER_PAGE,
+  parseAdminCategoriesQuery
+} from '~/composables/admin-categories-query'
 
 type Category = components['schemas']['AdminCategoryEntity']
 
@@ -16,9 +20,11 @@ defineI18nRoute(false)
 definePageMeta({ layout: 'dashboard', middleware: 'auth' })
 
 const { t, locale } = useDashboardI18n()
+const route = useRoute()
+const router = useRouter()
 const overlayOpen = ref(false)
 const editing = ref<Category | null>(null)
-const { items, pending, forbidden, failed, load } = useAdminCategories()
+const { items, total, totalPages, pending, forbidden, failed, load } = useAdminCategories()
 const hasData = computed(() => items.value.length > 0)
 const request = useRequestState(pending as Ref<boolean>, hasData, failed as Ref<boolean>)
 const state = reactive({
@@ -26,8 +32,9 @@ const state = reactive({
   refreshing: request.refreshing,
   error: computed(() => failed.value && !hasData.value),
   stale: computed(() => failed.value && hasData.value),
-  empty: computed(() => !pending.value && !failed.value && !forbidden.value && !hasData.value)
+  empty: computed(() => !pending.value && !failed.value && !forbidden.value && total.value === 0)
 })
+const parsedQuery = computed(() => parseAdminCategoriesQuery(route.query))
 
 const columns: TableColumn<Category>[] = [
   { accessorKey: 'id', header: () => t('dashboard.taxonomy.categories.title') },
@@ -47,8 +54,19 @@ function openEditor(row: Category | null) {
   overlayOpen.value = true
 }
 
+function queryWithPage(page: number): Record<string, string | undefined> {
+  return { ...route.query, page: page === 1 ? undefined : String(page) }
+}
+function goToPage(page: number): void { void router.push({ query: queryWithPage(page) }) }
+async function loadCurrentPage(): Promise<void> {
+  const query = parsedQuery.value
+  const meta = await load(query)
+  if (!meta || query.page !== parsedQuery.value.page || query.page <= meta.totalPages) return
+  await router.replace({ query: queryWithPage(meta.totalPages) })
+}
+
 useHead({ title: () => `${t('dashboard.taxonomy.categories.title')} · ${t('dashboard.title')}` })
-void load()
+watch(parsedQuery, () => { void loadCurrentPage() }, { immediate: true, deep: true })
 </script>
 
 <template>
@@ -75,10 +93,10 @@ void load()
     <template v-else>
       <p v-if="state.stale" role="status" data-categories-stale class="mb-3 rounded-control border border-warning/40 bg-warning/10 px-3 py-2 text-sm text-highlighted">
         {{ t('dashboard.taxonomy.staleNotice') }}
-        <UButton class="ms-2" size="xs" color="neutral" variant="subtle" data-categories-stale-retry @click="load()">{{ t('dashboard.taxonomy.retry') }}</UButton>
+        <UButton class="ms-2" size="xs" color="neutral" variant="subtle" data-categories-stale-retry @click="loadCurrentPage()">{{ t('dashboard.taxonomy.retry') }}</UButton>
       </p>
-      <UiRequestState :pending="state.initialPending" :refreshing="state.refreshing" :error="state.error" :empty="state.empty" skeleton="rows" :count="3" @retry="load()">
-        <template #error><UiStateError data-categories-failed :message="t('dashboard.taxonomy.categories.errorTitle')" @retry="load()" /></template>
+      <UiRequestState :pending="state.initialPending" :refreshing="state.refreshing" :error="state.error" :empty="state.empty" skeleton="rows" :count="3" @retry="loadCurrentPage()">
+        <template #error><UiStateError data-categories-failed :message="t('dashboard.taxonomy.categories.errorTitle')" @retry="loadCurrentPage()" /></template>
         <template #empty>
           <div class="rounded-control border border-default p-10 text-center" data-categories-empty>
             <p class="font-medium text-highlighted">{{ t('dashboard.taxonomy.categories.emptyTitle') }}</p>
@@ -86,7 +104,7 @@ void load()
           </div>
         </template>
         <div data-categories-loaded>
-          <p class="mb-3 text-sm text-muted" data-categories-count>{{ t('dashboard.taxonomy.categories.resultCount', { total: items.length }) }}</p>
+          <p class="mb-3 text-sm text-muted" data-categories-count>{{ t('dashboard.taxonomy.categories.resultCount', { total }) }}</p>
           <div class="overflow-x-auto">
             <UTable :data="items" :columns="columns" :aria-label="t('dashboard.taxonomy.categories.regionLabel')" data-categories-table>
               <template #id-cell="{ row }">
@@ -111,9 +129,12 @@ void load()
               </template>
             </UTable>
           </div>
+          <div v-if="totalPages > 1" class="mt-4 flex justify-end" data-categories-pagination>
+            <UPagination :page="parsedQuery.page" :total="total" :items-per-page="ADMIN_CATEGORIES_PER_PAGE" @update:page="goToPage" />
+          </div>
         </div>
       </UiRequestState>
     </template>
-    <DashboardTaxonomyCategoryOverlay v-model:open="overlayOpen" kind="categories" :row="editing" @saved="load()" />
+    <DashboardTaxonomyCategoryOverlay v-model:open="overlayOpen" kind="categories" :row="editing" @saved="loadCurrentPage()" />
   </UContainer>
 </template>

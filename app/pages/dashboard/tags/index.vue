@@ -9,6 +9,10 @@ import {
   type TaxonomyRowLike
 } from '~/composables/admin-taxonomy-fields'
 import type { components } from '~/types/api'
+import {
+  ADMIN_TAGS_PER_PAGE,
+  parseAdminTagsQuery
+} from '~/composables/admin-tags-query'
 
 type Tag = components['schemas']['AdminTagEntity']
 
@@ -16,9 +20,11 @@ defineI18nRoute(false)
 definePageMeta({ layout: 'dashboard', middleware: 'auth' })
 
 const { t, locale } = useDashboardI18n()
+const route = useRoute()
+const router = useRouter()
 const overlayOpen = ref(false)
 const editing = ref<Tag | null>(null)
-const { items, pending, forbidden, failed, load } = useAdminTags()
+const { items, total, totalPages, pending, forbidden, failed, load } = useAdminTags()
 const hasData = computed(() => items.value.length > 0)
 const request = useRequestState(pending as Ref<boolean>, hasData, failed as Ref<boolean>)
 const state = reactive({
@@ -26,8 +32,9 @@ const state = reactive({
   refreshing: request.refreshing,
   error: computed(() => failed.value && !hasData.value),
   stale: computed(() => failed.value && hasData.value),
-  empty: computed(() => !pending.value && !failed.value && !forbidden.value && !hasData.value)
+  empty: computed(() => !pending.value && !failed.value && !forbidden.value && total.value === 0)
 })
+const parsedQuery = computed(() => parseAdminTagsQuery(route.query))
 
 const columns: TableColumn<Tag>[] = [
   { accessorKey: 'id', header: () => t('dashboard.taxonomy.tags.title') },
@@ -47,8 +54,19 @@ function openEditor(row: Tag | null) {
   overlayOpen.value = true
 }
 
+function queryWithPage(page: number): Record<string, string | undefined> {
+  return { ...route.query, page: page === 1 ? undefined : String(page) }
+}
+function goToPage(page: number): void { void router.push({ query: queryWithPage(page) }) }
+async function loadCurrentPage(): Promise<void> {
+  const query = parsedQuery.value
+  const meta = await load(query)
+  if (!meta || query.page !== parsedQuery.value.page || query.page <= meta.totalPages) return
+  await router.replace({ query: queryWithPage(meta.totalPages) })
+}
+
 useHead({ title: () => `${t('dashboard.taxonomy.tags.title')} · ${t('dashboard.title')}` })
-void load()
+watch(parsedQuery, () => { void loadCurrentPage() }, { immediate: true, deep: true })
 </script>
 
 <template>
@@ -65,10 +83,10 @@ void load()
     <template v-else>
       <p v-if="state.stale" role="status" data-tags-stale class="mb-3 rounded-control border border-warning/40 bg-warning/10 px-3 py-2 text-sm text-highlighted">
         {{ t('dashboard.taxonomy.staleNotice') }}
-        <UButton class="ms-2" size="xs" color="neutral" variant="subtle" data-tags-stale-retry @click="load()">{{ t('dashboard.taxonomy.retry') }}</UButton>
+        <UButton class="ms-2" size="xs" color="neutral" variant="subtle" data-tags-stale-retry @click="loadCurrentPage()">{{ t('dashboard.taxonomy.retry') }}</UButton>
       </p>
-      <UiRequestState :pending="state.initialPending" :refreshing="state.refreshing" :error="state.error" :empty="state.empty" skeleton="rows" :count="3" @retry="load()">
-        <template #error><UiStateError data-tags-failed :message="t('dashboard.taxonomy.tags.errorTitle')" @retry="load()" /></template>
+      <UiRequestState :pending="state.initialPending" :refreshing="state.refreshing" :error="state.error" :empty="state.empty" skeleton="rows" :count="3" @retry="loadCurrentPage()">
+        <template #error><UiStateError data-tags-failed :message="t('dashboard.taxonomy.tags.errorTitle')" @retry="loadCurrentPage()" /></template>
         <template #empty>
           <div class="rounded-control border border-default p-10 text-center" data-tags-empty>
             <p class="font-medium text-highlighted">{{ t('dashboard.taxonomy.tags.emptyTitle') }}</p>
@@ -76,7 +94,7 @@ void load()
           </div>
         </template>
         <div data-tags-loaded>
-          <p class="mb-3 text-sm text-muted" data-tags-count>{{ t('dashboard.taxonomy.tags.resultCount', { total: items.length }) }}</p>
+          <p class="mb-3 text-sm text-muted" data-tags-count>{{ t('dashboard.taxonomy.tags.resultCount', { total }) }}</p>
           <div class="overflow-x-auto">
             <UTable :data="items" :columns="columns" :aria-label="t('dashboard.taxonomy.tags.regionLabel')" data-tags-table>
               <template #id-cell="{ row }"><p dir="auto" class="font-medium text-highlighted" :data-tag-row="row.original.id" :data-taxonomy-name="row.original.id">{{ name(row.original) }}</p></template>
@@ -96,9 +114,12 @@ void load()
               </template>
             </UTable>
           </div>
+          <div v-if="totalPages > 1" class="mt-4 flex justify-end" data-tags-pagination>
+            <UPagination :page="parsedQuery.page" :total="total" :items-per-page="ADMIN_TAGS_PER_PAGE" @update:page="goToPage" />
+          </div>
         </div>
       </UiRequestState>
     </template>
-    <DashboardTaxonomyTagOverlay v-model:open="overlayOpen" kind="tags" :row="editing" @saved="load()" />
+    <DashboardTaxonomyTagOverlay v-model:open="overlayOpen" kind="tags" :row="editing" @saved="loadCurrentPage()" />
   </UContainer>
 </template>

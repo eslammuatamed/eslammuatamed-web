@@ -234,6 +234,15 @@ describe('a failed save preserves the operator\'s work', () => {
 })
 
 describe('what it sends', () => {
+  it('keeps the Article picker on its independent direct taxonomy reads', async () => {
+    await mount()
+    expect(holder.calls.filter(call => call.method === 'GET' && (call.path === '/admin/categories' || call.path === '/admin/tags')))
+      .toEqual([
+        { path: '/admin/categories', method: 'GET', body: undefined },
+        { path: '/admin/tags', method: 'GET', body: undefined }
+      ])
+  })
+
   it('sends EVERY in-use locale, not only the edited one', async () => {
     const wrapper = await mount()
     await wrapper.find('[data-editor-title="en"]').setValue('Changed English only')

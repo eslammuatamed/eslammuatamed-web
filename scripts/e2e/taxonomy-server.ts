@@ -102,7 +102,11 @@ function seedCategories(): SeedEntity[] {
       translations: {
         en: { name: 'Field notes', slug: 'field-notes', description: null }
       }
-    }
+    },
+    ...Array.from({ length: 9 }, (_, index): SeedEntity => ({
+      id: `00000000-0000-4000-a100-1000000000${String(index + 1).padStart(2, '0')}`,
+      translations: { en: { name: `Archived category ${index + 1}`, slug: `archived-category-${index + 1}`, description: null } }
+    }))
   ]
 }
 
@@ -127,7 +131,11 @@ function seedTags(): SeedEntity[] {
         en: { name: 'Testing', slug: 'testing' },
         ar: { name: 'اختبار', slug: 'testing-ar' }
       }
-    }
+    },
+    ...Array.from({ length: 10 }, (_, index): SeedEntity => ({
+      id: `00000000-0000-4000-a200-1000000000${String(index + 1).padStart(2, '0')}`,
+      translations: { en: { name: `Archived tag ${index + 1}`, slug: `archived-tag-${index + 1}` } }
+    }))
   ]
 }
 
@@ -409,15 +417,19 @@ async function handleRequest(req: http.IncomingMessage, res: http.ServerResponse
 
     const rest = path.slice(collectionRoot.length)
 
-    if (rest === '' && url.searchParams.size > 0) {
-      return problem(res, 422, 'Unprocessable Entity', `Admin ${kind} does not accept query parameters.`)
-    }
-
     if (delayMs > 0) await sleep(delayMs)
 
     if (rest === '' && req.method === 'GET') {
       const pool = kind === 'categories' ? categories : tags
-      return json(res, 200, { data: (mode === 'empty' ? [] : pool).map(toEntity) })
+      const page = Math.max(1, Number(url.searchParams.get('page') ?? '1') || 1)
+      const perPage = Math.min(50, Math.max(1, Number(url.searchParams.get('perPage') ?? '12') || 12))
+      const rows = mode === 'empty' ? [] : pool
+      const total = rows.length
+      const totalPages = Math.max(1, Math.ceil(total / perPage))
+      return json(res, 200, {
+        data: rows.slice((page - 1) * perPage, page * perPage).map(toEntity),
+        meta: { page, perPage, total, totalPages }
+      })
     }
 
     if (rest === '' && req.method === 'POST') {
@@ -440,7 +452,9 @@ async function handleRequest(req: http.IncomingMessage, res: http.ServerResponse
 
       const created: SeedEntity = { id: nextId(kind), translations: {} }
       applyWrite(created, kind, body)
-      ;(kind === 'categories' ? categories : tags).push(created)
+      // Keep a just-created row visible on the current first page, matching the collection's
+      // observable server ordering in this deterministic browser fixture.
+      ;(kind === 'categories' ? categories : tags).unshift(created)
       return json(res, 201, { data: toEntity(created) })
     }
 

@@ -5749,3 +5749,49 @@ No route cap or governance entry changed. The normal route gate retains its exis
 quality-target warnings; both affected collection routes pass their shared-floor, incremental, CSS,
 and frozen app-owned limits. Categories, Tags, Skills, picker aggregation, FE5-U6, and FE5-U7 remain
 untouched. No deployment occurred.
+
+---
+
+## Acceptance Feedback U5I — server-side Categories + Tags pagination · COMPLETE · 2026-09-02
+
+Starting frontend SHA: `6b677e0517618a2cabbf96fcaed0d7c63992af94`. This frontend-only unit consumes
+the final Production backend contract from `origin/main`
+`9da49f71d41f2275e588db479329df4998364fe4`; no backend, vendored OpenAPI, or generated API type
+changed.
+
+**Picker safety decision: A — collection owners are independent.** The Categories and Tags
+collection pages each own their own request composable. `ArticleEditor` continues to obtain selector
+data through `useAdminTaxonomy` in `useAdminArticles`, which directly owns its `/admin/categories`
+and `/admin/tags` reads. U5I therefore changes no picker request or picker state. The direct-owner
+regression remains green, but Production pagination means the complete-vocabulary picker migration
+is still a dedicated pending unit; U5I deliberately implements no all-page aggregation.
+
+`/dashboard/categories` and `/dashboard/tags` now own `page` in their URLs. Missing, repeated, or
+invalid values parse to page one; page one is canonicalized without a query when the pager/history
+returns there. Both send the fixed released `perPage=12`, consume `{ data, meta }`, use server rows
+without client slicing, and key their displayed page identity by `page`. A monotonic request sequence
+prevents stale page one from overwriting page two. Create/edit/delete keep server state authoritative,
+refresh the current page, and replace an out-of-range page with the server-reported final page.
+
+The mutable taxonomy fixture now exposes 13 records per resource and serves the released page
+envelope. Browser coverage proves actual `page=1&perPage=12` and `page=2&perPage=12` requests,
+URL/history/deep-link behavior, metadata clamping, retries on page two, stale-response protection,
+existing overlay CRUD/focus behavior, delete-last-row clamping, and narrow EN/AR axe coverage.
+
+### Verification
+
+| Check | Result |
+| --- | --- |
+| Focused Categories + Tags composable/page + Article editor tests | 26/26, exit 0 — request transport, metadata, page identity, no local slicing, stale protection, and the independent Article selector owner. |
+| Categories stale-response negative control | Temporarily removed the `++loadSeq` advance; the focused test failed by rendering `old` after `new`. Restored immediately; exact focused test passed. |
+| Tags stale-response negative control | Same bounded defect on the independent Tags owner failed by rendering `old` after `new`; restored immediately; exact focused test passed. |
+| Categories browser coverage | 12/12, exit 0 — paged URL/API contract, delayed stale response, deep-link/retry/delete clamps, overlay CRUD, focus, and EN/AR axe. |
+| Tags browser coverage | 11/11, exit 0 — equivalent page contract, stale/deep-link/retry/delete behavior, CRUD, and EN/AR axe. |
+| Legacy taxonomy redirect | 1/1, exit 0 — `/dashboard/taxonomy` remains an authenticated redirect to Categories. |
+| `npm run typecheck:e2e` / `npm run typecheck` / `npm run lint` / `git diff --check` | exit 0 / exit 0 / exit 0 / exit 0. |
+| Analysis build / route-size gate | `ANALYZE_BUNDLE=1 NUXT_PUBLIC_SITE_URL=https://example.com npm run build` and `NUXT_PUBLIC_SITE_URL=https://example.com npm run size:routes`, exit 0. Categories: 115,188 B / 130,048 B. Tags: 112,589 B / 126,976 B. |
+
+No route caps changed. Both routes pass the D20-32 shared-floor, incremental, CSS, and frozen
+app-owned caps; the normal report retains their existing D20-24 quality-target warnings (326.4 KB gz
+Categories, 323.5 KB gz Tags). Skills pagination, Article Category/Tag all-page picker aggregation,
+FE5-U6, and FE5-U7 remain unstarted. No deployment occurred.
