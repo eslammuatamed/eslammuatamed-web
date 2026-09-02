@@ -27,8 +27,11 @@ import process from 'node:process'
  * directory. A public page could therefore call `useAdminProjects()` with no import statement at
  * all and no existing gate would say a word until someone read a bundle report. This does.
  *
- * Deliberately TEXT-BASED rather than import-graph based, following `scripts/e2e/lane-isolation.spec.mjs`:
- * an auto-imported symbol has no import statement to follow, so the name IS the reference.
+ * Deliberately TEXT-BASED rather than import-graph based: an auto-imported symbol has no import
+ * statement to follow, so the name IS the reference. (This used to cite
+ * `scripts/e2e/lane-isolation.spec.mjs` as the precedent. That gate now asserts against the typed lane
+ * registry rather than the config's text, so the citation was removed rather than left to read as a
+ * description of something that changed — the reason above never depended on it.)
  */
 
 const ROOT = process.cwd()
@@ -43,7 +46,7 @@ const MODULE_FILES = [
   'composables/useAdminSkills.ts',
   'components/dashboard/ProjectEditor.vue',
   'components/dashboard/ProjectGalleryEditor.vue',
-  'components/dashboard/ProjectTechnologyPicker.vue',
+  'components/dashboard/SkillPicker.vue',
   'components/dashboard/ProjectTranslationFields.vue',
   'pages/dashboard/projects/index.vue',
   'pages/dashboard/projects/new.vue',
@@ -69,13 +72,61 @@ const FORBIDDEN_REFERENCES = [
   'validateProjectForm',
   'DashboardProjectEditor',
   'DashboardProjectGalleryEditor',
-  'DashboardProjectTechnologyPicker',
+  'DashboardSkillPicker',
   'DashboardProjectTranslationFields',
   'dashboard-project-editor',
   'dashboard-project-gallery-editor',
-  'dashboard-project-technology-picker',
+  'dashboard-skill-picker',
   'dashboard-project-translation-fields'
 ]
+
+/**
+ * Dashboard-only files belonging to ANOTHER dashboard module.
+ *
+ * These are the Articles module's composables. They are not public surface — they live in
+ * `app/composables/` for the same reason this module's do, and they are guarded by their own
+ * `pages/dashboard/articles/public-isolation.spec.ts` exactly as these files are guarded here.
+ *
+ * They are excluded because they legitimately NAME this module in PROSE: Articles was written
+ * against Projects as its precedent, and its comments cite `admin-project-form.ts`,
+ * `useAdminProjects` and `useAdminSkills` to explain what it copied and what it deliberately did
+ * differently. This gate is text-based by design (an auto-imported symbol has no import statement
+ * to follow), so it cannot tell a citation from a call — and deleting the citations to satisfy it
+ * would trade real explanation for a green scan. Their own gate is what keeps them honest.
+ */
+const OTHER_DASHBOARD_MODULE_FILES = [
+  // FE-3 module 1 (Experiences). Registered for the same reason the Projects files above
+  // are: `app/composables/` holds dashboard modules too, and the scan's public set is defined by
+  // PATH, so an unregistered dashboard composable is treated as public surface.
+  'composables/admin-experience-form.ts',
+  'composables/admin-experience-fields.ts',
+  'composables/admin-experience-types.ts',
+  'composables/useAdminExperiences.ts',
+  'composables/admin-article-form.ts',
+  'composables/admin-article-fields.ts',
+  'composables/admin-article-types.ts',
+  'composables/admin-articles-query.ts',
+  'composables/useAdminArticles.ts',
+  // FE-3 modules 2–3 and Taxonomy — registered for the same reason as every sibling above.
+  'composables/admin-skill-fields.ts',
+  'composables/admin-skill-form.ts',
+  'composables/useAdminSkills.ts',
+  'composables/useAdminSkill.ts',
+  'composables/useAdminSkillsCollection.ts',
+  'composables/admin-testimonial-fields.ts',
+  'composables/admin-testimonial-form.ts',
+  'composables/admin-testimonial-types.ts',
+  'composables/useAdminTestimonials.ts',
+  'composables/admin-category-form.ts',
+  'composables/admin-tag-form.ts',
+  'composables/admin-taxonomy-fields.ts',
+  'composables/useAdminCategories.ts',
+  'composables/useAdminTags.ts',
+  'composables/useAdminTaxonomy.ts'
+]
+// `components/dashboard/**` and `pages/dashboard/**` files need no entry here — the public-surface
+// filter already drops anything under a `dashboard/` directory. Only the `app/composables/` files
+// need naming, because that directory serves both worlds.
 
 function sourceFiles(dir: string): string[] {
   const found: string[] = []
@@ -95,6 +146,7 @@ const publicFiles = sourceFiles(APP)
   .map(file => relative(APP, file).split('\\').join('/'))
   .filter(file => !file.includes('dashboard/'))
   .filter(file => !MODULE_FILES.includes(file))
+  .filter(file => !OTHER_DASHBOARD_MODULE_FILES.includes(file))
 
 describe('the admin Projects module is invisible to the public surface', () => {
   it('scans a non-trivial number of public files, so a passing result is not vacuous', () => {

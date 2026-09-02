@@ -112,7 +112,7 @@ useAsyncData(`key:${locale}`, () => api<Envelope<T>>('/path').then(r => r.data))
   يُصدرها `app.vue` على مستوى الموقع (`web-013` أغلقت `F-1`).
 
 ### حماية لوحة التحكّم
-`login.vue` **بلا** حارس (كي يصلها الخارج) و`robots:noindex`؛ `index.vue` بـ `middleware:'auth'`. عزل SSR: `routeRules` في `nuxt.config.ts` تجعل `/dashboard/**` و`/ar/dashboard/**` بـ `ssr:false`.
+`login.vue` **بلا** حارس (كي يصلها الخارج) و`robots:noindex`؛ `index.vue` بـ `middleware:'auth'`. عزل SSR: `routeRules` في `nuxt.config.ts` تجعل `/dashboard/**` بـ `ssr:false`. ولا يوجد `/ar/dashboard/**`: كل صفحة لوحة تستدعي `defineI18nRoute(false)`، فمسارات اللوحة بلا بادئة لغة في اللغتين (D04-7)، واللوحة ثنائية اللغة عبر تفضيل لغة محفوظ لا عبر المسار (D02-15).
 
 ## العقود والثوابت
 

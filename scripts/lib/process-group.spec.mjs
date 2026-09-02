@@ -1,4 +1,7 @@
 import { connect, createServer } from 'node:net'
+import { mkdtemp, readFile, rm } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import { shutdownAll, startTracked, waitForExit } from './process-group.mjs'
 
@@ -19,6 +22,7 @@ import { shutdownAll, startTracked, waitForExit } from './process-group.mjs'
  * removes the problem instead of layering process management on top of it.
  */
 const registries = []
+const listenerDirectories = []
 function registry() {
   const list = []
   registries.push(list)
@@ -28,25 +32,37 @@ function registry() {
 afterEach(async () => {
   // Never let a failing assertion leak a process into the next test.
   await Promise.all(registries.splice(0).map(list => shutdownAll(list, { graceMs: 1000, killMs: 1000 })))
+  await Promise.all(listenerDirectories.splice(0).map(directory => rm(directory, { recursive: true, force: true })))
 })
 
-/** A child that binds `port` and exits politely on SIGTERM. */
-function politeListener(list, port) {
-  return startTracked(list, {
-    name: 'polite',
+/**
+ * A real child listener owns its ephemeral port. It records the assigned port only after `listen(0)`
+ * succeeds, so the test never has the parent-side "find a port, release it, race another process"
+ * window that fixed repository-wide ports had.
+ */
+async function listener(list, name, ignoreSigterm) {
+  const directory = await mkdtemp(join(tmpdir(), 'process-group-listener-'))
+  listenerDirectories.push(directory)
+  const readyFile = join(directory, 'port')
+  startTracked(list, {
+    name,
     command: 'node',
-    args: ['-e', `require('net').createServer().listen(${port},'127.0.0.1');process.on('SIGTERM',()=>process.exit(0));setInterval(()=>{},1000)`]
+    args: ['-e', [
+      "const { writeFileSync } = require('node:fs')",
+      "const { createServer } = require('node:net')",
+      'const server = createServer()',
+      "server.listen(0, '127.0.0.1', () => writeFileSync(process.argv[1], String(server.address().port)))",
+      `process.on('SIGTERM', () => ${ignoreSigterm ? '{}' : 'process.exit(0)'})`,
+      'setInterval(() => {}, 1000)'
+    ].join(';'), readyFile]
   })
+  return readyFile
 }
 
-/** A child that binds `port` and IGNORES SIGTERM — the Prism-shaped case that needs SIGKILL. */
-function stubbornListener(list, port) {
-  return startTracked(list, {
-    name: 'stubborn',
-    command: 'node',
-    args: ['-e', `require('net').createServer().listen(${port},'127.0.0.1');process.on('SIGTERM',()=>{});setInterval(()=>{},1000)`]
-  })
-}
+/** A child that exits politely on SIGTERM. */
+const politeListener = list => listener(list, 'polite', false)
+/** A child that IGNORES SIGTERM — the Prism-shaped case that needs SIGKILL. */
+const stubbornListener = list => listener(list, 'stubborn', true)
 
 /** Resolves true when nothing is listening on `port`. */
 function portFree(port) {
@@ -68,51 +84,66 @@ function portRebindable(port) {
   })
 }
 
-async function waitUntilListening(port, timeoutMs = 5000) {
+async function readBoundPort(readyFile) {
+  try {
+    const port = Number(await readFile(readyFile, 'utf8'))
+    return Number.isInteger(port) && port > 0 ? port : null
+  } catch {
+    return null
+  }
+}
+
+/** Waits for the real child to report its OS-assigned port and accept a TCP connection. */
+async function waitUntilListening(readyFile, timeoutMs = 5000) {
   const deadline = Date.now() + timeoutMs
   while (Date.now() < deadline) {
-    if (!(await portFree(port))) return true
+    const port = await readBoundPort(readyFile)
+    if (port !== null && !(await portFree(port))) return port
     await new Promise(r => setTimeout(r, 50))
   }
-  return false
+  return null
 }
 
 describe('shutdownAll — observed termination, not timed hope', () => {
   it('terminates a well-behaved child and frees its port', async () => {
     const list = registry()
-    politeListener(list, 39301)
-    expect(await waitUntilListening(39301)).toBe(true)
+    const readyFile = await politeListener(list)
+    const port = await waitUntilListening(readyFile)
+    expect(port).toBeTypeOf('number')
 
     const survivors = await shutdownAll(list, { graceMs: 3000, killMs: 1000 })
 
     expect(survivors).toEqual([])
-    expect(await portRebindable(39301)).toBe(true)
+    expect(await portRebindable(port)).toBe(true)
   })
 
   it('escalates to SIGKILL when a child ignores SIGTERM, instead of exiting and orphaning it', async () => {
     // This is the Prism case: the old code would have returned here with the port still held.
     const list = registry()
-    stubbornListener(list, 39302)
-    expect(await waitUntilListening(39302)).toBe(true)
+    const readyFile = await stubbornListener(list)
+    const port = await waitUntilListening(readyFile)
+    expect(port).toBeTypeOf('number')
 
     const survivors = await shutdownAll(list, { graceMs: 300, killMs: 3000 })
 
     expect(survivors).toEqual([])
-    expect(await portRebindable(39302)).toBe(true)
+    expect(await portRebindable(port)).toBe(true)
   })
 
   it('frees every port when several children are tracked together', async () => {
     const list = registry()
-    politeListener(list, 39304)
-    stubbornListener(list, 39305)
-    expect(await waitUntilListening(39304)).toBe(true)
-    expect(await waitUntilListening(39305)).toBe(true)
+    const politeReadyFile = await politeListener(list)
+    const stubbornReadyFile = await stubbornListener(list)
+    const politePort = await waitUntilListening(politeReadyFile)
+    const stubbornPort = await waitUntilListening(stubbornReadyFile)
+    expect(politePort).toBeTypeOf('number')
+    expect(stubbornPort).toBeTypeOf('number')
 
     const survivors = await shutdownAll(list, { graceMs: 300, killMs: 3000 })
 
     expect(survivors).toEqual([])
-    expect(await portRebindable(39304)).toBe(true)
-    expect(await portRebindable(39305)).toBe(true)
+    expect(await portRebindable(politePort)).toBe(true)
+    expect(await portRebindable(stubbornPort)).toBe(true)
   })
 
   it('resolves immediately and reports nothing when every child has already exited', async () => {
@@ -125,12 +156,13 @@ describe('shutdownAll — observed termination, not timed hope', () => {
 
   it('is safe to call twice', async () => {
     const list = registry()
-    politeListener(list, 39306)
-    expect(await waitUntilListening(39306)).toBe(true)
+    const readyFile = await politeListener(list)
+    const port = await waitUntilListening(readyFile)
+    expect(port).toBeTypeOf('number')
 
     expect(await shutdownAll(list, { graceMs: 2000, killMs: 1000 })).toEqual([])
     expect(await shutdownAll(list, { graceMs: 2000, killMs: 1000 })).toEqual([])
-    expect(await portRebindable(39306)).toBe(true)
+    expect(await portRebindable(port)).toBe(true)
   })
 })
 

@@ -22,6 +22,11 @@
  * AUTHORITATIVE run configuration, never the output filename or directory, either of which a
  * config change could silently invert.
  *
+ * Enforcement defaults to hard. GitHub-hosted PR CI may explicitly opt into advisory mode because
+ * its runner capacity is not a comparable performance reference; that mode changes ONLY a verified
+ * threshold breach (exit 1) to success after it is fully reported. It never masks exit 2 measurement
+ * failures, collection failures, or script/runtime errors.
+ *
  * Exit codes mirror the size gate, for the same reason:
  *   0 — every median within threshold
  *   1 — a median breached a threshold (a real regression: fix the site)
@@ -50,6 +55,8 @@ const DIRS = process.env.LHCI_REPORT_DIRS
   : ['.lighthouseci/mobile', '.lighthouseci/desktop']
 
 class InfraError extends Error {}
+
+const ENFORCEMENT = process.env.LIGHTHOUSE_ENFORCEMENT ?? 'hard'
 
 /**
  * Load every Lighthouse report under the configured directories.
@@ -102,6 +109,12 @@ function fmt(value, unit) {
 }
 
 async function main() {
+  if (!['hard', 'advisory'].includes(ENFORCEMENT)) {
+    throw new InfraError(
+      `LIGHTHOUSE_ENFORCEMENT must be "hard" or "advisory" (received ${JSON.stringify(ENFORCEMENT)})`
+    )
+  }
+
   const runs = await loadRuns()
   const summaries = groupRuns(runs).map(summariseGroup)
 
@@ -182,6 +195,15 @@ async function main() {
     '\n  These thresholds are normative. They are re-baselined ONLY by a decision-log entry in\n'
     + '  eslammuatamed-docs/docs/20-performance.md — never by editing this gate.'
   )
+  if (ENFORCEMENT === 'advisory') {
+    console.warn(
+      '::warning title=Lighthouse advisory threshold breach::Governed Lighthouse collection and median '
+      + 'calculation completed, but one or more performance thresholds were missed. This GitHub-hosted '
+      + 'PR signal is advisory; infrastructure and report-integrity failures remain hard.'
+    )
+    console.log('⚠ Lighthouse threshold breaches are advisory in this explicit CI mode; preserving reported evidence.')
+    return 0
+  }
   return 1
 }
 
@@ -192,4 +214,6 @@ try {
   console.error(`\n✗ MEASUREMENT FAILURE (not a score verdict): ${error instanceof InfraError ? error.message : (error?.stack ?? error)}`)
   code = 2
 }
-process.exit(code)
+// Let stdout/stderr drain before Node exits. The orchestrator runs this as a child process; an
+// immediate process.exit(code) can discard the breach or infrastructure evidence that CI must show.
+process.exitCode = code

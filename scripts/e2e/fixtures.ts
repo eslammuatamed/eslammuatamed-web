@@ -129,6 +129,7 @@ export const SITE_SETTINGS: Record<Locale, SiteSettings> = {
     careerStartMonth: 11,
     googleSiteVerification: null,
     bingSiteVerification: null,
+    gtmContainerId: null,
     customMetas: [],
     resumeAsset: null,
     // About content + portrait are POPULATED here on purpose: this is the only lane that can render
@@ -161,6 +162,7 @@ export const SITE_SETTINGS: Record<Locale, SiteSettings> = {
     careerStartMonth: 11,
     googleSiteVerification: null,
     bingSiteVerification: null,
+    gtmContainerId: null,
     customMetas: [],
     resumeAsset: null,
     // The Arabic alt is authored SEPARATELY rather than reusing the English string: that is what makes
@@ -236,6 +238,22 @@ export function resumePdfSettings(mediaOrigin: string): Record<Locale, SiteSetti
   return {
     en: { ...SITE_SETTINGS.en, resumeAsset: asset },
     ar: { ...SITE_SETTINGS.ar, resumeAsset: asset }
+  }
+}
+
+/**
+ * A syntactically VALID but entirely FICTIONAL GTM container id (FE4-U2e2). It satisfies the
+ * backend's publication pattern (`/^GTM-[A-Z0-9]{4,12}$/`) so the frontend's eligibility guard
+ * admits it, and the focused browser harness intercepts the loader request — no real analytics
+ * container exists behind it and none is contacted for content.
+ */
+export const GTM_TEST_CONTAINER_ID = 'GTM-TEST1234'
+
+/** The `/settings/site` variant with analytics ENABLED (valid container id published). */
+export function gtmSettings(): Record<Locale, SiteSettings> {
+  return {
+    en: { ...SITE_SETTINGS.en, gtmContainerId: GTM_TEST_CONTAINER_ID },
+    ar: { ...SITE_SETTINGS.ar, gtmContainerId: GTM_TEST_CONTAINER_ID }
   }
 }
 

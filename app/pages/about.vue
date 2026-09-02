@@ -22,6 +22,15 @@ const { t } = useI18n()
 
 const { data, status, error, refresh } = await useAboutContent()
 
+// Static Page SEO override (FR-DSH-051 consumption) — awaited so SSR renders the FINAL head.
+// Optional by design: a failure leaves `data` null and the resolver falls through (below).
+const { data: aboutPageSeo } = await usePublicPageSeo('about')
+
+// The Settings defaults tier of the resolver. The read itself is NOT new network traffic: it
+// shares the `settings:site:{locale}` payload key with the public layout and the footer
+// (useSettingsRead), so `/about` now consumes one shared request instead of owning a second one.
+const { data: aboutSettings } = await useSiteSettings()
+
 // The locale the CONTENT was fetched in (D06-6) — deliberately not the reactive UI locale. It keys
 // the Markdown render cache below, and the two must agree: during the D03-13 deferred locale commit
 // the UI locale still holds the outgoing language, so keying on it would file the incoming locale's
@@ -57,28 +66,45 @@ const localePath = useLocalePath()
 
 useAboutSchema(data, crumbs)
 
-// Title, description and OG title/description only. Canonical, hreflang/x-default, og:locale, og:url
-// and <html lang/dir> are owned by @nuxtjs/i18n under strict SEO (D22-7) — writing them here would
-// duplicate the tags and fight the global owner, which is how finding F-3 happened.
-// No `ogImage` HERE, but the page is no longer imageless: web-013 CLOSED finding F-1 by committing
-// a branded 1200×630 PNG that `app.vue` emits as the site-wide floor, so this route inherits one
-// absolute, resolvable image. This page still sets none of its own — the portrait is NOT substituted
-// for one, because it is unpublished and emitting a URL that does not resolve is worse than
-// inheriting the branded card.
-// The Twitter pair is set ALONGSIDE the OG pair, not left to the lower tiers. Omitting it here never
-// produced an EMPTY tag — it produced a WRONG one, because the pair is always filled from below:
-// `layouts/default.vue` supplies the CMS `defaultMetaTitle`/`defaultMetaDescription` (tier 2) and
-// `app.vue` the committed defaults (tier 3). So `/about` shipped two DISAGREEING previews of one
-// URL: `og:*` describing About, `twitter:*` describing the site. Measured against the built server in
-// both states, not assumed. `/resume` already set both for this reason, and `/` now does too — see
-// the sharper case documented there. The image pair still comes from the floor: this page has none.
+// Effective metadata: authored `about` override → About's governed i18n copy → localized Settings
+// defaults → committed floor (doc 22 §3 F-D4, resolved by utils/page-seo-metadata). Canonical,
+// hreflang/x-default, og:locale, og:url and <html lang/dir> stay owned by @nuxtjs/i18n under strict
+// SEO (D22-7) — nothing here writes them, and Page SEO's storage-only canonicalUrl is not consumed.
+//
+// ONE text pair feeds title + og + twitter: the effective values replace the previous local
+// composition (`${title} — brand` for OG), so the three previews of this URL can no longer
+// disagree. The social image overrides ONLY when the resolver returns an accepted descriptor;
+// otherwise those keys are not registered at all and `app.vue`'s committed card stays effective.
+const siteConfig = useSiteConfig()
+const effectiveAboutMeta = resolvePageSeoMetadata({
+  pageSeo: aboutPageSeo.value,
+  pageTitle: t('seo.about.title'),
+  pageDescription: t('seo.about.description'),
+  settingsDefaultTitle: aboutSettings.value?.defaultMetaTitle ?? null,
+  settingsDefaultDescription: aboutSettings.value?.defaultMetaDescription ?? null,
+  fallbackTitle: t('seo.defaultTitle'),
+  fallbackDescription: t('seo.siteDescription'),
+  siteUrl: siteConfig.url
+})
+
+const aboutImage = effectiveAboutMeta.socialImageOverride
 useSeoMeta({
-  title: () => t('seo.about.title'),
-  description: () => t('seo.about.description'),
-  ogTitle: () => `${t('seo.about.title')} — ${t('brand.name')}`,
-  ogDescription: () => t('seo.about.description'),
-  twitterTitle: () => `${t('seo.about.title')} — ${t('brand.name')}`,
-  twitterDescription: () => t('seo.about.description')
+  title: () => effectiveAboutMeta.title,
+  description: () => effectiveAboutMeta.description,
+  ogTitle: () => effectiveAboutMeta.title,
+  ogDescription: () => effectiveAboutMeta.description,
+  twitterTitle: () => effectiveAboutMeta.title,
+  twitterDescription: () => effectiveAboutMeta.description,
+  ...(aboutImage
+    ? {
+        ogImage: () => aboutImage.url,
+        ogImageWidth: () => aboutImage.width,
+        ogImageHeight: () => aboutImage.height,
+        ogImageAlt: () => aboutImage.alt,
+        twitterImage: () => aboutImage.url,
+        twitterImageAlt: () => aboutImage.alt
+      }
+    : {})
 })
 </script>
 

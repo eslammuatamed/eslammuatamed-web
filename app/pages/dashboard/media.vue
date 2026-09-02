@@ -18,9 +18,13 @@ import { dimensionsOf, libraryAltFor } from '~/utils/media-asset'
  * by design (D07-6) — "replace" means selecting or uploading a different asset and repointing the
  * reference, which is the picker's job, not an edit to bytes that other records already reference.
  */
+// No locale-prefixed twin of this route (D04-7) — the dashboard is bilingual through a persisted
+// application locale, not through the URL. Rationale in `~/utils/dashboard-locale`.
+defineI18nRoute(false)
+
 definePageMeta({ layout: 'dashboard', middleware: 'auth' })
 
-const { t, locale } = useI18n()
+const { t, locale } = useDashboardI18n()
 const route = useRoute()
 const router = useRouter()
 const library = useMediaLibrary()

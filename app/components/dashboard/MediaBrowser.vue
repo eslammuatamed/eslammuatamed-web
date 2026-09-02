@@ -41,7 +41,7 @@ const emit = defineEmits<{
   'uploaded': [asset: MediaAsset, deduplicated: boolean]
 }>()
 
-const { t } = useI18n()
+const { t } = useDashboardI18n()
 const library = useMediaLibrary()
 const { items, total, totalPages, pending, forbidden, failed } = library
 

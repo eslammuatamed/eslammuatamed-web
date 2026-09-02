@@ -12,6 +12,11 @@ const localePath = useLocalePath()
 
 const { settings, experiences, skills } = useResumeData()
 
+// Static Page SEO override (FR-DSH-051 consumption) — awaited so SSR renders the FINAL head.
+// Optional by design: a failure leaves `data` null and the resolver falls through (below).
+// Settings defaults come from the SAME shared read `useResumeData` already owns.
+const { data: resumePageSeo } = await usePublicPageSeo('resume')
+
 // Identity, taken verbatim. `tagline` is the ONE governed public title
 // (positioning-strategy v2.0.0 §2, seeded through `PUBLIC_TAGLINE`); §8 states the rule as "ONE
 // VALUE, SEVERAL CONSUMERS — no surface may hard-code its own title", so this renders the contract
@@ -70,13 +75,37 @@ useSchemaOrg([
 // writing them here would duplicate the tags and fight the global owner (that is how F-3
 // happened). No `ogImage` of its own — web-013 CLOSED F-1 by committing a branded social card, so
 // this route inherits the absolute site-wide image `app.vue` emits instead of carrying none.
+// Effective metadata (doc 22 §3 F-D4 via utils/page-seo-metadata): ONE text pair for
+// title + og + twitter — replacing this page's previously hand-written Twitter copy with the
+// same effective values; image override only when the resolver accepts the descriptor.
+const effectiveResumeMeta = resolvePageSeoMetadata({
+  pageSeo: resumePageSeo.value,
+  pageTitle: t('seo.resume.title'),
+  pageDescription: t('seo.resume.description'),
+  settingsDefaultTitle: settings.data.value?.defaultMetaTitle ?? null,
+  settingsDefaultDescription: settings.data.value?.defaultMetaDescription ?? null,
+  fallbackTitle: t('seo.defaultTitle'),
+  fallbackDescription: t('seo.siteDescription'),
+  siteUrl: siteConfig.url
+})
+const resumeImage = effectiveResumeMeta.socialImageOverride
 useSeoMeta({
-  title: () => t('seo.resume.title'),
-  description: () => t('seo.resume.description'),
-  ogTitle: () => `${t('seo.resume.title')} — ${t('brand.name')}`,
-  ogDescription: () => t('seo.resume.description'),
-  twitterTitle: () => `${t('seo.resume.title')} — ${t('brand.name')}`,
-  twitterDescription: () => t('seo.resume.description')
+  title: () => effectiveResumeMeta.title,
+  description: () => effectiveResumeMeta.description,
+  ogTitle: () => effectiveResumeMeta.title,
+  ogDescription: () => effectiveResumeMeta.description,
+  twitterTitle: () => effectiveResumeMeta.title,
+  twitterDescription: () => effectiveResumeMeta.description,
+  ...(resumeImage
+    ? {
+        ogImage: () => resumeImage.url,
+        ogImageWidth: () => resumeImage.width,
+        ogImageHeight: () => resumeImage.height,
+        ogImageAlt: () => resumeImage.alt,
+        twitterImage: () => resumeImage.url,
+        twitterImageAlt: () => resumeImage.alt
+      }
+    : {})
 })
 </script>
 

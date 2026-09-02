@@ -77,8 +77,7 @@ function settings(overrides: {
     careerStartMonth: null,
     googleSiteVerification: null,
     bingSiteVerification: null,
-    analyticsProvider: null,
-    analyticsMeasurementId: null,
+    gtmContainerId: null,
     analyticsEnabled: false,
     customMetas: [],
     translations: { en: translation(enAlt), ar: translation(arAlt) }

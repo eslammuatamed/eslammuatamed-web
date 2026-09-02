@@ -3,7 +3,7 @@ import type { Testimonial } from '~/types/models'
 
 // Quote block (FR-PUB-016) — a testimonial as an editorial pull quote led by a violet quotation mark.
 // The avatar is null in the current contract, so attribution falls to a monogram; when an avatar is
-// seeded later it renders through NuxtImg (doc 20 §4) with no layout change (null-safe by construction).
+// seeded later it renders from the API's pre-generated absolute URL with no layout change (null-safe).
 interface Props {
   testimonial: Testimonial
 }
@@ -20,7 +20,7 @@ const monogram = computed(() => Array.from(props.testimonial.authorName ?? '?')[
       {{ testimonial.quote }}
     </blockquote>
     <figcaption class="mt-6 flex items-center gap-3">
-      <NuxtImg
+      <img
         v-if="testimonial.avatar?.url"
         :src="testimonial.avatar.url"
         :alt="testimonial.authorName"
@@ -28,7 +28,7 @@ const monogram = computed(() => Array.from(props.testimonial.authorName ?? '?')[
         height="40"
         loading="lazy"
         class="size-10 shrink-0 rounded-full object-cover"
-      />
+      >
       <span
         v-else
         class="grid size-10 shrink-0 place-items-center rounded-full border border-default bg-accented font-display text-body-sm text-muted"

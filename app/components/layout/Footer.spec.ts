@@ -32,6 +32,7 @@ const full: SiteSettings = {
   careerStartMonth: null,
   googleSiteVerification: null,
   bingSiteVerification: null,
+  gtmContainerId: null,
   customMetas: [],
   resumeAsset: { id: 'r1', kind: 'PDF', url: 'https://media.example.com/cv.pdf', filename: 'cv.pdf', sizeBytes: 100 },
   aboutBio: null,

@@ -12,7 +12,9 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), { label: undefined })
-const { t } = useI18n()
+// Both worlds render this component, so the locale that owns the SURFACE decides the
+// copy — not the route locale, which is always `en` inside the dashboard (plan §14.9 F-1).
+const { t } = useSurfaceI18n()
 const text = computed(() => props.label ?? t('state.updating'))
 </script>
 

@@ -3,7 +3,7 @@
  * Per-public-route size gate for the doc 20 §1 JavaScript budgets:
  *
  *     JS transferred per public route   ≤ 250 KB gz total          (D20-11)
- *     App-owned rendered bytes          ≤ 101 KiB (103,424 B)      (D20-12, frozen)
+ *     App-owned rendered bytes          ≤ frozen per-route cap      (D20-12 / D20-42, frozen)
  *     CSS                               ≤ 30 KB gz
  *
  * WHY THIS BOOTS A SERVER. §1 budgets "per public route", which no static glob can express: a glob
@@ -37,8 +37,8 @@
  * Run `npm run size:routes` after `ANALYZE_BUNDLE=1 npm run build`.
  *
  * BUDGETS ARE doc 20 §1 VERBATIM. Re-baselining requires an owner decision plus a decision-log
- * entry in doc 20 — never an edit here. The app limit is FROZEN: this gate never recalculates it
- * from the build it is measuring.
+ * entry in doc 20 — never an edit here. App limits are FROZEN per route: this gate never recalculates
+ * one from the build it is measuring.
  *
  * Exit codes are distinguishable on purpose:
  *   0 — every enforceable budget passed and no required classification was indeterminate
@@ -68,6 +68,7 @@ import {
   budgetVerdict,
   classifyFloorDelta,
   PUBLIC_DELIVERY_BUDGET,
+  publicAppCapFor,
   publicTierFor,
   assertPublicTierCoverage,
   resolveSharedFloor,
@@ -453,12 +454,14 @@ function stopPreview() {
 // ─────────────────────────────────────────────────────────────── measurement
 
 /**
+ * @param {string} route
  * @param {string} html
  * @param {Map<string, any>} meta
  */
-async function measureRoute(html, meta) {
+async function measureRoute(route, html, meta) {
   const jsAssets = collectRouteAssets(html, 'js')
   const cssAssets = collectRouteAssets(html, 'css')
+  const appCap = publicAppCapFor(route)
 
   // An HTML document that references no JS is not a passing route — it is a failed measurement
   // (error page, truncated response, or a selector that stopped matching after a Nuxt upgrade).
@@ -495,7 +498,8 @@ async function measureRoute(html, meta) {
     js,
     css,
     ...attribution,
-    appVerdict: budgetVerdict(attribution.totals.app, BUDGET.appRenderedBytes),
+    appCap,
+    appVerdict: budgetVerdict(attribution.totals.app, appCap),
     // NOTE: there is deliberately no total/delta verdict here. D20-31 gates `route_total - shared
     // floor`, and the floor is an intersection over the frozen reference set — it cannot be known
     // until every reference route has been measured. It is assigned in `main()` instead. Computing
@@ -543,7 +547,8 @@ async function main() {
     + `  ·  per-route INCREMENTAL delivery ≤ ${kb(PUBLIC_DELIVERY_BUDGET.incrementalBytes.content)}`
     + `/${kb(PUBLIC_DELIVERY_BUDGET.incrementalBytes.collection)}`
     + `/${kb(PUBLIC_DELIVERY_BUDGET.incrementalBytes['interactive-subsystem'])} gz by tier`
-    + `  ·  app-owned rendered ≤ ${kb(BUDGET.appRenderedBytes)} (D20-12, frozen)  ·  CSS ≤ ${kb(BUDGET.cssBytes)} gz  (inclusive)`
+    + `  ·  app-owned rendered ≤ frozen per-route caps (D20-12/D20-42; default ${kb(BUDGET.appRenderedBytes)})`
+    + `  ·  CSS ≤ ${kb(BUDGET.cssBytes)} gz  (inclusive)`
   )
   console.log('The GATED quantity per route is the DELTA above the shared floor, never the route total:')
   console.log('shared framework growth is charged ONCE to the floor cap, not to every page.')
@@ -561,7 +566,7 @@ async function main() {
     }
     if (!res.ok) throw new InfraError(`${route} returned HTTP ${res.status}; cannot measure`)
     const html = await res.text()
-    rows.push({ route, ...(await measureRoute(html, meta)) })
+    rows.push({ route, ...(await measureRoute(route, html, meta)) })
   }
 
   // ── D20-31: derive the shared floor, then charge each route only for what it adds on top ──
@@ -708,7 +713,7 @@ async function main() {
   )
   console.log(`  derived as the intersection over ${FLOOR_REFERENCE_ROUTES.length} FROZEN reference routes\n`)
 
-  const header = `${'route'.padEnd(44)}${'assets'.padStart(7)}${'gz total'.padStart(10)}${'Δ floor'.padStart(9)}${'tier'.padStart(23)}${'cap'.padStart(9)}${'ok'.padStart(4)}${'app rendered'.padStart(14)}${'≤101KB'.padStart(8)}`
+  const header = `${'route'.padEnd(44)}${'assets'.padStart(7)}${'gz total'.padStart(10)}${'Δ floor'.padStart(9)}${'tier'.padStart(23)}${'cap'.padStart(9)}${'ok'.padStart(4)}${'app rendered'.padStart(14)}${'app cap'.padStart(9)}${'ok'.padStart(4)}`
   console.log(header)
   console.log('─'.repeat(header.length))
 
@@ -732,7 +737,8 @@ async function main() {
       + `${row.tierCap}`.padStart(9)
       + (row.deltaVerdict === 'PASS' ? (row.needsAttribution ? '!' : '✓') : '✗').padStart(4)
       + `${row.totals.app} B`.padStart(14)
-      + (row.appVerdict === 'PASS' ? '✓' : '✗').padStart(8)
+      + `${row.appCap} B`.padStart(9)
+      + (row.appVerdict === 'PASS' ? '✓' : '✗').padStart(4)
     )
   }
 
@@ -866,12 +872,12 @@ async function main() {
     )
   }
 
-  console.log('\nApp-owned budget (frozen at doc 20 §1 / D20-12 — never recalculated from a build):')
+  console.log('\nApp-owned budget (frozen per route at doc 20 §1 / D20-12 / D20-42 — never recalculated from a build):')
   for (const row of rows) {
     console.log(
       `  ${row.appVerdict === 'PASS' ? '✓' : '✗'} ${row.route.padEnd(44)}`
       + ` ${String(row.totals.app).padStart(7)} B (${kb(row.totals.app).padStart(9)})`
-      + ` / ${BUDGET.appRenderedBytes} B (${kb(BUDGET.appRenderedBytes)})`
+      + ` / ${row.appCap} B (${kb(row.appCap)})`
       + `   ${row.duplicates.length ? `· ${row.duplicates.length} duplicate module id(s)` : ''}`
     )
   }
@@ -928,10 +934,10 @@ async function main() {
         console.error(`  ${row.route}: CSS ${kb(row.css.gz)} gz exceeds ${kb(BUDGET.cssBytes)}`)
       }
       if (row.appVerdict === 'FAIL') {
-        const over = row.totals.app - BUDGET.appRenderedBytes
+        const over = row.totals.app - row.appCap
         console.error(
-          `  ${row.route}: app-owned rendered bytes ${row.totals.app} B exceeds the frozen ${BUDGET.appRenderedBytes} B limit by ${over} B (${kb(over)}).`
-          + '\n      The limit is FROZEN at doc 20 §1 / D20-12 and is never refitted to a build. Either reduce'
+          `  ${row.route}: app-owned rendered bytes ${row.totals.app} B exceeds its frozen ${row.appCap} B limit by ${over} B (${kb(over)}).`
+          + '\n      The route cap is frozen by doc 20 and is never refitted to a build. Either reduce'
           + '\n      project-owned payload on this route, or take a new owner decision in doc 20. The largest'
           + '\n      app-owned modules are listed above — start there.'
         )

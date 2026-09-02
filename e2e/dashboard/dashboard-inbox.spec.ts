@@ -81,7 +81,7 @@ test.describe('Shell, navigation and list presentations', () => {
     await signIn(page)
     await page.goto('/dashboard/messages')
     await listSettled(page)
-    const link = messagesNavLink(page).first()
+    const link = messagesNavLink(page)
     const active = await link.evaluate(el =>
       el.getAttribute('aria-current') ?? (el.className.includes('active') ? 'page' : null))
     expect(active, 'the current destination must be programmatically exposed').not.toBeNull()
@@ -111,10 +111,10 @@ test.describe('Shell, navigation and list presentations', () => {
     await signIn(page)
     await page.goto('/dashboard/messages')
     await listSettled(page)
-    // The sidebar link exists in the DOM at every width but is hidden below `lg`, so the assertion
-    // must be scoped to the DRAWER — otherwise it passes against the hidden desktop sidebar.
+    // The sidebar link exists in the DOM at every width but is hidden below `lg`, so assert against
+    // the sidebar navigation landmark rather than the visible Overview action with the same route.
     await expect(
-      messagesNavLink(page).first(),
+      messagesNavLink(page),
       'the desktop sidebar must be hidden on mobile'
     ).toBeHidden()
 
@@ -197,6 +197,49 @@ test.describe('Shell, navigation and list presentations', () => {
     expect(new URL(page.url()).searchParams.get('page')).toBe('2')
     expect(secondPage, 'page 2 must not render page 1').not.toEqual(firstPage)
     expect(secondPage.length).toBeGreaterThan(0)
+  })
+})
+
+test.describe('collection refresh continuity', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/dashboard/login')
+    await resetBackend(page)
+    await page.setViewportSize(DESKTOP)
+    await signIn(page)
+  })
+
+  test('page refresh keeps the current list and detail usable through stale retry', async ({ page }) => {
+    await page.goto('/dashboard/messages')
+    await listSettled(page)
+    const held = await tableOpeners(page).allTextContents()
+    expect(held.length).toBeGreaterThan(0)
+
+    await setBackendState(page, { delayMs: 2000 })
+    await page.locator('[aria-label="Page 2"]').click()
+    await expect(page.locator('[aria-busy=true]').first()).toBeVisible()
+    expect(await tableOpeners(page).allTextContents(), 'refresh must retain the usable current page').toEqual(held)
+
+    await setBackendState(page, { mode: 'error' })
+    await expect(page.locator('[data-messages-stale]')).toBeVisible({ timeout: 15_000 })
+    expect(await tableOpeners(page).allTextContents(), 'a failed page refresh must leave stale rows available').toEqual(held)
+    await expect(page.locator('[data-messages-failed]')).toHaveCount(0)
+
+    await setBackendState(page, { mode: 'ok', delayMs: 0 })
+    await page.locator('[data-messages-stale-retry]').click()
+    await listSettled(page)
+    await expect(page.locator('[data-messages-stale]')).toHaveCount(0)
+    expect(query(page).get('page')).toBe('2')
+    expect(await tableOpeners(page).allTextContents(), 'retry must replace held rows with requested page').not.toEqual(held)
+
+    // Detail remains a mutation-capable working surface once the list has recovered; opening an
+    // unread row triggers the confirmed, action-local mark-read path rather than list takeover.
+    await tableOpeners(page).first().click()
+    await expect(slideover(page)).toBeVisible()
+    await expect(page.locator('[data-messages-failed]')).toHaveCount(0)
+
+    await page.setViewportSize({ width: 380, height: 780 })
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
+    expect(overflow, 'the retained-list notice must not introduce 380px horizontal overflow').toBeLessThanOrEqual(1)
   })
 })
 
@@ -476,6 +519,8 @@ test.describe('Mutations, contact shapes, required states and accessibility', ()
     await openRowMenu(page)
     await page.locator('[role=menu] [role=menuitem]').first().click()
     await listSettled(page)
+    await expect(page.locator('div[aria-live="polite"]')).toContainText('The change did not save')
+    await expect(messagesNavLink(page)).toBeVisible()
 
     expect(await tableOpeners(page).allTextContents(), 'a failed mutation must not change the list')
       .toEqual(rowsBefore)

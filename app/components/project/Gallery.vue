@@ -4,9 +4,8 @@ import type { ProjectGalleryItem } from '~/types/models'
 // Case-study gallery (FR-PUB-032): "optimized images and captions".
 //
 // The API pre-generates every rendition and R2 serves the static objects — there is no image CDN and
-// no runtime transformation (D23-15). So the srcset is built from the contract's own `variants`
-// rather than asking @nuxt/image to re-derive one; `mediaAsset.url` (the widest WebP) stays the `src`
-// fallback for browsers that ignore srcset.
+// no runtime transformation (D23-15). So the browser consumes the contract's own `variants` as its
+// srcset; `mediaAsset.url` (the widest WebP) stays the `src` fallback for browsers that ignore it.
 //
 // PRESENTATION ONLY: the items arrive already ordered, already localized and already carrying their
 // own renditions. Nothing here fetches, sorts, caches or re-derives any of that — the gallery was
@@ -72,15 +71,16 @@ function shapeOf(item: ProjectGalleryItem): GalleryShape {
  * a bandwidth regression that no size gate can see, because the bytes are images and they are fetched
  * at runtime. Coupling them here makes the two impossible to drift apart.
  *
- * `sizes` is @nuxt/image's breakpoint shorthand, not a raw media-query list.
+ * `sizes` is a native responsive-image media-query list. It matches the output Nuxt Image previously
+ * generated from this component's breakpoint shorthand.
  */
 const SHAPE_PRESENTATION = {
   // Wide screenshots earn the full gallery width — this is the case the column was designed around.
-  landscape: { class: 'w-full', sizes: '100vw md:768px lg:1024px' },
+  landscape: { class: 'w-full', sizes: '(max-width: 767px) 100vw, (max-width: 1023px) 768px, 1024px' },
   // 28rem. Wide enough to read a square screenshot, narrow enough that it never reads as a hero.
-  square: { class: 'w-full max-w-md', sizes: '100vw sm:448px' },
+  square: { class: 'w-full max-w-md', sizes: '(max-width: 639px) 100vw, 448px' },
   // 24rem — a phone screenshot at roughly its own scale.
-  portrait: { class: 'w-full max-w-sm', sizes: '100vw sm:384px' }
+  portrait: { class: 'w-full max-w-sm', sizes: '(max-width: 639px) 100vw, 384px' }
 } as const satisfies Record<GalleryShape, { class: string, sizes: string }>
 
 function presentationFor(item: ProjectGalleryItem) {
@@ -178,7 +178,7 @@ function isUntranslated(item: ProjectGalleryItem): boolean {
         <!-- width/height are always set: reserving the box is what actually keeps CLS at zero, and
              the blurhash average colour fills it until the image paints. Lazy by default — nothing
              in a gallery below the fold competes with the page's LCP element. -->
-        <NuxtImg
+        <img
           :src="item.mediaAsset.url"
           :srcset="srcsetFor(item)"
           :sizes="presentationFor(item).sizes"
@@ -191,7 +191,7 @@ function isUntranslated(item: ProjectGalleryItem): boolean {
           class="w-full h-auto rounded-card border border-default"
           :data-gallery-shape="shapeOf(item)"
           :style="{ backgroundColor: blurhashAverageColor(item.mediaAsset.blurhash) ?? undefined }"
-        />
+        >
         <figcaption v-if="item.caption" class="mt-3 text-body-sm text-muted">
           {{ item.caption }}
         </figcaption>

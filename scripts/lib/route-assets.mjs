@@ -283,8 +283,10 @@ export function classifyFloorDelta(deltaBytes, calibrationSha) {
 /**
  * doc 20 §1 budgets, 1024-based, INCLUSIVE ("≤", so exactly-at-budget passes).
  *
- * These are doc 20 §1 VERBATIM. Re-baselining any of them requires an owner decision plus a
- * decision-log entry in `eslammuatamed-docs/docs/20-performance.md` — never an edit here.
+ * These are doc 20 §1 VERBATIM defaults. Re-baselining any of them requires an owner decision plus a
+ * decision-log entry in `eslammuatamed-docs/docs/20-performance.md` — never an edit here. The
+ * FE4-U2e2 Home exception is registered separately below, while this default remains unchanged for
+ * every other public route.
  */
 export const BUDGET = {
   /**
@@ -324,8 +326,9 @@ export const BUDGET = {
  *                          innocent pages.
  *   2. `incrementalBytes`  caps what each page adds ON TOP of the floor, by FUNCTIONAL TIER.
  *
- * `appRenderedBytes` (D20-12) is untouched and remains an INDEPENDENT guard: a route can fail
- * either, and passing one never excuses the other.
+ * `appRenderedBytes` (D20-12) remains an INDEPENDENT guard: a route can fail either, and passing one
+ * never excuses the other. `publicAppCapFor` applies the separately governed Home exception while
+ * preserving this default for every other route.
  *
  * ⚠ THE GATED QUANTITY IS THE DELTA, NEVER THE TOTAL. Read `incrementalBytes` against
  * `route_total − shared_floor`. Comparing a route TOTAL against these numbers reinstates exactly the
@@ -405,8 +408,9 @@ export const PUBLIC_DELIVERY_BUDGET = {
  * — is the failure mode this table exists to make visible, which is why each entry carries the
  * FUNCTIONAL reason rather than a byte figure.
  *
- * ⚠ There is deliberately NO per-route byte exception table. If the functional tiers are ever proven
- * insufficient by evidence, that is a new owner decision, not a local edit here.
+ * ⚠ There is deliberately NO per-route byte exception table for incremental delivery. If the
+ * functional tiers are ever proven insufficient by evidence, that is a new owner decision, not a
+ * local edit here. App-owned caps are a separate D20-12 guard and are selected by `publicAppCapFor`.
  */
 export const PUBLIC_ROUTE_TIERS = {
   // Composite landing page: hero plus previews of several content collections.
@@ -433,6 +437,37 @@ export const PUBLIC_ROUTE_TIERS = {
   // Embeds the Nuxt UI form control set (`UForm`/`UFormField`/`UInput`/`UTextarea`).
   '/contact': 'interactive-subsystem',
   '/ar/contact': 'interactive-subsystem'
+}
+
+/**
+ * D20-42 / FE4-U2e2 — the Home routes' app-owned baselines, measured on the completed GTM surface.
+ *
+ * This is a deliberately narrow route-specific registration, following D20-29's measure-first
+ * formula without changing the D20-31 delivery tiers, shared floor, or any other public cap. The
+ * default D20-12 cap remains authoritative for every public route not listed here.
+ *
+ * These are frozen derivation inputs, not values that CI may refresh from the build it measures. The
+ * clean stamped reproduction and its measurements belong in the private doc-20 decision record.
+ */
+export const PUBLIC_APP_OWNED_BASELINE_BYTES = Object.freeze({
+  '/': 104_526,
+  '/ar': 104_526
+})
+
+/** Frozen absolute caps derived from the baselines above by D20-12's approved formula. */
+export const PUBLIC_APP_OWNED_CAP_BYTES = Object.freeze({
+  '/': 120_832,
+  '/ar': 120_832
+})
+
+/**
+ * Resolve the frozen app-owned cap for a public route.
+ *
+ * Home and Arabic Home have the D20-42 registration above; every other route deliberately retains
+ * D20-12's original 101 KiB cap. The caller separately asserts the route inventory is governed.
+ */
+export function publicAppCapFor(route) {
+  return PUBLIC_APP_OWNED_CAP_BYTES[route] ?? BUDGET.appRenderedBytes
 }
 
 /**
@@ -726,10 +761,41 @@ export function resolveDashboardSharedFloor(assetsByRoute) {
 }
 
 /**
- * App-owned baselines for the five routes D20-29 newly governs, measured at Web `origin/dev`
- * `d53af111168ffff56eadaacc0c1d7fdd6c2c635c3` by the §1.2 closure. Recorded so each frozen cap
- * below can be re-derived from its stated input rather than taken on trust — the caps are what the
- * gate enforces, these are only their provenance.
+ * App-owned baselines: the HISTORICAL DERIVATION INPUT each frozen cap below was computed from.
+ *
+ * ⚠ EACH VALUE BELONGS TO THE TREE IT WAS MEASURED ON — see `DASHBOARD_APP_OWNED_BASELINE_PROVENANCE`
+ * for which tree that is, per route. They are NOT current-tree reproduction targets, and the gate
+ * never compares a build against them. A baseline that does not equal today's measurement is
+ * EXPECTED once the route's source has changed; that is the routes growing, not the record decaying.
+ *
+ * ⚠ SCOPE OF WHAT IS PROVEN, stated narrowly on purpose. Reproduction-by-rebuild has been performed
+ * for exactly ONE of the eleven: `/dashboard/experiences` at `fd4e9df`, measured 85,551 B, exact.
+ * The other ten are recorded from their decision provenance and have NOT been re-verified by
+ * rebuild. Do not read the sentence above as a measured claim about all eleven — it is the rule the
+ * record follows, evidenced once, and one attempt to extend it (Articles) FAILED to reproduce.
+ *
+ * An earlier revision of this comment said these were recorded "so each frozen cap below can be
+ * re-derived from its stated input rather than taken on trust", with no tree named. That sentence is
+ * true of the DERIVATION and false of any REPRODUCTION, and the campaign ledger §9.5 opened a finding
+ * ("the recorded baselines no longer reproduce") on the strength of the second reading. Measured
+ * 2026-08-19, that finding's premise did not survive:
+ *
+ *   - `/dashboard/experiences` was rebuilt at its own provenance tree `fd4e9df` (`M1·U2`) and
+ *     measured **85,551 B — exact, to the byte**. The baseline reproduces perfectly where it was taken.
+ *   - Rebuilt at `7e6d11a` (`M1·U3`) the same route measures 87,404 B, and the +1,853 B attributes
+ *     EXACTLY, per module: `useAdminExperiences.ts` +1,345, `admin-experience-fields.ts` +187, and
+ *     the editor's two new route modules +161/+160. Four modules, summing to the delta with no
+ *     remainder. The editor's composable growth is charged to the COLLECTION route because both
+ *     share one composable inside the route's static closure.
+ *   - The ledger's candidate explanation — "~50 new i18n keys x 2 locales" — is REFUTED. The key
+ *     count was right (50 net new keys per locale) but the byte path is not: `i18n/locales/**` has
+ *     ZERO module records in the entire client build, because nuxt-i18n loads locale messages
+ *     outside the Rollup module graph this gate measures. Translation growth cannot move this number.
+ *
+ * So the comparison that produced the finding was a category error — a historical derivation input
+ * read against a later tree — and the fix belongs here, in the record, not in the numbers. Nothing
+ * below was re-stamped: re-stamping the Experiences collection 85,551 -> 87,404 would silently
+ * re-derive its cap 99,328 -> 101,376, a budget change performed to correct a report label.
  *
  * The three D20-23 routes are deliberately ABSENT: their cap is D20-12's constant and was not
  * derived from a dashboard measurement, so inventing a baseline for them here would be a fiction.
@@ -737,9 +803,105 @@ export function resolveDashboardSharedFloor(assetsByRoute) {
 export const DASHBOARD_APP_OWNED_BASELINE_BYTES = {
   '/dashboard/media': 96_084,
   '/dashboard/profile': 106_990,
+  // Measured on the SHIPPED tree. The owner decision D20-33 quotes 89,016 B, taken one revision
+  // earlier — before the page dropped its bespoke error block in favour of reusing `UiStateError`.
+  // Both derive the SAME cap (102,400 B), so the decision is unaffected; the value recorded here is
+  // the one the artifact actually produces, because that is what provenance means.
+  '/dashboard/articles': 88_344,
+  '/dashboard/articles/new': 106_095,
+  '/dashboard/articles/00000000-0000-0000-0000-000000000000': 106_203,
+  // D20-34 — FE-3 module 1's collection, measured on the tree that ships it.
+  //
+  // ⚠ THIS VALUE NO LONGER REPRODUCES ON THE CURRENT TREE, AND IS DELIBERATELY LEFT ALONE. `M1·U3`
+  // re-measured the same route at 87,404 B. It still PASSES its 99,328 B cap with 11,924 B spare, so
+  // this is provenance drift and not a breach. The owner ruled that historical derivation inputs are
+  // NOT re-stamped merely because they stop reproducing: re-stamping 85,551 → 87,404 would re-derive
+  // this route's cap from 99,328 B to 101,376 B — a budget change performed to fix a report label.
+  // The finding is recorded in the campaign ledger §9.5; deriving a new cap from a later tree would
+  // require a separate, explicitly governed recalibration.
+  '/dashboard/experiences': 85_551,
+  // D20-35 (owner decision, 2026-08-18) — FE-3 module 1's TWO EDITOR routes, measured on the tree
+  // that ships them (`M1·U3`, `7e6d11a`). Measured FIRST and escalated as one batched decision, which
+  // is what D20-34's standing instruction required: the collection's 99,328 B was NOT inherited.
+  '/dashboard/experiences/new': 105_051,
+  '/dashboard/experiences/00000000-0000-0000-0000-000000000000': 105_159,
+  // U5A owner-authorized clean measurement — Skills is now a UTable collection with a lazy,
+  // entity-owned slideover; the former full-page editor routes are redirect-only compatibility
+  // routes. All three values come from one clean closure build of `7b5be36`.
+  '/dashboard/skills': 89_941,
+  '/dashboard/skills/new': 66_734,
+  '/dashboard/skills/00000000-0000-0000-0000-000000000000': 66_885,
+  // U5B owner-authorized clean measurement — Testimonials is now a UTable collection with a lazy
+  // entity-owned slideover; its former full-page editor URLs are redirect-only compatibility routes.
+  '/dashboard/testimonials': 91_758,
+  '/dashboard/testimonials/new': 66_752,
+  '/dashboard/testimonials/00000000-0000-0000-0000-000000000000': 66_903,
+  // U4 owner-authorized clean measurement — the former combined Taxonomy baseline is retired.
+  // Categories, Tags, and the app-owned legacy redirect each carry their own measured input.
+  '/dashboard/categories': 112_895,
+  '/dashboard/tags': 110_367,
+  '/dashboard/taxonomy': 66_748,
   '/dashboard/projects': 95_029,
   '/dashboard/projects/new': 152_208,
-  '/dashboard/projects/00000000-0000-0000-0000-000000000000': 152_393
+  '/dashboard/projects/00000000-0000-0000-0000-000000000000': 152_393,
+  // D20-41 — FE-4 Static Page SEO's ONE editing destination, measured at the completed U1f
+  // checkpoint via the §1.2 closure workflow on the clean, stamped U1f analysis build. One route,
+  // one number from one build; the same measurement the owner approved the cap from.
+  '/dashboard/seo': 109_003
+}
+
+/**
+ * The TREE each baseline above was measured on. Values carry no bytes and derive no cap — this map
+ * exists so "the baseline does not reproduce" can never again be raised without first asking
+ * "reproduce WHERE?", which is the question that dissolved the §9.5 finding.
+ *
+ * Keys must match `DASHBOARD_APP_OWNED_BASELINE_BYTES` exactly; the spec asserts it, so a future
+ * baseline added without its provenance fails rather than inheriting a neighbour's tree by proximity.
+ *
+ * ⚠ Adding an entry here is a RECORD-KEEPING act and must never be paired with an edit to the bytes
+ * above. Changing a baseline changes a cap.
+ */
+export const DASHBOARD_APP_OWNED_BASELINE_PROVENANCE = {
+  // D20-29 — measured at Web `origin/dev` by the §1.2 closure.
+  '/dashboard/media': 'd53af111168ffff56eadaacc0c1d7fdd6c2c635c3',
+  '/dashboard/profile': 'd53af111168ffff56eadaacc0c1d7fdd6c2c635c3',
+  '/dashboard/projects': 'd53af111168ffff56eadaacc0c1d7fdd6c2c635c3',
+  '/dashboard/projects/new': 'd53af111168ffff56eadaacc0c1d7fdd6c2c635c3',
+  '/dashboard/projects/00000000-0000-0000-0000-000000000000': 'd53af111168ffff56eadaacc0c1d7fdd6c2c635c3',
+  // D20-33 — "the FE-2c shipped tree", which is how the decision's own record names it, and it is
+  // NOT one of the campaign's unit commits. ⚠ UNRESOLVED to a SHA, and deliberately left so rather
+  // than guessed: rebuilding `944443f` (FE-2c's last commit) measured 91,022 / 106,776 / 106,884
+  // against the recorded 88,344 / 106,095 / 106,203, so `944443f` is RULED OUT. The recorded values
+  // are LOWER than that tree produces, so the measurement predates it. Resolving these needs an
+  // FE-2c bisect; until someone does that, a string that admits it is unactionable beats a SHA that
+  // would reproduce nothing.
+  '/dashboard/articles': 'FE-2c shipped tree (UNRESOLVED; ruled out: 944443f)',
+  '/dashboard/articles/new': 'FE-2c shipped tree (UNRESOLVED; ruled out: 944443f)',
+  '/dashboard/articles/00000000-0000-0000-0000-000000000000': 'FE-2c shipped tree (UNRESOLVED; ruled out: 944443f)',
+  // D20-34 — `M1·U2`. VERIFIED by rebuild 2026-08-19: this tree reproduces 85,551 B exactly.
+  '/dashboard/experiences': 'fd4e9df',
+  // D20-35 — `M1·U3`, the commit that created the two editor routes.
+  '/dashboard/experiences/new': '7e6d11a',
+  '/dashboard/experiences/00000000-0000-0000-0000-000000000000': '7e6d11a',
+  // U5A — the clean, stamped implementation commit. The governance-only amendment records this
+  // provenance and changes no client-bundle input.
+  '/dashboard/skills': '7b5be3683023e3bda2ed289db150585a2b58a9e0',
+  '/dashboard/skills/new': '7b5be3683023e3bda2ed289db150585a2b58a9e0',
+  '/dashboard/skills/00000000-0000-0000-0000-000000000000': '7b5be3683023e3bda2ed289db150585a2b58a9e0',
+  // U5B — clean implementation commit; this governance-only amendment changes no client input.
+  '/dashboard/testimonials': 'f8892294c604a34c649eb7aec5bfa106ba95f991',
+  '/dashboard/testimonials/new': 'f8892294c604a34c649eb7aec5bfa106ba95f991',
+  '/dashboard/testimonials/00000000-0000-0000-0000-000000000000': 'f8892294c604a34c649eb7aec5bfa106ba95f991',
+  // U4 owner-authorized measurement build: clean, stamped implementation commit. The subsequent
+  // governance-only amendment records this provenance and changes no client-bundle input.
+  '/dashboard/categories': '23d77a8cb0357a4600fbdfb392a6124fabc39e9b',
+  '/dashboard/tags': '23d77a8cb0357a4600fbdfb392a6124fabc39e9b',
+  '/dashboard/taxonomy': '23d77a8cb0357a4600fbdfb392a6124fabc39e9b',
+  // D20-41 — the U1f measurement tree: HEAD of the clean, provenance-stamped analysis build the
+  // authoritative completed-route reading (109,003 B) was taken on. The governance commit that
+  // registers this route changes no client-bundle input, and the post-registration reproduction
+  // build re-measured the SAME figure on that tree.
+  '/dashboard/seo': 'a38a70c7f63db6002a9244ddfedda8926e4362f6'
 }
 
 /**
@@ -747,7 +909,8 @@ export const DASHBOARD_APP_OWNED_BASELINE_BYTES = {
  *
  * These are doc 20 VERBATIM. This map is an ENFORCEMENT mechanism, never the authority: a new cap,
  * or a change to one, requires an owner decision plus a decision-log entry in
- * `eslammuatamed-docs/docs/20-performance.md` — never an edit here.
+ * `eslammuatamed-docs/docs/20-performance.md` — never an edit here, except an explicitly
+ * owner-approved, ledger-recorded acceptance bridge such as PR #75's interim Messages cap.
  *
  * ABSOLUTE CEILINGS, NOT REGRESSION BASELINES. Nothing here is recomputed from a build, and the
  * gate may never raise one. A route that grows past its cap FAILS (exit 1) and is fixed by
@@ -766,13 +929,98 @@ export const DASHBOARD_APP_OWNED_CAP_BYTES = {
   // D20-23 / D20-12 — preserved unchanged.
   '/dashboard/login': 101 * KB,
   '/dashboard': 101 * KB,
-  '/dashboard/messages': 101 * KB,
+  // PR #75 owner-approved acceptance bridge: 104,858 B -> 120,832 B under the existing 15%
+  // formula. Interim only; FE5-U6 owns the final post-feedback recalibration.
+  '/dashboard/messages': 120_832,
   // D20-29 — derived from the baselines above.
+  //
+  // `/dashboard/articles` is D20-33 (owner decision, 2026-08-18): the cap is D20-29's formula
+  // applied to this route's own measured baseline, and the decision registers the SAME cap for the
+  // module's two editor routes, which inherit it rather than deriving their own. That is a
+  // deliberate registration of governance coverage, NOT a waiver and NOT a budget raised to excuse
+  // a failing route — the measured route fits the model with 13,384 B to spare. If an editor route
+  // later cannot meet it, the cause is attributed and escalated; the cap is not silently raised.
+  '/dashboard/articles': 100 * KB,
+  // D20-33 as AMENDED 2026-08-18. These two were first registered at the collection's 100 KiB,
+  // INHERITED before the editor surface existed. It now exists and has been measured, so the cap is
+  // derived from their own baselines by D20-29's formula — which is a CORRECTION of a provisional
+  // ceiling, not a waiver, not a floor change, and not a D20-32 recalibration.
+  //
+  // The gap is attributable to real authoring functionality rather than to waste: an editor carries
+  // the media-authoring subsystem (MediaBrowser + MediaPicker + MediaCard = 20,352 B) that a list
+  // route does not, and 24,769 B were removed by moving it off the critical path before the cap was
+  // ever questioned. For scale, the Projects editor's governed cap is 176,128 B.
+  //
+  // NO generic authoring-route class: the owner held that back for FE-5, when Projects, the
+  // remaining content modules and the system modules have stabilised and there is repeated evidence
+  // to generalise from. Two routes is not that evidence.
+  '/dashboard/articles/new': 120 * KB,
+  '/dashboard/articles/00000000-0000-0000-0000-000000000000': 120 * KB,
+  // D20-34 (owner decision, 2026-08-18) — FE-3 module 1's collection.
+  //
+  // Derived by D20-29's formula from THIS route's own measured baseline (85,551 B), not inherited
+  // from a sibling: ceil(85,551 × 115 / 102,400) × 1024 = 99,328 B, leaving 13,777 B of headroom.
+  // The owner declined rounding it up to the Articles 100 KiB cap for visual consistency — a cap
+  // set by a sibling is a cap set by something other than evidence.
+  //
+  // The decision is explicitly NOT a waiver, NOT a shared-floor change, NOT a change to the generic
+  // incremental allowance, and NOT a D20-32 recalibration.
+  //
+  // ⚠ THE EDITOR ROUTES DO NOT INHERIT THIS. They are measured first and escalated as one batched
+  // decision when `M1·U3` creates them. That is the D20-33 amendment's lesson applied in advance:
+  // Articles' two editor routes were first registered at the collection's cap INHERITED before the
+  // editor surface existed, and had to be corrected to 120 KiB once measured.
+  '/dashboard/experiences': 97 * KB,
+  // D20-35 (owner decision, 2026-08-18) — the Experiences editor routes, each derived from its OWN
+  // measured baseline by D20-29's formula. The owner declined rounding them up to the Articles
+  // editor's 122,880 B for consistency: "use each route's own measured baseline under the
+  // already-governed D20-29 formula".
+  //
+  // Explicitly NOT a waiver, NOT a shared-floor change, NOT a generic incremental-allowance change,
+  // and NOT a D20-32 recalibration. Both surfaces are materially LEANER than the governed Articles
+  // (122,880 B) and Projects (176,128 B) editors, so nothing was loosened by precedent.
+  //
+  // Still no generic authoring-route class — D20-33's amendment held that back for FE-5, and four
+  // routes is not the repeated evidence it asked for.
+  '/dashboard/experiences/new': 118 * KB,
+  '/dashboard/experiences/00000000-0000-0000-0000-000000000000': 119 * KB,
+  // U5A owner-authorized recalibration — each materially changed Skills route derives from its OWN
+  // clean `7b5be36` baseline using D20-29: 89,941 B -> ceil(89,941 * 115 / 102,400) KiB = 102 KiB;
+  // 66,734 B -> 75 KiB; 66,885 B -> 76 KiB. The lazy collection overlay keeps its editor form out
+  // of the initial route closure; the two legacy routes are intentionally smaller redirect routes.
+  //
+  // Explicitly NOT a waiver, NOT a shared-floor change, NOT a generic incremental-allowance change,
+  // and NOT a D20-32 recalibration. The owner declined consistency-rounding toward Articles
+  // (100/120 KiB), Experiences (97/118/119 KiB) or Projects (107/171/172 KiB): each route carries
+  // the cap its own baseline derives.
+  '/dashboard/skills': 102 * KB,
+  '/dashboard/skills/new': 75 * KB,
+  '/dashboard/skills/00000000-0000-0000-0000-000000000000': 76 * KB,
+  // U5B owner-authorized recalibration via D20-29: 91,758 B -> 104 KiB; 66,752 B -> 75 KiB;
+  // 66,903 B -> 76 KiB. The lazy slideover keeps the form out of the initial collection closure,
+  // while retained bookmarks carry their measured redirect-only caps.
+  '/dashboard/testimonials': 104 * KB,
+  '/dashboard/testimonials/new': 75 * KB,
+  '/dashboard/testimonials/00000000-0000-0000-0000-000000000000': 76 * KB,
+  // U4 owner decision — independent, clean §1.2 closure measurements. The former combined
+  // Taxonomy baseline/cap is retired rather than transferred. The legacy route is still app-owned
+  // and redirecting, so it has its own evidence-based cap until a future decision removes it.
+  '/dashboard/categories': 127 * KB,
+  '/dashboard/tags': 124 * KB,
+  '/dashboard/taxonomy': 75 * KB,
   '/dashboard/media': 108 * KB,
   '/dashboard/profile': 121 * KB,
   '/dashboard/projects': 107 * KB,
   '/dashboard/projects/new': 171 * KB,
-  '/dashboard/projects/00000000-0000-0000-0000-000000000000': 172 * KB
+  '/dashboard/projects/00000000-0000-0000-0000-000000000000': 172 * KB,
+  // D20-41 (owner decision) — FE-4 Static Page SEO's ONE route: the Dashboard destination AND its
+  // editing surface are the same page (no editor route exists, so no separate editor cap is
+  // created). Derived by D20-29's formula from THIS route's own measured U1f baseline:
+  // ceil((109,003 × 115) / 102,400) × 1024 = 125,952 B (123 KiB), headroom 16,949 B.
+  // Route-specific: not inherited from any sibling, not rounded upward or toward one. Explicitly
+  // NOT a waiver, NOT a shared-floor change, NOT an incremental-allowance change, and NOT a D20-32
+  // recalibration; the frozen floor reference sets are untouched.
+  '/dashboard/seo': 123 * KB
 }
 
 /**

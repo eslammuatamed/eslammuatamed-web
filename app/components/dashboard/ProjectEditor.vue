@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { onBeforeRouteLeave } from 'vue-router'
 import {
   PROJECT_LOCALES,
   buildProjectPayload,
@@ -14,6 +13,7 @@ import {
 } from '~/composables/admin-project-form'
 import { toApiError } from '~/utils/api-error'
 import type { ApiError } from '~/utils/api-error'
+import type { AdminSkill } from '~/composables/admin-project-types'
 
 /**
  * The Projects editor — create and edit, one implementation.
@@ -41,7 +41,7 @@ const props = defineProps<{
   id: string | null
 }>()
 
-const { t } = useI18n()
+const { t, locale } = useDashboardI18n()
 const router = useRouter()
 const editor = useAdminProject()
 const { project, pending, forbidden, notFound, failed } = editor
@@ -69,6 +69,25 @@ const deleteError = ref(false)
  * the blank baseline, and a delete leaves for a project that no longer exists.
  */
 const bypassGuard = ref(false)
+
+const activeLocale = ref<ProjectLocale>('en')
+const skillCreateOpen = ref(false)
+const createdTechnologyId = ref<string | null>(null)
+const addTechnologyTrigger = useTemplateRef<HTMLButtonElement>('addTechnologyTrigger')
+const skillPickerRef = useTemplateRef<{
+  refresh: () => Promise<void>
+  focusTechnology: (id: string) => Promise<boolean>
+}>('skillPickerRef')
+
+/**
+ * Seed the tab from the Dashboard locale once. From then on it belongs to this entity editor: a
+ * chrome-language change must never throw an operator out of the locale they deliberately edit.
+ */
+onMounted(() => {
+  activeLocale.value = PROJECT_LOCALES.includes(locale.value as ProjectLocale)
+    ? (locale.value as ProjectLocale)
+    : 'en'
+})
 
 /**
  * Seed both the edited state and the baseline from the loaded project.
@@ -102,6 +121,28 @@ const fillStates = computed(() => ({
   en: translationFillState(form.value.translations.en),
   ar: translationFillState(form.value.translations.ar)
 }))
+
+const {
+  serverFieldErrors,
+  fieldErrorSummary,
+  localesWithErrors,
+  reset: resetFieldErrors,
+  applyFieldErrors
+} = useTranslatableForm<ProjectLocale>({
+  locales: PROJECT_LOCALES,
+  activeLocale,
+  scope: '[data-project-editor]',
+  clearOn: form
+})
+
+const tabItems = computed(() =>
+  PROJECT_LOCALES.map(value => ({
+    value,
+    label: t(`dashboard.projects.locale.${value}`),
+    fill: fillStates.value[value],
+    invalid: localesWithErrors.value.has(value)
+  }))
+)
 
 /**
  * What this save will do to publication, in words, BEFORE it is made.
@@ -160,14 +201,58 @@ function setOrder(raw: string): void {
   patchForm({ order: raw.trim() === '' ? Number.NaN : Number(raw) })
 }
 
+/** The Project owns only this local overlay intent; the Skill form itself remains entity-owned. */
+function openTechnologyCreate(): void {
+  createdTechnologyId.value = null
+  skillCreateOpen.value = true
+}
+
+/** A created Skill persists independently; selecting its id is the Project's first real mutation. */
+function selectCreatedTechnology(skill: AdminSkill): void {
+  createdTechnologyId.value = skill.id
+  if (!form.value.technologyIds.includes(skill.id)) {
+    patchForm({ technologyIds: [...form.value.technologyIds, skill.id] })
+  }
+}
+
+async function onSkillCreateClose(): Promise<void> {
+  const createdId = createdTechnologyId.value
+  if (createdId) {
+    // Refresh rather than inventing local vocabulary state; existing and unknown selected ids stay
+    // owned by the picker while the returned id has already made the Project form dirty.
+    await skillPickerRef.value?.refresh()
+    await nextTick()
+    if (await skillPickerRef.value?.focusTechnology(createdId)) {
+      createdTechnologyId.value = null
+      return
+    }
+    createdTechnologyId.value = null
+  }
+
+  await nextTick()
+  addTechnologyTrigger.value?.focus()
+}
+
 async function save(): Promise<void> {
+  if (saving.value) return
   showErrors.value = true
   if (hasBlockingError(errors.value)) return
   saving.value = true
   saveError.value = null
+  resetFieldErrors()
   saved.value = false
+  let sentLocales: ProjectLocale[] = []
   try {
-    const payload = buildProjectPayload(form.value)
+    // The seeded form is the baseline the payload measures SEO changes against: a field held then
+    // blanked must travel as an explicit `null` (D10-23), which only an original-vs-current
+    // comparison can distinguish from "never had one". Create has no stored values, so it passes
+    // no baseline and keeps its omission-on-blank shape.
+    const payload = props.id === null
+      ? buildProjectPayload(form.value)
+      : buildProjectPayload(form.value, initial.value)
+    // Captured before the request: a 422 index addresses this precise payload ordering, never the
+    // canonical locale order or whichever tab happens to be open when the response arrives.
+    sentLocales = payload.translations.map((translation): ProjectLocale => translation.locale as ProjectLocale)
     if (props.id === null) {
       const created = await editor.create(payload)
       // Land on the created project's own address, so a reload shows the saved project rather than
@@ -181,7 +266,17 @@ async function save(): Promise<void> {
     showErrors.value = false
   } catch (error) {
     // The operator's input is deliberately NOT discarded: a failed save must not also lose the work.
-    saveError.value = toApiError(error)
+    const apiError = toApiError(error)
+    if (apiError.status === 422 && apiError.fieldErrors.length > 0) {
+      applyFieldErrors(apiError.fieldErrors, sentLocales)
+      // Keep non-translation errors in the existing form-level surface. Translation errors belong
+      // on their named field and activate its locale tab through the shared mapper.
+      if (apiError.fieldErrors.some(({ field }) => !/^translations\[\d+\]\./.test(field))) {
+        saveError.value = apiError
+      }
+    } else {
+      saveError.value = apiError
+    }
   } finally {
     saving.value = false
   }
@@ -195,14 +290,6 @@ function discard(): void {
 }
 
 /* ── delete ────────────────────────────────────────────────────────────────────────────────────── */
-
-function startDelete(): void {
-  confirmingDelete.value = true
-}
-
-function cancelDelete(): void {
-  confirmingDelete.value = false
-}
 
 async function confirmDelete(): Promise<void> {
   if (props.id === null) return
@@ -220,35 +307,34 @@ async function confirmDelete(): Promise<void> {
   }
 }
 
-/* ── unsaved-change protection ─────────────────────────────────────────────────────────────────── */
-
-onBeforeRouteLeave(() => {
-  if (bypassGuard.value || !dirty.value) return true
-  // The native dialog rather than a modal of our own: this must block the navigation synchronously,
-  // and the dashboard has no confirmation-overlay infrastructure to reuse. It is the documented
-  // vue-router pattern for exactly this.
-  return window.confirm(t('dashboard.projects.editor.unsavedWarning'))
+useUnsavedChangesGuard({
+  dirty,
+  bypass: bypassGuard,
+  message: () => t('dashboard.projects.editor.unsavedWarning')
 })
 
-onMounted(() => {
-  const onBeforeUnload = (event: BeforeUnloadEvent): void => {
-    if (dirty.value && !bypassGuard.value) event.preventDefault()
-  }
-  window.addEventListener('beforeunload', onBeforeUnload)
-  onUnmounted(() => window.removeEventListener('beforeunload', onBeforeUnload))
+const saveState = computed<'saving' | 'unsaved' | 'saved' | 'idle'>(() => {
+  if (saving.value) return 'saving'
+  if (dirty.value) return 'unsaved'
+  if (saved.value) return 'saved'
+  return 'idle'
 })
 </script>
 
 <template>
-  <UContainer class="py-8">
-    <UButton to="/dashboard/projects" color="neutral" variant="ghost" size="sm" icon="i-lucide-arrow-left" class="mb-4">
+  <UContainer class="py-8" data-project-editor>
+    <UButton to="/dashboard/projects" color="neutral" variant="ghost" size="sm" icon="i-lucide-arrow-left" class="mb-4" data-editor-back>
       {{ t('dashboard.projects.back') }}
     </UButton>
 
-    <div v-if="id !== null && pending" class="flex flex-col gap-3" aria-busy="true" :aria-label="t('dashboard.projects.editor.loading')">
-      <USkeleton class="h-10 w-64" />
-      <USkeleton class="h-40 w-full" />
-    </div>
+    <h1 v-if="id !== null && pending && project === null" class="sr-only">
+      {{ t('dashboard.projects.title') }}
+    </h1>
+
+    <DashboardEntityEditorSkeleton
+      v-if="id !== null && pending && project === null"
+      :label="t('dashboard.projects.editor.loading')"
+    />
 
     <UAlert
       v-else-if="forbidden"
@@ -418,11 +504,42 @@ onMounted(() => {
 
       <!-- ── technologies ─────────────────────────────────────────────────────────────────────── -->
       <section :aria-labelledby="'technologies-heading'" class="flex flex-col gap-3">
-        <h2 id="technologies-heading" class="text-h2 text-highlighted">{{ t('dashboard.projects.editor.technologies') }}</h2>
-        <DashboardProjectTechnologyPicker
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <h2 id="technologies-heading" class="text-h2 text-highlighted">{{ t('dashboard.projects.editor.technologies') }}</h2>
+          <UButton
+            ref="addTechnologyTrigger"
+            type="button"
+            color="neutral"
+            variant="subtle"
+            size="sm"
+            icon="i-lucide-plus"
+            :disabled="saving"
+            data-project-add-technology
+            @click="openTechnologyCreate"
+          >
+            {{ t('dashboard.projects.editor.addTechnology') }}
+          </UButton>
+        </div>
+        <DashboardSkillPicker
+          ref="skillPickerRef"
           :model-value="form.technologyIds"
           :disabled="saving"
+          :labels="{
+            legend: t('dashboard.projects.editor.technologies'),
+            help: t('dashboard.projects.editor.technologiesHelp'),
+            filter: t('dashboard.projects.editor.technologyFilter'),
+            empty: t('dashboard.projects.editor.technologiesEmpty'),
+            error: t('dashboard.projects.editor.technologiesError'),
+            unknown: t('dashboard.projects.editor.technologiesUnknown'),
+            selected: t('dashboard.projects.editor.technologiesSelected', { count: form.technologyIds.length })
+          }"
           @update:model-value="patchForm({ technologyIds: $event })"
+        />
+        <LazyDashboardSkillOverlay
+          :id="null"
+          v-model:open="skillCreateOpen"
+          @saved="selectCreatedTechnology"
+          @close="onSkillCreateClose"
         />
       </section>
 
@@ -444,45 +561,73 @@ onMounted(() => {
         <h2 id="content-heading" class="text-h2 text-highlighted">{{ t('dashboard.projects.editor.content') }}</h2>
         <p class="text-sm text-muted">{{ t('dashboard.projects.editor.contentHelp') }}</p>
 
-        <div
-          v-for="contentLocale in PROJECT_LOCALES"
-          :key="contentLocale"
-          class="rounded-control border border-default p-4"
-          :data-locale-section="contentLocale"
+        <DashboardTranslationTabs
+          v-model="activeLocale"
+          :items="tabItems"
+          :invalid-label="t('dashboard.projects.editor.tabInvalid')"
+          :fill-labels="{
+            empty: t('dashboard.projects.editor.localeEmpty'),
+            partial: t('dashboard.projects.editor.localePartial'),
+            complete: t('dashboard.projects.editor.localeComplete')
+          }"
         >
-          <div class="mb-4 flex flex-wrap items-center gap-2">
-            <h3 class="text-h3 text-highlighted">{{ t(`dashboard.projects.locale.${contentLocale}`) }}</h3>
-            <!-- Never colour-only: the state is a word. "Not written" is a legitimate resting state,
-                 not an error — the project may deliberately exist in one language only. -->
-            <UBadge
-              :color="fillStates[contentLocale] === 'complete' ? 'success' : fillStates[contentLocale] === 'partial' ? 'warning' : 'neutral'"
-              variant="subtle"
-              size="sm"
-              :data-locale-state="`${contentLocale}:${fillStates[contentLocale]}`"
-            >
-              {{ t(
-                fillStates[contentLocale] === 'complete'
-                  ? 'dashboard.projects.editor.localeComplete'
-                  : fillStates[contentLocale] === 'partial'
-                    ? 'dashboard.projects.editor.localePartial'
-                    : 'dashboard.projects.editor.localeEmpty'
-              ) }}
-            </UBadge>
-          </div>
+          <template #panel="{ locale: contentLocale }">
+            <div class="rounded-control border border-default p-4" :data-locale-section="contentLocale">
+              <div class="mb-4 flex flex-wrap items-center gap-2">
+                <h3 class="text-h3 text-highlighted">{{ t(`dashboard.projects.locale.${contentLocale}`) }}</h3>
+                <!-- Never colour-only: the state is a word. "Not written" is a legitimate resting state,
+                     not an error — the project may deliberately exist in one language only. -->
+                <UBadge
+                  :color="fillStates[contentLocale] === 'complete' ? 'success' : fillStates[contentLocale] === 'partial' ? 'warning' : 'neutral'"
+                  variant="subtle"
+                  size="sm"
+                  :data-locale-state="`${contentLocale}:${fillStates[contentLocale]}`"
+                >
+                  {{ t(
+                    fillStates[contentLocale] === 'complete'
+                      ? 'dashboard.projects.editor.localeComplete'
+                      : fillStates[contentLocale] === 'partial'
+                        ? 'dashboard.projects.editor.localePartial'
+                        : 'dashboard.projects.editor.localeEmpty'
+                  ) }}
+                </UBadge>
+              </div>
 
-          <DashboardProjectTranslationFields
-            :model-value="form.translations[contentLocale]"
-            :locale="contentLocale"
-            :disabled="saving"
-            :show-errors="showErrors"
-            :missing-fields="errors.missingFields[contentLocale]"
-            @update:model-value="setTranslation(contentLocale, $event)"
-          />
-        </div>
+              <DashboardProjectTranslationFields
+                :model-value="form.translations[contentLocale]"
+                :locale="contentLocale"
+                :disabled="saving"
+                :show-errors="showErrors"
+                :missing-fields="errors.missingFields[contentLocale]"
+                :server-field-errors="serverFieldErrors"
+                @update:model-value="setTranslation(contentLocale, $event)"
+              />
+            </div>
+          </template>
+        </DashboardTranslationTabs>
       </section>
 
       <!-- ── validation, save state and the API's own answer ──────────────────────────────────── -->
       <div aria-live="polite" class="flex flex-col gap-3 empty:hidden">
+        <UAlert
+          v-if="fieldErrorSummary.length > 0"
+          color="error"
+          variant="subtle"
+          icon="i-lucide-triangle-alert"
+          data-editor-error-summary
+          :ui="{ title: 'text-error-700 dark:text-error-300', description: 'text-error-700 dark:text-error-300' }"
+          :title="t('dashboard.projects.editor.fieldErrorsHeading')"
+        >
+          <template #description>
+            <ul class="flex flex-col gap-1">
+              <li v-for="(entry, index) in fieldErrorSummary" :key="index" class="text-xs">
+                <span v-if="entry.locale" class="font-medium">{{ t(`dashboard.projects.locale.${entry.locale}`) }}:</span>
+                {{ entry.message }}
+              </li>
+            </ul>
+          </template>
+        </UAlert>
+
         <UAlert
           v-if="showErrors && errors.noTranslation"
           color="error"
@@ -579,51 +724,42 @@ onMounted(() => {
         />
       </div>
 
-      <div class="flex flex-wrap items-center gap-3">
-        <UButton type="submit" :loading="saving" :disabled="saving || (id !== null && !dirty)" data-project-save>
-          {{ t('dashboard.projects.editor.save') }}
-        </UButton>
-        <UButton
-          v-if="dirty"
-          type="button"
-          color="neutral"
-          variant="ghost"
-          :disabled="saving"
-          data-project-discard
-          @click="discard()"
-        >
-          {{ t('dashboard.projects.editor.discard') }}
-        </UButton>
-        <p v-if="!dirty && !saving" class="text-xs text-muted">{{ t('dashboard.projects.editor.noChanges') }}</p>
-      </div>
-
-      <!-- ── delete ───────────────────────────────────────────────────────────────────────────── -->
-      <section v-if="id !== null" class="flex flex-col gap-2 border-t border-default pt-6">
-        <div class="flex flex-wrap gap-2">
-          <template v-if="confirmingDelete">
-            <UButton type="button" color="error" :loading="deleting" data-project-delete-confirm @click="confirmDelete()">
-              {{ t('dashboard.projects.editor.deleteConfirm') }}
-            </UButton>
-            <UButton type="button" color="neutral" variant="ghost" :disabled="deleting" @click="cancelDelete()">
-              {{ t('dashboard.projects.editor.deleteCancel') }}
-            </UButton>
-          </template>
+      <DashboardEntityFormActions
+        v-model:confirming="confirmingDelete"
+        :save-state="saveState"
+        :save-state-labels="{
+          saving: t('dashboard.projects.editor.saving'),
+          unsaved: t('dashboard.projects.editor.unsaved'),
+          saved: t('dashboard.projects.editor.saved')
+        }"
+        :save-label="t('dashboard.projects.editor.save')"
+        :saving="saving"
+        :deletable="id !== null"
+        :deleting="deleting"
+        :delete-labels="{
+          delete: t('dashboard.projects.editor.delete'),
+          confirm: t('dashboard.projects.editor.deleteConfirm'),
+          cancel: t('dashboard.projects.editor.deleteCancel')
+        }"
+        @delete="confirmDelete()"
+      >
+        <template #leading>
+          <p v-if="confirmingDelete" class="text-xs text-muted">{{ t('dashboard.projects.editor.deleteWarning') }}</p>
+        </template>
+        <template #actions>
           <UButton
-            v-else
+            v-if="dirty"
             type="button"
-            color="error"
-            variant="subtle"
-            icon="i-lucide-trash-2"
+            color="neutral"
+            variant="ghost"
             :disabled="saving"
-            data-project-delete
-            :ui="{ base: 'text-error-700 dark:text-error-300' }"
-            @click="startDelete()"
+            data-project-discard
+            @click="discard()"
           >
-            {{ t('dashboard.projects.editor.delete') }}
+            {{ t('dashboard.projects.editor.discard') }}
           </UButton>
-        </div>
-        <p v-if="confirmingDelete" class="text-xs text-muted">{{ t('dashboard.projects.editor.deleteWarning') }}</p>
-      </section>
+        </template>
+      </DashboardEntityFormActions>
     </form>
   </UContainer>
 </template>
