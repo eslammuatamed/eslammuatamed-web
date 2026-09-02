@@ -41,15 +41,77 @@ async function openEdit(page: Page, baseURL: string, id: string = SKILL.typescri
 }
 
 test.describe('the Skills collection', () => {
-  test('renders the complete unpaginated response in API order inside a UTable', async ({ page, baseURL }) => {
+  test('renders the first server page in API order inside a UTable', async ({ page, baseURL }) => {
     await signIn(page, 'en', baseURL!)
     await visit(page)
     await expect(page.locator('[data-skills-table]')).toBeVisible()
-    expect(await rows(page).evaluateAll(elements => elements.map(element => element.getAttribute('data-skill-row'))))
+    expect((await rows(page).evaluateAll(elements => elements.map(element => element.getAttribute('data-skill-row')))).slice(0, API_ORDER.length))
       .toEqual([...API_ORDER])
-    await expect(page.locator('[data-skills-pagination], [data-skills-filter]')).toHaveCount(0)
+    await expect(rows(page)).toHaveCount(12)
+    await expect(page.locator('[data-skills-pagination], [data-skills-filter]')).toHaveCount(2)
     await expect(page.locator(`[data-skill-brand-color="${SKILL.nest}"]`)).toHaveText('brand-token-nest')
     await expect(page.locator(`[data-skill-row="${SKILL.delivery}"] [data-skill-translation="ar:missing"]`)).toBeVisible()
+  })
+
+  test('owns page and group in the URL and sends their server query values', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL!)
+    await visit(page)
+    const pageTwo = page.waitForRequest(request => {
+      const url = new URL(request.url())
+      return url.pathname.endsWith('/admin/skills') && url.searchParams.get('page') === '2' && url.searchParams.get('perPage') === '12'
+    })
+    await page.goto('/dashboard/skills?page=2')
+    await pageTwo
+    await listSettled(page)
+    await expect(rows(page)).toHaveCount(12)
+
+    const frontend = page.waitForRequest(request => {
+      const url = new URL(request.url())
+      return url.pathname.endsWith('/admin/skills') && url.searchParams.get('page') === '1' && url.searchParams.get('group') === 'FRONTEND'
+    })
+    await page.locator('[data-skills-group]').click()
+    await page.getByRole('option', { name: 'Frontend', exact: true }).click()
+    await frontend
+    await listSettled(page)
+    await expect(page).toHaveURL(/\/dashboard\/skills\?group=FRONTEND$/)
+    await expect(rows(page)).toHaveCount(12)
+    await expect(page.locator(`[data-skill-row="${SKILL.vue}"]`)).toBeVisible()
+  })
+
+  test('restores deep-linked group pages, preserves the group across page changes, and handles history', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL!)
+    const backendPageTwo = page.waitForRequest(request => {
+      const url = new URL(request.url())
+      return url.pathname.endsWith('/admin/skills')
+        && url.searchParams.get('page') === '2'
+        && url.searchParams.get('perPage') === '12'
+        && url.searchParams.get('group') === 'BACKEND'
+    })
+    await page.goto('/dashboard/skills?group=BACKEND&page=2')
+    await backendPageTwo
+    await listSettled(page)
+    await expect(rows(page)).toHaveCount(1)
+    await expect(page.locator('[data-skill-group]').getByText('Backend')).toBeVisible()
+
+    const pageOne = page.waitForRequest(request => {
+      const url = new URL(request.url())
+      return url.pathname.endsWith('/admin/skills')
+        && url.searchParams.get('page') === '1'
+        && url.searchParams.get('group') === 'BACKEND'
+    })
+    await page.locator('[data-skills-pagination]').getByRole('button', { name: 'Page 1', exact: true }).click()
+    await pageOne
+    await listSettled(page)
+    await expect(page).toHaveURL(/\/dashboard\/skills\?group=BACKEND$/)
+    await expect(rows(page)).toHaveCount(12)
+
+    await page.goBack()
+    await listSettled(page)
+    await expect(page).toHaveURL(/\/dashboard\/skills\?group=BACKEND&page=2$/)
+    await expect(rows(page)).toHaveCount(1)
+    await page.goForward()
+    await listSettled(page)
+    await expect(page).toHaveURL(/\/dashboard\/skills\?group=BACKEND$/)
   })
 
   test('keeps loading, empty, error/retry, and forbidden states local to the collection', async ({ page, baseURL }) => {
@@ -72,13 +134,40 @@ test.describe('the Skills collection', () => {
     await setBackendState(page, { mode: 'ok' })
     await page.locator('[data-skills-failed]').getByRole('button').click()
     await listSettled(page)
-    await expect(rows(page)).toHaveCount(API_ORDER.length)
+    await expect(rows(page)).toHaveCount(12)
 
     await setBackendState(page, { mode: 'forbidden' })
     await page.reload()
     await listSettled(page)
     await expect(page.locator('[data-skills-forbidden]')).toBeVisible()
     await expect(page.locator('[data-skills-failed], [data-skills-empty]')).toHaveCount(0)
+  })
+
+  test('keeps a filtered page through retry and clamps it after its only final-page row is deleted', async ({ page, baseURL }) => {
+    await signIn(page, 'en', baseURL!)
+    await page.goto('/dashboard/skills?group=BACKEND&page=2')
+    await listSettled(page)
+    await setBackendState(page, { mode: 'error' })
+    await page.reload()
+    await listSettled(page)
+    await expect(page.locator('[data-skills-failed]')).toBeVisible()
+    await setBackendState(page, { mode: 'ok' })
+    const retry = page.waitForRequest(request => {
+      const url = new URL(request.url())
+      return url.pathname.endsWith('/admin/skills') && url.searchParams.get('group') === 'BACKEND' && url.searchParams.get('page') === '2'
+    })
+    await page.locator('[data-skills-failed]').getByRole('button').click()
+    await retry
+    await listSettled(page)
+    const finalPageId = await rows(page).first().getAttribute('data-skill-row')
+    await page.locator(`[data-skill-edit="${finalPageId}"]`).click()
+    await expect(page.locator('[data-editor-delete]')).toBeVisible()
+    await page.locator('[data-editor-delete]').click()
+    await page.locator('[data-editor-delete-confirm]').click()
+    await expect(page.locator('[data-skill-overlay]')).toBeHidden()
+    await expect(page).toHaveURL(/\/dashboard\/skills\?group=BACKEND$/)
+    await listSettled(page)
+    await expect(rows(page)).toHaveCount(12)
   })
 })
 
@@ -210,6 +299,7 @@ test.describe('legacy Skills URLs and query-state intent', () => {
     await expect(page.locator('[data-skill-overlay]')).toBeVisible()
     await page.locator('[data-skill-overlay-close]').click()
     await expect(page.locator('[data-skill-overlay]')).toBeHidden()
+    await expect(page).toHaveURL(/\/dashboard\/skills\?source=bookmark$/)
     const url = new URL(page.url())
     expect(url.searchParams.get('create')).toBeNull()
     expect(url.searchParams.get('source')).toBe('bookmark')

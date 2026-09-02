@@ -5795,3 +5795,32 @@ No route caps changed. Both routes pass the D20-32 shared-floor, incremental, CS
 app-owned caps; the normal report retains their existing D20-24 quality-target warnings (326.4 KB gz
 Categories, 323.5 KB gz Tags). Skills pagination, Article Category/Tag all-page picker aggregation,
 FE5-U6, and FE5-U7 remain unstarted. No deployment occurred.
+
+---
+
+## Acceptance Feedback U5J — server-side Skills pagination + group filter · COMPLETE · 2026-09-02
+
+Starting frontend SHA: `86c6d295d3c97aa8d8efdae0c51e60c485c84284`. The Skills collection now owns
+page and optional group in its URL and sends the released fixed `perPage=12` request shape to
+`GET /admin/skills`. Server `data` and `meta` exclusively determine rows, totals, pagination, and
+final-page clamps; there is no client-side slicing or group filtering. Changing group clears the
+page, page navigation preserves group, and sequence plus `[group, page]` identity prevents stale
+page/group responses from replacing the latest view. CRUD clears its overlay intent before the
+route-driven refresh, preventing a delete clamp from reopening a stale editor.
+
+**Picker safety decision: B — a small ownership separation was required.** The old `useAdminSkills`
+remains the independent Project/Experience `DashboardSkillPicker` owner. U5J introduces the narrowly
+named `useAdminSkillsCollection` only for `/dashboard/skills`, so collection page/group state cannot
+leak into picker requests or state. Complete admin Skill vocabulary aggregation remains pending; no
+picker aggregation is claimed or implemented. Article Category/Tag aggregation remains pending;
+FE5-U6 and FE5-U7 remain unstarted. No backend, OpenAPI, or generated API type changed.
+
+### Verification
+
+| Check | Result |
+| --- | --- |
+| Focused query/composable/page, backend calibration, and Project picker unit coverage | 102/102, exit 0 — URL parsing/request transport, all group enums, server meta, stale page/group, no local filtering/slicing, and bounded Project picker opening/render/selection. |
+| Group identity negative control | Temporarily omitting `group` from `adminSkillsQueryKey` made the focused different-group failure test retain the prior Frontend row; restored immediately. |
+| Focused Skills browser checks | Passing isolated checks cover actual page/group requests, deep-link/history restoration, retry preservation, overlay CRUD, and filtered final-page delete clamp. |
+| `npm run typecheck:e2e` / `npx nuxt typecheck` / `git diff --check` | exit 0 / exit 0 / exit 0 before final validation pass. |
+| Analysis build / route-size gate | `/dashboard/skills`: 93,918 B app-owned / 104,448 B frozen cap; cap unchanged. The D20-32 delivery and CSS gates pass; the existing D20-24 332.0 KB gzip quality-target warning remains. |

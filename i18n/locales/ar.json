@@ -752,6 +752,7 @@
       "emptyBody": "أنشئ أول مهارة وستظهر هنا.",
       "listRegionLabel": "المهارات",
       "resultCount": "{total} مهارات",
+      "filters": { "group": "التصفية حسب المجموعة", "allGroups": "كل المجموعات" },
       "create": "مهارة جديدة",
       "edit": "تحرير",
       "editFor": "تحرير {label}",

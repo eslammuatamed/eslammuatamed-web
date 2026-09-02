@@ -752,6 +752,7 @@
       "emptyBody": "Create the first skill and it will appear here.",
       "listRegionLabel": "Skills",
       "resultCount": "{total} skills",
+      "filters": { "group": "Filter by group", "allGroups": "All groups" },
       "create": "New skill",
       "edit": "Edit",
       "editFor": "Edit {label}",

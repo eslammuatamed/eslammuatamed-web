@@ -7,10 +7,15 @@ import {
   type SkillLocale
 } from '~/composables/admin-skill-fields'
 import type { AdminSkill } from '~/composables/admin-project-types'
+import {
+  ADMIN_SKILLS_PER_PAGE,
+  ADMIN_SKILLS_FILTER_GROUPS,
+  parseAdminSkillsQuery,
+  type AdminSkillsFilterGroup
+} from '~/composables/admin-skills-query'
 
 /**
- * Skills is an unpaginated server-owned vocabulary. Its create/edit workflow remains on this route
- * as an entity-owned slideover; only the overlay intent is shareable through its narrow query state.
+ * The collection owns server page/group state. The shared picker retains its independent owner.
  */
 defineI18nRoute(false)
 definePageMeta({ layout: 'dashboard', middleware: 'auth' })
@@ -21,17 +26,22 @@ const router = useRouter()
 const overlayOpen = ref(false)
 const editingId = ref<string | null>(null)
 const lastTrigger = ref<HTMLElement | null>(null)
-const { skills, pending, forbidden, failed, load } = useAdminSkills()
+const { items, total, totalPages, pending, forbidden, failed, load } = useAdminSkillsCollection()
 
 useHead({ title: () => `${t('dashboard.skills.title')} · ${t('dashboard.title')}` })
 
-const hasData = computed(() => skills.value.length > 0)
+const hasData = computed(() => items.value.length > 0)
 const { initialPending, refreshing } = useRequestState(pending, hasData, failed)
 const showErrorState = computed(() => failed.value && !hasData.value)
 const stale = computed(() => failed.value && hasData.value)
 const isEmpty = computed(() =>
-  !pending.value && !failed.value && !forbidden.value && skills.value.length === 0
+  !pending.value && !failed.value && !forbidden.value && total.value === 0
 )
+const parsedQuery = computed(() => parseAdminSkillsQuery(route.query))
+const groupItems = computed(() => [
+  { label: t('dashboard.skills.filters.allGroups'), value: 'all' },
+  ...ADMIN_SKILLS_FILTER_GROUPS.map(value => ({ label: t(`dashboard.skills.group.${value}`), value }))
+])
 
 const columns: TableColumn<AdminSkill>[] = [
   { id: 'label', header: () => t('dashboard.skills.field.label') },
@@ -101,10 +111,38 @@ async function closeOverlay(): Promise<void> {
 }
 
 async function refreshAfterMutation(): Promise<void> {
-  await load()
+  // Clear the overlay intent before the route-owned collection refresh. If a deletion clamps a
+  // final page while `edit` is still present, that replace would otherwise reopen the slideover.
+  const query = { ...route.query }
+  if (editingId.value) delete query.edit
+  else delete query.create
+  await router.replace({ query })
 }
 
-void load()
+function queryWithPage(page: number): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries({ ...route.query, page: page === 1 ? undefined : String(page) })
+      .filter(([, value]) => value !== undefined)
+      .map(([key, value]) => [key, String(value)])
+  )
+}
+function goToPage(page: number): void { void router.push({ query: queryWithPage(page) }) }
+function setGroup(value: AdminSkillsFilterGroup | 'all'): void {
+  const query = Object.fromEntries(
+    Object.entries({ ...route.query, group: value === 'all' ? undefined : value, page: undefined })
+      .filter(([, entry]) => entry !== undefined)
+      .map(([key, entry]) => [key, String(entry)])
+  )
+  void router.push({ query })
+}
+async function loadCurrentPage(): Promise<void> {
+  const query = parsedQuery.value
+  const meta = await load(query)
+  if (!meta || query.page !== parsedQuery.value.page || query.page <= meta.totalPages) return
+  await router.replace({ query: queryWithPage(meta.totalPages) })
+}
+
+watch(parsedQuery, () => { void loadCurrentPage() }, { immediate: true, deep: true })
 </script>
 
 <template>
@@ -132,7 +170,7 @@ void load()
     <section v-else :aria-label="t('dashboard.skills.listRegionLabel')">
       <p v-if="stale" role="status" data-skills-stale class="mb-3 rounded-control border border-warning/40 bg-warning/10 px-3 py-2 text-sm text-highlighted">
         {{ t('dashboard.skills.staleNotice') }}
-        <UButton class="ms-2" size="xs" color="neutral" variant="subtle" data-skills-stale-retry @click="load">
+        <UButton class="ms-2" size="xs" color="neutral" variant="subtle" data-skills-stale-retry @click="loadCurrentPage()">
           {{ t('dashboard.skills.retry') }}
         </UButton>
       </p>
@@ -144,10 +182,10 @@ void load()
         :empty="isEmpty"
         skeleton="rows"
         :count="5"
-        @retry="load"
+        @retry="loadCurrentPage()"
       >
         <template #error>
-          <UiStateError data-skills-failed :message="t('dashboard.skills.errorTitle')" @retry="load" />
+          <UiStateError data-skills-failed :message="t('dashboard.skills.errorTitle')" @retry="loadCurrentPage()" />
         </template>
 
         <template #empty>
@@ -161,13 +199,24 @@ void load()
         </template>
 
         <div data-skills-loaded>
+          <div class="mb-3 flex justify-end" data-skills-filter>
+            <UFormField :label="t('dashboard.skills.filters.group')" class="w-full sm:w-56">
+              <USelect
+                :model-value="parsedQuery.group ?? 'all'"
+                :items="groupItems"
+                data-skills-group
+                class="w-full"
+                @update:model-value="setGroup($event as AdminSkillsFilterGroup | 'all')"
+              />
+            </UFormField>
+          </div>
           <p class="mb-3 text-sm text-muted" data-skills-count>
-            {{ t('dashboard.skills.resultCount', { total: skills.length }) }}
+            {{ t('dashboard.skills.resultCount', { total }) }}
           </p>
 
           <div class="overflow-x-auto">
             <UTable
-              :data="skills"
+              :data="items"
               :columns="columns"
               :loading="refreshing"
               :aria-label="t('dashboard.skills.listRegionLabel')"
@@ -245,6 +294,9 @@ void load()
                 </UButton>
               </template>
             </UTable>
+          </div>
+          <div v-if="totalPages > 1" class="mt-4 flex justify-end" data-skills-pagination>
+            <UPagination :page="parsedQuery.page" :total="total" :items-per-page="ADMIN_SKILLS_PER_PAGE" @update:page="goToPage" />
           </div>
         </div>
       </UiRequestState>
