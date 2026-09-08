@@ -105,7 +105,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>): Promise<void> {
     </template>
 
     <div v-if="formError" ref="alert" tabindex="-1" role="alert" class="mb-6 outline-none">
-      <UAlert color="error" variant="subtle" icon="i-lucide-circle-alert" :title="formError" />
+      <LazyUAlert color="error" variant="subtle" icon="i-lucide-circle-alert" :title="formError" />
     </div>
 
     <UForm ref="form" :schema="schema" :state="state" class="space-y-5" @submit="onSubmit">
