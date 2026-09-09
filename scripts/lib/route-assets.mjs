@@ -905,7 +905,7 @@ export const DASHBOARD_APP_OWNED_BASELINE_PROVENANCE = {
 }
 
 /**
- * The FROZEN absolute app-owned hard cap for every governed dashboard route (doc 20 §1.1, D20-29).
+ * The PRE-FE5 interim app-owned hard caps for every governed dashboard route.
  *
  * These are doc 20 VERBATIM. This map is an ENFORCEMENT mechanism, never the authority: a new cap,
  * or a change to one, requires an owner decision plus a decision-log entry in
@@ -925,7 +925,7 @@ export const DASHBOARD_APP_OWNED_BASELINE_PROVENANCE = {
  *   D20-29 routes  — derived once from DASHBOARD_APP_OWNED_BASELINE_BYTES via
  *                    `approvedAppLimitBytes`, i.e. D20-12's headroom, rounding and units verbatim.
  */
-export const DASHBOARD_APP_OWNED_CAP_BYTES = {
+export const DASHBOARD_APP_OWNED_INTERIM_CAP_BYTES = {
   // D20-23 / D20-12 — preserved unchanged.
   '/dashboard/login': 101 * KB,
   '/dashboard': 101 * KB,
@@ -1021,6 +1021,75 @@ export const DASHBOARD_APP_OWNED_CAP_BYTES = {
   // NOT a waiver, NOT a shared-floor change, NOT an incremental-allowance change, and NOT a D20-32
   // recalibration; the frozen floor reference sets are untouched.
   '/dashboard/seo': 123 * KB
+}
+
+/**
+ * Final FE5-U6 app-owned renderedLength baseline, measured once from the provenance-stamped U6C
+ * production build. Unlike delivered gzip, these exact Rollup bytes are the approved input to the
+ * D20-12/D20-29 formula: ceil(measured × 115 / 102400) × 1024.
+ */
+export const DASHBOARD_APP_OWNED_FE5_BASELINE_BYTES = {
+  '/dashboard/login': 71_786,
+  '/dashboard': 79_179,
+  '/dashboard/messages': 105_753,
+  '/dashboard/media': 98_830,
+  '/dashboard/profile': 110_401,
+  '/dashboard/articles': 98_205,
+  '/dashboard/articles/new': 120_072,
+  '/dashboard/articles/00000000-0000-0000-0000-000000000000': 120_180,
+  '/dashboard/experiences': 93_143,
+  '/dashboard/experiences/new': 115_563,
+  '/dashboard/experiences/00000000-0000-0000-0000-000000000000': 115_671,
+  '/dashboard/skills': 93_937,
+  '/dashboard/skills/new': 66_753,
+  '/dashboard/skills/00000000-0000-0000-0000-000000000000': 66_904,
+  '/dashboard/testimonials': 94_055,
+  '/dashboard/testimonials/new': 66_771,
+  '/dashboard/testimonials/00000000-0000-0000-0000-000000000000': 66_922,
+  '/dashboard/categories': 115_207,
+  '/dashboard/tags': 112_608,
+  '/dashboard/taxonomy': 66_767,
+  '/dashboard/projects': 107_684,
+  '/dashboard/projects/new': 171_707,
+  '/dashboard/projects/00000000-0000-0000-0000-000000000000': 171_885,
+  '/dashboard/seo': 111_260
+}
+
+export const DASHBOARD_APP_OWNED_FE5_BASELINE_PROVENANCE = Object.freeze({
+  head: '892aac18a37ef27348bb796ddd2ce329bf85f83d',
+  tree: '12900a695504f3dfbb0bf5ef38e0dc78a04144ba'
+})
+
+/**
+ * FINAL post-FE5 app-owned hard caps. Every route is independently derived from the baseline above;
+ * the map is frozen policy, never recomputed from later builds. Delivery floor/increment caps, CSS,
+ * reference routes, governed routes, and the D20-24 quality-warning threshold are separate controls.
+ */
+export const DASHBOARD_APP_OWNED_CAP_BYTES = {
+  '/dashboard/login': 81 * KB,
+  '/dashboard': 89 * KB,
+  '/dashboard/messages': 119 * KB,
+  '/dashboard/media': 111 * KB,
+  '/dashboard/profile': 124 * KB,
+  '/dashboard/articles': 111 * KB,
+  '/dashboard/articles/new': 135 * KB,
+  '/dashboard/articles/00000000-0000-0000-0000-000000000000': 135 * KB,
+  '/dashboard/experiences': 105 * KB,
+  '/dashboard/experiences/new': 130 * KB,
+  '/dashboard/experiences/00000000-0000-0000-0000-000000000000': 130 * KB,
+  '/dashboard/skills': 106 * KB,
+  '/dashboard/skills/new': 75 * KB,
+  '/dashboard/skills/00000000-0000-0000-0000-000000000000': 76 * KB,
+  '/dashboard/testimonials': 106 * KB,
+  '/dashboard/testimonials/new': 75 * KB,
+  '/dashboard/testimonials/00000000-0000-0000-0000-000000000000': 76 * KB,
+  '/dashboard/categories': 130 * KB,
+  '/dashboard/tags': 127 * KB,
+  '/dashboard/taxonomy': 75 * KB,
+  '/dashboard/projects': 121 * KB,
+  '/dashboard/projects/new': 193 * KB,
+  '/dashboard/projects/00000000-0000-0000-0000-000000000000': 194 * KB,
+  '/dashboard/seo': 125 * KB
 }
 
 /**

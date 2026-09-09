@@ -471,7 +471,7 @@ shared abstraction: the shared set is now `useTranslatableForm`, `DashboardTrans
 | **FE-2 — Articles Tracer Bullet + Dashboard Architecture** | **COMPLETE.** OD-11, OD-3, D20-33 and its amendment all resolved. FE-2a/2b/2c done: F-1 **CLOSED** with browser evidence · collection · editor · §14.6 extraction pass · **all ten §14.9 criteria demonstrated** · every gate green including `size:routes`. The reusable architecture is recorded in **§10**. |
 | **FE-3 — Content Module Replication** | **COMPLETE — CLOSED at SEO-U4 (2026-08-23).** All five content modules + the shared per-entity SEO panel implemented, verified and inside governance: Experiences, Skills, Testimonials, Taxonomy, plus `DashboardSeoPanel` serving Articles + Projects (the only entities the contract gives SEO fields), Projects null-clear fixed and browser-proven on the wire, R16 closed by the official `dashboard-projects` lane. Final evidence (§5/SEO-U4): clean provenance-stamped build (`632b160…`), all 21 governed routes inside frozen caps (`size:routes` exit 0, zero unclassified), CSS 28.1 KB gz / 30 PASS, typecheck/typecheck:e2e/lint exit 0, unit 144 files / **2102 tests exit 0**, Articles lane 48/48, Projects lane 21/21 (unfiltered axe EN+AR+loading, 380px both locales), full suite 614/616 with both casualties classified as the R15 load class (did not reproduce sharded), sharded suite **616/616 exit 0**, R14 conclusion (B) recorded as recommendation-only, R15 remains OPEN precisely stated. No FE-3 product scope remains open. **FE-4 is next.**<br>**Historical module record (superseded in verdict by the closure above, preserved for the record):** Delegation settled as **OD-12** (hybrid: module 1 in-house, modules 2–5 delegable once the pattern holds). `M1·U1` landed the instrument; **`M1·U2` landed the collection at `/dashboard/experiences`, its `lanes.ts` record, and a third public-isolation gate** — every gate green, the lane 10/10 booting 1 pair, and the route measured at 85,551 B against its own D20-34 cap of 99,328 B. The new route cost **zero CSS**. Four unpredicted findings are in §5/M1·U2, including a gate (`typecheck:e2e`) that had been RED since `M1·U1` because that unit's exit row never listed it. **`M1·U3` landed the editor** (`7e6d11a`): bilingual, Zod + `UForm`, 422→locale-tab mapping, the shared skill picker, `isCurrent`⇄`endDate` on a field-owned error path, and the calendar-date read that Articles' instant-shaped converter would have got wrong. Three rules were each proven able to fail; the `technologyIds` omission control failed **only** the clear-case test, which is the empirical reason both tests exist. Four more unpredicted findings are in §5/M1·U3, including a backend crash that reported itself as eight failing tests. Its route caps were **measured and escalated, never inherited** — the batched decision is **§9.5**, which the owner then **RESOLVED as D20-35** (caps stamped: Web `6b59261`, Docs `97efd02`), clearing the transient `size:routes` exit 2 that this row previously described as current. ⚠ That exit 2 was a MEASUREMENT FAILURE, never a budget breach — the distinction is kept because it is the reason no cap was invented to silence the gate. **`M1·U4b` performed the three HELD extractions** (`fd11c7b`) and **`M1·U5` closed the gates** (`328bf9c`): every authoritative gate green, axe unfiltered in BOTH dashboard languages across four surfaces, 380px verified, `size:routes` 0 on fourteen governed routes, CSS unchanged at 29.19 KB gz. Two findings kept out of the green claim: the full suite is flaky at 507 tests (**R15**, not attributable — shard 3 passed 93/93 twice) and **there is no Projects browser lane to re-run** (**R16**, measured at 0 matches). Module 1 is otherwise CLOSED; modules 2–5 are delegable under OD-12 now that the pattern holds.<br>**`M1·U4` rendered the verdicts**: **five of five §5.2 predictions HELD**, plus a sixth candidate (`DashboardSkillPicker`) discovered and already extracted — measured on 56 byte-identical code lines, 34% of the Experiences editor. The three HELD extractions are **queued, not performed**: acting on them refactors the shipped `ArticleEditor` and needs both lanes re-run, so it is its own unit — **`M1·U4b`, the extraction pass, is next**, then `M1·U5` (gates + axe).<br>**Lane-strategy unit (R14):** A run now boots only the lanes it selected: measured 1 preview pair for `--project=dashboard-articles`, against 10 before, same command. The full suite still boots all ten by design, so R14 is **NARROWED, NOT CLOSED** — see §6 and §5/FE-3/U-1. ⚠ This row previously said the full suite "loses exactly one test per run"; the pre-change control run **did not reproduce that** (471 passed, exit 0) and the claim is corrected here rather than carried forward. |
 | FE-4 — System Modules | **COMPLETE — U1a–U1f and U2e1–U2e3 landed.** U2e3 final closure is recorded below at Web `f64a227`; the governed build, canonical E2E, static gates and Lighthouse all pass. Docs D20-42 and its synchronized bundle are at `d6cbb84`. |
-| FE-5 — Coherence, D20-32 Review, M4 Closure | NOT STARTED |
+| FE-5 — Coherence, D20-32 Review, M4 Closure | **IN PROGRESS.** FE5-U6 implementation and final D20-32 app-owned recalibration are complete on `perf/frontend-v1-u6-login-alert`; promotion to `dev` is pending. FE5-U7 has not started. |
 
 ---
 
@@ -5863,3 +5863,84 @@ FE5-U6 and FE5-U7 remain unstarted. No backend, OpenAPI, or generated API type c
 | Focused Skills browser checks | Passing isolated checks cover actual page/group requests, deep-link/history restoration, retry preservation, overlay CRUD, and filtered final-page delete clamp. |
 | `npm run typecheck:e2e` / `npx nuxt typecheck` / `git diff --check` | exit 0 / exit 0 / exit 0 before final validation pass. |
 | Analysis build / route-size gate | `/dashboard/skills`: 93,918 B app-owned / 104,448 B frozen cap; cap unchanged. The D20-32 delivery and CSS gates pass; the existing D20-24 332.0 KB gzip quality-target warning remains. |
+
+---
+
+## FE5-U6 — final D20-32 recalibration · IMPLEMENTATION COMPLETE — PROMOTION PENDING · 2026-09-08
+
+**OWNER FUNCTIONAL ACCEPTANCE.** The accepted Production baseline remains `main`
+`40eb52c6470579c19131d3cede41ccc9b295bdf5`, release `20260902T233003Z-40eb52c`. U6A measured the
+accepted 266,242 B Dashboard shared floor and required investigation rather than silently raising a
+limit. U6B attributed all 6,331 B of shared-floor growth, proved the two CSS gates intentionally
+measure different scopes, judged the floor acceptable but tight, and selected the login
+`LazyUAlert` candidate. U6C changed only `app/pages/dashboard/login.vue` at
+`892aac18a37ef27348bb796ddd2ce329bf85f83d`: Alert left the eight-route common intersection, the
+floor fell from 266,242 B to 264,978 B (-1,264 B), hard-ceiling headroom became 3,310 B, and focused
+login behavior/accessibility checks passed.
+
+U6D used one new, serialized analysis build because the prior output lacked an exact provenance
+marker. The stamped input is HEAD `892aac18a37ef27348bb796ddd2ce329bf85f83d`, tree
+`12900a695504f3dfbb0bf5ef38e0dc78a04144ba`, output hash
+`c9a99aa39531c4cc6c4d1532ab63cf3896c250ad5680571fb367b39f749989e5`, 1,799 output files and 150
+client chunks. The final eight-reference-route floor is 264,978 B gzip across 56 common assets:
+3,310 B below the unchanged 268,288 B hard ceiling (98.766% utilization). Static CSS is 29,239 B
+gzip / 30,000 B; Dashboard route-entry CSS is 28,777 B gzip / 30,720 B. Both CSS caps are unchanged.
+
+The final app-owned cap formula was applied only to Rollup `renderedLength`:
+`ceil(measured × 115 / 102400) × 1024`. Each final value is the first whole-KiB boundary that covers
+`measured × 1.15`; subtracting 1,024 B fails that boundary. Delivery total and increment remain
+independent gzip readings.
+
+| Route | Role | App B | Delivered B | Increment B | Interim cap B | Final cap B | Delta B | Final headroom B |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `/dashboard/login` | auth | 71,786 | 291,682 | 26,704 | 103,424 | 82,944 | -20,480 | 11,158 |
+| `/dashboard` | overview | 79,179 | 270,736 | 5,758 | 103,424 | 91,136 | -12,288 | 11,957 |
+| `/dashboard/messages` | collection | 105,753 | 345,357 | 80,379 | 120,832 | 121,856 | +1,024 | 16,103 |
+| `/dashboard/media` | collection | 98,830 | 296,448 | 31,470 | 110,592 | 113,664 | +3,072 | 14,834 |
+| `/dashboard/profile` | settings | 110,401 | 300,373 | 35,395 | 123,904 | 126,976 | +3,072 | 16,575 |
+| `/dashboard/articles` | collection | 98,205 | 343,294 | 78,316 | 102,400 | 113,664 | +11,264 | 15,459 |
+| `/dashboard/articles/new` | editor | 120,072 | 336,514 | 71,536 | 122,880 | 138,240 | +15,360 | 18,168 |
+| `/dashboard/articles/00000000-0000-0000-0000-000000000000` | editor | 120,180 | 336,558 | 71,580 | 122,880 | 138,240 | +15,360 | 18,060 |
+| `/dashboard/experiences` | collection | 93,143 | 315,521 | 50,543 | 99,328 | 107,520 | +8,192 | 14,377 |
+| `/dashboard/experiences/new` | editor | 115,563 | 343,564 | 78,586 | 120,832 | 133,120 | +12,288 | 17,557 |
+| `/dashboard/experiences/00000000-0000-0000-0000-000000000000` | editor | 115,671 | 343,610 | 78,632 | 121,856 | 133,120 | +11,264 | 17,449 |
+| `/dashboard/skills` | collection | 93,937 | 340,385 | 75,407 | 104,448 | 108,544 | +4,096 | 14,607 |
+| `/dashboard/skills/new` | redirect | 66,753 | 265,223 | 245 | 76,800 | 76,800 | 0 | 10,047 |
+| `/dashboard/skills/00000000-0000-0000-0000-000000000000` | redirect | 66,904 | 265,274 | 296 | 77,824 | 77,824 | 0 | 10,920 |
+| `/dashboard/testimonials` | collection | 94,055 | 316,162 | 51,184 | 106,496 | 108,544 | +2,048 | 14,489 |
+| `/dashboard/testimonials/new` | redirect | 66,771 | 265,227 | 249 | 76,800 | 76,800 | 0 | 10,029 |
+| `/dashboard/testimonials/00000000-0000-0000-0000-000000000000` | redirect | 66,922 | 265,277 | 299 | 77,824 | 77,824 | 0 | 10,902 |
+| `/dashboard/categories` | collection | 115,207 | 334,441 | 69,463 | 130,048 | 133,120 | +3,072 | 17,913 |
+| `/dashboard/tags` | collection | 112,608 | 331,435 | 66,457 | 126,976 | 130,048 | +3,072 | 17,440 |
+| `/dashboard/taxonomy` | redirect | 66,767 | 265,222 | 244 | 76,800 | 76,800 | 0 | 10,033 |
+| `/dashboard/projects` | collection | 107,684 | 344,656 | 79,678 | 109,568 | 123,904 | +14,336 | 16,220 |
+| `/dashboard/projects/new` | editor | 171,707 | 328,121 | 63,143 | 175,104 | 197,632 | +22,528 | 25,925 |
+| `/dashboard/projects/00000000-0000-0000-0000-000000000000` | editor | 171,885 | 328,179 | 63,201 | 176,128 | 198,656 | +22,528 | 26,771 |
+| `/dashboard/seo` | settings | 111,260 | 308,937 | 43,959 | 125,952 | 128,000 | +2,048 | 16,740 |
+
+The closest delivery increment is Messages at 80,379 B, leaving 5,637 B below the unchanged
+86,016 B hard ceiling. Next closest are Projects 79,678 B, Experience edit 78,632 B, Experience new
+78,586 B, Articles 78,316 B, and Skills 75,407 B. There are no hard-delivery breaches. The shared
+floor ceiling, delivery-increment ceiling, eight reference routes, 24 governed routes, warning
+threshold, gzip/closure algorithms, package/CI configuration, backend, OpenAPI/types, and both CSS
+limits are unchanged.
+
+### U6D verification
+
+| Check | Result |
+| --- | --- |
+| Measurement provenance | `ANALYZE_BUNDLE=1 NUXT_PUBLIC_SITE_URL=https://example.com npm run build`, exit 0; 150 client chunks. `ANALYZE_BUNDLE=1 NUXT_PUBLIC_SITE_URL=https://example.com node scripts/assert-exact-build.mjs`, exit 0, exact HEAD/tree verified. |
+| Matrix instrument negative control | Omitting one known common asset failed with `common asset /_nuxt/10PgAdWr2.js was omitted from the floor`; restored instrument matched the route gate at 264,978 B / 56 assets and max increment 80,379 B. The temporary instrument was not committed. |
+| Focused route-governance tests | `npm test -- --run scripts/lib/route-assets.spec.mjs`, 1 file / 173 tests passed, exit 0. A first run isolated one stale historical expectation; its exact test then passed before the full focused rerun. New-test negative control raised the login cap by 1 KiB and the literal-map test failed 1/1 with 83,968 B received versus 82,944 B expected; restored isolated rerun passed 1/1. |
+| Route-size gate | `NUXT_PUBLIC_SITE_URL=https://example.com npm run size:routes`, exit 0 on the same output: all 24 final app-owned caps, shared floor, every delivery increment, and Dashboard CSS pass; 15 existing D20-24 quality warnings remain warning-only. |
+| Static CSS gate | `npm run size`, exit 0: 29.24 kB displayed (29,239 B gzip measured by the gate algorithm) / 30 kB. |
+| Cheap static gates | `npm run typecheck`; `npm run typecheck:e2e`; `npm run lint` — each exit 0. |
+
+U6 is not remotely accepted, merged, or deployed. Promotion through a release PR and authoritative
+CI is next; FE5-U7 has not started.
+
+Next three actions:
+
+1. Open the FE5-U6 release PR to `dev` in the separately authorized promotion unit.
+2. Require authoritative PR CI and review against this exact U6C+U6D branch history.
+3. Merge only after approval; do not start FE5-U7 from this unit.

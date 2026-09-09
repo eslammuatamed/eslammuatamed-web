@@ -59,12 +59,18 @@ test.describe('GTM enabled (published test container)', () => {
       route.fulfill({ status: 200, contentType: 'application/json', body: '{}' })
     )
 
+    // Arm before navigation: request events are not retrospective, and the onNuxtReady loader can
+    // fire while the hydration helper is still observing Vue's completed mount.
+    const gtmRequest = page.waitForRequest(
+      request =>
+        request.url()
+        === 'https://www.googletagmanager.com/gtm.js?id=GTM-TEST1234',
+      { timeout: 10_000 }
+    )
+
     await page.goto('/')
     await hydrated(page)
-
-    // The loader request fires only AFTER Vue has mounted (onNuxtReady), never during SSR or
-    // before hydration completes.
-    await page.waitForRequest(GTM_LOADER, { timeout: 10_000 })
+    await gtmRequest
     expect(gtmRequests.length).toBe(1)
     expect(gtmRequests[0]).toMatch(/^https:\/\/www\.googletagmanager\.com\//)
 

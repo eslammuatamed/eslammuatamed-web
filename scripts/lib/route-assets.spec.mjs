@@ -5,6 +5,9 @@ import {
   DASHBOARD_ACCEPTED_BASELINE_BYTES,
   DASHBOARD_APP_OWNED_BASELINE_BYTES,
   DASHBOARD_APP_OWNED_BASELINE_PROVENANCE,
+  DASHBOARD_APP_OWNED_FE5_BASELINE_BYTES,
+  DASHBOARD_APP_OWNED_FE5_BASELINE_PROVENANCE,
+  DASHBOARD_APP_OWNED_INTERIM_CAP_BYTES,
   DASHBOARD_APP_OWNED_CAP_BYTES,
   DASHBOARD_BUDGET,
   KB,
@@ -577,6 +580,9 @@ describe('DASHBOARD_ACCEPTED_BASELINE_BYTES — reporting input, never a gate', 
  * drop one. Each of those failures is invisible in a green exit code.
  */
 describe('dashboard app-owned caps — frozen, per route (D20-29)', () => {
+  // Preserve every historical decision assertion against the exact pre-FE5 map it originally
+  // governed. FE5-U6 introduces a separately tested final map below; it does not rewrite history.
+  const DASHBOARD_APP_OWNED_CAP_BYTES = DASHBOARD_APP_OWNED_INTERIM_CAP_BYTES
   const D20_23_ROUTES = ['/dashboard/login', '/dashboard']
   /** PR #75 owner-approved interim acceptance bridge; FE5-U6 remains its final recalibration. */
   const PR75_BRIDGE_ROUTES = ['/dashboard/messages']
@@ -987,8 +993,8 @@ describe('dashboard app-owned caps — frozen, per route (D20-29)', () => {
 
   describe('dashboardAppCapFor', () => {
     it('returns the frozen cap for each governed route', () => {
-      for (const [route, cap] of Object.entries(DASHBOARD_APP_OWNED_CAP_BYTES)) {
-        expect(dashboardAppCapFor(route)).toBe(cap)
+      for (const [route, measured] of Object.entries(DASHBOARD_APP_OWNED_FE5_BASELINE_BYTES)) {
+        expect(dashboardAppCapFor(route)).toBe(approvedAppLimitBytes(measured))
       }
     })
 
@@ -1016,6 +1022,70 @@ describe('dashboard app-owned caps — frozen, per route (D20-29)', () => {
       expect(projectsNew).toBeGreaterThan(profileCap)
       expect(budgetVerdict(projectsNew, profileCap)).toBe('FAIL')
     })
+  })
+})
+
+describe('FE5-U6 — final app-owned route-cap recalibration', () => {
+  const FINAL_CAPS = {
+    '/dashboard/login': 82_944,
+    '/dashboard': 91_136,
+    '/dashboard/messages': 121_856,
+    '/dashboard/media': 113_664,
+    '/dashboard/profile': 126_976,
+    '/dashboard/articles': 113_664,
+    '/dashboard/articles/new': 138_240,
+    '/dashboard/articles/00000000-0000-0000-0000-000000000000': 138_240,
+    '/dashboard/experiences': 107_520,
+    '/dashboard/experiences/new': 133_120,
+    '/dashboard/experiences/00000000-0000-0000-0000-000000000000': 133_120,
+    '/dashboard/skills': 108_544,
+    '/dashboard/skills/new': 76_800,
+    '/dashboard/skills/00000000-0000-0000-0000-000000000000': 77_824,
+    '/dashboard/testimonials': 108_544,
+    '/dashboard/testimonials/new': 76_800,
+    '/dashboard/testimonials/00000000-0000-0000-0000-000000000000': 77_824,
+    '/dashboard/categories': 133_120,
+    '/dashboard/tags': 130_048,
+    '/dashboard/taxonomy': 76_800,
+    '/dashboard/projects': 123_904,
+    '/dashboard/projects/new': 197_632,
+    '/dashboard/projects/00000000-0000-0000-0000-000000000000': 198_656,
+    '/dashboard/seo': 128_000
+  }
+
+  it('pins the exact provenance-stamped U6C measurement tree', () => {
+    expect(DASHBOARD_APP_OWNED_FE5_BASELINE_PROVENANCE).toEqual({
+      head: '892aac18a37ef27348bb796ddd2ce329bf85f83d',
+      tree: '12900a695504f3dfbb0bf5ef38e0dc78a04144ba'
+    })
+  })
+
+  it('freezes one final measured baseline for every governed route', () => {
+    const governed = DASHBOARD_ROUTES.map(({ route }) => route).sort()
+    expect(governed).toHaveLength(24)
+    expect(Object.keys(DASHBOARD_APP_OWNED_FE5_BASELINE_BYTES).sort()).toEqual(governed)
+    expect(Object.keys(DASHBOARD_APP_OWNED_CAP_BYTES).sort()).toEqual(governed)
+  })
+
+  it('pins the exact final cap map independently of the derivation helper', () => {
+    expect(DASHBOARD_APP_OWNED_CAP_BYTES).toEqual(FINAL_CAPS)
+  })
+
+  it('applies the approved formula exactly and would reject a cap one KiB lower', () => {
+    for (const [route, measured] of Object.entries(DASHBOARD_APP_OWNED_FE5_BASELINE_BYTES)) {
+      const scaled = measured * 115 / 100
+      const cap = DASHBOARD_APP_OWNED_CAP_BYTES[route]
+      expect(cap, `${route} must cover measured × 1.15`).toBeGreaterThanOrEqual(scaled)
+      expect(cap - KB, `${route} must be the first whole-KiB boundary above measured × 1.15`)
+        .toBeLessThan(scaled)
+      expect(cap, `${route} must use the established helper`).toBe(approvedAppLimitBytes(measured))
+    }
+  })
+
+  it('keeps final enforcement separate from the interim audit record', () => {
+    expect(DASHBOARD_APP_OWNED_CAP_BYTES).not.toBe(DASHBOARD_APP_OWNED_INTERIM_CAP_BYTES)
+    expect(DASHBOARD_APP_OWNED_CAP_BYTES['/dashboard/login']).toBe(82_944)
+    expect(DASHBOARD_APP_OWNED_INTERIM_CAP_BYTES['/dashboard/login']).toBe(103_424)
   })
 })
 
