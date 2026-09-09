@@ -471,7 +471,7 @@ shared abstraction: the shared set is now `useTranslatableForm`, `DashboardTrans
 | **FE-2 — Articles Tracer Bullet + Dashboard Architecture** | **COMPLETE.** OD-11, OD-3, D20-33 and its amendment all resolved. FE-2a/2b/2c done: F-1 **CLOSED** with browser evidence · collection · editor · §14.6 extraction pass · **all ten §14.9 criteria demonstrated** · every gate green including `size:routes`. The reusable architecture is recorded in **§10**. |
 | **FE-3 — Content Module Replication** | **COMPLETE — CLOSED at SEO-U4 (2026-08-23).** All five content modules + the shared per-entity SEO panel implemented, verified and inside governance: Experiences, Skills, Testimonials, Taxonomy, plus `DashboardSeoPanel` serving Articles + Projects (the only entities the contract gives SEO fields), Projects null-clear fixed and browser-proven on the wire, R16 closed by the official `dashboard-projects` lane. Final evidence (§5/SEO-U4): clean provenance-stamped build (`632b160…`), all 21 governed routes inside frozen caps (`size:routes` exit 0, zero unclassified), CSS 28.1 KB gz / 30 PASS, typecheck/typecheck:e2e/lint exit 0, unit 144 files / **2102 tests exit 0**, Articles lane 48/48, Projects lane 21/21 (unfiltered axe EN+AR+loading, 380px both locales), full suite 614/616 with both casualties classified as the R15 load class (did not reproduce sharded), sharded suite **616/616 exit 0**, R14 conclusion (B) recorded as recommendation-only, R15 remains OPEN precisely stated. No FE-3 product scope remains open. **FE-4 is next.**<br>**Historical module record (superseded in verdict by the closure above, preserved for the record):** Delegation settled as **OD-12** (hybrid: module 1 in-house, modules 2–5 delegable once the pattern holds). `M1·U1` landed the instrument; **`M1·U2` landed the collection at `/dashboard/experiences`, its `lanes.ts` record, and a third public-isolation gate** — every gate green, the lane 10/10 booting 1 pair, and the route measured at 85,551 B against its own D20-34 cap of 99,328 B. The new route cost **zero CSS**. Four unpredicted findings are in §5/M1·U2, including a gate (`typecheck:e2e`) that had been RED since `M1·U1` because that unit's exit row never listed it. **`M1·U3` landed the editor** (`7e6d11a`): bilingual, Zod + `UForm`, 422→locale-tab mapping, the shared skill picker, `isCurrent`⇄`endDate` on a field-owned error path, and the calendar-date read that Articles' instant-shaped converter would have got wrong. Three rules were each proven able to fail; the `technologyIds` omission control failed **only** the clear-case test, which is the empirical reason both tests exist. Four more unpredicted findings are in §5/M1·U3, including a backend crash that reported itself as eight failing tests. Its route caps were **measured and escalated, never inherited** — the batched decision is **§9.5**, which the owner then **RESOLVED as D20-35** (caps stamped: Web `6b59261`, Docs `97efd02`), clearing the transient `size:routes` exit 2 that this row previously described as current. ⚠ That exit 2 was a MEASUREMENT FAILURE, never a budget breach — the distinction is kept because it is the reason no cap was invented to silence the gate. **`M1·U4b` performed the three HELD extractions** (`fd11c7b`) and **`M1·U5` closed the gates** (`328bf9c`): every authoritative gate green, axe unfiltered in BOTH dashboard languages across four surfaces, 380px verified, `size:routes` 0 on fourteen governed routes, CSS unchanged at 29.19 KB gz. Two findings kept out of the green claim: the full suite is flaky at 507 tests (**R15**, not attributable — shard 3 passed 93/93 twice) and **there is no Projects browser lane to re-run** (**R16**, measured at 0 matches). Module 1 is otherwise CLOSED; modules 2–5 are delegable under OD-12 now that the pattern holds.<br>**`M1·U4` rendered the verdicts**: **five of five §5.2 predictions HELD**, plus a sixth candidate (`DashboardSkillPicker`) discovered and already extracted — measured on 56 byte-identical code lines, 34% of the Experiences editor. The three HELD extractions are **queued, not performed**: acting on them refactors the shipped `ArticleEditor` and needs both lanes re-run, so it is its own unit — **`M1·U4b`, the extraction pass, is next**, then `M1·U5` (gates + axe).<br>**Lane-strategy unit (R14):** A run now boots only the lanes it selected: measured 1 preview pair for `--project=dashboard-articles`, against 10 before, same command. The full suite still boots all ten by design, so R14 is **NARROWED, NOT CLOSED** — see §6 and §5/FE-3/U-1. ⚠ This row previously said the full suite "loses exactly one test per run"; the pre-change control run **did not reproduce that** (471 passed, exit 0) and the claim is corrected here rather than carried forward. |
 | FE-4 — System Modules | **COMPLETE — U1a–U1f and U2e1–U2e3 landed.** U2e3 final closure is recorded below at Web `f64a227`; the governed build, canonical E2E, static gates and Lighthouse all pass. Docs D20-42 and its synchronized bundle are at `d6cbb84`. |
-| FE-5 — Coherence, D20-32 Review, M4 Closure | **IN PROGRESS.** FE5-U6 implementation and final D20-32 app-owned recalibration are complete on `perf/frontend-v1-u6-login-alert`; promotion to `dev` is pending. FE5-U7 has not started. |
+| FE-5 — Coherence, D20-32 Review, M4 Closure | **IN PROGRESS.** FE5-U6 implementation, final D20-32 app-owned recalibration, and promotion are complete on `dev` at `71cac27cba3ba03b214fea4ef1cd409c7d3f170a` via PR #81. FE5-U7 has not started. |
 
 ---
 
@@ -5866,7 +5866,7 @@ FE5-U6 and FE5-U7 remain unstarted. No backend, OpenAPI, or generated API type c
 
 ---
 
-## FE5-U6 — final D20-32 recalibration · IMPLEMENTATION COMPLETE — PROMOTION PENDING · 2026-09-08
+## FE5-U6 — final D20-32 recalibration · COMPLETE — MERGED TO DEV · 2026-09-09
 
 **OWNER FUNCTIONAL ACCEPTANCE.** The accepted Production baseline remains `main`
 `40eb52c6470579c19131d3cede41ccc9b295bdf5`, release `20260902T233003Z-40eb52c`. U6A measured the
@@ -5936,11 +5936,27 @@ limits are unchanged.
 | Static CSS gate | `npm run size`, exit 0: 29.24 kB displayed (29,239 B gzip measured by the gate algorithm) / 30 kB. |
 | Cheap static gates | `npm run typecheck`; `npm run typecheck:e2e`; `npm run lint` — each exit 0. |
 
-U6 is not remotely accepted, merged, or deployed. Promotion through a release PR and authoritative
-CI is next; FE5-U7 has not started.
+### U6 release closeout
+
+PR #80 was closed without merge after its sole E2E failure was isolated to a GTM request-observer
+timing race. Commit `516fd02949ad1d08213853a88373192f7b74993f` pre-armed that observer before
+navigation without changing runtime behavior, retry policy, the 10-second timeout, or any product
+assertion. Replacement PR #81 tested head `516fd02949ad1d08213853a88373192f7b74993f` on synthetic
+merge `1ec69450a1474578f63e5677ef905e6986e655c6` into exact base
+`875e2b75e5a0e4e7deb6ac282127bd0e1d149333`. Authoritative PR CI run `34351145493` passed all five
+jobs, including 2,600 unit tests, 675 Playwright/axe results, both governed Lighthouse jobs, every
+route/CSS/isolation gate, and the corrected GTM lifecycle assertion.
+
+PR #81 was squash-merged to `dev` as `71cac27cba3ba03b214fea4ef1cd409c7d3f170a` on 2026-09-09.
+Its tree `4ed5347832567bd440ebb549f38c97eaa5d96a9d` exactly matches the CI-tested synthetic merge tree,
+and its sole parent is the reviewed base. Required push-to-`dev` integration run `34368047302`
+completed successfully: verification/build/isolation, E2E/axe, and Lighthouse desktop/mobile were
+all green; the advisory branch-policy job was correctly skipped for the push event. `main` remains
+`40eb52c6470579c19131d3cede41ccc9b295bdf5`, no production deployment occurred, and FE5-U7 has not
+started. U6 is closed on `dev`; deployment remains outside this unit.
 
 Next three actions:
 
-1. Open the FE5-U6 release PR to `dev` in the separately authorized promotion unit.
-2. Require authoritative PR CI and review against this exact U6C+U6D branch history.
-3. Merge only after approval; do not start FE5-U7 from this unit.
+1. Stop at the FE5-U6 release boundary; do not promote `dev` to `main` or deploy from this unit.
+2. Start FE5-U7 only under separate explicit authorization and from the then-current `dev` tip.
+3. Preserve the accepted Production baseline and the U6 provenance above when FE5-U7 begins.
