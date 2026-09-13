@@ -6102,3 +6102,50 @@ Medians are compared before formatting or rounding.
 This is prerequisite remediation only. No governed Lighthouse matrix ran, no U7 candidate was frozen,
 and FE5-U7 acceptance remains unstarted. PR and post-merge facts are deliberately deferred until they
 exist; the established ledger-only closeout will record them after exact-SHA certification.
+
+### Pre-U7 strict CLS comparator prerequisite closeout · 2026-09-14
+
+Implementation branch `fix/frontend-v1-u7-cls-threshold` started from exact `origin/dev`
+`3e63583c7257d3064b9de6b133130e25dbe10ad8`. Its checkpoint commit was
+`f8c4f53173473e530e92d8582312bf295f731bfb`; implementation head
+`c2f61de044469c9ecc37537a2d91acf5cf86bf2d` preserved the raw `0.05` threshold and median
+aggregation while changing only CLS to exclusive `<` comparison/reporting. LCP, font, category,
+quality-target, desktop/mobile, run-count, Arabic-exception, and advisory/blocking semantics are
+unchanged.
+
+The boundary test was added before the runtime correction. Against the old inclusive comparator,
+`npm test -- --run scripts/lib/lighthouse-medians.spec.mjs -t "strict CLS limit"` failed the exact
+`0.05` assertion with `expected true to be false`; after correction it passed with `0.0499` accepted,
+exact `0.05` rejected, and `0.0501` rejected. The combined comparator/CLI command
+`npm test -- --run scripts/lib/lighthouse-medians.spec.mjs scripts/check-lighthouse-medians.spec.mjs`
+passed 95/95 tests across two files. `npm run lint` and `npm run typecheck` passed. The authoritative
+full `npm test` rerun passed 2,602/2,602 tests across 167 files. The clean-tree production build
+`NUXT_PUBLIC_SITE_URL=https://example.com NUXT_PUBLIC_API_BASE=https://example.com/api/v1 npm run build`
+passed and stamped `.output/.provenance.json` for exact head
+`c2f61de044469c9ecc37537a2d91acf5cf86bf2d`; `git diff --check origin/dev` passed.
+
+PR #85 (`https://github.com/eslammuatamed/eslammuatamed-web/pull/85`) targeted exact base
+`3e63583c7257d3064b9de6b133130e25dbe10ad8` at exact head
+`c2f61de044469c9ecc37537a2d91acf5cf86bf2d`. Its only changed files were the shared comparator,
+comparator spec, CLI reporter, CLI spec, and this append-only ledger. PR CI run `34766457176` passed
+all five jobs: branch-policy advisory, verification/build/isolation, E2E/axe, Lighthouse desktop,
+and Lighthouse mobile. Independent read-only review found no actionable defect or scope drift.
+
+PR #85 was squash-merged to `dev` as `1c7a555591286caf9fb5d4157c7eb4195e8e54a3` on
+2026-09-13. Required exact-SHA push integration run `34788579555` completed `success`: the primary
+job passed in 4m03s, Lighthouse mobile in 10m44s, E2E/axe in 11m27s, and Lighthouse desktop in
+11m37s; the push-event branch-policy advisory was correctly skipped. These ordinary CI Lighthouse
+jobs certify the code merge only and are not governed FE5-U7 acceptance evidence.
+
+U7-PRE-004 is therefore closed. Authoritative Central Docs remains
+`5001ae62573ae488a16a552b1de9d7d1d03f72ab` with strict `CLS < 0.05`; Web `main` remains the
+accepted production baseline `40eb52c6470579c19131d3cede41ccc9b295bdf5`. No reference environment
+was provisioned, no security remediation or workflow/package/lockfile change occurred, no U7-A01
+candidate was frozen, no governed 96-audit matrix or manual acceptance ran, FE5-U7 acceptance did
+not start, and no content, production, promotion, deployment, or FE5-U8 action occurred.
+
+**Next three actions.**
+
+1. Provision and independently certify the governed non-production Lighthouse reference environment.
+2. Repair and independently certify the D19-11 blocking HIGH+ Web PR/integration CI gate, and assign governed evidence locations, operators, and retention.
+3. Only after all remaining start prerequisites pass, separately authorize U7-A01 to freeze the candidate; do not treat this closeout as the start of FE5-U7 acceptance.

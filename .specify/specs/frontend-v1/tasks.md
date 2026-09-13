@@ -23,7 +23,7 @@ reviews, and D16-8 closeout.
 - [ ] **U7-PRE-001** Provision/identify the governed non-production Lighthouse reference environment satisfying `spec.md` §5.1; retain capacity and protocol proof.
 - [ ] **U7-PRE-002** Remediate the Web **CI SECURITY GATE DEFECT** so the D19-11 high+ audit blocks PR/integration CI; do not infer a `deploy.yml` requirement.
 - [ ] **U7-PRE-003** Certify prerequisite outputs independently and record their merged SHAs/evidence locations in the append-only ledger.
-- [ ] **U7-PRE-004** Reconcile the current Lighthouse summarizer's `0.05`-passes comparator with authoritative D20 `CLS < 0.05`; prove the strict boundary with a negative control in a separately authorized instrumentation fix.
+- [x] **U7-PRE-004** Reconcile the current Lighthouse summarizer's `0.05`-passes comparator with authoritative D20 `CLS < 0.05`; prove the strict boundary with a negative control in a separately authorized instrumentation fix.
 
 **Start checkpoint:** do not run U7-A01 until SP-1 and SP-3…SP-5 pass. U7-A01 is the controlled
 start that freezes the candidate and discharges SP-2 before any downstream evidence collection.
