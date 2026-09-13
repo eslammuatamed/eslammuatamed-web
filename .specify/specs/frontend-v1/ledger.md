@@ -6054,3 +6054,29 @@ are N/A under D16-13 because this task changed no application module or data-bac
 1. Provision and independently certify the governed non-production Lighthouse reference environment in a separately authorized prerequisite task.
 2. Repair the D19-11 high+ Web PR/integration CI gate and the strict D20 CLS comparator in separately authorized prerequisite tasks.
 3. Only after SP-1 and SP-3…SP-5 pass, begin U7 with controlled candidate freeze U7-A01; do not promote or deploy.
+
+---
+
+## Pre-U7 strict CLS comparator prerequisite — zero-trust start · 2026-09-13
+
+**Boundary:** repair only U7-PRE-004. FE5-U7 acceptance remains unstarted; no candidate is frozen.
+
+| Claim | Verified live state |
+| --- | --- |
+| Web base | `origin/dev` `3e63583c7257d3064b9de6b133130e25dbe10ad8` |
+| Production baseline | `origin/main` `40eb52c6470579c19131d3cede41ccc9b295bdf5` |
+| Exact-SHA integration CI | run `34763887093`, head `3e63583c7257d3064b9de6b133130e25dbe10ad8`, `completed` / `success` |
+| Central Docs authority | `origin/main` `5001ae62573ae488a16a552b1de9d7d1d03f72ab`; `docs/20-performance.md` requires strict `CLS < 0.05` |
+| Root cause | Release-policy comparator defect: `METRIC_LIMITS` stores raw `0.05`, but `summariseGroup` applies the inclusive `value <= limit` metric comparator and the focused test expects exact `0.05` to pass |
+| Enforcement topology | One shared median implementation serves local hard mode and hosted advisory mode; no duplicate CLS comparator exists |
+
+**Authorized files:** `scripts/lib/lighthouse-medians.mjs`, its focused spec,
+`scripts/check-lighthouse-medians.mjs`, its focused spec, and this campaign evidence surface. No
+workflow, dependency, lockfile, application, Central Docs, environment, security, content, production,
+promotion, or FE5-U8 change is authorized.
+
+**Next three actions.**
+
+1. Add the strict CLS boundary proof and demonstrate that it fails against the existing inclusive comparator.
+2. Correct only CLS comparison/reporting semantics, then run focused and changed-surface validation.
+3. Certify and merge the exact PR head, certify post-merge `dev`, and close only U7-PRE-004 in a ledger-only follow-up.
