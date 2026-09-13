@@ -6054,3 +6054,51 @@ are N/A under D16-13 because this task changed no application module or data-bac
 1. Provision and independently certify the governed non-production Lighthouse reference environment in a separately authorized prerequisite task.
 2. Repair the D19-11 high+ Web PR/integration CI gate and the strict D20 CLS comparator in separately authorized prerequisite tasks.
 3. Only after SP-1 and SP-3…SP-5 pass, begin U7 with controlled candidate freeze U7-A01; do not promote or deploy.
+
+---
+
+## Pre-U7 strict CLS comparator prerequisite — zero-trust start · 2026-09-13
+
+**Boundary:** repair only U7-PRE-004. FE5-U7 acceptance remains unstarted; no candidate is frozen.
+
+| Claim | Verified live state |
+| --- | --- |
+| Web base | `origin/dev` `3e63583c7257d3064b9de6b133130e25dbe10ad8` |
+| Production baseline | `origin/main` `40eb52c6470579c19131d3cede41ccc9b295bdf5` |
+| Exact-SHA integration CI | run `34763887093`, head `3e63583c7257d3064b9de6b133130e25dbe10ad8`, `completed` / `success` |
+| Central Docs authority | `origin/main` `5001ae62573ae488a16a552b1de9d7d1d03f72ab`; `docs/20-performance.md` requires strict `CLS < 0.05` |
+| Root cause | Release-policy comparator defect: `METRIC_LIMITS` stores raw `0.05`, but `summariseGroup` applies the inclusive `value <= limit` metric comparator and the focused test expects exact `0.05` to pass |
+| Enforcement topology | One shared median implementation serves local hard mode and hosted advisory mode; no duplicate CLS comparator exists |
+
+**Authorized files:** `scripts/lib/lighthouse-medians.mjs`, its focused spec,
+`scripts/check-lighthouse-medians.mjs`, its focused spec, and this campaign evidence surface. No
+workflow, dependency, lockfile, application, Central Docs, environment, security, content, production,
+promotion, or FE5-U8 change is authorized.
+
+**Next three actions.**
+
+1. Add the strict CLS boundary proof and demonstrate that it fails against the existing inclusive comparator.
+2. Correct only CLS comparison/reporting semantics, then run focused and changed-surface validation.
+3. Certify and merge the exact PR head, certify post-merge `dev`, and close only U7-PRE-004 in a ledger-only follow-up.
+
+### Strict CLS comparator implementation proven locally · 2026-09-13
+
+The threshold remains the raw number `0.05`. `cumulative-layout-shift` now declares an exclusive
+comparison, so the shared median summarizer applies `<` only to CLS while retaining inclusive `≤`
+for LCP, fonts, and LCP quality targets. The CLI reports the same operator used by the verdict.
+Medians are compared before formatting or rounding.
+
+| Evidence | Result |
+| --- | --- |
+| Required negative control | Added the strict focused assertion before changing the comparator; `npm test -- --run scripts/lib/lighthouse-medians.spec.mjs -t "strict CLS limit"` failed 1/1 at the intended line with `expected true to be false` for exact median `0.05` |
+| Corrected isolated boundary | The same command passed 1/1: `0.0499` passes, exact `0.05` fails, and `0.0501` fails |
+| Focused comparator + CLI suites | `npm test -- --run scripts/lib/lighthouse-medians.spec.mjs scripts/check-lighthouse-medians.spec.mjs` passed 95/95 across 2 files |
+| Lint | `npm run lint`, exit 0 |
+| Typecheck | `npm run typecheck`, exit 0 |
+| Full unit suite | Initial restricted-sandbox run could not complete process/port harnesses; the first named failure passed 1/1 when isolated with required permissions. Authoritative rerun `npm test` passed 2,602/2,602 across 167 files, exit 0 |
+| Production build | `NUXT_PUBLIC_SITE_URL=https://example.com NUXT_PUBLIC_API_BASE=https://example.com/api/v1 npm run build`, exit 0; the provenance marker correctly declined to stamp the intentionally dirty pre-commit tree |
+| Scope/diff | `git diff --check`, exit 0; no `.github`, package, lockfile, application, OpenAPI, Nuxt config, Docs, environment, production, or unrelated performance change |
+
+This is prerequisite remediation only. No governed Lighthouse matrix ran, no U7 candidate was frozen,
+and FE5-U7 acceptance remains unstarted. PR and post-merge facts are deliberately deferred until they
+exist; the established ledger-only closeout will record them after exact-SHA certification.

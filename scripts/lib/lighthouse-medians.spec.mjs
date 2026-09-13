@@ -253,13 +253,18 @@ describe('summariseGroup — thresholds and boundaries', () => {
     expect(bad.categories.seo.pass).toBe(false)
   })
 
-  it('asserts the UNCHANGED CLS limit on the median', () => {
+  it('asserts the strict CLS limit on the raw median without rounding', () => {
     expect(METRIC_LIMITS['cumulative-layout-shift'].limit).toBe(0.05)
-    const pass = summarise([{ cls: 0.05 }, { cls: 0.05 }, { cls: 0.05 }])
-    expect(pass.metrics['cumulative-layout-shift'].pass).toBe(true)
-    const fail = summarise([{ cls: 0.06 }, { cls: 0.06 }, { cls: 0.02 }])
-    expect(fail.metrics['cumulative-layout-shift'].median).toBe(0.06)
-    expect(fail.metrics['cumulative-layout-shift'].pass).toBe(false)
+    const below = summarise([{ cls: 0.0499 }, { cls: 0.0499 }, { cls: 0.0499 }])
+    expect(below.metrics['cumulative-layout-shift'].pass).toBe(true)
+
+    const exact = summarise([{ cls: 0.05 }, { cls: 0.05 }, { cls: 0.05 }])
+    expect(exact.metrics['cumulative-layout-shift'].median).toBe(0.05)
+    expect(exact.metrics['cumulative-layout-shift'].pass).toBe(false)
+
+    const above = summarise([{ cls: 0.0501 }, { cls: 0.0501 }, { cls: 0.049 }])
+    expect(above.metrics['cumulative-layout-shift'].median).toBe(0.0501)
+    expect(above.metrics['cumulative-layout-shift'].pass).toBe(false)
   })
 
   it('asserts the LCP limit of the DEVICE the run was collected on (D20-14)', () => {
