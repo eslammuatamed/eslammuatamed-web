@@ -60,7 +60,14 @@ const FONT_RESOURCES = [
 ]
 const FONT_TOTAL = FONT_RESOURCES.reduce((sum, f) => sum + f.transferSize, 0)
 
-function report({ formFactor = 'mobile', url = 'http://127.0.0.1:3000/', performance = 70, version = '12.0.0', lcp = 900 } = {}) {
+function report({
+  formFactor = 'mobile',
+  url = 'http://127.0.0.1:3000/',
+  performance = 70,
+  version = '12.0.0',
+  lcp = 900,
+  cls = 0.01
+} = {}) {
   return {
     lighthouseVersion: version,
     requestedUrl: url,
@@ -73,7 +80,7 @@ function report({ formFactor = 'mobile', url = 'http://127.0.0.1:3000/', perform
     },
     audits: {
       'largest-contentful-paint': { numericValue: lcp },
-      'cumulative-layout-shift': { numericValue: 0.01 },
+      'cumulative-layout-shift': { numericValue: cls },
       'total-blocking-time': { numericValue: 150 },
       'speed-index': { numericValue: 1200 },
       'network-requests': {
@@ -117,6 +124,23 @@ describe('lighthouse median gate', () => {
     expect(out).toMatch(/thresholds not satisfied/)
     expect(out).toMatch(/performance median 40\.0 < required 60/)
     expect(out).not.toMatch(/MEASUREMENT FAILURE/)
+  })
+
+  it('rejects a CLS median exactly at the strict 0.05 boundary', async () => {
+    const dir = join(await scratch(), 'mobile')
+    await seed(dir, { cls: 0.05 })
+    const { code, out } = await gate([dir])
+    expect(code).toBe(1)
+    expect(out).toMatch(/CLS .* median 0\.05\s+< 0\.05/)
+    expect(out).toMatch(/CLS .* median 0\.05 must be < 0\.05/)
+  })
+
+  it('accepts a raw CLS median immediately below the strict boundary', async () => {
+    const dir = join(await scratch(), 'mobile')
+    await seed(dir, { cls: 0.0499 })
+    const { code, out } = await gate([dir])
+    expect(code).toBe(0)
+    expect(out).toMatch(/CLS .* median 0\.0499\s+< 0\.05/)
   })
 
   it('reports the identical breached median but exits 0 in explicit advisory mode', async () => {

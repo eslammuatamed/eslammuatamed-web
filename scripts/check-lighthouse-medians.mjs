@@ -13,7 +13,7 @@
  *                     mobile `/ar` ≤ 5000 ms — route+device CI regression ceiling (D20-16);
  *                     mobile `/ar/projects` ≤ 5500 ms — same, per D20-17;
  *                     4000 ms remains a reported, non-blocking quality target on both
- *     CLS             ≤ 0.05
+ *     CLS             < 0.05
  *     Fonts           Arabic-SCRIPT resources ≤ 130 KiB on Arabic routes (D20-15); the combined
  *                     per-route total and the non-Arabic split are reported as diagnostics
  *     TBT / Speed Index        recorded, never asserted (doc 20 §1 states no budget)
@@ -155,7 +155,7 @@ async function main() {
         ? (id in METRIC_LIMITS
             ? '(budget does not apply to this route)'
             : '(recorded, no doc 20 §1 budget)')
-        : `≤ ${fmt(m.limit, m.unit)}`
+        : `${m.comparison === 'lt' ? '<' : '≤'} ${fmt(m.limit, m.unit)}`
       // A D20-16 / D20-17 ceiling raised the asserted bound above the quality target, so the target
       // is reported beside the verdict. An unmet target must stay legible on a PASSING gate — a
       // ceiling that silently absorbs the number it replaced is how a temporary allowance becomes

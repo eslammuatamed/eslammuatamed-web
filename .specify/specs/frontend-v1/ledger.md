@@ -6080,3 +6080,25 @@ promotion, or FE5-U8 change is authorized.
 1. Add the strict CLS boundary proof and demonstrate that it fails against the existing inclusive comparator.
 2. Correct only CLS comparison/reporting semantics, then run focused and changed-surface validation.
 3. Certify and merge the exact PR head, certify post-merge `dev`, and close only U7-PRE-004 in a ledger-only follow-up.
+
+### Strict CLS comparator implementation proven locally · 2026-09-13
+
+The threshold remains the raw number `0.05`. `cumulative-layout-shift` now declares an exclusive
+comparison, so the shared median summarizer applies `<` only to CLS while retaining inclusive `≤`
+for LCP, fonts, and LCP quality targets. The CLI reports the same operator used by the verdict.
+Medians are compared before formatting or rounding.
+
+| Evidence | Result |
+| --- | --- |
+| Required negative control | Added the strict focused assertion before changing the comparator; `npm test -- --run scripts/lib/lighthouse-medians.spec.mjs -t "strict CLS limit"` failed 1/1 at the intended line with `expected true to be false` for exact median `0.05` |
+| Corrected isolated boundary | The same command passed 1/1: `0.0499` passes, exact `0.05` fails, and `0.0501` fails |
+| Focused comparator + CLI suites | `npm test -- --run scripts/lib/lighthouse-medians.spec.mjs scripts/check-lighthouse-medians.spec.mjs` passed 95/95 across 2 files |
+| Lint | `npm run lint`, exit 0 |
+| Typecheck | `npm run typecheck`, exit 0 |
+| Full unit suite | Initial restricted-sandbox run could not complete process/port harnesses; the first named failure passed 1/1 when isolated with required permissions. Authoritative rerun `npm test` passed 2,602/2,602 across 167 files, exit 0 |
+| Production build | `NUXT_PUBLIC_SITE_URL=https://example.com NUXT_PUBLIC_API_BASE=https://example.com/api/v1 npm run build`, exit 0; the provenance marker correctly declined to stamp the intentionally dirty pre-commit tree |
+| Scope/diff | `git diff --check`, exit 0; no `.github`, package, lockfile, application, OpenAPI, Nuxt config, Docs, environment, production, or unrelated performance change |
+
+This is prerequisite remediation only. No governed Lighthouse matrix ran, no U7 candidate was frozen,
+and FE5-U7 acceptance remains unstarted. PR and post-merge facts are deliberately deferred until they
+exist; the established ledger-only closeout will record them after exact-SHA certification.

@@ -126,7 +126,12 @@ export const ARABIC_FONT_BUDGET = 130 * 1024
  */
 export const METRIC_LIMITS = {
   'largest-contentful-paint': { limit: LCP_LIMITS, unit: 'ms', label: 'LCP (doc 20 §1 lab, per device)' },
-  'cumulative-layout-shift': { limit: 0.05, unit: '', label: 'CLS (doc 20 §1)' },
+  'cumulative-layout-shift': {
+    limit: 0.05,
+    comparison: 'lt',
+    unit: '',
+    label: 'CLS (doc 20 §1)'
+  },
   'fonts:arabic-script': {
     limit: ARABIC_FONT_BUDGET,
     unit: 'B',
@@ -490,12 +495,22 @@ export function summariseGroup(group) {
       continue
     }
     const value = median(values)
-    const pass = limit === null ? null : value <= limit
+    // CLS is the one exclusive metric (`< 0.05`). LCP and font budgets remain inclusive (`≤`).
+    // Compare the raw median: rounding before this point would turn 0.049999 and 0.05 into the same
+    // displayed value and silently erase the policy boundary.
+    const pass = limit === null
+      ? null
+      : spec.comparison === 'lt'
+        ? value < limit
+        : value <= limit
     // Recorded regardless of the verdict: a missed target must stay visible on a passing gate.
     const targetMet = target === null ? null : value <= target
     metrics[id] = { values, median: value, ...spec, limit, target, targetMet, pass }
     if (pass === false && !problems.length) {
-      failures.push(`${spec.label} median ${value} exceeds ${limit}${spec.unit} (runs: ${values.join(', ')})`)
+      const breach = spec.comparison === 'lt'
+        ? `must be < ${limit}${spec.unit}`
+        : `exceeds ${limit}${spec.unit}`
+      failures.push(`${spec.label} median ${value} ${breach} (runs: ${values.join(', ')})`)
     }
   }
 
