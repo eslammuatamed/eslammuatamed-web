@@ -1177,3 +1177,50 @@ exists to prevent.
   be replied to. `GET` still returns `200 []` for it: **empty history and 404 are different facts.**
 - **`mailto:` is NOT removed.** `FR-DSH-060` states replying from the owner's own email client
   "remains available and is unaffected". `replyMailto()` stays; the dashboard reply is an **addition**.
+
+---
+
+## 16. FE5-U7 authoritative execution plan · DEFINITION ONLY · 2026-09-13
+
+This section is the authoritative forward plan for **FE5-U7 — Frontend v1 Release Acceptance
+Evidence**. Earlier U7 mentions in this historical campaign plan establish sequencing only; this
+section plus `spec.md` and `tasks.md` governs execution. Central Docs source alignment landed first
+via PR #65 at `5001ae62573ae488a16a552b1de9d7d1d03f72ab`.
+Central Docs D05-5 narrowly supersedes this plan's earlier Tiptap/autosave-as-v1 language for the
+shipped Frontend v1 and its release acceptance. Those retained lines are historical planning
+evidence, not U7 requirements; the U7 manual journey is Markdown + explicit save.
+
+### 16.1 Operating strategy
+
+1. **Discharge pre-U7 work separately.** Provision the governed reference environment, repair the
+   D19-11 Web PR/integration high+ CI gate, and align the Lighthouse CLS comparator with D20's strict
+   `< 0.05` rule in separately authorized units. None is acceptance.
+2. **Freeze once, bind everything.** Select one candidate SHA/tree/lockfile after start prerequisites
+   pass. Any remediation that changes it invalidates affected evidence and returns to the freeze step.
+3. **Collect independent evidence lanes.** Exact-SHA CI, governed Lighthouse, automated/manual
+   accessibility, security, and owner-operated content reconciliation all target the same manifest.
+4. **Close through evidence consistency.** U7-G8 checks provenance, artifacts, remediation links,
+   source truth, ledger, and standalone handoff. Only then may the unit say READY FOR PROMOTION.
+5. **Stop at the boundary.** U7 never promotes `dev → main`, deploys, mutates production merely to
+   test it, or includes production smoke in its closure.
+
+### 16.2 Sequencing and stop conditions
+
+`SP-1…SP-5 → U7-G1/G2 → U7-G3/G4/G5/G6/G7 → U7-G8 → CLOSED / READY FOR PROMOTION`
+
+- The current state is **DEFINED — NOT READY TO START GOVERNED ACCEPTANCE** until the controlled
+  reference environment exists and all other start prerequisites pass.
+- A measurement-infrastructure defect produces no threshold verdict; repair the instrument or
+  environment separately and repeat the affected collection.
+- A genuine gate failure blocks that gate and opens separately authorized remediation. Do not code
+  a fix under an acceptance task.
+- Content apply remains owner-authorized and conditional on a reviewed non-empty plan.
+- The strict D20 CLS rule is `< 0.05`; the 16-path/two-profile/three-run matrix is 96 audits.
+
+### 16.3 Definition-task closeout
+
+This docs-only branch changes only the Frontend-v1 SpecKit surface. Arabic module documentation and
+development/demo seed work are N/A because no application module or data-backed flow changes.
+Validation requires `git diff --check`, stale-reference/boundary searches, ledger/spec/task
+consistency, and independent read-only review. Merging this definition establishes U7 but does not
+start acceptance.

@@ -5960,3 +5960,62 @@ Next three actions:
 1. Stop at the FE5-U6 release boundary; do not promote `dev` to `main` or deploy from this unit.
 2. Start FE5-U7 only under separate explicit authorization and from the then-current `dev` tip.
 3. Preserve the accepted Production baseline and the U6 provenance above when FE5-U7 begins.
+
+---
+
+## FE5-U7 definition start — zero-trust rebaseline · 2026-09-13
+
+**Unit:** FE5-U7 — Frontend v1 Release Acceptance Evidence. This checkpoint opens only the
+documentation/specification task that defines the future acceptance unit; no U7 acceptance has
+started.
+
+| Claim | Verified live state |
+| --- | --- |
+| Web definition base | `origin/dev` `e79d24beca25704c4643579c5e3a25c7f482f46d`, tree `3190033ed8537d1519ea7fd60480fa91929d0e9d` |
+| Production baseline | `origin/main` `40eb52c6470579c19131d3cede41ccc9b295bdf5` |
+| Exact-SHA integration CI | run `34371680460`, head `e79d24beca25704c4643579c5e3a25c7f482f46d`, `completed` / `success` |
+| Dev PR drift | Open Dependabot PRs #68, #69, #72, #73, #74 and historical draft #46 all target stale base snapshots; none is U7 |
+| U7 work search | No U7 branch, PR, acceptance execution, gate artifacts, or implementation found |
+| Certified Central Docs input | Docs PR #65 merged; `origin/main` `5001ae62573ae488a16a552b1de9d7d1d03f72ab` |
+| Reference environment | `REFERENCE ENVIRONMENT PROVISIONING REQUIRED`; none exists and none is provisioned by this definition task |
+| Security prerequisite | `CI SECURITY GATE DEFECT`; Web PR/integration CI lacks the D19-11 blocking high+ audit and this task does not remediate it |
+
+The Frontend-v1 campaign surface contained only `plan.md`, this append-only ledger, and the Backend
+list-envelope handoff. Repository-wide SpecKit convention uses `spec.md`, `plan.md`, and `tasks.md`;
+FE5-U7 therefore adds an authoritative specification and executable task list while preserving the
+campaign history. Central Docs PR #65 reconciled F-D2 to the shipped Markdown + explicit-save
+journey and added D16-13's evidence-only applicability clarification before this Web definition.
+
+**Definition-task boundary:** documentation only. No Lighthouse or acceptance run, environment
+provisioning, security/CI/package remediation, content sync, application/runtime/test change,
+promotion, deployment, production smoke, production mutation, Tiptap/autosave implementation, or
+FE5-U8 work is authorized.
+
+**Next three actions.**
+
+1. Record the authoritative U7 specification, gate matrix, prerequisites, evidence schemas, and exact completion boundary.
+2. Record an executable task sequence that separates pre-U7 remediation/provisioning from U7 acceptance work and ends with D16-8 closeout.
+3. Independently review, validate, and merge only the documentation definition; leave acceptance unstarted.
+
+### FE5-U7 authoritative definition authored · 2026-09-13
+
+Central Docs alignment PR #65 was independently reviewed and squash-merged first at
+`5001ae62573ae488a16a552b1de9d7d1d03f72ab`. It records D05-5 (the shipped Markdown + explicit-save
+F-D2 journey, narrowly superseding older Tiptap/autosave clauses for Frontend v1 acceptance) and
+D16-13 (module docs N/A for an evidence-only unit with no application-module change; the remaining
+D16-8 evidence/handoff gate stays mandatory). D20/D11 were byte-identical to the Docs PR base.
+
+The Web definition now adds `spec.md`, `tasks.md`, and
+`checklists/release-acceptance.md`, and appends the authoritative execution plan in `plan.md`.
+It defines SP-1…SP-5, CP-1…CP-5, U7-G1…U7-G8, the 96-audit D20 matrix, automated and manual
+accessibility, no-waiver security, owner-operated canonical-content evidence, exact evidence schemas,
+separate pre-U7 work, D16-8 closeout, and the immutable READY FOR PROMOTION boundary.
+
+One live discrepancy is recorded rather than hidden: Central Docs D20 requires strict `CLS < 0.05`,
+while the current Web summarizer uses `value <= limit` and its existing test accepts exactly `0.05`.
+D20 governs U7, so a separate pre-U7 instrumentation remediation must align and negatively control
+that boundary. No threshold, script, test, CI, dependency, runtime, or application file changed here.
+
+Acceptance remains unstarted. Candidate identity is not frozen, the reference environment is not
+provisioned, the Web high+ CI gate defect is not remediated, manual accessibility is outstanding,
+and canonical content reconciliation is outstanding.
