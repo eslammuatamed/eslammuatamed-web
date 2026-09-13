@@ -5996,3 +5996,26 @@ FE5-U8 work is authorized.
 1. Record the authoritative U7 specification, gate matrix, prerequisites, evidence schemas, and exact completion boundary.
 2. Record an executable task sequence that separates pre-U7 remediation/provisioning from U7 acceptance work and ends with D16-8 closeout.
 3. Independently review, validate, and merge only the documentation definition; leave acceptance unstarted.
+
+### FE5-U7 authoritative definition authored · 2026-09-13
+
+Central Docs alignment PR #65 was independently reviewed and squash-merged first at
+`5001ae62573ae488a16a552b1de9d7d1d03f72ab`. It records D05-5 (the shipped Markdown + explicit-save
+F-D2 journey, narrowly superseding older Tiptap/autosave clauses for Frontend v1 acceptance) and
+D16-13 (module docs N/A for an evidence-only unit with no application-module change; the remaining
+D16-8 evidence/handoff gate stays mandatory). D20/D11 were byte-identical to the Docs PR base.
+
+The Web definition now adds `spec.md`, `tasks.md`, and
+`checklists/release-acceptance.md`, and appends the authoritative execution plan in `plan.md`.
+It defines SP-1…SP-5, CP-1…CP-5, U7-G1…U7-G8, the 96-audit D20 matrix, automated and manual
+accessibility, no-waiver security, owner-operated canonical-content evidence, exact evidence schemas,
+separate pre-U7 work, D16-8 closeout, and the immutable READY FOR PROMOTION boundary.
+
+One live discrepancy is recorded rather than hidden: Central Docs D20 requires strict `CLS < 0.05`,
+while the current Web summarizer uses `value <= limit` and its existing test accepts exactly `0.05`.
+D20 governs U7, so a separate pre-U7 instrumentation remediation must align and negatively control
+that boundary. No threshold, script, test, CI, dependency, runtime, or application file changed here.
+
+Acceptance remains unstarted. Candidate identity is not frozen, the reference environment is not
+provisioned, the Web high+ CI gate defect is not remediated, manual accessibility is outstanding,
+and canonical content reconciliation is outstanding.
