@@ -13,7 +13,7 @@ silently implement a fix inside acceptance.
 - [x] **U7-DEF-002** Merge the focused Central Docs F-D2/D16-8 alignment before finalizing this definition.
 - [x] **U7-DEF-003** Define SP-1…SP-5, CP-1…CP-5, U7-G1…U7-G8, evidence schemas, and exact closure boundary in `spec.md`.
 - [x] **U7-DEF-004** Record the executable prerequisite/acceptance sequence and consistency checklist.
-- [ ] **U7-DEF-005** Merge this documentation PR to `dev`, record the merge/integration evidence append-only, and leave U7 acceptance unstarted.
+- [x] **U7-DEF-005** Merge this documentation PR to `dev`, record the merge/integration evidence append-only, and leave U7 acceptance unstarted.
 
 ## Phase PRE — Separately authorized pre-U7 prerequisite work
 
