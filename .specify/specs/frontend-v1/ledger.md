@@ -6268,3 +6268,46 @@ production, promotion, deployment, U7-A01, governed U7 acceptance, or FE5-U8 sta
 1. Obtain a supported Postman release that uses fixed Faker, or explicitly authorize one bounded reviewed Postman patch/fork strategy.
 2. Resume C1 from exact `origin/dev` and require Prism startup, contract responses, relevant E2E, fixture stability, and bundle isolation to pass before retaining the resolution.
 3. Only after C1 succeeds, evaluate C2 and the remaining R1/R2/CI work; FE5-U7 acceptance remains unstarted.
+
+---
+
+## Postman/Faker bounded compatibility continuation — zero-trust rebaseline · 2026-09-14
+
+The owner now authorizes only a small, reviewed Postman Collection compatibility patch/fork for the
+Prism → Postman Collection → Faker chain. Lighthouse/Puppeteer/extract-zip, other R1/R2 work, the
+HIGH+ CI gate, reference-environment work, U7 acceptance, and Production remain outside this task.
+
+| Check | Ledger claim | Fresh live state | Match |
+| --- | --- | --- | --- |
+| Web integration | `origin/dev` `7feee77d3fdd562bcecf5cd6cbe8e73d7644b3d7` | same after `git fetch origin --prune` | yes |
+| Web Production baseline | `origin/main` `40eb52c6470579c19131d3cede41ccc9b295bdf5` | same after fetch | yes |
+| Security branch | `fix/frontend-v1-u7-security-gate` at `e6be998fa3c3d6041bcbeddd315677284520f901` | same; clean worktree exists | yes |
+| Central Docs authority | `origin/main` `5001ae62573ae488a16a552b1de9d7d1d03f72ab` | same after fetch | yes |
+| Lock identity | SHA-256 `43c11bad…c655`; blob `c617069c…27d0` | exact match | yes |
+| Evidence commits | `f06732d`, `e6be998` only | exact two commits over `origin/dev` | yes |
+
+The Central Docs checkout has unrelated pre-existing local edits, but this task claims only its
+fetched `origin/main` authority and will not touch that checkout. Open Web PRs #68, #69, #72, #73,
+and #74 modify dependency manifests but do not touch Prism/Postman/Faker; draft #46 is unrelated.
+No open PR supplies this remediation.
+
+Read-only inventory found 118 Postman dynamic generators and 111 unique Faker method references in
+the single file `postman-collection@4.5.0/lib/superstring/dynamic-variables.js`; 47 referenced APIs
+are absent in Faker 10.6.0. They fall into bounded namespace/method moves: address→location,
+name→person, random/datatype→helpers/lorem/string/number, renamed phone/company/finance methods,
+category-preserving image wrappers, and internet username/color moves. No other Postman source file
+imports Faker. This is classified **P2 — bounded compatibility adapter**, not P3/P4.
+
+There is no repository package-patch mechanism. The proposed deterministic mechanism is
+`patch-package@8.0.1`, with a version-bound source-controlled patch for Postman Collection 4.5.0,
+a parent-scoped Faker 10.6.0 override, and a focused real-Prism regression spec that also invokes
+every generator. Expected package patch: one existing Postman import line plus one compact adapter
+file of approximately 55–65 LOC. Upstream Postman PR #1393 documents substantially the same API
+migration and says its full suite passes, but it remains open/unreviewed and targets vulnerable
+Faker 9.3.0; it is provenance evidence only, not an installed dependency.
+
+**Next three actions.**
+
+1. Add the real-Prism/all-generator compatibility spec and reproduce the fixed-Faker/unmodified-Postman failure as its negative control.
+2. Add the version-bound patch artifact, rerun the focused compatibility proof, then prove a clean `npm ci` reapplies it.
+3. Run Prism-dependent, bundle, audit-classification, and Web validation; commit a checkpoint without starting other security chains.
