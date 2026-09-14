@@ -18,6 +18,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:postman-faker-compat": "vitest run scripts/postman-faker-compat.spec.mjs",
+    "test:puppeteer-extraction-compat": "vitest run scripts/puppeteer-extraction-compat.spec.mjs",
     "mock": "prism mock openapi/openapi.json --port 3001",
     "api:types": "openapi-typescript openapi/openapi.json --output app/types/api.d.ts",
     "check:bundle": "node scripts/check-forbidden-modules.mjs",
@@ -109,6 +110,9 @@
   "overrides": {
     "postman-collection": {
       "@faker-js/faker": "10.6.0"
+    },
+    "puppeteer-core@24.43.1": {
+      "@puppeteer/browsers": "git+https://github.com/eslammuatamed/puppeteer-browsers-safe-extract.git#9c87c39d0bbdb78499b204c39f66a4196939092f"
     }
   }
 }
