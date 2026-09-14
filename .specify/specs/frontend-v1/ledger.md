@@ -6413,3 +6413,41 @@ occurred.
 1. Separately authorize and remediate the remaining Lighthouse/Puppeteer/extract-zip and compatible R1/R2 HIGH chains without weakening D19-11.
 2. Only after the full graph reaches zero HIGH/CRITICAL, negatively control and add the blocking PR/integration CI audit gate and independently certify it.
 3. Keep U7-A01 and governed FE5-U7 acceptance closed until all pre-U7 prerequisites, including the reference environment, are independently certified.
+
+---
+
+## Lighthouse/extract-zip security continuation — zero-trust rebaseline · 2026-09-14
+
+**Boundary:** only the Lighthouse/LHCI/Puppeteer/extract-zip HIGH chain. Postman/Faker is frozen;
+remaining R1/R2 remediation, HIGH+ CI enforcement, Central Docs, reference-environment work, U7,
+production, promotion, and deployment are outside this task.
+
+| Claim | Ledger says | Fresh live state | Match |
+| --- | --- | --- | --- |
+| Web integration | `origin/dev` `7feee77d3fdd562bcecf5cd6cbe8e73d7644b3d7` | same after `git fetch origin --prune` | yes |
+| Production baseline | `origin/main` `40eb52c6470579c19131d3cede41ccc9b295bdf5` | same after fetch | yes |
+| Security branch | `fix/frontend-v1-u7-security-gate` at ledger checkpoint `5ab24500529f68261c29da34687a95e3d90c7176` | exact branch and HEAD; worktree exists and is clean | yes |
+| Postman implementation | `6d0375626872df42fe49580f77f0c9f845d966e3` | exact ancestor of HEAD | yes |
+| Lock identity | SHA-256 `11f88f267e807e0eec51bcd4ce705af37b5b809ca7c09c5a15566e4d516612a0`; blob `b2443684a8e10b2e9ccc340d2fb0808cbe6fd6b4` | exact | yes |
+| Postman patch | SHA-256 `6a628ef2c6a83bd227546d10ee1a31b9f122eb90c8a0521bbab48167494a2049` | exact | yes |
+| Full audit | 63 total: 14 high, 46 moderate, 3 low, 0 critical | exact fresh `npm audit --audit-level=high --json`; exit 1 | yes |
+
+Open Web PRs are #74 `d1064da1e1ad309a558a3cf5a0e2b761e10a9e00`, #73
+`f9be4b40168e9eaf74d6e53fa7c0c9e9ef037124`, #72
+`9ea46aabf411aeef7457995cb91341a304c1c038`, #69
+`3d175fafccd39c094ec9d122e4c00f75e8a46a9a`, #68
+`513defb39a2594429eaa7dde31065ee707054b86`, and #46
+`016f0d9becfac34cc7e336b3fd2b784e71fec091`. None changes the Lighthouse chain or supplies this
+remediation. Zero drift was found.
+
+The pre-mutation installed chain is `@lhci/cli@0.15.1` → `@lhci/utils@0.15.1` and
+`lighthouse@12.6.1` → `puppeteer-core@24.43.1` → `@puppeteer/browsers@2.13.2` →
+`extract-zip@2.0.1`. Both extract-zip HIGH advisories are present: GHSA-jmr9-qjv8-65gv and
+GHSA-7pqw-9j4j-h8q3. A clean `npm ci` passed, automatically applied
+`postman-collection@4.5.0 ✔`, and the focused Postman/Faker proof passed 2/2 with Faker 10.6.0.
+
+**Next three actions.**
+
+1. Inventory every repository Lighthouse/LHCI/report/provenance coupling and re-read the live D20 methodology invariants.
+2. Evaluate current supported upstream toolchain combinations and report the smallest extract-zip-free candidate before mutation.
+3. If bounded, run an isolated manifest/lock experiment and require clean install, structural/report, desktop/mobile, audit, regression, and independent-review proof before checkpointing.
