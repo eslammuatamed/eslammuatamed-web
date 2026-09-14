@@ -6733,3 +6733,56 @@ Implementation has not started and no implementation verdict is issued at this c
    lockfile and prove `extract-zip` absent plus audit improvement.
 3. Run the serialized compatibility/Lighthouse/D20 acceptance matrix, append exact evidence, obtain
    independent final review, then decide whether to open the security PR.
+
+---
+
+## X2 immutable-fork implementation authorization — zero-trust rebaseline · 2026-09-14
+
+The owner made `563b7a02c704b4ff388a904bc7c8be9ab3bb14b9` the latest authoritative
+checkpoint and authorized implementation/certification of only the already-selected X2
+`@puppeteer/browsers@2.13.2` extraction fork. `git fetch origin --prune` completed before these
+readings.
+
+| Claim | Authoritative handoff | Fresh live state | Match |
+| --- | --- | --- | --- |
+| Security branch/HEAD | `fix/frontend-v1-u7-security-gate` at `563b7a02c704b4ff388a904bc7c8be9ab3bb14b9` | exact | yes |
+| Worktree | durable and clean | listed at the expected path; `git status --porcelain` empty | yes |
+| Web integration | `origin/dev` `7feee77d3fdd562bcecf5cd6cbe8e73d7644b3d7` | exact | yes |
+| Production baseline | `origin/main` `40eb52c6470579c19131d3cede41ccc9b295bdf5` | exact | yes |
+| Lock identity | SHA-256 `11f88f267e807e0eec51bcd4ce705af37b5b809ca7c09c5a15566e4d516612a0`; blob `b2443684a8e10b2e9ccc340d2fb0808cbe6fd6b4` | exact | yes |
+| Postman patch | SHA-256 `6a628ef2c6a83bd227546d10ee1a31b9f122eb90c8a0521bbab48167494a2049` | exact | yes |
+| Security PR | none | exact (`[]`) | yes |
+| Full audit | 63 total: 14 high, 46 moderate, 3 low, 0 critical | exact; expected exit 1 | yes |
+| Production audit | 40 total: 4 high, 35 moderate, 1 low, 0 critical | exact; expected exit 1 | yes |
+
+Fresh `npm ci` exited 0, installed 1,615 packages, applied `postman-collection@4.5.0 ✔`, and
+reported the same 63-vulnerability total. The focused Postman/Faker command initially received
+`listen EPERM` from the filesystem/network sandbox; rerunning the identical command with localhost
+binding permitted passed 2/2 in 1.17 s. Faker resolves to 10.6.0.
+
+The exact installed chain remains `@lhci/cli@0.15.1` → `lighthouse@12.6.1` →
+`puppeteer-core@24.43.1` → `@puppeteer/browsers@2.13.2` → `extract-zip@2.0.1` →
+`yauzl@2.10.0`. `npm explain extract-zip` again found only that path. Live npm records still match
+the checkpoint: browsers integrity `sha512-5EUZSUIc37H6aIXyWO0Z4y8NlF8NnjgmqeQgOGiswAU7pY0HOo16ho4+alIWmSfdZnjqBRawMsP3I5YqLSn6kw==`
+at git head `970bda63c03d96b7a42d96fe44e35da1b4dc4a8b`; yauzl 3.4.0 integrity
+`sha512-jIH9yLR9wqr0wOS0TpBvo/g/2UgZH5qePVbjgRliiF0BYvOZyaBknKsF+x9Iht0O6sqgnB93rCICdOZFecJuDw==`
+at git head `f5798e15204ffbb9a428b00217e4659684a41b0f`. There is no material contradiction and X2 remains
+the verified plan.
+
+Open Web PRs were also re-read: #74 `d1064da1e1ad309a558a3cf5a0e2b761e10a9e00`, #73
+`f9be4b40168e9eaf74d6e53fa7c0c9e9ef037124`, #72
+`9ea46aabf411aeef7457995cb91341a304c1c038`, #69
+`3d175fafccd39c094ec9d122e4c00f75e8a46a9a`, #68
+`513defb39a2594429eaa7dde31065ee707054b86`, and #46
+`016f0d9becfac34cc7e336b3fd2b784e71fec091`; none targets or is headed by this security branch.
+
+No non-ledger mutation appeared after the authoritative checkpoint. **Zero drift.**
+
+**Next three actions.**
+
+1. Materialize the exact published package as a minimal standalone fork, preserve provenance and
+   licenses, implement the bounded adapter and prove its security test with a negative control.
+2. Obtain independent fork review, publish the reviewed full commit, then wire only that immutable
+   commit into Web and audit the generated manifest/lock delta.
+3. Complete clean-install, extraction, Lighthouse/D20, Postman and Web regression evidence; obtain
+   independent integration review and commit implementation/evidence without opening a PR.
