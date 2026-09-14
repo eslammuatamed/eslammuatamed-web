@@ -6149,3 +6149,48 @@ not start, and no content, production, promotion, deployment, or FE5-U8 action o
 1. Provision and independently certify the governed non-production Lighthouse reference environment.
 2. Repair and independently certify the D19-11 blocking HIGH+ Web PR/integration CI gate, and assign governed evidence locations, operators, and retention.
 3. Only after all remaining start prerequisites pass, separately authorize U7-A01 to freeze the candidate; do not treat this closeout as the start of FE5-U7 acceptance.
+
+---
+
+## Pre-U7 HIGH+ security prerequisite — owner-authorized zero-trust start · 2026-09-14
+
+**Boundary:** remediate only U7-PRE-002 and its dependency/PR-integration enforcement evidence.
+FE5-U7 acceptance remains unstarted; U7-A01 is not frozen or executed.
+
+| Claim | Verified live state |
+| --- | --- |
+| Web base | `origin/dev` `7feee77d3fdd562bcecf5cd6cbe8e73d7644b3d7` |
+| Production baseline | `origin/main` `40eb52c6470579c19131d3cede41ccc9b295bdf5` |
+| Central Docs authority | `origin/main` `5001ae62573ae488a16a552b1de9d7d1d03f72ab`; D19-11 requires unmodified blocking full-graph `npm audit --audit-level=high` in PR/integration CI |
+| Starting lockfile | SHA-256 `43c11badc5c98bae9b1c1a071dbce60533382c0890cb6121148e05d40845c655`; Git blob `c617069c2489a8bb2ffa54be8f74055c619927d0` |
+| Full audit | npm 11.17.0; 64 total: 20 high, 41 moderate, 3 low, 0 critical; exit 1 |
+| Production-only classification | 40 total: 4 high, 35 moderate, 1 low, 0 critical; exit 1 |
+| Dependabot | 23 open: 14 high, 7 medium, 2 low, 0 critical; scanner population kept distinct from npm audit |
+| CI defect | `.github/workflows/ci.yml` installs the full graph but contains no blocking HIGH+ audit; `deploy.yml` is not an authorized or required enforcement surface |
+
+Owner decisions O-SEC-1 through O-SEC-4 authorize bounded compatible R1/R2 updates, a narrowly
+scoped Faker major override only after direct Prism/Postman compatibility proof, and a bounded
+Lighthouse/Puppeteer migration only if it eliminates `extract-zip` while preserving the existing
+LHCI architecture, report schema, three-run medians, profiles, protocol/provenance checks, routes,
+and D20 thresholds. No waiver, allowlist, dev-graph omission, severity weakening, or alternate audit
+platform is authorized.
+
+The coherent pre-mutation delta is: compatible Tiptap/js-yaml/Redocly/sharp/svgo/fast-uri updates;
+parent-scoped Postman overrides for patched Faker/Lodash only if Prism compatibility passes;
+parent-scoped `tmp` fixes; and parent-scoped Lighthouse 13.4.1 for both exact-pinning LHCI parents
+only if the custom Lighthouse tooling contract passes. Current registry evidence shows Redocly
+1.34.20 normally carries patched js-yaml, no supported Prism/Postman release removes vulnerable
+Faker, and latest LHCI 0.15.1 still exact-pins Lighthouse 12.6.1 while Lighthouse 13.4.1 moves to a
+Puppeteer/browser stack that no longer depends on unpatched `extract-zip`.
+
+**Authorized files:** `package.json`, package-manager-generated `package-lock.json`, the D19-11
+override register in `CONTRIBUTING.md`, `.github/workflows/ci.yml`, one narrow workflow-contract
+spec, directly necessary compatibility tests/config, and this SpecKit evidence/status surface. No
+deployment workflow, product/runtime feature, Central Docs, reference environment, production,
+content, promotion, deployment, U7 acceptance, or FE5-U8 change is authorized.
+
+**Next three actions.**
+
+1. Run isolated Postman/Faker and LHCI/Lighthouse compatibility experiments; retain only proven paths.
+2. Apply the bounded R1/R2 graph corrections and require the full HIGH+ audit to reach exit 0 before editing CI.
+3. Negatively control and add the blocking PR/integration CI contract, then certify the full changed surface and close only U7-PRE-002.
