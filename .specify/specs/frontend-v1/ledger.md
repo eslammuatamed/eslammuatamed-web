@@ -6451,3 +6451,119 @@ GHSA-7pqw-9j4j-h8q3. A clean `npm ci` passed, automatically applied
 1. Inventory every repository Lighthouse/LHCI/report/provenance coupling and re-read the live D20 methodology invariants.
 2. Evaluate current supported upstream toolchain combinations and report the smallest extract-zip-free candidate before mutation.
 3. If bounded, run an isolated manifest/lock experiment and require clean install, structural/report, desktop/mobile, audit, regression, and independent-review proof before checkpointing.
+
+---
+
+## Lighthouse/extract-zip supported-toolchain gate — blocked checkpoint · 2026-09-14
+
+The investigation stopped before dependency mutation, exactly as authorized. The package manifest,
+lockfile, Lighthouse scripts/configuration, CI workflow, Postman/Faker adaptation, application code,
+Central Docs, shared refs, and production are unchanged from checkpoint `fd16915`. No candidate met
+the required intersection of upstream support, `@lhci/cli` architecture preservation, Node 24, D20
+methodology preservation, and complete `extract-zip` removal.
+
+### Current supported graph and upstream boundary
+
+Fresh official npm metadata and the installed lock graph agree:
+
+```text
+@lhci/cli@0.15.1 (latest)
+├─ @lhci/utils@0.15.1 ─┐
+└─ lighthouse@12.6.1  <┘ (both LHCI packages exact-pin 12.6.1)
+   └─ puppeteer-core@24.43.1
+      └─ @puppeteer/browsers@2.13.2
+         └─ extract-zip@2.0.1
+```
+
+`npm explain extract-zip` found this one dependency path and no second source. `extract-zip` remains
+at its latest published `2.0.1`; there is no patched package release. The installed package retains
+both HIGH advisories, GHSA-jmr9-qjv8-65gv and GHSA-7pqw-9j4j-h8q3.
+
+Puppeteer's first extract-free browser-management release is the 3.x breaking line. Its official
+changelog marks the boundary ESM-only, raises the Node floor, changes proxy-agent handling, removes
+an API, and replaces `extract-zip`. `puppeteer-core@25.0.2` exact-pins the first published
+extract-free `@puppeteer/browsers@3.0.2`. Lighthouse 13.3.0 still selects Puppeteer core 24;
+Lighthouse 13.4.0 is the first Lighthouse release selecting Puppeteer core 25. Current Lighthouse
+13.4.1 selects `puppeteer-core ^25.3.0`, which resolves to an extract-free browsers 3.x graph. All
+of these newer engines accept repository Node 24, but engine compatibility is not LHCI support.
+
+As of this checkpoint, the upstream Lighthouse CI issue “Lighthouse 13 support?” (#1136) remains
+open with no assignee, milestone, linked pull request, or development item. The published latest
+LHCI release and the current upstream CLI/utils manifests still exact-pin Lighthouse 12.6.1.
+Therefore forcing Lighthouse 13.4.x beneath LHCI through npm overrides is experimentally possible,
+but is not an upstream-supported package combination. The official primary evidence is:
+
+- `https://github.com/GoogleChrome/lighthouse-ci/issues/1136`
+- `https://github.com/GoogleChrome/lighthouse-ci/blob/main/packages/cli/package.json`
+- `https://github.com/GoogleChrome/lighthouse-ci/blob/main/packages/utils/package.json`
+- `https://github.com/puppeteer/puppeteer/blob/main/packages/browsers/CHANGELOG.md`
+- `https://github.com/GoogleChrome/lighthouse/releases/tag/v13.0.0`
+- official npm registry metadata queried live for each exact candidate version.
+
+### Candidate matrix and pre-mutation decision
+
+| Candidate | Node 24 | `extract-zip` | Upstream-supported with LHCI 0.15.1 | Decision |
+| --- | --- | --- | --- | --- |
+| Native latest LHCI 0.15.1 + Lighthouse 12.6.1 + core 24 + browsers 2.13.2 | yes | present | yes | reject: vulnerability remains |
+| Override LHCI's exact Lighthouse pin to 12.8.2 | yes | present through core 24 / browsers 2.13.2 | no | reject: no remediation and overrides an exact pin |
+| Override Lighthouse to 13.0–13.3 | yes | present through core 24 / browsers 2.13.2 | no; upstream Lighthouse 13 support is open | reject: no remediation plus unsupported combination |
+| Override browsers 3 beneath Puppeteer core 24, or core 25 beneath Lighthouse 12 | yes | absent | no; exact-major and CommonJS/ESM boundaries are crossed | reject: structurally unsupported |
+| Override both LHCI parents to Lighthouse 13.4.0/13.4.1 + core 25 + browsers 3 | yes | absent | no; upstream Lighthouse 13 support is open | reject: fails supported-combination gate and changes Lighthouse major semantics |
+| Replace LHCI collection with direct Lighthouse 13.4.x | yes | absent | supported only at the Lighthouse/Puppeteer layer | reject: replaces the authorized repository architecture |
+
+The smallest extract-free package graph is Lighthouse 13.4.0 → Puppeteer core 25 → browsers 3,
+but there is no corresponding supported LHCI release. Lighthouse 13 also intentionally changes
+audits and accessibility scoring composition. Repository tests can check report shape and runtime;
+they cannot certify an unsupported cross-major LHCI pairing or declare new scoring semantics
+equivalent to approved D20 policy. Rewriting the collector to avoid LHCI would exceed the explicit
+owner boundary.
+
+### Repository coupling and D20 compatibility surface
+
+| Surface | Dependency/API assumption | Major-upgrade risk | Existing coverage |
+| --- | --- | --- | --- |
+| `package.json` / `package-lock.json` | LHCI binary and exact transitive Lighthouse graph; Node 24 | unsupported override and broad lock churn | clean `npm ci`, `npm ls`, audit |
+| `lighthouserc.cjs` | CommonJS config; `lhci autorun`; CLI flags; filesystem upload; mobile default / desktop preset | config/flag and CJS/ESM loader changes | `scripts/lighthouse-ci.spec.mjs` plus config fixtures |
+| `scripts/lighthouse-ci.mjs` | launches `npx lhci autorun`; Chrome path/flags; per-profile directories; lifecycle ownership | CLI process behavior, browser discovery, report placement | lifecycle/orchestrator specs |
+| `scripts/lib/lighthouse-medians.mjs` and comparator | category scores, `requestedUrl`, `configSettings.formFactor`, LCP/CLS numeric values, `network-requests`, `resource-summary`, one Lighthouse version per group | report-schema and score-definition changes | median/comparator and CLI specs |
+| protocol / coverage helpers | `network-requests.details.items[].protocol`; final/requested URL; exact route/profile population | audit removal/rename or URL field changes | protocol and coverage specs |
+| build/report provenance | exact HEAD/tree/lock/environment/output; hashes every JSON/HTML report | output naming/layout and runtime metadata changes | provenance specs |
+| `.github/workflows/ci.yml` | Node `.nvmrc` = 24; preinstalled Chrome; independent mobile/desktop shards; advisory hosted metrics | Chrome/tool version coupling and shard/report behavior | ordinary CI jobs plus local orchestrator specs |
+
+Live D20 remains version 1.26.1 at Central Docs `origin/main`
+`5001ae62573ae488a16a552b1de9d7d1d03f72ab`. The unchanged repository implementation reflects the
+approved 16 localized routes, mobile and desktop profiles, exactly three comparable runs per
+profile×URL, true median grouping, strict raw CLS `< 0.05`, performance/category and device-scoped
+LCP thresholds including the `/ar` and `/ar/projects` ceilings, Arabic-script font budget, hard
+local/reference versus advisory hosted-CI distinction, HTTP/2 measured-session proof, and complete
+build/report provenance. No policy value was edited.
+
+### Verification and independent review
+
+The pre-mutation clean `npm ci` and focused Postman/Faker proof recorded in the preceding checkpoint
+remain authoritative: patch-package applied `postman-collection@4.5.0 ✔`, Faker resolved 10.6.0,
+and 2/2 compatibility tests passed. The unchanged audit remains 63 total: 14 high, 46 moderate,
+3 low, 0 critical; production-only remains 40 total: 4 high, 35 moderate, 1 low, 0 critical.
+
+An optional focused baseline invocation covering six Lighthouse/orchestrator test files reached
+Vitest startup but emitted no test result for several minutes. Because it was not needed to resolve
+the upstream-support gate, the owned process was interrupted and exited 130. It is explicitly not
+reported as a pass or failure of a candidate; no candidate was installed.
+
+Independent read-only review re-resolved the registry metadata, installed graph, exact package
+constraints, CommonJS/ESM boundary, upstream support issue, repository coupling, and candidate
+matrix. It found no material discrepancy and recommended that no override ship. The worktree was
+clean at reviewed HEAD `fd16915cc5f54bbf2ab81677cb80c3a7582e3eb9`.
+
+No implementation commit exists because the candidate-selection gate failed. No PR was opened.
+The security prerequisite remains open. No remaining R1/R2 remediation, HIGH+ CI gate, reference
+environment, U7-A01, FE5-U7 acceptance, Central Docs mutation, shared-ref movement, production
+mutation/deployment, promotion, or FE5-U8 work occurred.
+
+**Verdict:** `LIGHTHOUSE SECURITY COMPATIBILITY BLOCKED — NO PATCHED SUPPORTED TOOLCHAIN`
+
+**Next three actions.**
+
+1. Track upstream Lighthouse CI issue #1136 and the next published `@lhci/cli`/`@lhci/utils` release; re-run this bounded investigation only when both support Lighthouse 13.4+ (or another extract-free supported graph).
+2. Continue remaining R1/R2 security remediation in a separate authorized task without modifying this frozen Lighthouse chain.
+3. Keep HIGH+ CI enforcement and FE5-U7 acceptance closed until every pre-U7 security prerequisite has a supported, independently verified resolution.
