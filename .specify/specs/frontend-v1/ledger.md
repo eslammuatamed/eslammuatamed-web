@@ -6567,3 +6567,42 @@ mutation/deployment, promotion, or FE5-U8 work occurred.
 1. Track upstream Lighthouse CI issue #1136 and the next published `@lhci/cli`/`@lhci/utils` release; re-run this bounded investigation only when both support Lighthouse 13.4+ (or another extract-free supported graph).
 2. Continue remaining R1/R2 security remediation in a separate authorized task without modifying this frozen Lighthouse chain.
 3. Keep HIGH+ CI enforcement and FE5-U7 acceptance closed until every pre-U7 security prerequisite has a supported, independently verified resolution.
+
+---
+
+## Puppeteer extraction-adapter authorization — zero-trust rebaseline · 2026-09-14
+
+The owner superseded the older checkpoint reference and made
+`f579f9e022160d7ed2b42ff332a2d0f21a6c2916` authoritative. The newly authorized scope is only a
+reviewed X1/X2 patch or immutable fork of the direct Puppeteer browser-extraction surface needed to
+remove `extract-zip`; replacing Lighthouse/LHCI, redesigning provisioning, remaining R1/R2 work,
+HIGH+ enforcement, Central Docs/D20, reference-environment work, U7, shared refs, and production
+remain outside the boundary.
+
+| Claim | Authoritative handoff | Fresh live state | Match |
+| --- | --- | --- | --- |
+| Security branch | `fix/frontend-v1-u7-security-gate` at `f579f9e022160d7ed2b42ff332a2d0f21a6c2916` | exact branch and HEAD | yes |
+| Worktree | exists and clean | durable worktree exists; `git status --porcelain` empty | yes |
+| Web integration | `origin/dev` `7feee77d3fdd562bcecf5cd6cbe8e73d7644b3d7` | exact after `git fetch origin --prune` | yes |
+| Production baseline | `origin/main` `40eb52c6470579c19131d3cede41ccc9b295bdf5` | exact after fetch | yes |
+| Lock identity | SHA-256 `11f88f267e807e0eec51bcd4ce705af37b5b809ca7c09c5a15566e4d516612a0`; blob `b2443684a8e10b2e9ccc340d2fb0808cbe6fd6b4` | exact | yes |
+| Postman patch | SHA-256 `6a628ef2c6a83bd227546d10ee1a31b9f122eb90c8a0521bbab48167494a2049` | exact | yes |
+| Security PR | none | `gh pr list --head fix/frontend-v1-u7-security-gate` returned `[]` | yes |
+| Full audit | 63 total: 14 high, 46 moderate, 3 low, 0 critical | exact fresh registry result; expected exit 1 | yes |
+| Production audit | 40 total: 4 high, 35 moderate, 1 low, 0 critical | exact fresh registry result; expected exit 1 | yes |
+
+The installed path is still `@lhci/cli@0.15.1` → `lighthouse@12.6.1` →
+`puppeteer-core@24.43.1` → `@puppeteer/browsers@2.13.2` → `extract-zip@2.0.1`.
+`npm explain extract-zip` found this single source. The full HIGH set remains `@lhci/cli`,
+`@lhci/utils`, `@puppeteer/browsers`, `@redocly/openapi-core`, `@tiptap/core`, `extract-zip`,
+`fast-uri`, `js-yaml`, `lighthouse`, `lodash`, `puppeteer-core`, `sharp`, `svgo`, and `tmp`.
+Production HIGH names remain `@tiptap/core`, `js-yaml`, `sharp`, and `svgo`. Zero drift was found.
+
+No package, lockfile, patch, source, test, CI, Central Docs, shared ref, PR, browser installation,
+or production state changed during this rebaseline.
+
+**Next three actions.**
+
+1. Inspect every declaration/import/call and security-sensitive behavior in the exact `@puppeteer/browsers@2.13.2` ZIP extraction surface.
+2. Trace discovery/download/install/unpack reachability and compare maintained Node-24-compatible replacement implementations using current primary security/upstream evidence.
+3. Classify X1–X4 and report the complete proposed X1/X2 patch, tests, package/lock effect, and public-semantic argument before any implementation mutation.
