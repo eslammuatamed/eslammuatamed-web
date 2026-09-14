@@ -37,6 +37,20 @@ hotfix/<slug>   (branch from main)
 - **Never reset or force-push the shared `dev` branch**, and never recreate it.
 - **A zero-file content diff is not sufficient** — `dev` and `main` must also share ancestry (`git merge-base --is-ancestor origin/main origin/dev` is true after a sync). This synchronization rule applies **independently per repository**; coordinated API/Web releases still go **API first, then Web**.
 
+## Temporary dependency patches (D19-11)
+
+`patches/postman-collection+4.5.0.patch` is the sole registered package patch. Prism CLI 5.16.0
+loads Postman Collection 4.5.0, whose exact Faker 5.5.3 dependency is affected by
+`GHSA-qxc2-j82w-r537`. The manifest therefore scopes Faker 10.6.0 to Postman Collection and the
+version-bound patch supplies only the legacy Faker API adapter required by Postman's dynamic
+variable register. `npm ci` applies it before Nuxt preparation; a patch mismatch fails installation.
+
+The Web dependency owner must check upstream Postman Collection PR #1393 (or its successor) during
+each dependency/security review. Remove the override, patch artifact, adapter regression test, and
+`patch-package` when a supported Postman release depends on a Faker version newer than 10.4.0 and
+the same focused Prism/contract/E2E proof passes without the patch. Do not carry the patch across a
+Postman version change by editing its filename or context blindly.
+
 ## Performance verification — governed Lighthouse (doc 20 §5.1, D20-25)
 
 **One command, everywhere — and it is the only setup you need:**

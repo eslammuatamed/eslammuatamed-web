@@ -10,13 +10,14 @@
     "dev": "nuxt dev",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
-    "postinstall": "nuxt prepare",
+    "postinstall": "patch-package && nuxt prepare",
     "prepare": "husky",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "typecheck": "nuxt typecheck",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:postman-faker-compat": "vitest run scripts/postman-faker-compat.spec.mjs",
     "mock": "prism mock openapi/openapi.json --port 3001",
     "api:types": "openapi-typescript openapi/openapi.json --output app/types/api.d.ts",
     "check:bundle": "node scripts/check-forbidden-modules.mjs",
@@ -99,9 +100,15 @@
     "husky": "^9.1.7",
     "lint-staged": "^17.3.0",
     "openapi-typescript": "^7.13.0",
+    "patch-package": "8.0.1",
     "size-limit": "^13.0.3",
     "typescript": "^5.9.3",
     "vitest": "^4.1.10",
     "vue-tsc": "^3.3.10"
+  },
+  "overrides": {
+    "postman-collection": {
+      "@faker-js/faker": "10.6.0"
+    }
   }
 }
