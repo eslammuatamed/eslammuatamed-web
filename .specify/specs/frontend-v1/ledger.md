@@ -6194,3 +6194,77 @@ content, promotion, deployment, U7 acceptance, or FE5-U8 change is authorized.
 1. Run isolated Postman/Faker and LHCI/Lighthouse compatibility experiments; retain only proven paths.
 2. Apply the bounded R1/R2 graph corrections and require the full HIGH+ audit to reach exit 0 before editing CI.
 3. Negatively control and add the blocking PR/integration CI contract, then certify the full changed surface and close only U7-PRE-002.
+
+---
+
+## Pre-U7 HIGH+ security prerequisite — authorized path exhausted · 2026-09-14
+
+**Verdict:** `PRE-U7 SECURITY REMEDIATION BLOCKED — AUTHORIZED COMPATIBILITY PATH EXHAUSTED`.
+The first mandatory major-risk experiment, C1, proved that the currently available fixed Faker line
+is not compatible with the Postman execution path used by Prism. The owner-authored stop condition
+therefore fired before C2, partial R1/R2 remediation, CI enforcement, publication, or U7 work.
+
+### C1 supported-parent investigation
+
+Current registry resolution was refreshed before mutation. Latest Prism CLI `5.16.0` resolves
+`@stoplight/http-spec@7.1.0`, which still resolves `postman-collection@4.5.0`. The latest available
+Postman Collection `5.3.1` also still declares `@faker-js/faker@5.5.3`; consequently neither the
+current compatible parents nor the latest Postman parent remove the vulnerable dependency. The npm
+advisory `GHSA-qxc2-j82w-r537` affects Faker `<=10.4.0`, so the minimum fixed line is `>=10.5.0`.
+
+### C1 isolated override experiment and rejection
+
+The experiment added only this temporary parent-scoped override:
+
+```json
+"postman-collection": {
+  "@faker-js/faker": "10.6.0"
+}
+```
+
+`npm install --package-lock-only --ignore-scripts` succeeded and changed only the root override plus
+removal of Postman's nested Faker lock node. `npm ci` also succeeded. The focused contract-fixture
+command `npm test -- --run scripts/e2e/contract-fixtures.spec.ts` passed 26/26, but that test validates
+authored fixtures and does not execute Postman's dynamic-variable module. The required direct tool
+proof then failed immediately:
+
+```text
+$ node_modules/.bin/prism mock openapi/openapi.json --port 43187
+.../postman-collection/lib/superstring/dynamic-variables.js:171
+            generator: faker.address.city
+                                     ^
+TypeError: Cannot read properties of undefined (reading 'city')
+Node.js v24.19.0
+exit 1
+```
+
+The failure occurs before OpenAPI fixture loading or the listening state, and is an actual removed
+Faker API consumed by Postman. Therefore the major override fails the owner-required direct
+compatibility condition; later Prism response, E2E, fixture-drift, and bundle checks cannot truthfully
+be reached on that graph. No failed experiment was committed.
+
+### Restoration proof and stop boundary
+
+The override was removed using a source patch, the lockfile was regenerated normally, and `npm ci`
+restored installed dependencies. The repository is back on Faker `5.5.3` under Postman. Restored
+lock identity exactly matches the certified start: SHA-256
+`43c11badc5c98bae9b1c1a071dbce60533382c0890cb6121148e05d40845c655`, Git blob
+`c617069c2489a8bb2ffa54be8f74055c619927d0`. As a restoration control, baseline Prism loaded the
+committed contract, listened on `127.0.0.1:43187`, and
+`GET /api/v1/settings/site?locale=en` returned HTTP 200 before the exact process started for the test
+was interrupted.
+
+No supported parent route removes vulnerable Faker, and the only owner-authorized major override
+route is directly incompatible. Resolving this chain now requires an upstream Postman fix, a reviewed
+fork/patch, or replacing/removing the Prism/Postman path; none is authorized by O-SEC-1/O-SEC-2.
+Per the explicit stop condition, C2 Lighthouse/Puppeteer was not attempted, compatible R1/R2 fixes
+were not partially landed, the predictably-red CI audit gate was not added, and no PR was opened.
+
+No production/runtime feature, `deploy.yml`, Central Docs, reference environment, content,
+production, promotion, deployment, U7-A01, governed U7 acceptance, or FE5-U8 state changed.
+
+**Next three actions (owner decision required before resumption).**
+
+1. Obtain a supported Postman release that uses fixed Faker, or explicitly authorize one bounded reviewed Postman patch/fork strategy.
+2. Resume C1 from exact `origin/dev` and require Prism startup, contract responses, relevant E2E, fixture stability, and bundle isolation to pass before retaining the resolution.
+3. Only after C1 succeeds, evaluate C2 and the remaining R1/R2/CI work; FE5-U7 acceptance remains unstarted.
