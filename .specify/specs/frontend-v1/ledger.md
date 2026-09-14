@@ -6606,3 +6606,130 @@ or production state changed during this rebaseline.
 1. Inspect every declaration/import/call and security-sensitive behavior in the exact `@puppeteer/browsers@2.13.2` ZIP extraction surface.
 2. Trace discovery/download/install/unpack reachability and compare maintained Node-24-compatible replacement implementations using current primary security/upstream evidence.
 3. Classify X1–X4 and report the complete proposed X1/X2 patch, tests, package/lock effect, and public-semantic argument before any implementation mutation.
+
+---
+
+## Puppeteer extraction-adapter investigation — pre-mutation checkpoint · 2026-09-14
+
+This phase was read-only except for this append-only checkpoint. No fork, package manifest,
+lockfile, patch, source, test, CI, Central Docs, shared ref, PR, browser installation, or production
+state was changed. The exact published input is `@puppeteer/browsers@2.13.2`, npm integrity
+`sha512-5EUZSUIc37H6aIXyWO0Z4y8NlF8NnjgmqeQgOGiswAU7pY0HOo16ho4+alIWmSfdZnjqBRawMsP3I5YqLSn6kw==`,
+upstream git head `970bda63c03d96b7a42d96fe44e35da1b4dc4a8b`, Apache-2.0, Node `>=18`.
+
+### Exact declaration, call site, and runtime reachability
+
+`src/fileUtil.ts` and its CJS/ESM builds contain the package's only `extract-zip` import. The ZIP
+branch of `unpackArchive(archivePath, folderPath)` dynamically imports it and calls its default
+export with only `{dir: folderPath}`. `src/install.ts` and its builds are the only callers: after a
+browser archive is downloaded, the installer passes the cache installation directory to
+`unpackArchive`; its `finally` removes the archive even when extraction rejects. Other branches
+(`tar.bz2`, `tar.xz`, DMG and EXE) are disjoint and need no edit.
+
+| Runtime path | Package load | ZIP extraction call | Required compatibility |
+| --- | --- | --- | --- |
+| Repository LHCI with preinstalled `CHROME_PATH` | Lighthouse loads `puppeteer-core`, which loads browser enums/launch helpers from `@puppeteer/browsers` | no | CJS/ESM exports and launch/profile helpers must remain byte-for-byte available |
+| Lighthouse/Puppeteer launch of an already-installed browser | yes | no | executable discovery, profile creation and launch semantics unchanged |
+| `@puppeteer/browsers` CLI/API or Puppeteer browser download | yes | yes for Chrome, Chrome Headless Shell, ChromeDriver, Chromium and applicable Windows Firefox ZIPs | archive removal/error propagation, nested directories, modes, symlinks and overwrite behavior |
+| Linux/macOS Firefox non-ZIP installation | yes | no | tar/DMG branches unchanged |
+
+The current vulnerable adapter creates parents, checks the real parent remains under the extraction
+root, preserves the ZIP mode bits with 0755/0644 defaults, supports directories and symlinks, and
+overwrites ordinary existing files. It does not validate a symlink target and opens a later regular
+entry by pathname. That enables CVE-2026-56876 / GHSA-jmr9-qjv8-65gv and the duplicate-entry
+symlink write-through CVE-2026-19693 / GHSA-7pqw-9j4j-h8q3. The affected range includes 2.0.1 and
+has no patched release.
+
+### Candidate comparison
+
+Disposable fresh lockfiles in `/tmp` were created with exact versions and audited against the live
+registry. All four candidates reported zero vulnerabilities, including zero HIGH/CRITICAL.
+
+| Candidate | Fresh audit | Production dependency footprint | Semantic fit | Decision |
+| --- | --- | --- | --- | --- |
+| `yauzl@3.4.0` | 0 total | itself + `pend` | low-level, bounded-memory ZIP reader; filename and size validation; closest to both the old adapter and current Puppeteer implementation | **select** |
+| `unzipper@0.12.5` | 0 total | 16 transitive packages | higher-level but much larger graph and historic traversal surface | reject |
+| `@zip.js/zip.js@2.15.0` | 0 total | no transitive package | maintained and Node-compatible, but ESM-only and requires a larger modes/symlink adapter | reject |
+| `fflate@0.8.3` | 0 total | no transitive package | compact, but does not supply filesystem mode/symlink semantics and encourages more custom extraction code | reject |
+
+The selected `yauzl@3.4.0` is MIT, Node `>=12`, npm integrity
+`sha512-jIH9yLR9wqr0wOS0TpBvo/g/2UgZH5qePVbjgRliiF0BYvOZyaBknKsF+x9Iht0O6sqgnB93rCICdOZFecJuDw==`
+and upstream git head `f5798e15204ffbb9a428b00217e4659684a41b0f`. Unlike the currently
+installed 2.10.0 chain, 3.4.0 vendors its simplified file slicer and includes the 3.3.1 stream
+interruption fixes plus promise/async-iterator APIs. The implementation must nevertheless prove a
+large deflated-entry extraction on the repository's Node 24 runtime because old yauzl/file-slicer
+combinations have a documented Node 24/26 truncation failure.
+
+Using only OS `unzip`/PowerShell was rejected because it adds an environment dependency and current
+Puppeteer 3.x had to restore a library fallback after CLI-only extraction broke consumers. A root
+`patch-package` edit was also rejected: postinstall patching cannot change npm's prior dependency
+resolution, so `extract-zip` would remain installed, locked and audited. Aliasing the
+`extract-zip` name to a different implementation is opaque and does not meet the explicit absence
+gate.
+
+### X classification and complete proposed delta
+
+**Classification: X2 — bounded immutable fork.** The fork changes one internal ZIP adapter while
+preserving the exact 2.13.2 public package, browser metadata, installer, CJS/ESM entry points and all
+non-ZIP branches. It does not upgrade or override Lighthouse, LHCI or Puppeteer core.
+
+The proposed external repository is
+`https://github.com/eslammuatamed/puppeteer-browsers-safe-extract`. It will be initialized only in
+the implementation phase from the exact published 2.13.2 tarball above, retain Apache-2.0 notices,
+and be referenced only by a full immutable commit SHA. Its owned delta is:
+
+- `package.json`: retain name/version/export/engine metadata; remove `extract-zip`; add exact
+  `yauzl: 3.4.0`.
+- `src/fileUtil.ts`, `lib/cjs/fileUtil.js`, and `lib/esm/fileUtil.js` plus corresponding source maps:
+  replace only the ZIP branch/helper. Validate yauzl filenames and uncompressed sizes; preserve
+  `__MACOSX` skipping, directory detection, 0755/0644 defaults and low mode bits; resolve every
+  output and symlink target inside the real extraction root; re-check real parent containment; use
+  `O_NOFOLLOW` for regular-file creation so a pre-existing or duplicate symlink cannot be followed;
+  retain normal-file truncating overwrite and reject on extraction errors.
+- A fork-local Node test covering normal nested extraction, empty directories, executable mode,
+  ordinary duplicate overwrite, parent/absolute traversal rejection, external symlink rejection,
+  duplicate symlink→file rejection, pre-existing parent/final symlinks, malformed/size-mismatch
+  rejection, and a >64 KiB deflated file whose bytes/hash must match.
+
+The web-repository delta, after the fork passes independent review, is limited to:
+
+- `package.json`: add a nested override under `puppeteer-core@24.43.1` replacing only
+  `@puppeteer/browsers` with `git+https://github.com/eslammuatamed/puppeteer-browsers-safe-extract.git#<full-commit-sha>`;
+  add a focused test script.
+- `package-lock.json`: resolve that exact Git commit; remove `extract-zip@2.0.1`, old
+  `yauzl@2.10.0`, `fd-slicer@1.1.0`, the extract-only `get-stream@5.2.0`, and optional
+  `@types/yauzl@2.x`; add exact `yauzl@3.4.0` while retaining/reusing `pend@1.2.0`.
+- `scripts/puppeteer-extraction.spec.mjs`: downstream package-identity and extraction smoke/security
+  assertions so deletion of the override or containment/no-follow logic fails discriminatingly.
+- This ledger only. No Lighthouse config, D20 threshold, CI workflow, production dependency or
+  application source file is proposed.
+
+npm's official package-json contract confirms that root overrides may replace a transitive package
+with a Git URL and that a `#<commit-ish>` selects exactly that commit. Before trusting the new test,
+the implementation phase must perform the standing negative control: deliberately restore the
+unsafe symlink-follow behavior in the fork, demonstrate the focused test fails with an outside-write
+signal, revert it, then demonstrate the same command passes.
+
+### Planned acceptance matrix — not yet executed
+
+1. Fork-local focused ZIP suite on Node 24, including the large-file integrity assertion.
+2. Independent review of fork provenance, license, diff, containment/no-follow implementation and
+   full commit SHA before the web manifest refers to it.
+3. Fresh clean `npm ci`; `npm ls`; `npm explain extract-zip` must return absent; full and production
+   audits must remove the inherited Puppeteer/Lighthouse HIGHs without introducing any new
+   HIGH/CRITICAL.
+4. Focused extraction/downstream compatibility tests, then the existing Lighthouse/LHCI unit and
+   orchestration suites.
+5. One serialized clean-build LHCI/D20 mobile+desktop proof with exact build SHA and unchanged D20
+   rules before any security-PR decision.
+
+Implementation has not started and no implementation verdict is issued at this checkpoint.
+
+**Next three actions.**
+
+1. Create the standalone fork from the exact tarball/integrity, implement and negatively control the
+   one ZIP adapter, then obtain an independent review of its immutable commit.
+2. Apply the commit-pinned nested override and focused downstream test in this branch; regenerate the
+   lockfile and prove `extract-zip` absent plus audit improvement.
+3. Run the serialized compatibility/Lighthouse/D20 acceptance matrix, append exact evidence, obtain
+   independent final review, then decide whether to open the security PR.
