@@ -6311,3 +6311,105 @@ Faker 9.3.0; it is provenance evidence only, not an installed dependency.
 1. Add the real-Prism/all-generator compatibility spec and reproduce the fixed-Faker/unmodified-Postman failure as its negative control.
 2. Add the version-bound patch artifact, rerun the focused compatibility proof, then prove a clean `npm ci` reapplies it.
 3. Run Prism-dependent, bundle, audit-classification, and Web validation; commit a checkpoint without starting other security chains.
+
+### Postman/Faker bounded compatibility remediation proven · 2026-09-14
+
+**Verdict:** `POSTMAN/FAKER COMPATIBILITY REMEDIATION PROVEN — SECURITY PREREQUISITE REMAINS OPEN`.
+Implementation checkpoint `6d0375626872df42fe49580f77f0c9f845d966e3` replaces only the vulnerable
+Faker resolution beneath Postman Collection and preserves the repository's Prism behavior. It does
+not close U7-PRE-002 and does not authorize or begin any other security or U7 work.
+
+#### Compatibility inventory and classification
+
+Postman Collection 4.5.0 imports Faker only from
+`lib/superstring/dynamic-variables.js`. That eagerly constructs 118 generators containing 111
+unique Faker references. Faker 10.6.0 retains 64 references and lacks 47. Because the whole register
+is constructed at Prism startup and the focused proof executes every generator, every adapted row is
+both startup-relevant and directly exercised by the repository test.
+
+| Postman call site/group | Faker 5 surface | Faker 10.6 equivalent | Compatibility treatment |
+| --- | --- | --- | --- |
+| Address generators | `address.city`, `country`, `countryCode`, `streetAddress` | same methods under `location` | namespace adapter |
+| Street generator | `address.streetName` | `location.street` | method alias |
+| Coordinate generators | `address.latitude`, `longitude` | `location.latitude`, `longitude` | wrapper preserves legacy fixed-four-decimal string and valid range |
+| Person/job generators | `name.firstName`, `lastName`, `prefix`, `suffix`, `jobArea`, `jobDescriptor`, `jobTitle`, `jobType` | same methods under `person` | namespace adapter |
+| Full-name generator | `name.findName` | `person.fullName` | method alias |
+| Random helpers | `random.alphaNumeric`, `arrayElement`, `word` | `string.alphanumeric`, `helpers.arrayElement`, `lorem.word` | method aliases |
+| Datatype generators | `datatype.number`, `uuid` | `number.int`, `string.uuid` | method aliases |
+| Phone generators | `phone.phoneNumber`, `phoneNumberFormat` | `helpers.fromRegExp` | wrapper preserves repository-used ten-digit hyphenated form |
+| Commerce color | `commerce.color` | `color.human` | method alias |
+| Company generators | `company.bs`, `bsAdjective`, `bsBuzz`, `bsNoun`, `companyName`, `companySuffix` | `company.buzzPhrase`, `buzzAdjective`, `buzzVerb`, `buzzNoun`, `name`, plus legal-entity definition selection | aliases and compact suffix wrapper |
+| Finance generators | `finance.account`, `mask` | `finance.accountNumber`, `string.numeric` | aliases; mask wrapper preserves legacy four-digit output |
+| Generic image URL | `image.imageUrl` | `image.url` | method alias |
+| Image categories | `image.abstract`, `animals`, `business`, `cats`, `city`, `fashion`, `food`, `nature`, `nightlife`, `people`, `sports`, `transport` | `image.urlLoremFlickr({ category })` | category-preserving wrappers |
+| Internet generators | `internet.color`, `userName` | `color.rgb`, `internet.username` | method aliases |
+| IPv4 semantic contract | `internet.ip` | `internet.ipv4` | explicit alias prevents Faker 10's IPv6-capable default from violating `$randomIP` |
+
+This remains **P2 — bounded compatibility adapter**. The dependency patch changes one existing
+import line and adds one 82-line shim; it does not rewrite Postman, Prism, the mock architecture, or
+application code. Official Faker v10 migration guidance documents the principal namespace/method
+moves (`address`→`location`, `name`→`person`, and `userName`→`username`). Upstream Postman Collection
+PR #1393 (`https://github.com/postmanlabs/postman-collection/pull/1393`) makes the same families of
+changes and reports its suite passing, but remains open and targets advisory-affected Faker 9.3.0,
+so it is evidence only. Faker migration source: `https://fakerjs.dev/guide/upgrading`.
+
+#### Deterministic patch and negative control
+
+The repository had no package-patch facility. The selected mechanism pins `patch-package@8.0.1`,
+uses a parent-scoped Postman override to exact Faker `10.6.0`, and runs patch application before
+`nuxt prepare`. The version-bound source artifact is
+`patches/postman-collection+4.5.0.patch`, SHA-256
+`6a628ef2c6a83bd227546d10ee1a31b9f122eb90c8a0521bbab48167494a2049`.
+Final lock SHA-256 is `11f88f267e807e0eec51bcd4ce705af37b5b809ca7c09c5a15566e4d516612a0`.
+
+The final automated instrument's exact defect is fixed-Faker Prism startup without a Postman
+adapter. After `npx patch-package --reverse`, `npm run test:postman-faker-compat` failed 2/2 as
+required: Prism exited before readiness and direct register construction both stopped at
+`faker.address.city`. After `npx patch-package`, the same command passed 2/2. The proof starts real
+Prism against committed `openapi/openapi.json`, validates HTTP 200 plus exact EN/AR site names, and
+constructs and executes all 118 generators. Discriminating assertions cover IPv4/IPv6, the legacy
+four-digit mask, string/four-decimal/ranged coordinates, URL, UUID, phone, boolean, and integer
+contracts. Independent review found the initial IP/mask/coordinate semantic gaps; these assertions
+and adapter corrections resolved every finding before the implementation checkpoint.
+
+#### Clean install, runtime, test, and security evidence
+
+| Evidence | Exact result |
+| --- | --- |
+| Clean dependency install | `npm ci`, exit 0; `patch-package 8.0.1` applied `postman-collection@4.5.0 ✔`; 1,615 packages added / 1,617 audited; no manual `node_modules` state required |
+| Final dependency tree | Prism CLI 5.16.0 → Prism HTTP 5.16.0 → HTTP Spec 7.1.0 → Postman Collection 4.5.0 → Faker 10.6.0 overridden/deduped; Prism HTTP's direct Faker also resolves 10.6.0; patch-package 8.0.1 |
+| Focused compatibility/fixtures | `npm test -- --run scripts/postman-faker-compat.spec.mjs scripts/e2e/contract-fixtures.spec.ts scripts/e2e/prism-locale-selection.spec.mjs`: 3 files, 44/44 tests passed; the contract-fixture file retains 26/26 |
+| Known endpoint | Real Prism returned 200 for `/api/v1/settings/site?locale=en`; body contained `Eslam Muatamed`, locale `en`, and available locales `en`/`ar`; representative Arabic returned `إسلام معتمد`, locale `ar` |
+| Lint / typecheck | `npm run lint`, exit 0; `npm run typecheck`, exit 0 |
+| Full unit suite | `npm test`: 168 files, 2,604/2,604 tests passed, exit 0 |
+| Prism E2E / axe | First six-worker post-review run passed 149 and timed out four unrelated `/about` navigations; the exact four isolated tests then passed 4/4. Final authoritative serial `npx playwright test --project=contract --workers=1`: 153/153 passed in 1.6m, exit 0 |
+| Production build | Clean-tree `NUXT_PUBLIC_SITE_URL=https://example.com NUXT_PUBLIC_API_BASE=https://example.com/api/v1 npm run build`, exit 0; 47.5 MB output; provenance stamped exact head `6d0375626872df42fe49580f77f0c9f845d966e3`, tree `80e339223844eb7baa7ee5417386a0213dc549fb` and the final lock hash |
+| Bundle isolation | `npm run check:bundle`, exit 0, 150 public chunks scanned; explicit client-chunk scan: `BUNDLE_ISOLATION: PASS — Faker/Postman/Prism absent from all client chunks` |
+| Full audit | `set -o pipefail; npm audit --audit-level=high --json | …`, expected exit 1 for remaining chains: 63 total, 14 high, 46 moderate, 3 low, 0 critical; Faker advisory absent |
+| Production-only audit | `set -o pipefail; npm audit --omit=dev --audit-level=high --json | …`, expected exit 1: unchanged 40 total, 4 high, 35 moderate, 1 low, 0 critical; Faker absent |
+
+Compared with the certified 64-total/20-high start, no HIGH or CRITICAL was introduced and six HIGH
+findings were removed. The five-moderate increase is development-only `patch-package` transitive
+churn; production audit population is unchanged. `postman-collection` remains classified moderate
+through its separate lodash/uuid paths, which are outside this narrow task. The remaining full-graph
+HIGH names are `@lhci/cli`, `@lhci/utils`, `@puppeteer/browsers`,
+`@redocly/openapi-core`, `@tiptap/core`, `extract-zip`, `fast-uri`, `js-yaml`, `lighthouse`,
+`lodash`, `puppeteer-core`, `sharp`, `svgo`, and `tmp`. Production HIGH names remain
+`@tiptap/core`, `js-yaml`, `sharp`, and `svgo`.
+
+`CONTRIBUTING.md` assigns the Web dependency owner to check Postman PR #1393 or its successor at
+each dependency/security review. Removal is allowed only when a supported Postman release uses
+Faker newer than 10.4.0 and this same focused Prism/contract/E2E proof passes without the override,
+patch, adapter test, and patch tool. A Postman version change must fail patch application rather than
+silently carrying edited context.
+
+No PR was opened. The security prerequisite remains open. No Lighthouse/Puppeteer/extract-zip
+remediation, other R1/R2 remediation, HIGH+ CI gate, reference environment, U7-A01, U7 acceptance,
+content sync, Central Docs mutation, production mutation/deployment, promotion, or FE5-U8 work
+occurred.
+
+**Next three actions.**
+
+1. Separately authorize and remediate the remaining Lighthouse/Puppeteer/extract-zip and compatible R1/R2 HIGH chains without weakening D19-11.
+2. Only after the full graph reaches zero HIGH/CRITICAL, negatively control and add the blocking PR/integration CI audit gate and independently certify it.
+3. Keep U7-A01 and governed FE5-U7 acceptance closed until all pre-U7 prerequisites, including the reference environment, are independently certified.
