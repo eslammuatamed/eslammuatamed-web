@@ -6786,3 +6786,128 @@ No non-ledger mutation appeared after the authoritative checkpoint. **Zero drift
    commit into Web and audit the generated manifest/lock delta.
 3. Complete clean-install, extraction, Lighthouse/D20, Postman and Web regression evidence; obtain
    independent integration review and commit implementation/evidence without opening a PR.
+
+---
+
+## X2 immutable Puppeteer extraction fork — certified checkpoint · 2026-09-16
+
+Owner authorization covered only the temporary, public, immutable compatibility fork for the exact
+`@puppeteer/browsers@2.13.2` extraction surface. Remaining R1/R2 work, HIGH+ enforcement, D20,
+Central Docs, the reference environment, U7, shared refs, production and FE5-U8 remained outside the
+boundary. The verified zero-trust starting state is the preceding checkpoint at Web HEAD
+`4f6bdf34cee5afcc14db97ea2d86570ea5a07d78`, `origin/dev`
+`7feee77d3fdd562bcecf5cd6cbe8e73d7644b3d7`, `origin/main`
+`40eb52c6470579c19131d3cede41ccc9b295bdf5`, lock SHA-256
+`11f88f267e807e0eec51bcd4ce705af37b5b809ca7c09c5a15566e4d516612a0` / blob
+`b2443684a8e10b2e9ccc340d2fb0808cbe6fd6b4`, and no security PR.
+
+### Public fork, provenance and bounded implementation
+
+The public, credential-free repository is
+`https://github.com/eslammuatamed/puppeteer-browsers-safe-extract`. It preserves the upstream
+Apache-2.0 license, README, copyrights, package name and version. `UPSTREAM_PROVENANCE.md` records
+upstream `puppeteer/puppeteer`, package `@puppeteer/browsers@2.13.2`, upstream git head
+`970bda63c03d96b7a42d96fe44e35da1b4dc4a8b`, exact npm integrity, fork purpose, security rationale,
+bounded diff, immutable-pin rule and temporary removal/archive condition.
+
+The fork base is `4464eef810abb154ebe4134af5d15d0751baeab0`; the reviewed compatibility commit is
+`9c87c39d0bbdb78499b204c39f66a4196939092f`. Public `main` and a fresh remote install both resolved
+to that exact full SHA. Rejected local candidates `2bca9dc2…`, `e165a89c…` and `5d25e991…` are not
+ancestors and GitHub returned no commit for any of them. They were neither published nor consumed.
+
+The ten-file fork diff is `2,741` insertions / `314` deletions including generated CJS/ESM output,
+source maps, tests and a new deterministic package lock. The authored TypeScript adapter itself is
+`322` insertions / `6` deletions in `src/fileUtil.ts`. `extract-zip` was removed and exact
+`yauzl@3.4.0` added. Browser metadata, URLs, revision selection, cache layout, public exports and all
+non-ZIP extraction branches remain unchanged.
+
+The adapter streams lazy yauzl entries; rejects traversal, absolute and cross-platform unsafe paths;
+resolves and revalidates canonical real parents; validates symlink targets from the real parent;
+uses `O_NOFOLLOW`; verifies descriptor `dev`/`ino`, `lstat` identity and realpath containment before
+truncate, chmod or write; applies file/directory modes through verified handles; and closes entry
+streams, descriptors and the ZIP on success/error. Nested and Unicode paths, empty files/directories,
+large deflated content, executable/default/directory modes, normal duplicate overwrite, safe links,
+`__MACOSX` skipping and malformed errors remain supported.
+
+Three already-proven negative controls remain the instrument evidence: disabling target/no-follow
+checks failed the outside-write cases; removing the second parent check failed the controlled
+pre-open parent-swap case; and validating a nested link from its lexical rather than canonical parent
+failed the contained-alias escape case. Restored code passed `19/19`, TypeScript and reproducible
+`build:compat`; full and production fork audits are zero. `npm pack --dry-run` produced 186 expected
+entries with license, CJS/ESM/source shape and executable CLI modes. Independent release QA found no
+blocking containment, symlink, race, mode, malformed-archive, streaming, packaging, provenance or
+license finding and approved the exact commit before publication.
+
+### Web wiring and deterministic dependency proof
+
+Web implementation commit `d3ca4ef35ccf086188ae9b0ca3ed084089cac55c` changes exactly:
+
+- `package.json`: one focused test command and a nested `puppeteer-core@24.43.1` override to
+  `git+https://github.com/eslammuatamed/puppeteer-browsers-safe-extract.git#9c87c39d0bbdb78499b204c39f66a4196939092f`;
+- `package-lock.json`: 10 insertions / 76 deletions, resolving that full SHA, removing
+  `extract-zip@2.0.1`, `get-stream@5.2.0`, `fd-slicer@1.1.0`, optional `@types/yauzl@2.x` and
+  `yauzl@2.10.0`, and installing `yauzl@3.4.0` while reusing `pend`;
+- `scripts/puppeteer-extraction-compat.spec.mjs`: package/lock identity, representative compressed
+  browser-layout extraction, traversal rejection and no outside write.
+
+Before the override, that downstream test failed on absent `yauzl@3.4.0` against the upstream graph;
+after a clean install it passed `3/3`. `npm ci` installed 1,610 packages, applied
+`postman-collection@4.5.0 ✔`, and required no manual fork setup. Final graph:
+`@lhci/cli@0.15.1` → `lighthouse@12.6.1` → `puppeteer-core@24.43.1` → forked
+`@puppeteer/browsers@2.13.2` → `yauzl@3.4.0`. `npm explain extract-zip` returned no dependency,
+`npm ls` contained no `extract-zip`, and the lock search was empty. Faker remains `10.6.0`; the
+Postman patch SHA remains `6a628ef2c6a83bd227546d10ee1a31b9f122eb90c8a0521bbab48167494a2049`.
+The final lock identity is SHA-256 `9c6380c66e6349405b9273ccd8e24855ff5078bb5f6bbf43f0101dde4af66065`
+and Git blob `ae75d14f37e83c1a8ba86e5b28a3137486612eb0`.
+
+### Runtime, Lighthouse, audit and repository verification
+
+A real supported CLI install downloaded and extracted Chrome Headless Shell `153.0.8010.36` into a
+controlled temporary cache. Its executable existed at mode 0755, reported the exact version,
+launched through Puppeteer, created CDP `1.3`, rendered the expected page, and left no `.zip` or
+`.crdownload`. Existing Chrome discovery resolved `/usr/bin/google-chrome-stable`; system Chrome
+`153.0.8010.36` also launched through Puppeteer and reported CDP `1.3`.
+
+LHCI and Lighthouse loaded at the unchanged `0.15.1` / `12.6.1`; the repository config loaded the
+unchanged 16 URLs × 2 profiles × 3 runs model. Two non-governed tooling smoke reports on the clean
+build at Web SHA `d3ca4ef…` passed schema/runtime compatibility: desktop `/resume` scored
+99/100/100/100 with LCP 728.15 ms and CLS 0.000622; mobile `/ar/resume` scored 81/100/100/100 with
+LCP 3438.59 ms and CLS 0.010543. These are regression evidence only, not FE5-U7 acceptance.
+
+Existing Lighthouse semantics passed 187 tests: 159 median, coverage, protocol, provenance and report
+tests plus 28 orchestrator lifecycle tests. The strict raw CLS boundary remains `0.0499 PASS`,
+`0.0500 FAIL`, `0.0501 FAIL`. Clean analyzed production build provenance verified exact HEAD/tree;
+bundle isolation passed; the complete D20 route-size gate passed its unchanged shared-floor,
+incremental, app-owned and CSS budgets, retaining 15 D20-24 warning-only dashboard totals. No D20,
+Lighthouse config, performance methodology or CI file changed.
+
+The Postman/Faker compatibility suite passed `2/2`, including real Prism EN/AR behavior. The focused
+Playwright contract harness passed `3/3`, including an unfiltered WCAG 2.2 AA axe scan. Full Web
+Vitest passed 169 files / 2,607 tests. Typecheck, lint, clean production analysis build and bundle
+isolation passed. The initially sandboxed local-listener invocations were classified and rerun with
+localhost binding permitted; only those passing reruns are acceptance evidence.
+
+Full audit moved from 63 total (14 high, 46 moderate, 3 low, 0 critical) to 58 total (8 high,
+47 moderate, 3 low, 0 critical). The six inherited Puppeteer/Lighthouse/extract-zip HIGH package
+nodes disappeared; neither extract-zip advisory remains; `yauzl`, Faker and the fork introduced no
+HIGH/CRITICAL. Production-only remains 40 total (4 high, 35 moderate, 1 low, 0 critical), as expected
+because X2 is a development-tool chain. Remaining full-audit HIGH names are
+`@redocly/openapi-core`, `@tiptap/core`, `fast-uri`, `js-yaml`, `lodash`, `sharp`, `svgo`, and `tmp`;
+production HIGH names remain `@tiptap/core`, `js-yaml`, `sharp`, and `svgo`.
+
+Independent Web integration review found no blocking issue: only the three intended Web files changed;
+the public full-SHA resolution and installed graph matched; extract-zip was absent; Postman/Faker was
+preserved; the compatibility test was discriminating and passed; all D20/Lighthouse methodology files
+were unchanged; and the reviewed worktree was clean.
+
+No security PR was opened. The overall PRE-U7 security prerequisite remains open. No R1/R2 fix,
+HIGH+ gate, reference-environment provisioning, U7-A01, FE5-U7 acceptance, Central Docs mutation,
+shared-ref movement, production mutation/deployment, promotion or FE5-U8 work occurred.
+
+**Verdict:** `PUPPETEER EXTRACT-ZIP IMMUTABLE FORK PROVEN — SECURITY PREREQUISITE REMAINS OPEN`
+
+**Next three actions.**
+
+1. Continue remaining R1/R2 remediation in a separately authorized task; do not change this certified immutable fork pin.
+2. Add the blocking HIGH+ CI gate only after every remaining security chain is resolved and separately reviewed.
+3. Keep U7-A01 and FE5-U7 acceptance closed until the full PRE-U7 security prerequisite is certified.
