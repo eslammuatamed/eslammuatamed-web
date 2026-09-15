@@ -6911,3 +6911,122 @@ shared-ref movement, production mutation/deployment, promotion or FE5-U8 work oc
 1. Continue remaining R1/R2 remediation in a separately authorized task; do not change this certified immutable fork pin.
 2. Add the blocking HIGH+ CI gate only after every remaining security chain is resolved and separately reviewed.
 3. Keep U7-A01 and FE5-U7 acceptance closed until the full PRE-U7 security prerequisite is certified.
+
+---
+
+## PRE-U7 remaining R1/R2 HIGH remediation — zero-trust investigation and pre-mutation plan · 2026-09-16
+
+The owner authorized only the remaining R1/R2 HIGH dependency remediation. HIGH+ CI enforcement,
+the governed U7 audit matrix, reference-environment provisioning, shared refs, production and all
+R3/R4 work remain outside this boundary. This checkpoint was produced before any dependency
+mutation.
+
+### Zero-trust resume
+
+`git fetch origin --prune` preceded the readings. The durable Web worktree is on
+`fix/frontend-v1-u7-security-gate` at the authoritative checkpoint
+`311f1afcfd7a192cdc13959159a77a5c27ec3af6`; `git status --porcelain` is empty.
+
+| Claim | Fresh live state | Result |
+| --- | --- | --- |
+| `origin/dev` | `7feee77d3fdd562bcecf5cd6cbe8e73d7644b3d7` | exact |
+| `origin/main` | `40eb52c6470579c19131d3cede41ccc9b295bdf5` | exact |
+| Manifest | certified X2 manifest, including unchanged Postman/Faker and Puppeteer overrides | exact |
+| Lock identity | SHA-256 `9c6380c66e6349405b9273ccd8e24855ff5078bb5f6bbf43f0101dde4af66065`; blob `ae75d14f37e83c1a8ba86e5b28a3137486612eb0` | exact |
+| Postman patch | SHA-256 `6a628ef2c6a83bd227546d10ee1a31b9f122eb90c8a0521bbab48167494a2049` | exact |
+| Fork | public `main`, local HEAD and Web pin all `9c87c39d0bbdb78499b204c39f66a4196939092f` | exact |
+| Browser-extraction graph | LHCI 0.15.1 → Lighthouse 12.6.1 → Puppeteer Core 24.43.1 → forked browsers 2.13.2 → yauzl 3.4.0 | exact |
+| `extract-zip` | absent from installed graph and lockfile; `npm explain` exits 1 | exact |
+| Postman/Faker graph | Prism CLI/HTTP 5.16.0 → HTTP Spec 7.1.0 → Postman Collection 4.5.0 → Faker 10.6.0 | exact |
+| Security PR | none | exact |
+
+Fresh `npm audit --json --audit-level=high` exited 1 with 58 total: 8 high, 47 moderate,
+3 low and 0 critical. Fresh `npm audit --omit=dev --json --audit-level=high` exited 1 with
+40 total: 4 high, 35 moderate, 1 low and 0 critical. These exactly match the certified X2
+checkpoint. The 14 open Dependabot HIGH alerts still include stale extract-zip and Faker entries;
+the current lockfile and npm audit prove those nodes absent/fixed, so GitHub recalculation lag is not
+treated as dependency truth.
+
+Open dependency PRs remain #74 (`d1064da1e1ad309a558a3cf5a0e2b761e10a9e00`), #73
+(`f9be4b40168e9eaf74d6e53fa7c0c9e9ef037124`), #72
+(`9ea46aabf411aeef7457995cb91341a304c1c038`), #69
+(`3d175fafccd39c094ec9d122e4c00f75e8a46a9a`), #68
+(`513defb39a2594429eaa7dde31065ee707054b86`) and #46
+(`016f0d9becfac34cc7e336b3fd2b784e71fec091`). None is this security branch and none supplies the
+complete bounded resolution below. **Zero drift.**
+
+### Exact remaining HIGH disposition
+
+| Advisory | Package/node | Exact installed parent path | Installed → fixed | Direct; class | Runtime |
+| --- | --- | --- | --- | --- | --- |
+| GHSA-j95f-988m-3j2f | `@tiptap/core` | 17 direct Tiptap packages plus `@nuxt/ui@4.10.0`; internal peers/dependencies are exact 3.30.1 | 3.30.1 → 3.30.5 | direct; R1 synchronized patch | prod |
+| GHSA-2883-xcg3-v3hh | `@redocly/openapi-core` / its `js-yaml` | `openapi-typescript@7.13.0` → Redocly `^1.34.6` → exact js-yaml 4.3.1 | Redocly 1.34.19 → 1.34.20; js-yaml 4.3.1 → 4.3.2 | transitive; R1 supported patch | dev |
+| GHSA-2883-xcg3-v3hh | remaining `js-yaml` copies | LHCI utils / json-schema-ref-parser → 3.15.1; Rollup YAML and APIDevTools parser → 4.3.1 | 3.15.1 → 3.15.2; 4.3.1 → 4.3.2 | transitive; R1 in-range | mixed; Rollup copy is prod |
+| GHSA-5jgf-p345-68v8 | `fast-uri` | root/Prism `ajv@8.20.0` → `fast-uri ^3.0.1` | 3.1.5 → 3.1.6 | transitive; R1 in-range | dev |
+| GHSA-f65p-4m7j-42xc | `fast-uri` | same single Ajv node, shared by root Ajv, Ajv Formats and Prism HTTP | 3.1.5 → 3.1.6 | transitive; R1 in-range | dev |
+| GHSA-fph4-wmhf-6fwf | `fast-uri` | same | 3.1.5 → 3.1.6 | transitive; R1 in-range | dev |
+| GHSA-jqff-g426-hqxp | `fast-uri` | same | 3.1.5 → 3.1.6 | transitive; R1 in-range | dev |
+| GHSA-r5fr-rjxr-66jc | nested `lodash` | Prism HTTP → HTTP Spec 7.1.0 → Postman Collection 4.5.0 → exact 4.17.21 | 4.17.21 → 4.18.0 | transitive exact pin; R2 parent-scoped override | dev |
+| GHSA-rgj7-g3m4-5g8c | two optional `sharp` nodes | Nuxt Image 2.1.0 → IPX 4.0.0-beta.1; Nuxt SEO 5.3.12 → SEO Utils 8.4.2; both `^0.35.3` | 0.35.3 → 0.35.4 | transitive; R1 in-range | prod optional |
+| GHSA-w27v-7q3p-w38r | `svgo` | Nuxt Vite builder → cssnano 8.0.6 → preset-default → postcss-svgo 8.0.5 → `^4.0.2` | 4.0.2 → 4.1.0 | transitive; R1 compatible minor | prod |
+| GHSA-ph9p-34f9-6g65 | root `tmp` | `@lhci/cli@0.15.1` → `tmp ^0.1.0` | 0.1.0 → 0.2.7 | transitive constrained range; R2 parent-scoped override | dev |
+| GHSA-ph9p-34f9-6g65 | nested `tmp` | LHCI → Inquirer 6.5.2 → external-editor 3.1.0 → `tmp ^0.0.33` | 0.0.33 → 0.2.7 | transitive constrained range; R2 parent-scoped override | dev |
+
+The audit's eight HIGH package groups are not eight advisories: fast-uri contributes four HIGH
+advisories; Redocly is an affected wrapper because of the same js-yaml advisory; tmp has two
+vulnerable installed nodes.
+
+Fresh registry evidence establishes the supported targets. Redocly 1.34.20 is inside
+openapi-typescript's `^1.34.6` range and pins js-yaml 4.3.2. All 17 directly used Tiptap packages
+publish synchronized 3.30.5 artifacts; core peers on exact `@tiptap/pm@3.30.5`, and starter-kit
+depends on exact 3.30.5 core/pm. fast-uri 3.1.6, js-yaml 3.15.2/4.3.2, sharp 0.35.4 and svgo 4.1.0
+all exist inside their owning ranges.
+
+No supported normal R1 parent fix exists for the two R2 groups. Postman Collection 4.5.0 is the
+last 4.x release and pins Lodash 4.17.21 exactly; its next maintained line is 5.x, an unauthorized
+major that also changes the established Faker relationship. LHCI 0.15.1 is current and still uses
+`tmp ^0.1.0`; external-editor 3.1.0 is current and still uses `tmp ^0.0.33`; Inquirer 6.5.2 is the
+last 6.x release. The required tmp APIs remain present in 0.2.7: LHCI uses `fileSync`, while
+external-editor uses `tmpNameSync`.
+
+### Approved-boundary delta before mutation
+
+| Chain | Current | Proposed | Mechanism | Risk | Required validation |
+| --- | --- | --- | --- | --- | --- |
+| Tiptap | 17 direct ranges `^3.30.1`, resolved 3.30.1 | ranges/resolution `^3.30.5` / 3.30.5 | synchronized direct R1 patch | low; exact internal peer lockstep | editor/dashboard suites, typecheck, build, bundle isolation |
+| Redocly/js-yaml | Redocly 1.34.19; js-yaml 3.15.1/4.3.1 | 1.34.20; 3.15.2/4.3.2 | named lock-compatible R1 updates | low; schema parser behavior | API type generation, OpenAPI/contract tests |
+| Ajv/fast-uri | Ajv 8.20.0 → fast-uri 3.1.5 | keep Ajv; fast-uri 3.1.6 | lock-only R1 patch | low | schema/contract/Prism tests |
+| Postman/Lodash | Postman 4.5.0 → exact Lodash 4.17.21 | keep Postman; nested Lodash 4.18.0 | add `lodash: 4.18.0` only under existing `postman-collection` override | medium; parent exact-pin bypass | patch application, 118 Faker generators, Prism EN/AR and contract fixtures |
+| sharp | two optional 0.35.3 copies | two 0.35.4 copies | lock-only R1 patch | low; native image runtime | image/IPX smoke and clean build |
+| svgo | 4.0.2 | 4.1.0 | lock-only R1 compatible minor | low; optimizer output | asset/CSS tests and build |
+| tmp | LHCI 0.1.0; external-editor 0.0.33 | both 0.2.7 | exact overrides under `@lhci/cli@0.15.1` and `external-editor@3.1.0` | medium; crossing 0.x ranges | direct API smoke plus unchanged Lighthouse/LHCI orchestration |
+
+Implementation order is fixed: first use normal npm resolution for all R1 changes and inspect each
+named graph; only then add the three R2 child resolutions under their owning parent scopes. No
+lockfile will be hand-edited. The existing Postman/Faker override gains only the Lodash child; the
+Puppeteer override and Postman patch are not rewritten. Override removal conditions are: remove the
+Lodash child when the consumed Postman line publishes a compatible fixed Lodash dependency; remove
+the LHCI tmp override when LHCI publishes a compatible tmp range; remove the external-editor tmp
+override when external-editor (or the consumed Inquirer line) publishes a compatible tmp range.
+
+Expected lock churn is bounded to synchronized Tiptap 3.30.5 artifacts; Redocly 1.34.20; js-yaml
+3.15.2/4.3.2; fast-uri 3.1.6; the nested Postman Lodash 4.18.0; both sharp 0.35.4 nodes; svgo 4.1.0;
+and tmp 0.2.7. Dedupe may remove the old root/nested tmp copies and their now-orphaned
+`os-tmpdir`/old rimraf-only edges. No framework, Nuxt, Vue, Prism, Lighthouse, LHCI, Ajv, cssnano,
+IPX, SEO, Faker, Puppeteer or fork version movement is planned. Any movement outside these direct
+consequences is a stop-and-correct condition.
+
+The full acceptance contract remains the owner's Phase F–M matrix: deterministic clean `npm ci`,
+full and production audits, advisory-by-advisory proof, focused dependency regression, preserved
+Postman/Faker and Puppeteer extraction proofs, standard Web gates, ordinary non-governed desktop and
+mobile Lighthouse, complete checkpoint diff/churn audit and an independent read-only review. The
+governed U7 96-audit matrix and HIGH+ CI workflow are explicitly excluded.
+
+No unexplained major update, new fork, waiver or policy exception is present. **R1/R2 implementation
+may proceed within this exact plan.**
+
+**Next three actions.**
+
+1. Apply and inspect only the normal R1 package-manager updates, then verify the named installed graphs.
+2. Add only the three documented parent-scoped R2 child resolutions, clean-install and prove the HIGH+ audits.
+3. Run focused and full regression, audit complete churn, obtain independent review, and commit implementation/evidence without adding CI enforcement or opening a PR.
