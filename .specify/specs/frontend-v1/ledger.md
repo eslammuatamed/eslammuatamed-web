@@ -7030,3 +7030,126 @@ may proceed within this exact plan.**
 1. Apply and inspect only the normal R1 package-manager updates, then verify the named installed graphs.
 2. Add only the three documented parent-scoped R2 child resolutions, clean-install and prove the HIGH+ audits.
 3. Run focused and full regression, audit complete churn, obtain independent review, and commit implementation/evidence without adding CI enforcement or opening a PR.
+
+---
+
+## PRE-U7 remaining R1/R2 HIGH remediation — certified checkpoint · 2026-09-16
+
+This phase completed only the owner-authorized remaining R1/R2 HIGH dependency remediation. It did
+not add HIGH+ CI enforcement, execute the governed U7 96-audit matrix, open a PR, provision the
+reference environment, begin U7-A01/FE5-U7 acceptance, move a shared ref, or mutate production.
+The zero-trust starting state and pre-mutation disposition immediately above remain the authoritative
+baseline: Web `311f1afcfd7a192cdc13959159a77a5c27ec3af6`, `origin/dev`
+`7feee77d3fdd562bcecf5cd6cbe8e73d7644b3d7`, `origin/main`
+`40eb52c6470579c19131d3cede41ccc9b295bdf5`, lock SHA-256
+`9c6380c66e6349405b9273ccd8e24855ff5078bb5f6bbf43f0101dde4af66065` / blob
+`ae75d14f37e83c1a8ba86e5b28a3137486612eb0`, full audit 58 total / 8 high /
+47 moderate / 3 low / 0 critical, and production audit 40 total / 4 high / 35 moderate /
+1 low / 0 critical.
+
+### Bounded implementation and final graph
+
+Implementation commit `f38249b3657661ecba10a8448a5a4614e7242c75` changes exactly
+`package.json` and `package-lock.json` (527 insertions / 610 deletions). The manifest synchronizes
+all 17 directly declared Tiptap packages from `^3.30.1` to `^3.30.5`, pins the already-consumed
+`@lhci/cli` exactly at `0.15.1` so its override selector is exact, adds Lodash only beneath the
+existing `postman-collection` override, and adds exact-parent tmp overrides for
+`@lhci/cli@0.15.1` and `external-editor@3.1.0`. The certified Puppeteer override is unchanged.
+
+The final exact remediation is:
+
+| Starting HIGH chain | Final node/path | Class and result |
+| --- | --- | --- |
+| Tiptap core GHSA-j95f-988m-3j2f | all 37 resolved Tiptap nodes `3.30.5` | R1 synchronized patch; resolved |
+| Redocly/js-yaml GHSA-2883-xcg3-v3hh | Redocly `1.34.20`; js-yaml `3.15.2` / `4.3.2` | R1 supported/in-range patches; resolved |
+| fast-uri four HIGH advisories | Ajv `8.20.0` → fast-uri `3.1.8` | R1 in-range patch; resolved |
+| Postman/Lodash GHSA-r5fr-rjxr-66jc | Postman `4.5.0` → shared Lodash `4.18.1` | R2 Postman-child override; resolved |
+| sharp GHSA-rgj7-g3m4-5g8c | IPX and SEO paths both `0.35.4` | R1 in-range patch; resolved |
+| svgo GHSA-w27v-7q3p-w38r | cssnano path → svgo `4.1.0` | R1 in-range minor; resolved |
+| tmp GHSA-ph9p-34f9-6g65 | LHCI and external-editor paths → tmp `0.2.7` | R2 exact-parent overrides; resolved |
+
+Normal npm resolution selected fast-uri `3.1.8`, a later compatible patch than the planned minimum
+`3.1.6`. Lodash `4.18.0` was rejected after npm marked that release deprecated as a bad release;
+`4.18.1` is the compatible fixed successor already shared by the rest of the graph. SVGO `4.1.0`
+necessarily moves only its isolated children `css-select` 5.2.2 → 6.0.0 and `css-what` 6.2.2 →
+7.0.0. These transitive majors are declared by upstream SVGO 4.1.0, do not alter a direct framework
+or tool major, and passed build/D20 review.
+
+The complete lock churn contains 110 changed package nodes, all classified: 37 Tiptap, 54 sharp
+platform/runtime nodes, 2 Redocly, 3 js-yaml, 1 fast-uri, 1 Lodash dedupe, 3 SVGO and its required
+children, and 9 tmp/dedupe/orphan-removal nodes. There is no unexplained or opportunistic movement.
+No Nuxt, Vue, Prism, Lighthouse, Puppeteer Core, Ajv, cssnano, IPX, SEO, Faker or fork version moved.
+
+The R2 scopes are exactly:
+
+- `postman-collection` → `lodash: 4.18.1`; remove when the consumed Postman line publishes a
+  compatible fixed Lodash dependency;
+- `@lhci/cli@0.15.1` → `tmp: 0.2.7`; remove when LHCI publishes a compatible tmp range;
+- `external-editor@3.1.0` → `tmp: 0.2.7`; remove when external-editor or the consumed Inquirer line
+  publishes a compatible tmp range.
+
+There is no unsafe global security override. Registry inspection confirmed Postman Collection 4.5.0,
+LHCI 0.15.1 and external-editor 3.1.0 are the current compatible owning lines, so no normal supported
+parent patch removes those exact/constrained vulnerable children.
+
+### Deterministic install, audit and compatibility preservation
+
+Fresh `npm ci` installed 1,601 packages, applied `postman-collection@4.5.0 ✔`, prepared Nuxt, and
+completed without manual setup. The final lock identity is SHA-256
+`db9fa9be31bd5a487f099d595f040265751dee5d345dbd35e8cd52b65cf80c48` and Git blob
+`6044eebf5ef64f81e320d5806632fdb328c7b805`.
+
+The Postman/Faker chain remains Prism CLI/HTTP 5.16.0 → HTTP Spec 7.1.0 → Postman Collection 4.5.0
+→ Faker 10.6.0. Patch SHA-256 remains
+`6a628ef2c6a83bd227546d10ee1a31b9f122eb90c8a0521bbab48167494a2049`; its suite passed 2/2 and
+explicitly exercised the complete 118-generator register plus real Prism EN/AR behavior. The
+Puppeteer chain remains LHCI 0.15.1 → Lighthouse 12.6.1 → Puppeteer Core 24.43.1 → immutable fork
+`9c87c39d0bbdb78499b204c39f66a4196939092f` → yauzl 3.4.0. Its extraction suite passed 3/3.
+`extract-zip` is absent from manifest, lock and installed graph.
+
+Final `npm audit --audit-level=high` exited 0 with 13 total: 0 critical, 0 high, 12 moderate and
+1 low. Final `npm audit --omit=dev --audit-level=high` separately exited 0 with 1 total: 0 critical,
+0 high, 0 moderate and 1 low. Every starting HIGH advisory is resolved; Faker and extract-zip HIGHs
+remain absent; no new HIGH or CRITICAL was introduced. These are not claims of zero vulnerabilities:
+the recorded LOW/MODERATE findings remain for later governed disposition.
+
+### Regression and independent review evidence
+
+The focused and repository-supported evidence all passed:
+
+- API types regenerated with no tracked output change; Redocly/js-yaml/OpenAPI behavior is intact.
+- Typecheck and lint exited 0.
+- Full Vitest passed 169 files / 2,607 tests.
+- The clean production build passed, included sharp linux-x64 binaries, and stamped exact
+  implementation HEAD `f38249b3657661ecba10a8448a5a4614e7242c75`, tree
+  `1f85a614f193e4b72a51866a9db4f68a5f7de42b`, lock SHA-256 `db9fa9be…`, and output hash
+  `e88c865110c6df45a7d189442be5b8b602ddb01e56a000f381cd31da9b711495` over 1,799 files.
+- The rebuilt Playwright contract project passed 153/153 in 1.5 minutes, including unfiltered axe,
+  CSP, Prism, schema and EN/AR fixtures. Before that rebuild, a stale-output run referenced missing
+  pre-install chunk names; the required isolated `/resume` locale test passed after rebuilding, and
+  only the subsequent 153/153 run is acceptance evidence.
+- Bundle isolation scanned 150 public chunks and found no Tiptap, ProseMirror, Shiki or markdown-it
+  identifiers. CSS size was 29.24 KB / 30 KB. The complete D20 route-size gate exited 0 on isolated
+  7200/7201 servers; its 15 existing D20-24 warning-only dashboard totals remained visible.
+- Ordinary, non-governed Lighthouse 12.6.1 regression reports on the exact clean build passed:
+  desktop `/resume` scored 100/100/100/100, LCP 695.25 ms, CLS 0.000622; mobile `/ar/resume`
+  scored 84/100/100/100, LCP 3149.82 ms, CLS 0.010543. These two smokes are tooling regression
+  evidence only; the prohibited governed U7 96-audit matrix was not run.
+
+Independent read-only review returned **PASS**. It re-ran both audits; verified the three exact
+R2 scopes, all 110 churn classifications, Postman/Faker and Puppeteer semantics, extract-zip absence,
+bundle isolation, CSS/D20 budgets and supported deviations; and found no material issue. Its only
+note is that pre-existing `npm ls` invalid markers for commander/cac are unchanged from baseline and
+outside this diff.
+
+No PR was opened. The overall PRE-U7 security prerequisite remains open solely because blocking
+HIGH+ CI enforcement has not yet been implemented or certified. The reference environment remains
+unprovisioned; U7-A01 and FE5-U7 acceptance remain closed; production and shared refs are unchanged.
+
+**Verdict:** `PRE-U7 R1/R2 DEPENDENCY REMEDIATION PROVEN — CI ENFORCEMENT REMAINS`
+
+**Next three actions.**
+
+1. In a separately authorized phase, implement and prove the blocking HIGH+ CI gate without changing this certified dependency graph.
+2. Reconcile any GitHub Dependabot recalculation lag only after this branch is published through the normal review workflow.
+3. Keep U7-A01 and FE5-U7 acceptance closed until the full PRE-U7 security prerequisite, including CI enforcement, is certified.
