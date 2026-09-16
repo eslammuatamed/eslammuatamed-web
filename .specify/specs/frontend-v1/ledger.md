@@ -7359,3 +7359,51 @@ tests, product, deployment, `dev`, `main`, reference environment, production or 
 1. Push the existing branch without force and verify the remote head equals the local rebaseline head.
 2. Open the single focused PR to `dev`, then compare its base, head, lineage and nine-file diff with this certification.
 3. Certify every required remote check on the exact PR head, including direct evidence that `npm audit --audit-level=high` executed and passed.
+
+---
+
+## PRE-U7 security publication — PR integrity and first remote certification · 2026-09-16
+
+The unchanged certified lineage was pushed without force. Local and remote branch heads were both
+`178f0c8bd5d9d41ddf053019c1358b9c05ea4f4e` before PR creation. PR
+[#87](https://github.com/eslammuatamed/eslammuatamed-web/pull/87),
+`fix(web): satisfy and enforce HIGH+ dependency security gate`, was opened from
+`fix/frontend-v1-u7-security-gate` to `dev`.
+
+GitHub reported base `dev` at `7feee77d3fdd562bcecf5cd6cbe8e73d7644b3d7`, head
+`178f0c8bd5d9d41ddf053019c1358b9c05ea4f4e`, all 19 expected commits, and exactly the nine
+approved files. No generated or unexpected file appeared. The PR was `MERGEABLE` / `CLEAN`; no
+GitHub-side branch mutation occurred.
+
+Exact-head pull-request workflow run
+[`35119996755`](https://github.com/eslammuatamed/eslammuatamed-web/actions/runs/35119996755)
+completed successfully on `178f0c8bd5d9d41ddf053019c1358b9c05ea4f4e`:
+
+- branch-policy guard job `104875053979`: success;
+- primary validation job `104875054254`: success, including full install, API fixed point, lint,
+  typecheck, tests, build, CSS and route budgets, bundle isolation and RTL logical properties;
+- E2E/axe job `104875054290`: success, including browser install, E2E typecheck, build and
+  Playwright + axe;
+- desktop Lighthouse regression job `104875054244`: success, including collection and report upload;
+- mobile Lighthouse regression job `104875054315`: success, including collection and report upload.
+
+The primary job log directly proves the new gate executed under `/usr/bin/bash -e`:
+`npm audit --audit-level=high`. It returned 13 vulnerabilities — 0 critical, 0 high, 12 moderate
+and 1 low — and step `Audit dependencies (HIGH+)` concluded success before later primary checks.
+This is execution evidence, not an inference from workflow YAML.
+
+GitHub emitted only non-failing annotations: actions targeting Node 20 were forced onto Node 24,
+and the mobile Lighthouse job recorded an explicitly advisory performance-threshold miss after
+collection and median calculation completed. Infrastructure/report-integrity gates passed. Both
+Lighthouse jobs are ordinary PR regression evidence only and are not FE5-U7 acceptance evidence.
+No candidate correction or retry was required.
+
+This append-only evidence commit necessarily advances the PR head. The earlier successful run is
+preserved as evidence but becomes superseded for final-head certification; the evidence-only head
+must itself complete the same required PR checks before merge readiness can be claimed.
+
+**Next three actions.**
+
+1. Push this append-only PR-evidence checkpoint and certify every required check on its exact new head, including direct HIGH+ audit execution.
+2. Fetch `origin/dev`, compare it with PR base `7feee77d3fdd562bcecf5cd6cbe8e73d7644b3d7`, and classify any intervening commits before merge.
+3. In the next phase, squash-merge only the exact certified head, then certify push CI on the exact merge SHA before security closeout.
