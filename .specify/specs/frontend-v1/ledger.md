@@ -7407,3 +7407,71 @@ must itself complete the same required PR checks before merge readiness can be c
 1. Push this append-only PR-evidence checkpoint and certify every required check on its exact new head, including direct HIGH+ audit execution.
 2. Fetch `origin/dev`, compare it with PR base `7feee77d3fdd562bcecf5cd6cbe8e73d7644b3d7`, and classify any intervening commits before merge.
 3. In the next phase, squash-merge only the exact certified head, then certify push CI on the exact merge SHA before security closeout.
+
+---
+
+## PRE-U7 HIGH+ security prerequisite — exact-SHA merge and closeout · 2026-09-16
+
+Final zero-trust verification found no drift. PR
+[#87](https://github.com/eslammuatamed/eslammuatamed-web/pull/87),
+`fix(web): satisfy and enforce HIGH+ dependency security gate`, remained open to `dev` at exact
+certified head `a94df8c8c93e9658381fa7c5eda9dfd57355bb03`, based on
+`7feee77d3fdd562bcecf5cd6cbe8e73d7644b3d7`. GitHub showed `MERGEABLE` / `CLEAN`, the expected
+20-commit lineage, exactly nine approved files, zero unexpected files and no review blocker.
+Certified PR run
+[`35121760678`](https://github.com/eslammuatamed/eslammuatamed-web/actions/runs/35121760678)
+still belonged to that exact head and all five jobs remained successful. Its primary job
+`104881015243` directly executed blocking `npm audit --audit-level=high` after the full install and
+passed with 0 critical and 0 high findings.
+
+Immediately before merge, refreshed `origin/dev` remained the certified base
+`7feee77d3fdd562bcecf5cd6cbe8e73d7644b3d7`; `origin/main` remained
+`40eb52c6470579c19131d3cede41ccc9b295bdf5`. Base drift was **none**. PR #87 was squash-merged
+without changing its certified head. GitHub recorded security merge SHA
+`229bcdc5bf69571a8b7f5842dc67e6f6998d8e33`, tree
+`6c76117dfc9e01733a0b6d93910469eeeff4f866`, sole parent
+`7feee77d3fdd562bcecf5cd6cbe8e73d7644b3d7`, and merged state at
+2026-09-16T19:01:18Z. A fresh fetch proved `origin/dev` equalled that exact merge SHA and
+`origin/main` was unchanged.
+
+Exact merge-SHA push workflow
+[`35138010510`](https://github.com/eslammuatamed/eslammuatamed-web/actions/runs/35138010510)
+ran as event `push` on branch `dev` with head
+`229bcdc5bf69571a8b7f5842dc67e6f6998d8e33` and concluded `success`. Applicable jobs were:
+
+- primary validation `104935148556`: success, including full install, API-type fixed point, lint,
+  typecheck, tests, build, CSS and per-route budgets, bundle isolation and RTL logical properties;
+- mobile Lighthouse regression `104935148758`: success, including report upload;
+- E2E/axe `104935149150`: success, including browser install, E2E typecheck, build, Playwright + axe
+  and report upload;
+- desktop Lighthouse regression `104935149182`: success, including report upload;
+- branch-policy advisory `104935149956`: correctly skipped because its workflow condition applies
+  to pull requests, not `push` integration events.
+
+The exact-SHA primary log directly proves `/usr/bin/bash -e` executed
+`npm audit --audit-level=high`. It exited successfully with 13 total findings: 0 critical, 0 high,
+12 moderate and 1 low. No `--omit=dev`, waiver, `continue-on-error`, cancellation, stale SHA or PR
+synthetic run was substituted. No CI retry or correction was required.
+
+The original blocker comprised HIGH dependency chains plus a missing blocking PR/integration gate.
+The complete certified resolution is: deterministic Postman Collection 4.5.0 compatibility with
+Faker 10.6.0; immutable Puppeteer safe-extract fork commit
+`9c87c39d0bbdb78499b204c39f66a4196939092f` with `extract-zip` absent; bounded R1/R2 compatible
+dependency remediation; the proven missing-gate negative control; semantic workflow contract
+12/12; PR #87 certification; and exact merge-SHA push certification above. The final full graph has
+0 HIGH and 0 CRITICAL findings.
+
+`U7-PRE-002` is therefore **complete**. This closes only the PRE-U7 security prerequisite; it does
+not pass U7-G6 or execute any FE5-U7 acceptance task. `U7-PRE-001` remains open because the governed
+reference environment is not provisioned. `U7-PRE-003` remains open for complete independent
+certification/evidence assignment across all prerequisites. U7-A01 is not executed, no candidate is
+frozen, FE5-U7 acceptance remains **DEFINED — NOT READY TO START GOVERNED ACCEPTANCE**, and no
+governed 96-audit matrix, manual accessibility acceptance, Central Docs change, `deploy.yml`
+change, content sync, production mutation, deployment, `dev` → `main` promotion or FE5-U8 work
+occurred.
+
+**Next three actions.**
+
+1. Certify and merge this documentation-only closeout through the normal Web PR/integration workflow.
+2. Separately provision and independently certify the governed non-production Lighthouse reference environment (`U7-PRE-001`).
+3. Only after every remaining start prerequisite passes, separately authorize U7-A01; do not treat this security closeout as FE5-U7 acceptance.
