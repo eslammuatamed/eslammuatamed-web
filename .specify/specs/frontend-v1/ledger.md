@@ -6149,3 +6149,1261 @@ not start, and no content, production, promotion, deployment, or FE5-U8 action o
 1. Provision and independently certify the governed non-production Lighthouse reference environment.
 2. Repair and independently certify the D19-11 blocking HIGH+ Web PR/integration CI gate, and assign governed evidence locations, operators, and retention.
 3. Only after all remaining start prerequisites pass, separately authorize U7-A01 to freeze the candidate; do not treat this closeout as the start of FE5-U7 acceptance.
+
+---
+
+## Pre-U7 HIGH+ security prerequisite — owner-authorized zero-trust start · 2026-09-14
+
+**Boundary:** remediate only U7-PRE-002 and its dependency/PR-integration enforcement evidence.
+FE5-U7 acceptance remains unstarted; U7-A01 is not frozen or executed.
+
+| Claim | Verified live state |
+| --- | --- |
+| Web base | `origin/dev` `7feee77d3fdd562bcecf5cd6cbe8e73d7644b3d7` |
+| Production baseline | `origin/main` `40eb52c6470579c19131d3cede41ccc9b295bdf5` |
+| Central Docs authority | `origin/main` `5001ae62573ae488a16a552b1de9d7d1d03f72ab`; D19-11 requires unmodified blocking full-graph `npm audit --audit-level=high` in PR/integration CI |
+| Starting lockfile | SHA-256 `43c11badc5c98bae9b1c1a071dbce60533382c0890cb6121148e05d40845c655`; Git blob `c617069c2489a8bb2ffa54be8f74055c619927d0` |
+| Full audit | npm 11.17.0; 64 total: 20 high, 41 moderate, 3 low, 0 critical; exit 1 |
+| Production-only classification | 40 total: 4 high, 35 moderate, 1 low, 0 critical; exit 1 |
+| Dependabot | 23 open: 14 high, 7 medium, 2 low, 0 critical; scanner population kept distinct from npm audit |
+| CI defect | `.github/workflows/ci.yml` installs the full graph but contains no blocking HIGH+ audit; `deploy.yml` is not an authorized or required enforcement surface |
+
+Owner decisions O-SEC-1 through O-SEC-4 authorize bounded compatible R1/R2 updates, a narrowly
+scoped Faker major override only after direct Prism/Postman compatibility proof, and a bounded
+Lighthouse/Puppeteer migration only if it eliminates `extract-zip` while preserving the existing
+LHCI architecture, report schema, three-run medians, profiles, protocol/provenance checks, routes,
+and D20 thresholds. No waiver, allowlist, dev-graph omission, severity weakening, or alternate audit
+platform is authorized.
+
+The coherent pre-mutation delta is: compatible Tiptap/js-yaml/Redocly/sharp/svgo/fast-uri updates;
+parent-scoped Postman overrides for patched Faker/Lodash only if Prism compatibility passes;
+parent-scoped `tmp` fixes; and parent-scoped Lighthouse 13.4.1 for both exact-pinning LHCI parents
+only if the custom Lighthouse tooling contract passes. Current registry evidence shows Redocly
+1.34.20 normally carries patched js-yaml, no supported Prism/Postman release removes vulnerable
+Faker, and latest LHCI 0.15.1 still exact-pins Lighthouse 12.6.1 while Lighthouse 13.4.1 moves to a
+Puppeteer/browser stack that no longer depends on unpatched `extract-zip`.
+
+**Authorized files:** `package.json`, package-manager-generated `package-lock.json`, the D19-11
+override register in `CONTRIBUTING.md`, `.github/workflows/ci.yml`, one narrow workflow-contract
+spec, directly necessary compatibility tests/config, and this SpecKit evidence/status surface. No
+deployment workflow, product/runtime feature, Central Docs, reference environment, production,
+content, promotion, deployment, U7 acceptance, or FE5-U8 change is authorized.
+
+**Next three actions.**
+
+1. Run isolated Postman/Faker and LHCI/Lighthouse compatibility experiments; retain only proven paths.
+2. Apply the bounded R1/R2 graph corrections and require the full HIGH+ audit to reach exit 0 before editing CI.
+3. Negatively control and add the blocking PR/integration CI contract, then certify the full changed surface and close only U7-PRE-002.
+
+---
+
+## Pre-U7 HIGH+ security prerequisite — authorized path exhausted · 2026-09-14
+
+**Verdict:** `PRE-U7 SECURITY REMEDIATION BLOCKED — AUTHORIZED COMPATIBILITY PATH EXHAUSTED`.
+The first mandatory major-risk experiment, C1, proved that the currently available fixed Faker line
+is not compatible with the Postman execution path used by Prism. The owner-authored stop condition
+therefore fired before C2, partial R1/R2 remediation, CI enforcement, publication, or U7 work.
+
+### C1 supported-parent investigation
+
+Current registry resolution was refreshed before mutation. Latest Prism CLI `5.16.0` resolves
+`@stoplight/http-spec@7.1.0`, which still resolves `postman-collection@4.5.0`. The latest available
+Postman Collection `5.3.1` also still declares `@faker-js/faker@5.5.3`; consequently neither the
+current compatible parents nor the latest Postman parent remove the vulnerable dependency. The npm
+advisory `GHSA-qxc2-j82w-r537` affects Faker `<=10.4.0`, so the minimum fixed line is `>=10.5.0`.
+
+### C1 isolated override experiment and rejection
+
+The experiment added only this temporary parent-scoped override:
+
+```json
+"postman-collection": {
+  "@faker-js/faker": "10.6.0"
+}
+```
+
+`npm install --package-lock-only --ignore-scripts` succeeded and changed only the root override plus
+removal of Postman's nested Faker lock node. `npm ci` also succeeded. The focused contract-fixture
+command `npm test -- --run scripts/e2e/contract-fixtures.spec.ts` passed 26/26, but that test validates
+authored fixtures and does not execute Postman's dynamic-variable module. The required direct tool
+proof then failed immediately:
+
+```text
+$ node_modules/.bin/prism mock openapi/openapi.json --port 43187
+.../postman-collection/lib/superstring/dynamic-variables.js:171
+            generator: faker.address.city
+                                     ^
+TypeError: Cannot read properties of undefined (reading 'city')
+Node.js v24.19.0
+exit 1
+```
+
+The failure occurs before OpenAPI fixture loading or the listening state, and is an actual removed
+Faker API consumed by Postman. Therefore the major override fails the owner-required direct
+compatibility condition; later Prism response, E2E, fixture-drift, and bundle checks cannot truthfully
+be reached on that graph. No failed experiment was committed.
+
+### Restoration proof and stop boundary
+
+The override was removed using a source patch, the lockfile was regenerated normally, and `npm ci`
+restored installed dependencies. The repository is back on Faker `5.5.3` under Postman. Restored
+lock identity exactly matches the certified start: SHA-256
+`43c11badc5c98bae9b1c1a071dbce60533382c0890cb6121148e05d40845c655`, Git blob
+`c617069c2489a8bb2ffa54be8f74055c619927d0`. As a restoration control, baseline Prism loaded the
+committed contract, listened on `127.0.0.1:43187`, and
+`GET /api/v1/settings/site?locale=en` returned HTTP 200 before the exact process started for the test
+was interrupted.
+
+No supported parent route removes vulnerable Faker, and the only owner-authorized major override
+route is directly incompatible. Resolving this chain now requires an upstream Postman fix, a reviewed
+fork/patch, or replacing/removing the Prism/Postman path; none is authorized by O-SEC-1/O-SEC-2.
+Per the explicit stop condition, C2 Lighthouse/Puppeteer was not attempted, compatible R1/R2 fixes
+were not partially landed, the predictably-red CI audit gate was not added, and no PR was opened.
+
+No production/runtime feature, `deploy.yml`, Central Docs, reference environment, content,
+production, promotion, deployment, U7-A01, governed U7 acceptance, or FE5-U8 state changed.
+
+**Next three actions (owner decision required before resumption).**
+
+1. Obtain a supported Postman release that uses fixed Faker, or explicitly authorize one bounded reviewed Postman patch/fork strategy.
+2. Resume C1 from exact `origin/dev` and require Prism startup, contract responses, relevant E2E, fixture stability, and bundle isolation to pass before retaining the resolution.
+3. Only after C1 succeeds, evaluate C2 and the remaining R1/R2/CI work; FE5-U7 acceptance remains unstarted.
+
+---
+
+## Postman/Faker bounded compatibility continuation — zero-trust rebaseline · 2026-09-14
+
+The owner now authorizes only a small, reviewed Postman Collection compatibility patch/fork for the
+Prism → Postman Collection → Faker chain. Lighthouse/Puppeteer/extract-zip, other R1/R2 work, the
+HIGH+ CI gate, reference-environment work, U7 acceptance, and Production remain outside this task.
+
+| Check | Ledger claim | Fresh live state | Match |
+| --- | --- | --- | --- |
+| Web integration | `origin/dev` `7feee77d3fdd562bcecf5cd6cbe8e73d7644b3d7` | same after `git fetch origin --prune` | yes |
+| Web Production baseline | `origin/main` `40eb52c6470579c19131d3cede41ccc9b295bdf5` | same after fetch | yes |
+| Security branch | `fix/frontend-v1-u7-security-gate` at `e6be998fa3c3d6041bcbeddd315677284520f901` | same; clean worktree exists | yes |
+| Central Docs authority | `origin/main` `5001ae62573ae488a16a552b1de9d7d1d03f72ab` | same after fetch | yes |
+| Lock identity | SHA-256 `43c11bad…c655`; blob `c617069c…27d0` | exact match | yes |
+| Evidence commits | `f06732d`, `e6be998` only | exact two commits over `origin/dev` | yes |
+
+The Central Docs checkout has unrelated pre-existing local edits, but this task claims only its
+fetched `origin/main` authority and will not touch that checkout. Open Web PRs #68, #69, #72, #73,
+and #74 modify dependency manifests but do not touch Prism/Postman/Faker; draft #46 is unrelated.
+No open PR supplies this remediation.
+
+Read-only inventory found 118 Postman dynamic generators and 111 unique Faker method references in
+the single file `postman-collection@4.5.0/lib/superstring/dynamic-variables.js`; 47 referenced APIs
+are absent in Faker 10.6.0. They fall into bounded namespace/method moves: address→location,
+name→person, random/datatype→helpers/lorem/string/number, renamed phone/company/finance methods,
+category-preserving image wrappers, and internet username/color moves. No other Postman source file
+imports Faker. This is classified **P2 — bounded compatibility adapter**, not P3/P4.
+
+There is no repository package-patch mechanism. The proposed deterministic mechanism is
+`patch-package@8.0.1`, with a version-bound source-controlled patch for Postman Collection 4.5.0,
+a parent-scoped Faker 10.6.0 override, and a focused real-Prism regression spec that also invokes
+every generator. Expected package patch: one existing Postman import line plus one compact adapter
+file of approximately 55–65 LOC. Upstream Postman PR #1393 documents substantially the same API
+migration and says its full suite passes, but it remains open/unreviewed and targets vulnerable
+Faker 9.3.0; it is provenance evidence only, not an installed dependency.
+
+**Next three actions.**
+
+1. Add the real-Prism/all-generator compatibility spec and reproduce the fixed-Faker/unmodified-Postman failure as its negative control.
+2. Add the version-bound patch artifact, rerun the focused compatibility proof, then prove a clean `npm ci` reapplies it.
+3. Run Prism-dependent, bundle, audit-classification, and Web validation; commit a checkpoint without starting other security chains.
+
+### Postman/Faker bounded compatibility remediation proven · 2026-09-14
+
+**Verdict:** `POSTMAN/FAKER COMPATIBILITY REMEDIATION PROVEN — SECURITY PREREQUISITE REMAINS OPEN`.
+Implementation checkpoint `6d0375626872df42fe49580f77f0c9f845d966e3` replaces only the vulnerable
+Faker resolution beneath Postman Collection and preserves the repository's Prism behavior. It does
+not close U7-PRE-002 and does not authorize or begin any other security or U7 work.
+
+#### Compatibility inventory and classification
+
+Postman Collection 4.5.0 imports Faker only from
+`lib/superstring/dynamic-variables.js`. That eagerly constructs 118 generators containing 111
+unique Faker references. Faker 10.6.0 retains 64 references and lacks 47. Because the whole register
+is constructed at Prism startup and the focused proof executes every generator, every adapted row is
+both startup-relevant and directly exercised by the repository test.
+
+| Postman call site/group | Faker 5 surface | Faker 10.6 equivalent | Compatibility treatment |
+| --- | --- | --- | --- |
+| Address generators | `address.city`, `country`, `countryCode`, `streetAddress` | same methods under `location` | namespace adapter |
+| Street generator | `address.streetName` | `location.street` | method alias |
+| Coordinate generators | `address.latitude`, `longitude` | `location.latitude`, `longitude` | wrapper preserves legacy fixed-four-decimal string and valid range |
+| Person/job generators | `name.firstName`, `lastName`, `prefix`, `suffix`, `jobArea`, `jobDescriptor`, `jobTitle`, `jobType` | same methods under `person` | namespace adapter |
+| Full-name generator | `name.findName` | `person.fullName` | method alias |
+| Random helpers | `random.alphaNumeric`, `arrayElement`, `word` | `string.alphanumeric`, `helpers.arrayElement`, `lorem.word` | method aliases |
+| Datatype generators | `datatype.number`, `uuid` | `number.int`, `string.uuid` | method aliases |
+| Phone generators | `phone.phoneNumber`, `phoneNumberFormat` | `helpers.fromRegExp` | wrapper preserves repository-used ten-digit hyphenated form |
+| Commerce color | `commerce.color` | `color.human` | method alias |
+| Company generators | `company.bs`, `bsAdjective`, `bsBuzz`, `bsNoun`, `companyName`, `companySuffix` | `company.buzzPhrase`, `buzzAdjective`, `buzzVerb`, `buzzNoun`, `name`, plus legal-entity definition selection | aliases and compact suffix wrapper |
+| Finance generators | `finance.account`, `mask` | `finance.accountNumber`, `string.numeric` | aliases; mask wrapper preserves legacy four-digit output |
+| Generic image URL | `image.imageUrl` | `image.url` | method alias |
+| Image categories | `image.abstract`, `animals`, `business`, `cats`, `city`, `fashion`, `food`, `nature`, `nightlife`, `people`, `sports`, `transport` | `image.urlLoremFlickr({ category })` | category-preserving wrappers |
+| Internet generators | `internet.color`, `userName` | `color.rgb`, `internet.username` | method aliases |
+| IPv4 semantic contract | `internet.ip` | `internet.ipv4` | explicit alias prevents Faker 10's IPv6-capable default from violating `$randomIP` |
+
+This remains **P2 — bounded compatibility adapter**. The dependency patch changes one existing
+import line and adds one 82-line shim; it does not rewrite Postman, Prism, the mock architecture, or
+application code. Official Faker v10 migration guidance documents the principal namespace/method
+moves (`address`→`location`, `name`→`person`, and `userName`→`username`). Upstream Postman Collection
+PR #1393 (`https://github.com/postmanlabs/postman-collection/pull/1393`) makes the same families of
+changes and reports its suite passing, but remains open and targets advisory-affected Faker 9.3.0,
+so it is evidence only. Faker migration source: `https://fakerjs.dev/guide/upgrading`.
+
+#### Deterministic patch and negative control
+
+The repository had no package-patch facility. The selected mechanism pins `patch-package@8.0.1`,
+uses a parent-scoped Postman override to exact Faker `10.6.0`, and runs patch application before
+`nuxt prepare`. The version-bound source artifact is
+`patches/postman-collection+4.5.0.patch`, SHA-256
+`6a628ef2c6a83bd227546d10ee1a31b9f122eb90c8a0521bbab48167494a2049`.
+Final lock SHA-256 is `11f88f267e807e0eec51bcd4ce705af37b5b809ca7c09c5a15566e4d516612a0`.
+
+The final automated instrument's exact defect is fixed-Faker Prism startup without a Postman
+adapter. After `npx patch-package --reverse`, `npm run test:postman-faker-compat` failed 2/2 as
+required: Prism exited before readiness and direct register construction both stopped at
+`faker.address.city`. After `npx patch-package`, the same command passed 2/2. The proof starts real
+Prism against committed `openapi/openapi.json`, validates HTTP 200 plus exact EN/AR site names, and
+constructs and executes all 118 generators. Discriminating assertions cover IPv4/IPv6, the legacy
+four-digit mask, string/four-decimal/ranged coordinates, URL, UUID, phone, boolean, and integer
+contracts. Independent review found the initial IP/mask/coordinate semantic gaps; these assertions
+and adapter corrections resolved every finding before the implementation checkpoint.
+
+#### Clean install, runtime, test, and security evidence
+
+| Evidence | Exact result |
+| --- | --- |
+| Clean dependency install | `npm ci`, exit 0; `patch-package 8.0.1` applied `postman-collection@4.5.0 ✔`; 1,615 packages added / 1,617 audited; no manual `node_modules` state required |
+| Final dependency tree | Prism CLI 5.16.0 → Prism HTTP 5.16.0 → HTTP Spec 7.1.0 → Postman Collection 4.5.0 → Faker 10.6.0 overridden/deduped; Prism HTTP's direct Faker also resolves 10.6.0; patch-package 8.0.1 |
+| Focused compatibility/fixtures | `npm test -- --run scripts/postman-faker-compat.spec.mjs scripts/e2e/contract-fixtures.spec.ts scripts/e2e/prism-locale-selection.spec.mjs`: 3 files, 44/44 tests passed; the contract-fixture file retains 26/26 |
+| Known endpoint | Real Prism returned 200 for `/api/v1/settings/site?locale=en`; body contained `Eslam Muatamed`, locale `en`, and available locales `en`/`ar`; representative Arabic returned `إسلام معتمد`, locale `ar` |
+| Lint / typecheck | `npm run lint`, exit 0; `npm run typecheck`, exit 0 |
+| Full unit suite | `npm test`: 168 files, 2,604/2,604 tests passed, exit 0 |
+| Prism E2E / axe | First six-worker post-review run passed 149 and timed out four unrelated `/about` navigations; the exact four isolated tests then passed 4/4. Final authoritative serial `npx playwright test --project=contract --workers=1`: 153/153 passed in 1.6m, exit 0 |
+| Production build | Clean-tree `NUXT_PUBLIC_SITE_URL=https://example.com NUXT_PUBLIC_API_BASE=https://example.com/api/v1 npm run build`, exit 0; 47.5 MB output; provenance stamped exact head `6d0375626872df42fe49580f77f0c9f845d966e3`, tree `80e339223844eb7baa7ee5417386a0213dc549fb` and the final lock hash |
+| Bundle isolation | `npm run check:bundle`, exit 0, 150 public chunks scanned; explicit client-chunk scan: `BUNDLE_ISOLATION: PASS — Faker/Postman/Prism absent from all client chunks` |
+| Full audit | `set -o pipefail; npm audit --audit-level=high --json | …`, expected exit 1 for remaining chains: 63 total, 14 high, 46 moderate, 3 low, 0 critical; Faker advisory absent |
+| Production-only audit | `set -o pipefail; npm audit --omit=dev --audit-level=high --json | …`, expected exit 1: unchanged 40 total, 4 high, 35 moderate, 1 low, 0 critical; Faker absent |
+
+Compared with the certified 64-total/20-high start, no HIGH or CRITICAL was introduced and six HIGH
+findings were removed. The five-moderate increase is development-only `patch-package` transitive
+churn; production audit population is unchanged. `postman-collection` remains classified moderate
+through its separate lodash/uuid paths, which are outside this narrow task. The remaining full-graph
+HIGH names are `@lhci/cli`, `@lhci/utils`, `@puppeteer/browsers`,
+`@redocly/openapi-core`, `@tiptap/core`, `extract-zip`, `fast-uri`, `js-yaml`, `lighthouse`,
+`lodash`, `puppeteer-core`, `sharp`, `svgo`, and `tmp`. Production HIGH names remain
+`@tiptap/core`, `js-yaml`, `sharp`, and `svgo`.
+
+`CONTRIBUTING.md` assigns the Web dependency owner to check Postman PR #1393 or its successor at
+each dependency/security review. Removal is allowed only when a supported Postman release uses
+Faker newer than 10.4.0 and this same focused Prism/contract/E2E proof passes without the override,
+patch, adapter test, and patch tool. A Postman version change must fail patch application rather than
+silently carrying edited context.
+
+No PR was opened. The security prerequisite remains open. No Lighthouse/Puppeteer/extract-zip
+remediation, other R1/R2 remediation, HIGH+ CI gate, reference environment, U7-A01, U7 acceptance,
+content sync, Central Docs mutation, production mutation/deployment, promotion, or FE5-U8 work
+occurred.
+
+**Next three actions.**
+
+1. Separately authorize and remediate the remaining Lighthouse/Puppeteer/extract-zip and compatible R1/R2 HIGH chains without weakening D19-11.
+2. Only after the full graph reaches zero HIGH/CRITICAL, negatively control and add the blocking PR/integration CI audit gate and independently certify it.
+3. Keep U7-A01 and governed FE5-U7 acceptance closed until all pre-U7 prerequisites, including the reference environment, are independently certified.
+
+---
+
+## Lighthouse/extract-zip security continuation — zero-trust rebaseline · 2026-09-14
+
+**Boundary:** only the Lighthouse/LHCI/Puppeteer/extract-zip HIGH chain. Postman/Faker is frozen;
+remaining R1/R2 remediation, HIGH+ CI enforcement, Central Docs, reference-environment work, U7,
+production, promotion, and deployment are outside this task.
+
+| Claim | Ledger says | Fresh live state | Match |
+| --- | --- | --- | --- |
+| Web integration | `origin/dev` `7feee77d3fdd562bcecf5cd6cbe8e73d7644b3d7` | same after `git fetch origin --prune` | yes |
+| Production baseline | `origin/main` `40eb52c6470579c19131d3cede41ccc9b295bdf5` | same after fetch | yes |
+| Security branch | `fix/frontend-v1-u7-security-gate` at ledger checkpoint `5ab24500529f68261c29da34687a95e3d90c7176` | exact branch and HEAD; worktree exists and is clean | yes |
+| Postman implementation | `6d0375626872df42fe49580f77f0c9f845d966e3` | exact ancestor of HEAD | yes |
+| Lock identity | SHA-256 `11f88f267e807e0eec51bcd4ce705af37b5b809ca7c09c5a15566e4d516612a0`; blob `b2443684a8e10b2e9ccc340d2fb0808cbe6fd6b4` | exact | yes |
+| Postman patch | SHA-256 `6a628ef2c6a83bd227546d10ee1a31b9f122eb90c8a0521bbab48167494a2049` | exact | yes |
+| Full audit | 63 total: 14 high, 46 moderate, 3 low, 0 critical | exact fresh `npm audit --audit-level=high --json`; exit 1 | yes |
+
+Open Web PRs are #74 `d1064da1e1ad309a558a3cf5a0e2b761e10a9e00`, #73
+`f9be4b40168e9eaf74d6e53fa7c0c9e9ef037124`, #72
+`9ea46aabf411aeef7457995cb91341a304c1c038`, #69
+`3d175fafccd39c094ec9d122e4c00f75e8a46a9a`, #68
+`513defb39a2594429eaa7dde31065ee707054b86`, and #46
+`016f0d9becfac34cc7e336b3fd2b784e71fec091`. None changes the Lighthouse chain or supplies this
+remediation. Zero drift was found.
+
+The pre-mutation installed chain is `@lhci/cli@0.15.1` → `@lhci/utils@0.15.1` and
+`lighthouse@12.6.1` → `puppeteer-core@24.43.1` → `@puppeteer/browsers@2.13.2` →
+`extract-zip@2.0.1`. Both extract-zip HIGH advisories are present: GHSA-jmr9-qjv8-65gv and
+GHSA-7pqw-9j4j-h8q3. A clean `npm ci` passed, automatically applied
+`postman-collection@4.5.0 ✔`, and the focused Postman/Faker proof passed 2/2 with Faker 10.6.0.
+
+**Next three actions.**
+
+1. Inventory every repository Lighthouse/LHCI/report/provenance coupling and re-read the live D20 methodology invariants.
+2. Evaluate current supported upstream toolchain combinations and report the smallest extract-zip-free candidate before mutation.
+3. If bounded, run an isolated manifest/lock experiment and require clean install, structural/report, desktop/mobile, audit, regression, and independent-review proof before checkpointing.
+
+---
+
+## Lighthouse/extract-zip supported-toolchain gate — blocked checkpoint · 2026-09-14
+
+The investigation stopped before dependency mutation, exactly as authorized. The package manifest,
+lockfile, Lighthouse scripts/configuration, CI workflow, Postman/Faker adaptation, application code,
+Central Docs, shared refs, and production are unchanged from checkpoint `fd16915`. No candidate met
+the required intersection of upstream support, `@lhci/cli` architecture preservation, Node 24, D20
+methodology preservation, and complete `extract-zip` removal.
+
+### Current supported graph and upstream boundary
+
+Fresh official npm metadata and the installed lock graph agree:
+
+```text
+@lhci/cli@0.15.1 (latest)
+├─ @lhci/utils@0.15.1 ─┐
+└─ lighthouse@12.6.1  <┘ (both LHCI packages exact-pin 12.6.1)
+   └─ puppeteer-core@24.43.1
+      └─ @puppeteer/browsers@2.13.2
+         └─ extract-zip@2.0.1
+```
+
+`npm explain extract-zip` found this one dependency path and no second source. `extract-zip` remains
+at its latest published `2.0.1`; there is no patched package release. The installed package retains
+both HIGH advisories, GHSA-jmr9-qjv8-65gv and GHSA-7pqw-9j4j-h8q3.
+
+Puppeteer's first extract-free browser-management release is the 3.x breaking line. Its official
+changelog marks the boundary ESM-only, raises the Node floor, changes proxy-agent handling, removes
+an API, and replaces `extract-zip`. `puppeteer-core@25.0.2` exact-pins the first published
+extract-free `@puppeteer/browsers@3.0.2`. Lighthouse 13.3.0 still selects Puppeteer core 24;
+Lighthouse 13.4.0 is the first Lighthouse release selecting Puppeteer core 25. Current Lighthouse
+13.4.1 selects `puppeteer-core ^25.3.0`, which resolves to an extract-free browsers 3.x graph. All
+of these newer engines accept repository Node 24, but engine compatibility is not LHCI support.
+
+As of this checkpoint, the upstream Lighthouse CI issue “Lighthouse 13 support?” (#1136) remains
+open with no assignee, milestone, linked pull request, or development item. The published latest
+LHCI release and the current upstream CLI/utils manifests still exact-pin Lighthouse 12.6.1.
+Therefore forcing Lighthouse 13.4.x beneath LHCI through npm overrides is experimentally possible,
+but is not an upstream-supported package combination. The official primary evidence is:
+
+- `https://github.com/GoogleChrome/lighthouse-ci/issues/1136`
+- `https://github.com/GoogleChrome/lighthouse-ci/blob/main/packages/cli/package.json`
+- `https://github.com/GoogleChrome/lighthouse-ci/blob/main/packages/utils/package.json`
+- `https://github.com/puppeteer/puppeteer/blob/main/packages/browsers/CHANGELOG.md`
+- `https://github.com/GoogleChrome/lighthouse/releases/tag/v13.0.0`
+- official npm registry metadata queried live for each exact candidate version.
+
+### Candidate matrix and pre-mutation decision
+
+| Candidate | Node 24 | `extract-zip` | Upstream-supported with LHCI 0.15.1 | Decision |
+| --- | --- | --- | --- | --- |
+| Native latest LHCI 0.15.1 + Lighthouse 12.6.1 + core 24 + browsers 2.13.2 | yes | present | yes | reject: vulnerability remains |
+| Override LHCI's exact Lighthouse pin to 12.8.2 | yes | present through core 24 / browsers 2.13.2 | no | reject: no remediation and overrides an exact pin |
+| Override Lighthouse to 13.0–13.3 | yes | present through core 24 / browsers 2.13.2 | no; upstream Lighthouse 13 support is open | reject: no remediation plus unsupported combination |
+| Override browsers 3 beneath Puppeteer core 24, or core 25 beneath Lighthouse 12 | yes | absent | no; exact-major and CommonJS/ESM boundaries are crossed | reject: structurally unsupported |
+| Override both LHCI parents to Lighthouse 13.4.0/13.4.1 + core 25 + browsers 3 | yes | absent | no; upstream Lighthouse 13 support is open | reject: fails supported-combination gate and changes Lighthouse major semantics |
+| Replace LHCI collection with direct Lighthouse 13.4.x | yes | absent | supported only at the Lighthouse/Puppeteer layer | reject: replaces the authorized repository architecture |
+
+The smallest extract-free package graph is Lighthouse 13.4.0 → Puppeteer core 25 → browsers 3,
+but there is no corresponding supported LHCI release. Lighthouse 13 also intentionally changes
+audits and accessibility scoring composition. Repository tests can check report shape and runtime;
+they cannot certify an unsupported cross-major LHCI pairing or declare new scoring semantics
+equivalent to approved D20 policy. Rewriting the collector to avoid LHCI would exceed the explicit
+owner boundary.
+
+### Repository coupling and D20 compatibility surface
+
+| Surface | Dependency/API assumption | Major-upgrade risk | Existing coverage |
+| --- | --- | --- | --- |
+| `package.json` / `package-lock.json` | LHCI binary and exact transitive Lighthouse graph; Node 24 | unsupported override and broad lock churn | clean `npm ci`, `npm ls`, audit |
+| `lighthouserc.cjs` | CommonJS config; `lhci autorun`; CLI flags; filesystem upload; mobile default / desktop preset | config/flag and CJS/ESM loader changes | `scripts/lighthouse-ci.spec.mjs` plus config fixtures |
+| `scripts/lighthouse-ci.mjs` | launches `npx lhci autorun`; Chrome path/flags; per-profile directories; lifecycle ownership | CLI process behavior, browser discovery, report placement | lifecycle/orchestrator specs |
+| `scripts/lib/lighthouse-medians.mjs` and comparator | category scores, `requestedUrl`, `configSettings.formFactor`, LCP/CLS numeric values, `network-requests`, `resource-summary`, one Lighthouse version per group | report-schema and score-definition changes | median/comparator and CLI specs |
+| protocol / coverage helpers | `network-requests.details.items[].protocol`; final/requested URL; exact route/profile population | audit removal/rename or URL field changes | protocol and coverage specs |
+| build/report provenance | exact HEAD/tree/lock/environment/output; hashes every JSON/HTML report | output naming/layout and runtime metadata changes | provenance specs |
+| `.github/workflows/ci.yml` | Node `.nvmrc` = 24; preinstalled Chrome; independent mobile/desktop shards; advisory hosted metrics | Chrome/tool version coupling and shard/report behavior | ordinary CI jobs plus local orchestrator specs |
+
+Live D20 remains version 1.26.1 at Central Docs `origin/main`
+`5001ae62573ae488a16a552b1de9d7d1d03f72ab`. The unchanged repository implementation reflects the
+approved 16 localized routes, mobile and desktop profiles, exactly three comparable runs per
+profile×URL, true median grouping, strict raw CLS `< 0.05`, performance/category and device-scoped
+LCP thresholds including the `/ar` and `/ar/projects` ceilings, Arabic-script font budget, hard
+local/reference versus advisory hosted-CI distinction, HTTP/2 measured-session proof, and complete
+build/report provenance. No policy value was edited.
+
+### Verification and independent review
+
+The pre-mutation clean `npm ci` and focused Postman/Faker proof recorded in the preceding checkpoint
+remain authoritative: patch-package applied `postman-collection@4.5.0 ✔`, Faker resolved 10.6.0,
+and 2/2 compatibility tests passed. The unchanged audit remains 63 total: 14 high, 46 moderate,
+3 low, 0 critical; production-only remains 40 total: 4 high, 35 moderate, 1 low, 0 critical.
+
+An optional focused baseline invocation covering six Lighthouse/orchestrator test files reached
+Vitest startup but emitted no test result for several minutes. Because it was not needed to resolve
+the upstream-support gate, the owned process was interrupted and exited 130. It is explicitly not
+reported as a pass or failure of a candidate; no candidate was installed.
+
+Independent read-only review re-resolved the registry metadata, installed graph, exact package
+constraints, CommonJS/ESM boundary, upstream support issue, repository coupling, and candidate
+matrix. It found no material discrepancy and recommended that no override ship. The worktree was
+clean at reviewed HEAD `fd16915cc5f54bbf2ab81677cb80c3a7582e3eb9`.
+
+No implementation commit exists because the candidate-selection gate failed. No PR was opened.
+The security prerequisite remains open. No remaining R1/R2 remediation, HIGH+ CI gate, reference
+environment, U7-A01, FE5-U7 acceptance, Central Docs mutation, shared-ref movement, production
+mutation/deployment, promotion, or FE5-U8 work occurred.
+
+**Verdict:** `LIGHTHOUSE SECURITY COMPATIBILITY BLOCKED — NO PATCHED SUPPORTED TOOLCHAIN`
+
+**Next three actions.**
+
+1. Track upstream Lighthouse CI issue #1136 and the next published `@lhci/cli`/`@lhci/utils` release; re-run this bounded investigation only when both support Lighthouse 13.4+ (or another extract-free supported graph).
+2. Continue remaining R1/R2 security remediation in a separate authorized task without modifying this frozen Lighthouse chain.
+3. Keep HIGH+ CI enforcement and FE5-U7 acceptance closed until every pre-U7 security prerequisite has a supported, independently verified resolution.
+
+---
+
+## Puppeteer extraction-adapter authorization — zero-trust rebaseline · 2026-09-14
+
+The owner superseded the older checkpoint reference and made
+`f579f9e022160d7ed2b42ff332a2d0f21a6c2916` authoritative. The newly authorized scope is only a
+reviewed X1/X2 patch or immutable fork of the direct Puppeteer browser-extraction surface needed to
+remove `extract-zip`; replacing Lighthouse/LHCI, redesigning provisioning, remaining R1/R2 work,
+HIGH+ enforcement, Central Docs/D20, reference-environment work, U7, shared refs, and production
+remain outside the boundary.
+
+| Claim | Authoritative handoff | Fresh live state | Match |
+| --- | --- | --- | --- |
+| Security branch | `fix/frontend-v1-u7-security-gate` at `f579f9e022160d7ed2b42ff332a2d0f21a6c2916` | exact branch and HEAD | yes |
+| Worktree | exists and clean | durable worktree exists; `git status --porcelain` empty | yes |
+| Web integration | `origin/dev` `7feee77d3fdd562bcecf5cd6cbe8e73d7644b3d7` | exact after `git fetch origin --prune` | yes |
+| Production baseline | `origin/main` `40eb52c6470579c19131d3cede41ccc9b295bdf5` | exact after fetch | yes |
+| Lock identity | SHA-256 `11f88f267e807e0eec51bcd4ce705af37b5b809ca7c09c5a15566e4d516612a0`; blob `b2443684a8e10b2e9ccc340d2fb0808cbe6fd6b4` | exact | yes |
+| Postman patch | SHA-256 `6a628ef2c6a83bd227546d10ee1a31b9f122eb90c8a0521bbab48167494a2049` | exact | yes |
+| Security PR | none | `gh pr list --head fix/frontend-v1-u7-security-gate` returned `[]` | yes |
+| Full audit | 63 total: 14 high, 46 moderate, 3 low, 0 critical | exact fresh registry result; expected exit 1 | yes |
+| Production audit | 40 total: 4 high, 35 moderate, 1 low, 0 critical | exact fresh registry result; expected exit 1 | yes |
+
+The installed path is still `@lhci/cli@0.15.1` → `lighthouse@12.6.1` →
+`puppeteer-core@24.43.1` → `@puppeteer/browsers@2.13.2` → `extract-zip@2.0.1`.
+`npm explain extract-zip` found this single source. The full HIGH set remains `@lhci/cli`,
+`@lhci/utils`, `@puppeteer/browsers`, `@redocly/openapi-core`, `@tiptap/core`, `extract-zip`,
+`fast-uri`, `js-yaml`, `lighthouse`, `lodash`, `puppeteer-core`, `sharp`, `svgo`, and `tmp`.
+Production HIGH names remain `@tiptap/core`, `js-yaml`, `sharp`, and `svgo`. Zero drift was found.
+
+No package, lockfile, patch, source, test, CI, Central Docs, shared ref, PR, browser installation,
+or production state changed during this rebaseline.
+
+**Next three actions.**
+
+1. Inspect every declaration/import/call and security-sensitive behavior in the exact `@puppeteer/browsers@2.13.2` ZIP extraction surface.
+2. Trace discovery/download/install/unpack reachability and compare maintained Node-24-compatible replacement implementations using current primary security/upstream evidence.
+3. Classify X1–X4 and report the complete proposed X1/X2 patch, tests, package/lock effect, and public-semantic argument before any implementation mutation.
+
+---
+
+## Puppeteer extraction-adapter investigation — pre-mutation checkpoint · 2026-09-14
+
+This phase was read-only except for this append-only checkpoint. No fork, package manifest,
+lockfile, patch, source, test, CI, Central Docs, shared ref, PR, browser installation, or production
+state was changed. The exact published input is `@puppeteer/browsers@2.13.2`, npm integrity
+`sha512-5EUZSUIc37H6aIXyWO0Z4y8NlF8NnjgmqeQgOGiswAU7pY0HOo16ho4+alIWmSfdZnjqBRawMsP3I5YqLSn6kw==`,
+upstream git head `970bda63c03d96b7a42d96fe44e35da1b4dc4a8b`, Apache-2.0, Node `>=18`.
+
+### Exact declaration, call site, and runtime reachability
+
+`src/fileUtil.ts` and its CJS/ESM builds contain the package's only `extract-zip` import. The ZIP
+branch of `unpackArchive(archivePath, folderPath)` dynamically imports it and calls its default
+export with only `{dir: folderPath}`. `src/install.ts` and its builds are the only callers: after a
+browser archive is downloaded, the installer passes the cache installation directory to
+`unpackArchive`; its `finally` removes the archive even when extraction rejects. Other branches
+(`tar.bz2`, `tar.xz`, DMG and EXE) are disjoint and need no edit.
+
+| Runtime path | Package load | ZIP extraction call | Required compatibility |
+| --- | --- | --- | --- |
+| Repository LHCI with preinstalled `CHROME_PATH` | Lighthouse loads `puppeteer-core`, which loads browser enums/launch helpers from `@puppeteer/browsers` | no | CJS/ESM exports and launch/profile helpers must remain byte-for-byte available |
+| Lighthouse/Puppeteer launch of an already-installed browser | yes | no | executable discovery, profile creation and launch semantics unchanged |
+| `@puppeteer/browsers` CLI/API or Puppeteer browser download | yes | yes for Chrome, Chrome Headless Shell, ChromeDriver, Chromium and applicable Windows Firefox ZIPs | archive removal/error propagation, nested directories, modes, symlinks and overwrite behavior |
+| Linux/macOS Firefox non-ZIP installation | yes | no | tar/DMG branches unchanged |
+
+The current vulnerable adapter creates parents, checks the real parent remains under the extraction
+root, preserves the ZIP mode bits with 0755/0644 defaults, supports directories and symlinks, and
+overwrites ordinary existing files. It does not validate a symlink target and opens a later regular
+entry by pathname. That enables CVE-2026-56876 / GHSA-jmr9-qjv8-65gv and the duplicate-entry
+symlink write-through CVE-2026-19693 / GHSA-7pqw-9j4j-h8q3. The affected range includes 2.0.1 and
+has no patched release.
+
+### Candidate comparison
+
+Disposable fresh lockfiles in `/tmp` were created with exact versions and audited against the live
+registry. All four candidates reported zero vulnerabilities, including zero HIGH/CRITICAL.
+
+| Candidate | Fresh audit | Production dependency footprint | Semantic fit | Decision |
+| --- | --- | --- | --- | --- |
+| `yauzl@3.4.0` | 0 total | itself + `pend` | low-level, bounded-memory ZIP reader; filename and size validation; closest to both the old adapter and current Puppeteer implementation | **select** |
+| `unzipper@0.12.5` | 0 total | 16 transitive packages | higher-level but much larger graph and historic traversal surface | reject |
+| `@zip.js/zip.js@2.15.0` | 0 total | no transitive package | maintained and Node-compatible, but ESM-only and requires a larger modes/symlink adapter | reject |
+| `fflate@0.8.3` | 0 total | no transitive package | compact, but does not supply filesystem mode/symlink semantics and encourages more custom extraction code | reject |
+
+The selected `yauzl@3.4.0` is MIT, Node `>=12`, npm integrity
+`sha512-jIH9yLR9wqr0wOS0TpBvo/g/2UgZH5qePVbjgRliiF0BYvOZyaBknKsF+x9Iht0O6sqgnB93rCICdOZFecJuDw==`
+and upstream git head `f5798e15204ffbb9a428b00217e4659684a41b0f`. Unlike the currently
+installed 2.10.0 chain, 3.4.0 vendors its simplified file slicer and includes the 3.3.1 stream
+interruption fixes plus promise/async-iterator APIs. The implementation must nevertheless prove a
+large deflated-entry extraction on the repository's Node 24 runtime because old yauzl/file-slicer
+combinations have a documented Node 24/26 truncation failure.
+
+Using only OS `unzip`/PowerShell was rejected because it adds an environment dependency and current
+Puppeteer 3.x had to restore a library fallback after CLI-only extraction broke consumers. A root
+`patch-package` edit was also rejected: postinstall patching cannot change npm's prior dependency
+resolution, so `extract-zip` would remain installed, locked and audited. Aliasing the
+`extract-zip` name to a different implementation is opaque and does not meet the explicit absence
+gate.
+
+### X classification and complete proposed delta
+
+**Classification: X2 — bounded immutable fork.** The fork changes one internal ZIP adapter while
+preserving the exact 2.13.2 public package, browser metadata, installer, CJS/ESM entry points and all
+non-ZIP branches. It does not upgrade or override Lighthouse, LHCI or Puppeteer core.
+
+The proposed external repository is
+`https://github.com/eslammuatamed/puppeteer-browsers-safe-extract`. It will be initialized only in
+the implementation phase from the exact published 2.13.2 tarball above, retain Apache-2.0 notices,
+and be referenced only by a full immutable commit SHA. Its owned delta is:
+
+- `package.json`: retain name/version/export/engine metadata; remove `extract-zip`; add exact
+  `yauzl: 3.4.0`.
+- `src/fileUtil.ts`, `lib/cjs/fileUtil.js`, and `lib/esm/fileUtil.js` plus corresponding source maps:
+  replace only the ZIP branch/helper. Validate yauzl filenames and uncompressed sizes; preserve
+  `__MACOSX` skipping, directory detection, 0755/0644 defaults and low mode bits; resolve every
+  output and symlink target inside the real extraction root; re-check real parent containment; use
+  `O_NOFOLLOW` for regular-file creation so a pre-existing or duplicate symlink cannot be followed;
+  retain normal-file truncating overwrite and reject on extraction errors.
+- A fork-local Node test covering normal nested extraction, empty directories, executable mode,
+  ordinary duplicate overwrite, parent/absolute traversal rejection, external symlink rejection,
+  duplicate symlink→file rejection, pre-existing parent/final symlinks, malformed/size-mismatch
+  rejection, and a >64 KiB deflated file whose bytes/hash must match.
+
+The web-repository delta, after the fork passes independent review, is limited to:
+
+- `package.json`: add a nested override under `puppeteer-core@24.43.1` replacing only
+  `@puppeteer/browsers` with `git+https://github.com/eslammuatamed/puppeteer-browsers-safe-extract.git#<full-commit-sha>`;
+  add a focused test script.
+- `package-lock.json`: resolve that exact Git commit; remove `extract-zip@2.0.1`, old
+  `yauzl@2.10.0`, `fd-slicer@1.1.0`, the extract-only `get-stream@5.2.0`, and optional
+  `@types/yauzl@2.x`; add exact `yauzl@3.4.0` while retaining/reusing `pend@1.2.0`.
+- `scripts/puppeteer-extraction.spec.mjs`: downstream package-identity and extraction smoke/security
+  assertions so deletion of the override or containment/no-follow logic fails discriminatingly.
+- This ledger only. No Lighthouse config, D20 threshold, CI workflow, production dependency or
+  application source file is proposed.
+
+npm's official package-json contract confirms that root overrides may replace a transitive package
+with a Git URL and that a `#<commit-ish>` selects exactly that commit. Before trusting the new test,
+the implementation phase must perform the standing negative control: deliberately restore the
+unsafe symlink-follow behavior in the fork, demonstrate the focused test fails with an outside-write
+signal, revert it, then demonstrate the same command passes.
+
+### Planned acceptance matrix — not yet executed
+
+1. Fork-local focused ZIP suite on Node 24, including the large-file integrity assertion.
+2. Independent review of fork provenance, license, diff, containment/no-follow implementation and
+   full commit SHA before the web manifest refers to it.
+3. Fresh clean `npm ci`; `npm ls`; `npm explain extract-zip` must return absent; full and production
+   audits must remove the inherited Puppeteer/Lighthouse HIGHs without introducing any new
+   HIGH/CRITICAL.
+4. Focused extraction/downstream compatibility tests, then the existing Lighthouse/LHCI unit and
+   orchestration suites.
+5. One serialized clean-build LHCI/D20 mobile+desktop proof with exact build SHA and unchanged D20
+   rules before any security-PR decision.
+
+Implementation has not started and no implementation verdict is issued at this checkpoint.
+
+**Next three actions.**
+
+1. Create the standalone fork from the exact tarball/integrity, implement and negatively control the
+   one ZIP adapter, then obtain an independent review of its immutable commit.
+2. Apply the commit-pinned nested override and focused downstream test in this branch; regenerate the
+   lockfile and prove `extract-zip` absent plus audit improvement.
+3. Run the serialized compatibility/Lighthouse/D20 acceptance matrix, append exact evidence, obtain
+   independent final review, then decide whether to open the security PR.
+
+---
+
+## X2 immutable-fork implementation authorization — zero-trust rebaseline · 2026-09-14
+
+The owner made `563b7a02c704b4ff388a904bc7c8be9ab3bb14b9` the latest authoritative
+checkpoint and authorized implementation/certification of only the already-selected X2
+`@puppeteer/browsers@2.13.2` extraction fork. `git fetch origin --prune` completed before these
+readings.
+
+| Claim | Authoritative handoff | Fresh live state | Match |
+| --- | --- | --- | --- |
+| Security branch/HEAD | `fix/frontend-v1-u7-security-gate` at `563b7a02c704b4ff388a904bc7c8be9ab3bb14b9` | exact | yes |
+| Worktree | durable and clean | listed at the expected path; `git status --porcelain` empty | yes |
+| Web integration | `origin/dev` `7feee77d3fdd562bcecf5cd6cbe8e73d7644b3d7` | exact | yes |
+| Production baseline | `origin/main` `40eb52c6470579c19131d3cede41ccc9b295bdf5` | exact | yes |
+| Lock identity | SHA-256 `11f88f267e807e0eec51bcd4ce705af37b5b809ca7c09c5a15566e4d516612a0`; blob `b2443684a8e10b2e9ccc340d2fb0808cbe6fd6b4` | exact | yes |
+| Postman patch | SHA-256 `6a628ef2c6a83bd227546d10ee1a31b9f122eb90c8a0521bbab48167494a2049` | exact | yes |
+| Security PR | none | exact (`[]`) | yes |
+| Full audit | 63 total: 14 high, 46 moderate, 3 low, 0 critical | exact; expected exit 1 | yes |
+| Production audit | 40 total: 4 high, 35 moderate, 1 low, 0 critical | exact; expected exit 1 | yes |
+
+Fresh `npm ci` exited 0, installed 1,615 packages, applied `postman-collection@4.5.0 ✔`, and
+reported the same 63-vulnerability total. The focused Postman/Faker command initially received
+`listen EPERM` from the filesystem/network sandbox; rerunning the identical command with localhost
+binding permitted passed 2/2 in 1.17 s. Faker resolves to 10.6.0.
+
+The exact installed chain remains `@lhci/cli@0.15.1` → `lighthouse@12.6.1` →
+`puppeteer-core@24.43.1` → `@puppeteer/browsers@2.13.2` → `extract-zip@2.0.1` →
+`yauzl@2.10.0`. `npm explain extract-zip` again found only that path. Live npm records still match
+the checkpoint: browsers integrity `sha512-5EUZSUIc37H6aIXyWO0Z4y8NlF8NnjgmqeQgOGiswAU7pY0HOo16ho4+alIWmSfdZnjqBRawMsP3I5YqLSn6kw==`
+at git head `970bda63c03d96b7a42d96fe44e35da1b4dc4a8b`; yauzl 3.4.0 integrity
+`sha512-jIH9yLR9wqr0wOS0TpBvo/g/2UgZH5qePVbjgRliiF0BYvOZyaBknKsF+x9Iht0O6sqgnB93rCICdOZFecJuDw==`
+at git head `f5798e15204ffbb9a428b00217e4659684a41b0f`. There is no material contradiction and X2 remains
+the verified plan.
+
+Open Web PRs were also re-read: #74 `d1064da1e1ad309a558a3cf5a0e2b761e10a9e00`, #73
+`f9be4b40168e9eaf74d6e53fa7c0c9e9ef037124`, #72
+`9ea46aabf411aeef7457995cb91341a304c1c038`, #69
+`3d175fafccd39c094ec9d122e4c00f75e8a46a9a`, #68
+`513defb39a2594429eaa7dde31065ee707054b86`, and #46
+`016f0d9becfac34cc7e336b3fd2b784e71fec091`; none targets or is headed by this security branch.
+
+No non-ledger mutation appeared after the authoritative checkpoint. **Zero drift.**
+
+**Next three actions.**
+
+1. Materialize the exact published package as a minimal standalone fork, preserve provenance and
+   licenses, implement the bounded adapter and prove its security test with a negative control.
+2. Obtain independent fork review, publish the reviewed full commit, then wire only that immutable
+   commit into Web and audit the generated manifest/lock delta.
+3. Complete clean-install, extraction, Lighthouse/D20, Postman and Web regression evidence; obtain
+   independent integration review and commit implementation/evidence without opening a PR.
+
+---
+
+## X2 immutable Puppeteer extraction fork — certified checkpoint · 2026-09-16
+
+Owner authorization covered only the temporary, public, immutable compatibility fork for the exact
+`@puppeteer/browsers@2.13.2` extraction surface. Remaining R1/R2 work, HIGH+ enforcement, D20,
+Central Docs, the reference environment, U7, shared refs, production and FE5-U8 remained outside the
+boundary. The verified zero-trust starting state is the preceding checkpoint at Web HEAD
+`4f6bdf34cee5afcc14db97ea2d86570ea5a07d78`, `origin/dev`
+`7feee77d3fdd562bcecf5cd6cbe8e73d7644b3d7`, `origin/main`
+`40eb52c6470579c19131d3cede41ccc9b295bdf5`, lock SHA-256
+`11f88f267e807e0eec51bcd4ce705af37b5b809ca7c09c5a15566e4d516612a0` / blob
+`b2443684a8e10b2e9ccc340d2fb0808cbe6fd6b4`, and no security PR.
+
+### Public fork, provenance and bounded implementation
+
+The public, credential-free repository is
+`https://github.com/eslammuatamed/puppeteer-browsers-safe-extract`. It preserves the upstream
+Apache-2.0 license, README, copyrights, package name and version. `UPSTREAM_PROVENANCE.md` records
+upstream `puppeteer/puppeteer`, package `@puppeteer/browsers@2.13.2`, upstream git head
+`970bda63c03d96b7a42d96fe44e35da1b4dc4a8b`, exact npm integrity, fork purpose, security rationale,
+bounded diff, immutable-pin rule and temporary removal/archive condition.
+
+The fork base is `4464eef810abb154ebe4134af5d15d0751baeab0`; the reviewed compatibility commit is
+`9c87c39d0bbdb78499b204c39f66a4196939092f`. Public `main` and a fresh remote install both resolved
+to that exact full SHA. Rejected local candidates `2bca9dc2…`, `e165a89c…` and `5d25e991…` are not
+ancestors and GitHub returned no commit for any of them. They were neither published nor consumed.
+
+The ten-file fork diff is `2,741` insertions / `314` deletions including generated CJS/ESM output,
+source maps, tests and a new deterministic package lock. The authored TypeScript adapter itself is
+`322` insertions / `6` deletions in `src/fileUtil.ts`. `extract-zip` was removed and exact
+`yauzl@3.4.0` added. Browser metadata, URLs, revision selection, cache layout, public exports and all
+non-ZIP extraction branches remain unchanged.
+
+The adapter streams lazy yauzl entries; rejects traversal, absolute and cross-platform unsafe paths;
+resolves and revalidates canonical real parents; validates symlink targets from the real parent;
+uses `O_NOFOLLOW`; verifies descriptor `dev`/`ino`, `lstat` identity and realpath containment before
+truncate, chmod or write; applies file/directory modes through verified handles; and closes entry
+streams, descriptors and the ZIP on success/error. Nested and Unicode paths, empty files/directories,
+large deflated content, executable/default/directory modes, normal duplicate overwrite, safe links,
+`__MACOSX` skipping and malformed errors remain supported.
+
+Three already-proven negative controls remain the instrument evidence: disabling target/no-follow
+checks failed the outside-write cases; removing the second parent check failed the controlled
+pre-open parent-swap case; and validating a nested link from its lexical rather than canonical parent
+failed the contained-alias escape case. Restored code passed `19/19`, TypeScript and reproducible
+`build:compat`; full and production fork audits are zero. `npm pack --dry-run` produced 186 expected
+entries with license, CJS/ESM/source shape and executable CLI modes. Independent release QA found no
+blocking containment, symlink, race, mode, malformed-archive, streaming, packaging, provenance or
+license finding and approved the exact commit before publication.
+
+### Web wiring and deterministic dependency proof
+
+Web implementation commit `d3ca4ef35ccf086188ae9b0ca3ed084089cac55c` changes exactly:
+
+- `package.json`: one focused test command and a nested `puppeteer-core@24.43.1` override to
+  `git+https://github.com/eslammuatamed/puppeteer-browsers-safe-extract.git#9c87c39d0bbdb78499b204c39f66a4196939092f`;
+- `package-lock.json`: 10 insertions / 76 deletions, resolving that full SHA, removing
+  `extract-zip@2.0.1`, `get-stream@5.2.0`, `fd-slicer@1.1.0`, optional `@types/yauzl@2.x` and
+  `yauzl@2.10.0`, and installing `yauzl@3.4.0` while reusing `pend`;
+- `scripts/puppeteer-extraction-compat.spec.mjs`: package/lock identity, representative compressed
+  browser-layout extraction, traversal rejection and no outside write.
+
+Before the override, that downstream test failed on absent `yauzl@3.4.0` against the upstream graph;
+after a clean install it passed `3/3`. `npm ci` installed 1,610 packages, applied
+`postman-collection@4.5.0 ✔`, and required no manual fork setup. Final graph:
+`@lhci/cli@0.15.1` → `lighthouse@12.6.1` → `puppeteer-core@24.43.1` → forked
+`@puppeteer/browsers@2.13.2` → `yauzl@3.4.0`. `npm explain extract-zip` returned no dependency,
+`npm ls` contained no `extract-zip`, and the lock search was empty. Faker remains `10.6.0`; the
+Postman patch SHA remains `6a628ef2c6a83bd227546d10ee1a31b9f122eb90c8a0521bbab48167494a2049`.
+The final lock identity is SHA-256 `9c6380c66e6349405b9273ccd8e24855ff5078bb5f6bbf43f0101dde4af66065`
+and Git blob `ae75d14f37e83c1a8ba86e5b28a3137486612eb0`.
+
+### Runtime, Lighthouse, audit and repository verification
+
+A real supported CLI install downloaded and extracted Chrome Headless Shell `153.0.8010.36` into a
+controlled temporary cache. Its executable existed at mode 0755, reported the exact version,
+launched through Puppeteer, created CDP `1.3`, rendered the expected page, and left no `.zip` or
+`.crdownload`. Existing Chrome discovery resolved `/usr/bin/google-chrome-stable`; system Chrome
+`153.0.8010.36` also launched through Puppeteer and reported CDP `1.3`.
+
+LHCI and Lighthouse loaded at the unchanged `0.15.1` / `12.6.1`; the repository config loaded the
+unchanged 16 URLs × 2 profiles × 3 runs model. Two non-governed tooling smoke reports on the clean
+build at Web SHA `d3ca4ef…` passed schema/runtime compatibility: desktop `/resume` scored
+99/100/100/100 with LCP 728.15 ms and CLS 0.000622; mobile `/ar/resume` scored 81/100/100/100 with
+LCP 3438.59 ms and CLS 0.010543. These are regression evidence only, not FE5-U7 acceptance.
+
+Existing Lighthouse semantics passed 187 tests: 159 median, coverage, protocol, provenance and report
+tests plus 28 orchestrator lifecycle tests. The strict raw CLS boundary remains `0.0499 PASS`,
+`0.0500 FAIL`, `0.0501 FAIL`. Clean analyzed production build provenance verified exact HEAD/tree;
+bundle isolation passed; the complete D20 route-size gate passed its unchanged shared-floor,
+incremental, app-owned and CSS budgets, retaining 15 D20-24 warning-only dashboard totals. No D20,
+Lighthouse config, performance methodology or CI file changed.
+
+The Postman/Faker compatibility suite passed `2/2`, including real Prism EN/AR behavior. The focused
+Playwright contract harness passed `3/3`, including an unfiltered WCAG 2.2 AA axe scan. Full Web
+Vitest passed 169 files / 2,607 tests. Typecheck, lint, clean production analysis build and bundle
+isolation passed. The initially sandboxed local-listener invocations were classified and rerun with
+localhost binding permitted; only those passing reruns are acceptance evidence.
+
+Full audit moved from 63 total (14 high, 46 moderate, 3 low, 0 critical) to 58 total (8 high,
+47 moderate, 3 low, 0 critical). The six inherited Puppeteer/Lighthouse/extract-zip HIGH package
+nodes disappeared; neither extract-zip advisory remains; `yauzl`, Faker and the fork introduced no
+HIGH/CRITICAL. Production-only remains 40 total (4 high, 35 moderate, 1 low, 0 critical), as expected
+because X2 is a development-tool chain. Remaining full-audit HIGH names are
+`@redocly/openapi-core`, `@tiptap/core`, `fast-uri`, `js-yaml`, `lodash`, `sharp`, `svgo`, and `tmp`;
+production HIGH names remain `@tiptap/core`, `js-yaml`, `sharp`, and `svgo`.
+
+Independent Web integration review found no blocking issue: only the three intended Web files changed;
+the public full-SHA resolution and installed graph matched; extract-zip was absent; Postman/Faker was
+preserved; the compatibility test was discriminating and passed; all D20/Lighthouse methodology files
+were unchanged; and the reviewed worktree was clean.
+
+No security PR was opened. The overall PRE-U7 security prerequisite remains open. No R1/R2 fix,
+HIGH+ gate, reference-environment provisioning, U7-A01, FE5-U7 acceptance, Central Docs mutation,
+shared-ref movement, production mutation/deployment, promotion or FE5-U8 work occurred.
+
+**Verdict:** `PUPPETEER EXTRACT-ZIP IMMUTABLE FORK PROVEN — SECURITY PREREQUISITE REMAINS OPEN`
+
+**Next three actions.**
+
+1. Continue remaining R1/R2 remediation in a separately authorized task; do not change this certified immutable fork pin.
+2. Add the blocking HIGH+ CI gate only after every remaining security chain is resolved and separately reviewed.
+3. Keep U7-A01 and FE5-U7 acceptance closed until the full PRE-U7 security prerequisite is certified.
+
+---
+
+## PRE-U7 remaining R1/R2 HIGH remediation — zero-trust investigation and pre-mutation plan · 2026-09-16
+
+The owner authorized only the remaining R1/R2 HIGH dependency remediation. HIGH+ CI enforcement,
+the governed U7 audit matrix, reference-environment provisioning, shared refs, production and all
+R3/R4 work remain outside this boundary. This checkpoint was produced before any dependency
+mutation.
+
+### Zero-trust resume
+
+`git fetch origin --prune` preceded the readings. The durable Web worktree is on
+`fix/frontend-v1-u7-security-gate` at the authoritative checkpoint
+`311f1afcfd7a192cdc13959159a77a5c27ec3af6`; `git status --porcelain` is empty.
+
+| Claim | Fresh live state | Result |
+| --- | --- | --- |
+| `origin/dev` | `7feee77d3fdd562bcecf5cd6cbe8e73d7644b3d7` | exact |
+| `origin/main` | `40eb52c6470579c19131d3cede41ccc9b295bdf5` | exact |
+| Manifest | certified X2 manifest, including unchanged Postman/Faker and Puppeteer overrides | exact |
+| Lock identity | SHA-256 `9c6380c66e6349405b9273ccd8e24855ff5078bb5f6bbf43f0101dde4af66065`; blob `ae75d14f37e83c1a8ba86e5b28a3137486612eb0` | exact |
+| Postman patch | SHA-256 `6a628ef2c6a83bd227546d10ee1a31b9f122eb90c8a0521bbab48167494a2049` | exact |
+| Fork | public `main`, local HEAD and Web pin all `9c87c39d0bbdb78499b204c39f66a4196939092f` | exact |
+| Browser-extraction graph | LHCI 0.15.1 → Lighthouse 12.6.1 → Puppeteer Core 24.43.1 → forked browsers 2.13.2 → yauzl 3.4.0 | exact |
+| `extract-zip` | absent from installed graph and lockfile; `npm explain` exits 1 | exact |
+| Postman/Faker graph | Prism CLI/HTTP 5.16.0 → HTTP Spec 7.1.0 → Postman Collection 4.5.0 → Faker 10.6.0 | exact |
+| Security PR | none | exact |
+
+Fresh `npm audit --json --audit-level=high` exited 1 with 58 total: 8 high, 47 moderate,
+3 low and 0 critical. Fresh `npm audit --omit=dev --json --audit-level=high` exited 1 with
+40 total: 4 high, 35 moderate, 1 low and 0 critical. These exactly match the certified X2
+checkpoint. The 14 open Dependabot HIGH alerts still include stale extract-zip and Faker entries;
+the current lockfile and npm audit prove those nodes absent/fixed, so GitHub recalculation lag is not
+treated as dependency truth.
+
+Open dependency PRs remain #74 (`d1064da1e1ad309a558a3cf5a0e2b761e10a9e00`), #73
+(`f9be4b40168e9eaf74d6e53fa7c0c9e9ef037124`), #72
+(`9ea46aabf411aeef7457995cb91341a304c1c038`), #69
+(`3d175fafccd39c094ec9d122e4c00f75e8a46a9a`), #68
+(`513defb39a2594429eaa7dde31065ee707054b86`) and #46
+(`016f0d9becfac34cc7e336b3fd2b784e71fec091`). None is this security branch and none supplies the
+complete bounded resolution below. **Zero drift.**
+
+### Exact remaining HIGH disposition
+
+| Advisory | Package/node | Exact installed parent path | Installed → fixed | Direct; class | Runtime |
+| --- | --- | --- | --- | --- | --- |
+| GHSA-j95f-988m-3j2f | `@tiptap/core` | 17 direct Tiptap packages plus `@nuxt/ui@4.10.0`; internal peers/dependencies are exact 3.30.1 | 3.30.1 → 3.30.5 | direct; R1 synchronized patch | prod |
+| GHSA-2883-xcg3-v3hh | `@redocly/openapi-core` / its `js-yaml` | `openapi-typescript@7.13.0` → Redocly `^1.34.6` → exact js-yaml 4.3.1 | Redocly 1.34.19 → 1.34.20; js-yaml 4.3.1 → 4.3.2 | transitive; R1 supported patch | dev |
+| GHSA-2883-xcg3-v3hh | remaining `js-yaml` copies | LHCI utils / json-schema-ref-parser → 3.15.1; Rollup YAML and APIDevTools parser → 4.3.1 | 3.15.1 → 3.15.2; 4.3.1 → 4.3.2 | transitive; R1 in-range | mixed; Rollup copy is prod |
+| GHSA-5jgf-p345-68v8 | `fast-uri` | root/Prism `ajv@8.20.0` → `fast-uri ^3.0.1` | 3.1.5 → 3.1.6 | transitive; R1 in-range | dev |
+| GHSA-f65p-4m7j-42xc | `fast-uri` | same single Ajv node, shared by root Ajv, Ajv Formats and Prism HTTP | 3.1.5 → 3.1.6 | transitive; R1 in-range | dev |
+| GHSA-fph4-wmhf-6fwf | `fast-uri` | same | 3.1.5 → 3.1.6 | transitive; R1 in-range | dev |
+| GHSA-jqff-g426-hqxp | `fast-uri` | same | 3.1.5 → 3.1.6 | transitive; R1 in-range | dev |
+| GHSA-r5fr-rjxr-66jc | nested `lodash` | Prism HTTP → HTTP Spec 7.1.0 → Postman Collection 4.5.0 → exact 4.17.21 | 4.17.21 → 4.18.0 | transitive exact pin; R2 parent-scoped override | dev |
+| GHSA-rgj7-g3m4-5g8c | two optional `sharp` nodes | Nuxt Image 2.1.0 → IPX 4.0.0-beta.1; Nuxt SEO 5.3.12 → SEO Utils 8.4.2; both `^0.35.3` | 0.35.3 → 0.35.4 | transitive; R1 in-range | prod optional |
+| GHSA-w27v-7q3p-w38r | `svgo` | Nuxt Vite builder → cssnano 8.0.6 → preset-default → postcss-svgo 8.0.5 → `^4.0.2` | 4.0.2 → 4.1.0 | transitive; R1 compatible minor | prod |
+| GHSA-ph9p-34f9-6g65 | root `tmp` | `@lhci/cli@0.15.1` → `tmp ^0.1.0` | 0.1.0 → 0.2.7 | transitive constrained range; R2 parent-scoped override | dev |
+| GHSA-ph9p-34f9-6g65 | nested `tmp` | LHCI → Inquirer 6.5.2 → external-editor 3.1.0 → `tmp ^0.0.33` | 0.0.33 → 0.2.7 | transitive constrained range; R2 parent-scoped override | dev |
+
+The audit's eight HIGH package groups are not eight advisories: fast-uri contributes four HIGH
+advisories; Redocly is an affected wrapper because of the same js-yaml advisory; tmp has two
+vulnerable installed nodes.
+
+Fresh registry evidence establishes the supported targets. Redocly 1.34.20 is inside
+openapi-typescript's `^1.34.6` range and pins js-yaml 4.3.2. All 17 directly used Tiptap packages
+publish synchronized 3.30.5 artifacts; core peers on exact `@tiptap/pm@3.30.5`, and starter-kit
+depends on exact 3.30.5 core/pm. fast-uri 3.1.6, js-yaml 3.15.2/4.3.2, sharp 0.35.4 and svgo 4.1.0
+all exist inside their owning ranges.
+
+No supported normal R1 parent fix exists for the two R2 groups. Postman Collection 4.5.0 is the
+last 4.x release and pins Lodash 4.17.21 exactly; its next maintained line is 5.x, an unauthorized
+major that also changes the established Faker relationship. LHCI 0.15.1 is current and still uses
+`tmp ^0.1.0`; external-editor 3.1.0 is current and still uses `tmp ^0.0.33`; Inquirer 6.5.2 is the
+last 6.x release. The required tmp APIs remain present in 0.2.7: LHCI uses `fileSync`, while
+external-editor uses `tmpNameSync`.
+
+### Approved-boundary delta before mutation
+
+| Chain | Current | Proposed | Mechanism | Risk | Required validation |
+| --- | --- | --- | --- | --- | --- |
+| Tiptap | 17 direct ranges `^3.30.1`, resolved 3.30.1 | ranges/resolution `^3.30.5` / 3.30.5 | synchronized direct R1 patch | low; exact internal peer lockstep | editor/dashboard suites, typecheck, build, bundle isolation |
+| Redocly/js-yaml | Redocly 1.34.19; js-yaml 3.15.1/4.3.1 | 1.34.20; 3.15.2/4.3.2 | named lock-compatible R1 updates | low; schema parser behavior | API type generation, OpenAPI/contract tests |
+| Ajv/fast-uri | Ajv 8.20.0 → fast-uri 3.1.5 | keep Ajv; fast-uri 3.1.6 | lock-only R1 patch | low | schema/contract/Prism tests |
+| Postman/Lodash | Postman 4.5.0 → exact Lodash 4.17.21 | keep Postman; nested Lodash 4.18.0 | add `lodash: 4.18.0` only under existing `postman-collection` override | medium; parent exact-pin bypass | patch application, 118 Faker generators, Prism EN/AR and contract fixtures |
+| sharp | two optional 0.35.3 copies | two 0.35.4 copies | lock-only R1 patch | low; native image runtime | image/IPX smoke and clean build |
+| svgo | 4.0.2 | 4.1.0 | lock-only R1 compatible minor | low; optimizer output | asset/CSS tests and build |
+| tmp | LHCI 0.1.0; external-editor 0.0.33 | both 0.2.7 | exact overrides under `@lhci/cli@0.15.1` and `external-editor@3.1.0` | medium; crossing 0.x ranges | direct API smoke plus unchanged Lighthouse/LHCI orchestration |
+
+Implementation order is fixed: first use normal npm resolution for all R1 changes and inspect each
+named graph; only then add the three R2 child resolutions under their owning parent scopes. No
+lockfile will be hand-edited. The existing Postman/Faker override gains only the Lodash child; the
+Puppeteer override and Postman patch are not rewritten. Override removal conditions are: remove the
+Lodash child when the consumed Postman line publishes a compatible fixed Lodash dependency; remove
+the LHCI tmp override when LHCI publishes a compatible tmp range; remove the external-editor tmp
+override when external-editor (or the consumed Inquirer line) publishes a compatible tmp range.
+
+Expected lock churn is bounded to synchronized Tiptap 3.30.5 artifacts; Redocly 1.34.20; js-yaml
+3.15.2/4.3.2; fast-uri 3.1.6; the nested Postman Lodash 4.18.0; both sharp 0.35.4 nodes; svgo 4.1.0;
+and tmp 0.2.7. Dedupe may remove the old root/nested tmp copies and their now-orphaned
+`os-tmpdir`/old rimraf-only edges. No framework, Nuxt, Vue, Prism, Lighthouse, LHCI, Ajv, cssnano,
+IPX, SEO, Faker, Puppeteer or fork version movement is planned. Any movement outside these direct
+consequences is a stop-and-correct condition.
+
+The full acceptance contract remains the owner's Phase F–M matrix: deterministic clean `npm ci`,
+full and production audits, advisory-by-advisory proof, focused dependency regression, preserved
+Postman/Faker and Puppeteer extraction proofs, standard Web gates, ordinary non-governed desktop and
+mobile Lighthouse, complete checkpoint diff/churn audit and an independent read-only review. The
+governed U7 96-audit matrix and HIGH+ CI workflow are explicitly excluded.
+
+No unexplained major update, new fork, waiver or policy exception is present. **R1/R2 implementation
+may proceed within this exact plan.**
+
+**Next three actions.**
+
+1. Apply and inspect only the normal R1 package-manager updates, then verify the named installed graphs.
+2. Add only the three documented parent-scoped R2 child resolutions, clean-install and prove the HIGH+ audits.
+3. Run focused and full regression, audit complete churn, obtain independent review, and commit implementation/evidence without adding CI enforcement or opening a PR.
+
+---
+
+## PRE-U7 remaining R1/R2 HIGH remediation — certified checkpoint · 2026-09-16
+
+This phase completed only the owner-authorized remaining R1/R2 HIGH dependency remediation. It did
+not add HIGH+ CI enforcement, execute the governed U7 96-audit matrix, open a PR, provision the
+reference environment, begin U7-A01/FE5-U7 acceptance, move a shared ref, or mutate production.
+The zero-trust starting state and pre-mutation disposition immediately above remain the authoritative
+baseline: Web `311f1afcfd7a192cdc13959159a77a5c27ec3af6`, `origin/dev`
+`7feee77d3fdd562bcecf5cd6cbe8e73d7644b3d7`, `origin/main`
+`40eb52c6470579c19131d3cede41ccc9b295bdf5`, lock SHA-256
+`9c6380c66e6349405b9273ccd8e24855ff5078bb5f6bbf43f0101dde4af66065` / blob
+`ae75d14f37e83c1a8ba86e5b28a3137486612eb0`, full audit 58 total / 8 high /
+47 moderate / 3 low / 0 critical, and production audit 40 total / 4 high / 35 moderate /
+1 low / 0 critical.
+
+### Bounded implementation and final graph
+
+Implementation commit `f38249b3657661ecba10a8448a5a4614e7242c75` changes exactly
+`package.json` and `package-lock.json` (527 insertions / 610 deletions). The manifest synchronizes
+all 17 directly declared Tiptap packages from `^3.30.1` to `^3.30.5`, pins the already-consumed
+`@lhci/cli` exactly at `0.15.1` so its override selector is exact, adds Lodash only beneath the
+existing `postman-collection` override, and adds exact-parent tmp overrides for
+`@lhci/cli@0.15.1` and `external-editor@3.1.0`. The certified Puppeteer override is unchanged.
+
+The final exact remediation is:
+
+| Starting HIGH chain | Final node/path | Class and result |
+| --- | --- | --- |
+| Tiptap core GHSA-j95f-988m-3j2f | all 37 resolved Tiptap nodes `3.30.5` | R1 synchronized patch; resolved |
+| Redocly/js-yaml GHSA-2883-xcg3-v3hh | Redocly `1.34.20`; js-yaml `3.15.2` / `4.3.2` | R1 supported/in-range patches; resolved |
+| fast-uri four HIGH advisories | Ajv `8.20.0` → fast-uri `3.1.8` | R1 in-range patch; resolved |
+| Postman/Lodash GHSA-r5fr-rjxr-66jc | Postman `4.5.0` → shared Lodash `4.18.1` | R2 Postman-child override; resolved |
+| sharp GHSA-rgj7-g3m4-5g8c | IPX and SEO paths both `0.35.4` | R1 in-range patch; resolved |
+| svgo GHSA-w27v-7q3p-w38r | cssnano path → svgo `4.1.0` | R1 in-range minor; resolved |
+| tmp GHSA-ph9p-34f9-6g65 | LHCI and external-editor paths → tmp `0.2.7` | R2 exact-parent overrides; resolved |
+
+Normal npm resolution selected fast-uri `3.1.8`, a later compatible patch than the planned minimum
+`3.1.6`. Lodash `4.18.0` was rejected after npm marked that release deprecated as a bad release;
+`4.18.1` is the compatible fixed successor already shared by the rest of the graph. SVGO `4.1.0`
+necessarily moves only its isolated children `css-select` 5.2.2 → 6.0.0 and `css-what` 6.2.2 →
+7.0.0. These transitive majors are declared by upstream SVGO 4.1.0, do not alter a direct framework
+or tool major, and passed build/D20 review.
+
+The complete lock churn contains 110 changed package nodes, all classified: 37 Tiptap, 54 sharp
+platform/runtime nodes, 2 Redocly, 3 js-yaml, 1 fast-uri, 1 Lodash dedupe, 3 SVGO and its required
+children, and 9 tmp/dedupe/orphan-removal nodes. There is no unexplained or opportunistic movement.
+No Nuxt, Vue, Prism, Lighthouse, Puppeteer Core, Ajv, cssnano, IPX, SEO, Faker or fork version moved.
+
+The R2 scopes are exactly:
+
+- `postman-collection` → `lodash: 4.18.1`; remove when the consumed Postman line publishes a
+  compatible fixed Lodash dependency;
+- `@lhci/cli@0.15.1` → `tmp: 0.2.7`; remove when LHCI publishes a compatible tmp range;
+- `external-editor@3.1.0` → `tmp: 0.2.7`; remove when external-editor or the consumed Inquirer line
+  publishes a compatible tmp range.
+
+There is no unsafe global security override. Registry inspection confirmed Postman Collection 4.5.0,
+LHCI 0.15.1 and external-editor 3.1.0 are the current compatible owning lines, so no normal supported
+parent patch removes those exact/constrained vulnerable children.
+
+### Deterministic install, audit and compatibility preservation
+
+Fresh `npm ci` installed 1,601 packages, applied `postman-collection@4.5.0 ✔`, prepared Nuxt, and
+completed without manual setup. The final lock identity is SHA-256
+`db9fa9be31bd5a487f099d595f040265751dee5d345dbd35e8cd52b65cf80c48` and Git blob
+`6044eebf5ef64f81e320d5806632fdb328c7b805`.
+
+The Postman/Faker chain remains Prism CLI/HTTP 5.16.0 → HTTP Spec 7.1.0 → Postman Collection 4.5.0
+→ Faker 10.6.0. Patch SHA-256 remains
+`6a628ef2c6a83bd227546d10ee1a31b9f122eb90c8a0521bbab48167494a2049`; its suite passed 2/2 and
+explicitly exercised the complete 118-generator register plus real Prism EN/AR behavior. The
+Puppeteer chain remains LHCI 0.15.1 → Lighthouse 12.6.1 → Puppeteer Core 24.43.1 → immutable fork
+`9c87c39d0bbdb78499b204c39f66a4196939092f` → yauzl 3.4.0. Its extraction suite passed 3/3.
+`extract-zip` is absent from manifest, lock and installed graph.
+
+Final `npm audit --audit-level=high` exited 0 with 13 total: 0 critical, 0 high, 12 moderate and
+1 low. Final `npm audit --omit=dev --audit-level=high` separately exited 0 with 1 total: 0 critical,
+0 high, 0 moderate and 1 low. Every starting HIGH advisory is resolved; Faker and extract-zip HIGHs
+remain absent; no new HIGH or CRITICAL was introduced. These are not claims of zero vulnerabilities:
+the recorded LOW/MODERATE findings remain for later governed disposition.
+
+### Regression and independent review evidence
+
+The focused and repository-supported evidence all passed:
+
+- API types regenerated with no tracked output change; Redocly/js-yaml/OpenAPI behavior is intact.
+- Typecheck and lint exited 0.
+- Full Vitest passed 169 files / 2,607 tests.
+- The clean production build passed, included sharp linux-x64 binaries, and stamped exact
+  implementation HEAD `f38249b3657661ecba10a8448a5a4614e7242c75`, tree
+  `1f85a614f193e4b72a51866a9db4f68a5f7de42b`, lock SHA-256 `db9fa9be…`, and output hash
+  `e88c865110c6df45a7d189442be5b8b602ddb01e56a000f381cd31da9b711495` over 1,799 files.
+- The rebuilt Playwright contract project passed 153/153 in 1.5 minutes, including unfiltered axe,
+  CSP, Prism, schema and EN/AR fixtures. Before that rebuild, a stale-output run referenced missing
+  pre-install chunk names; the required isolated `/resume` locale test passed after rebuilding, and
+  only the subsequent 153/153 run is acceptance evidence.
+- Bundle isolation scanned 150 public chunks and found no Tiptap, ProseMirror, Shiki or markdown-it
+  identifiers. CSS size was 29.24 KB / 30 KB. The complete D20 route-size gate exited 0 on isolated
+  7200/7201 servers; its 15 existing D20-24 warning-only dashboard totals remained visible.
+- Ordinary, non-governed Lighthouse 12.6.1 regression reports on the exact clean build passed:
+  desktop `/resume` scored 100/100/100/100, LCP 695.25 ms, CLS 0.000622; mobile `/ar/resume`
+  scored 84/100/100/100, LCP 3149.82 ms, CLS 0.010543. These two smokes are tooling regression
+  evidence only; the prohibited governed U7 96-audit matrix was not run.
+
+Independent read-only review returned **PASS**. It re-ran both audits; verified the three exact
+R2 scopes, all 110 churn classifications, Postman/Faker and Puppeteer semantics, extract-zip absence,
+bundle isolation, CSS/D20 budgets and supported deviations; and found no material issue. Its only
+note is that pre-existing `npm ls` invalid markers for commander/cac are unchanged from baseline and
+outside this diff.
+
+No PR was opened. The overall PRE-U7 security prerequisite remains open solely because blocking
+HIGH+ CI enforcement has not yet been implemented or certified. The reference environment remains
+unprovisioned; U7-A01 and FE5-U7 acceptance remain closed; production and shared refs are unchanged.
+
+**Verdict:** `PRE-U7 R1/R2 DEPENDENCY REMEDIATION PROVEN — CI ENFORCEMENT REMAINS`
+
+**Next three actions.**
+
+1. In a separately authorized phase, implement and prove the blocking HIGH+ CI gate without changing this certified dependency graph.
+2. Reconcile any GitHub Dependabot recalculation lag only after this branch is published through the normal review workflow.
+3. Keep U7-A01 and FE5-U7 acceptance closed until the full PRE-U7 security prerequisite, including CI enforcement, is certified.
+
+---
+
+## PRE-U7 HIGH+ CI enforcement — zero-trust rebaseline and pre-mutation scope · 2026-09-16
+
+The owner authorized the final PRE-U7 security-prerequisite task: deterministic CI-contract negative
+control, blocking Web PR/integration HIGH+ enforcement, local and remote certification, merge to
+`dev`, exact-SHA post-merge integration, and campaign closeout. FE5-U7 acceptance, the governed
+96-audit matrix, reference-environment provisioning, deployment, production, `main`, Central Docs,
+`deploy.yml` and FE5-U8 remain outside the boundary.
+
+`git fetch origin --prune` preceded all Web readings. The durable worktree exists and is clean on
+`fix/frontend-v1-u7-security-gate` at the certified checkpoint
+`604641e40b839504f67c164f4ec85f060ea33769`. It is 15 commits ahead and 0 behind
+`origin/dev`; history has not been rewritten.
+
+| Claim | Ledger/owner says | Fresh live state | Result |
+| --- | --- | --- | --- |
+| Web `origin/dev` | `7feee77d3fdd562bcecf5cd6cbe8e73d7644b3d7` | same after fetch | exact |
+| Web `origin/main` | `40eb52c6470579c19131d3cede41ccc9b295bdf5` | same after fetch | exact |
+| Security HEAD | `604641e40b839504f67c164f4ec85f060ea33769` | same; clean | exact |
+| Branch divergence | accumulated security lineage only | `origin/dev...HEAD = 0 behind / 15 ahead` | exact |
+| Lock identity | certified R1/R2 lock | SHA-256 `db9fa9be31bd5a487f099d595f040265751dee5d345dbd35e8cd52b65cf80c48`; blob `6044eebf5ef64f81e320d5806632fdb328c7b805` | exact |
+| Postman patch | `6a628ef2c6a83bd227546d10ee1a31b9f122eb90c8a0521bbab48167494a2049` | same | exact |
+| Puppeteer fork | immutable `9c87c39d0bbdb78499b204c39f66a4196939092f` | manifest and lock resolve same full SHA | exact |
+| `extract-zip` | absent | absent from manifest and lock | exact |
+| Full audit | exit 0; 0 critical / 0 high / 12 moderate / 1 low | same; 13 total | exact |
+| Production audit | exit 0; 0 critical / 0 high / 0 moderate / 1 low | same; 1 total | exact |
+| CI defect | full install but no blocking HIGH+ step | `.github/workflows/ci.yml` has `npm ci` and no audit command | confirmed |
+| Security PR | none | no open PR for this branch | exact |
+
+The 15 commits since `origin/dev` are the append-only authorization/evidence checkpoints plus three
+implementation commits already certified: Postman/Faker `6d037562…`, Puppeteer safe-extract
+`d3ca4ef3…`, and remaining R1/R2 remediation `f38249b3…`. The net seven-file diff is completely
+classified:
+
+| File | Classification |
+| --- | --- |
+| `.specify/specs/frontend-v1/ledger.md` | append-only security authorization and campaign evidence |
+| `CONTRIBUTING.md` | D19-11 Postman patch ownership/removal register |
+| `package.json`, `package-lock.json` | expected Postman/Faker, Puppeteer fork and R1/R2 manifest/lock graph |
+| `patches/postman-collection+4.5.0.patch` | Postman/Faker compatibility remediation |
+| `scripts/postman-faker-compat.spec.mjs` | Postman/Faker security regression test |
+| `scripts/puppeteer-extraction-compat.spec.mjs` | immutable safe-extract regression test |
+
+Unexpected files: **zero**. The six other open Web PRs are #74 `d1064da…`, #73 `f9be4b4…`, #72
+`9ea46aa…`, #69 `3d175fa…`, #68 `513defb…`, and #46 `016f0d9…`. Five touch dependencies but do
+not supply this complete remediation; #46 touches product surfaces only. None touches CI or this
+SpecKit lineage, and none is this branch.
+
+Central Docs was independently refreshed. Authoritative `origin/main` remains
+`5001ae62573ae488a16a552b1de9d7d1d03f72ab`. Reads came from `git show origin/main:…`, not the
+unrelated dirty local Docs checkout. D19-11 keeps the full `npm audit --audit-level=high` gate
+blocking and unmodified. Deployment §3 requires the same full-graph command on `pull_request` to
+`dev`/`main` and `push` to `dev`; it does not require changing `deploy.yml`.
+
+The bounded implementation write set is `.github/workflows/ci.yml`, one focused repository-owned
+`scripts/*.spec.mjs` workflow-contract test, and this append-only ledger. The test will parse YAML,
+locate a qualifying unconditioned CI job, prove full `npm ci` occurs before the audit, require the
+single exact non-comment command `npm audit --audit-level=high`, reject `--omit=dev`,
+`continue-on-error`, shell masking or weaker severity, and assert the required event branches.
+The same validator will run against fixtures for missing, omitted-dev, non-blocking and weakened
+forms. The real current workflow is the required missing-gate negative control; no vulnerable
+dependency will be introduced.
+
+**Zero drift. CI-contract implementation may proceed within the stated write set.**
+
+**Next three actions.**
+
+1. Add the focused semantic workflow-contract test and capture its expected missing-gate failure against the unchanged workflow.
+2. Add only the blocking full-graph HIGH+ step to `.github/workflows/ci.yml`, prove the positive and weakening fixtures, then run focused/local regression.
+3. Obtain independent review, commit the implementation and evidence checkpoint, and only then begin publication/PR certification in a fresh phase.
+
+---
+
+## PRE-U7 HIGH+ CI enforcement — local pre-PR certification · 2026-09-16
+
+This checkpoint completes the local CI-contract implementation and certification only. Publication,
+PR CI, merge to `dev`, exact-SHA post-merge integration and final prerequisite closeout remain
+pending. FE5-U7 acceptance remains unstarted.
+
+### Negative control and implementation
+
+The new repository-owned contract is `scripts/ci-security-gate.spec.mjs`, using the already-locked
+YAML parser and Vitest convention. Before `.github/workflows/ci.yml` changed,
+`npx vitest run scripts/ci-security-gate.spec.mjs` exited 1: the real-workflow assertion alone failed
+with `required blocking HIGH+ audit step absent`; the initial five missing/weakening fixtures passed.
+No vulnerable package was introduced.
+
+Implementation commit `89ab5989c0e43b053ac74bc334be38ea795e91b5` changes exactly two files:
+
+- `.github/workflows/ci.yml`: immediately after the existing full `npm ci` in the unconditioned
+  `verify` job, add `Audit dependencies (HIGH+)` with the single exact command
+  `npm audit --audit-level=high`;
+- `scripts/ci-security-gate.spec.mjs`: parse the workflow semantically and require PR → `dev`/`main`
+  plus push → `dev` without path filters, exact unconditional/blocking `npm ci` before the audit,
+  and exact unconditional/blocking full-graph HIGH+ audit semantics.
+
+The final 12-test contract rejects: missing audit; `--omit=dev` on audit or install; inherited
+`NPM_CONFIG_OMIT=dev`; `NODE_ENV=production`; step- or job-level `continue-on-error`; weaker
+severity; inline `|| true`; step-level custom shells; and inherited workflow/job
+`defaults.run.shell`. It also rejects conditional install/audit execution and multiple audit steps.
+The unchanged live event coverage is PR to `dev`/`main` and push to `dev`. `deploy.yml`, Central
+Docs and every other CI job are unchanged.
+
+The first independent read-only review correctly demonstrated two validator bypass classes before
+approval: job-level `continue-on-error` / inherited omit configuration, then custom-shell exit
+masking. Both were corrected with discriminating fixtures. The final independent re-review returned
+**PASS** and independently ran the strengthened contract 12/12. It found no remaining non-blocking,
+omit-dev, condition, shell, event-coverage, deploy, override, package, product or scope defect.
+
+### Exact local security and regression evidence
+
+Fresh `npm ci` installed 1,601 packages, applied `postman-collection@4.5.0 ✔`, prepared Nuxt and
+left the lockfile unchanged. Lock SHA-256 remains
+`db9fa9be31bd5a487f099d595f040265751dee5d345dbd35e8cd52b65cf80c48`; blob remains
+`6044eebf5ef64f81e320d5806632fdb328c7b805`. Postman patch SHA-256 remains
+`6a628ef2c6a83bd227546d10ee1a31b9f122eb90c8a0521bbab48167494a2049`.
+
+The exact new CI command, `npm audit --audit-level=high`, exited 0 with 13 total: 0 critical,
+0 high, 12 moderate and 1 low. The separately classified production command,
+`npm audit --omit=dev --audit-level=high`, exited 0 with 1 total: 0 critical, 0 high, 0 moderate and
+1 low. No HIGH/CRITICAL remains.
+
+Compatibility state is unchanged and re-proven:
+
+- Postman/Faker passed 2/2, including the complete 118-generator register and real Prism EN/AR;
+  installed Faker is 10.6.0 under Postman Collection 4.5.0;
+- Puppeteer extraction passed 3/3; LHCI 0.15.1 → Lighthouse 12.6.1 → Puppeteer Core 24.43.1 →
+  browsers fork full SHA `9c87c39d0bbdb78499b204c39f66a4196939092f` → yauzl 3.4.0;
+- `extract-zip` is absent from manifest, lock and installed graph; all scoped overrides remain exact
+  and no global override exists.
+
+Repository validation on the accumulated candidate passed:
+
+- API type regeneration was a fixed point; typecheck and lint exited 0;
+- full Vitest passed 170 files / 2,619 tests; the isolated Lighthouse orchestrator rerun passed
+  28/28 after the sandbox-only listener denial was classified and localhost permission granted;
+- clean production build passed at exact implementation HEAD
+  `89ab5989c0e43b053ac74bc334be38ea795e91b5`, tree
+  `e7fa98fb946e8c4cad9ef5d4aa3cb8a500aeb463`, output hash
+  `7da3f1404ac68836a0675717b406f2df81b2070cdaeea6ad0392281a1098d8c2`, 1,799 files;
+- CSS size passed at 29.24 KB / 30 KB; bundle isolation scanned 150 public chunks with no
+  Tiptap/ProseMirror/Shiki/markdown-it identifiers; logical-property enforcement passed;
+- rebuilt Playwright contract/E2E/axe passed 153/153 in 1.5 minutes;
+- ordinary non-governed Lighthouse 12.6.1 smokes on that exact build passed: desktop `/resume`
+  100/100/100/100, LCP 699.79 ms, CLS 0.000622; mobile `/ar/resume` 86/100/100/100,
+  LCP 3140.25 ms, CLS 0.009605. These are regression evidence, not FE5-U7 acceptance.
+
+No PR has been opened and nothing has been pushed or merged by this phase. The overall PRE-U7
+security prerequisite remains open until the exact implementation head is published, PR CI actually
+executes the HIGH+ step and all required jobs, the certified candidate merges to `dev`, and the
+exact merge SHA's integration workflow executes and passes the same gate. Reference-environment,
+U7-A01, U7-G6/FE5-U7 acceptance, production, deployment, `main` and FE5-U8 remain untouched.
+
+**Next three actions.**
+
+1. Re-verify base drift and the clean accumulated branch, push the exact local head, and open the single focused PR to `dev` with the complete security evidence.
+2. Inspect PR identity/diff and wait for every required check, explicitly proving the HIGH+ step executed on the exact head SHA; do not merge stale, running or red CI.
+3. Recheck `dev` drift, squash-merge only the certified head, then certify the exact merge SHA's push CI before closing the SpecKit/ledger prerequisite.
+
+---
+
+## PRE-U7 security publication — zero-trust pre-push rebaseline · 2026-09-16
+
+Publication resumed from local-certification checkpoint
+`e22a9790db80bc26df1f43616d8bc1c8bbb67bee`. A fresh `git fetch origin --prune`
+preceded all remote readings. The durable worktree exists and was clean on
+`fix/frontend-v1-u7-security-gate`; Web `origin/dev` remained
+`7feee77d3fdd562bcecf5cd6cbe8e73d7644b3d7` and `origin/main` remained
+`40eb52c6470579c19131d3cede41ccc9b295bdf5`. The branch remained 0 commits behind
+and 18 ahead of `origin/dev`; all 18 commits exactly matched the previously certified lineage.
+
+The accumulated `origin/dev...HEAD` diff remained exactly nine classified files:
+`.github/workflows/ci.yml`, `.specify/specs/frontend-v1/ledger.md`, `CONTRIBUTING.md`,
+`package.json`, `package-lock.json`, `patches/postman-collection+4.5.0.patch`,
+`scripts/ci-security-gate.spec.mjs`, `scripts/postman-faker-compat.spec.mjs`, and
+`scripts/puppeteer-extraction-compat.spec.mjs`. Unexpected files: **zero**. `git diff --check`
+passed.
+
+Immutable identities remained exact:
+
+- `package.json`: SHA-256 `db45e89ae8f99e8f2e2689e018386a27edb50c3b15de3817e9d9756c282fe59f`,
+  blob `926c77cb6a3622cb9f9a0de55c6f57e23d2d7d71`;
+- `package-lock.json`: SHA-256 `db9fa9be31bd5a487f099d595f040265751dee5d345dbd35e8cd52b65cf80c48`,
+  blob `6044eebf5ef64f81e320d5806632fdb328c7b805`;
+- Postman patch: SHA-256 `6a628ef2c6a83bd227546d10ee1a31b9f122eb90c8a0521bbab48167494a2049`;
+- Puppeteer compatibility fork: full commit
+  `9c87c39d0bbdb78499b204c39f66a4196939092f` in manifest and lock;
+- `extract-zip`: absent from manifest and lock.
+
+The exact publication gate instruments were rerun against the unchanged candidate.
+`npm audit --audit-level=high` exited 0 with 13 total vulnerabilities: 0 critical, 0 high,
+12 moderate and 1 low. `npx vitest run scripts/ci-security-gate.spec.mjs` exited 0 with
+1 file and 12/12 tests passing. GitHub returned no existing open PR whose head is
+`fix/frontend-v1-u7-security-gate`.
+
+**Zero drift. The unchanged certified lineage may be published without history rewriting.**
+This rebaseline is evidence-only; it does not change the certified dependency graph, CI workflow,
+tests, product, deployment, `dev`, `main`, reference environment, production or FE5-U7 state.
+
+**Next three actions.**
+
+1. Push the existing branch without force and verify the remote head equals the local rebaseline head.
+2. Open the single focused PR to `dev`, then compare its base, head, lineage and nine-file diff with this certification.
+3. Certify every required remote check on the exact PR head, including direct evidence that `npm audit --audit-level=high` executed and passed.
+
+---
+
+## PRE-U7 security publication — PR integrity and first remote certification · 2026-09-16
+
+The unchanged certified lineage was pushed without force. Local and remote branch heads were both
+`178f0c8bd5d9d41ddf053019c1358b9c05ea4f4e` before PR creation. PR
+[#87](https://github.com/eslammuatamed/eslammuatamed-web/pull/87),
+`fix(web): satisfy and enforce HIGH+ dependency security gate`, was opened from
+`fix/frontend-v1-u7-security-gate` to `dev`.
+
+GitHub reported base `dev` at `7feee77d3fdd562bcecf5cd6cbe8e73d7644b3d7`, head
+`178f0c8bd5d9d41ddf053019c1358b9c05ea4f4e`, all 19 expected commits, and exactly the nine
+approved files. No generated or unexpected file appeared. The PR was `MERGEABLE` / `CLEAN`; no
+GitHub-side branch mutation occurred.
+
+Exact-head pull-request workflow run
+[`35119996755`](https://github.com/eslammuatamed/eslammuatamed-web/actions/runs/35119996755)
+completed successfully on `178f0c8bd5d9d41ddf053019c1358b9c05ea4f4e`:
+
+- branch-policy guard job `104875053979`: success;
+- primary validation job `104875054254`: success, including full install, API fixed point, lint,
+  typecheck, tests, build, CSS and route budgets, bundle isolation and RTL logical properties;
+- E2E/axe job `104875054290`: success, including browser install, E2E typecheck, build and
+  Playwright + axe;
+- desktop Lighthouse regression job `104875054244`: success, including collection and report upload;
+- mobile Lighthouse regression job `104875054315`: success, including collection and report upload.
+
+The primary job log directly proves the new gate executed under `/usr/bin/bash -e`:
+`npm audit --audit-level=high`. It returned 13 vulnerabilities — 0 critical, 0 high, 12 moderate
+and 1 low — and step `Audit dependencies (HIGH+)` concluded success before later primary checks.
+This is execution evidence, not an inference from workflow YAML.
+
+GitHub emitted only non-failing annotations: actions targeting Node 20 were forced onto Node 24,
+and the mobile Lighthouse job recorded an explicitly advisory performance-threshold miss after
+collection and median calculation completed. Infrastructure/report-integrity gates passed. Both
+Lighthouse jobs are ordinary PR regression evidence only and are not FE5-U7 acceptance evidence.
+No candidate correction or retry was required.
+
+This append-only evidence commit necessarily advances the PR head. The earlier successful run is
+preserved as evidence but becomes superseded for final-head certification; the evidence-only head
+must itself complete the same required PR checks before merge readiness can be claimed.
+
+**Next three actions.**
+
+1. Push this append-only PR-evidence checkpoint and certify every required check on its exact new head, including direct HIGH+ audit execution.
+2. Fetch `origin/dev`, compare it with PR base `7feee77d3fdd562bcecf5cd6cbe8e73d7644b3d7`, and classify any intervening commits before merge.
+3. In the next phase, squash-merge only the exact certified head, then certify push CI on the exact merge SHA before security closeout.

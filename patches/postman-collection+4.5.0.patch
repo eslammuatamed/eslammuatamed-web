@@ -1,0 +1,96 @@
+diff --git a/node_modules/postman-collection/lib/superstring/dynamic-variables.js b/node_modules/postman-collection/lib/superstring/dynamic-variables.js
+index d026487..9ff3f7d 100644
+--- a/node_modules/postman-collection/lib/superstring/dynamic-variables.js
++++ b/node_modules/postman-collection/lib/superstring/dynamic-variables.js
+@@ -1,2 +1,2 @@
+-var faker = require('@faker-js/faker/locale/en'),
++var faker = require('./faker-compat'),
+     uuid = require('uuid'),
+diff --git a/node_modules/postman-collection/lib/superstring/faker-compat.js b/node_modules/postman-collection/lib/superstring/faker-compat.js
+new file mode 100644
+index 0000000..41d543c
+--- /dev/null
++++ b/node_modules/postman-collection/lib/superstring/faker-compat.js
+@@ -0,0 +1,82 @@
++/*
++ * Temporary compatibility surface for Faker 10.6.0.
++ * Remove with the repository patch when Postman Collection ships a fixed Faker dependency.
++ */
++var faker = require('@faker-js/faker/locale/en').faker;
++
++function extend(source, aliases) {
++    return Object.assign(Object.create(source), aliases);
++}
++
++function phoneNumber() {
++    return faker.helpers.fromRegExp(/[0-9]{3}-[0-9]{3}-[0-9]{4}/);
++}
++
++function categoryImage(category) {
++    return function () {
++        return faker.image.urlLoremFlickr({ category: category });
++    };
++}
++
++function coordinate(generator) {
++    return function () {
++        return generator().toFixed(4);
++    };
++}
++
++var compatible = Object.create(faker);
++
++compatible.address = extend(faker.location, {
++    latitude: coordinate(faker.location.latitude),
++    longitude: coordinate(faker.location.longitude),
++    streetName: faker.location.street
++});
++compatible.name = extend(faker.person, {
++    findName: faker.person.fullName
++});
++compatible.random = {
++    alphaNumeric: faker.string.alphanumeric,
++    arrayElement: faker.helpers.arrayElement,
++    word: faker.lorem.word
++};
++compatible.datatype = extend(faker.datatype, {
++    number: faker.number.int,
++    uuid: faker.string.uuid
++});
++compatible.phone = extend(faker.phone, {
++    phoneNumber: phoneNumber,
++    phoneNumberFormat: phoneNumber
++});
++compatible.commerce = extend(faker.commerce, {
++    color: faker.color.human
++});
++compatible.company = extend(faker.company, {
++    bs: faker.company.buzzPhrase,
++    bsAdjective: faker.company.buzzAdjective,
++    bsBuzz: faker.company.buzzVerb,
++    bsNoun: faker.company.buzzNoun,
++    companyName: faker.company.name,
++    companySuffix: function () {
++        return faker.helpers.arrayElement(faker.definitions.company.legal_entity_type);
++    }
++});
++compatible.finance = extend(faker.finance, {
++    account: faker.finance.accountNumber,
++    mask: function () {
++        return faker.string.numeric(4);
++    }
++});
++compatible.image = extend(faker.image, { imageUrl: faker.image.url });
++[
++    'abstract', 'animals', 'business', 'cats', 'city', 'fashion', 'food',
++    'nature', 'nightlife', 'people', 'sports', 'transport'
++].forEach(function (category) {
++    compatible.image[category] = categoryImage(category);
++});
++compatible.internet = extend(faker.internet, {
++    color: faker.color.rgb,
++    ip: faker.internet.ipv4,
++    userName: faker.internet.username
++});
++
++module.exports = compatible;
