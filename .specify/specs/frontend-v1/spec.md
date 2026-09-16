@@ -28,12 +28,12 @@ separate owner-governed lifecycle actions after U7.
 
 ## 2. Current prerequisite status
 
-| Item | Status at definition |
+| Item | Current status |
 | --- | --- |
-| U7 definition | Being established by this documentation PR |
+| U7 definition | Complete on Web `dev` |
 | Candidate SHA/tree | Not frozen for U7 |
 | Governed reference environment | **BLOCKED — REFERENCE ENVIRONMENT PROVISIONING REQUIRED** |
-| Security remediation | **BLOCKED / outstanding — CI SECURITY GATE DEFECT** |
+| Security remediation | **Complete — blocking full-graph HIGH+ PR/integration gate certified** |
 | Manual accessibility | Outstanding |
 | Canonical content reconciliation | Outstanding |
 | Production deployment | Not part of U7 |
@@ -48,10 +48,10 @@ unit from being ready to start.
 
 | ID | Requirement | Present state |
 | --- | --- | --- |
-| SP-1 | Authoritative U7 definition merged to Web `dev` | Pending this definition PR |
+| SP-1 | Authoritative U7 definition merged to Web `dev` | Satisfied |
 | SP-2 | One exact candidate commit SHA, tree SHA, lockfile hash, branch/base, and relevant CI run selected and frozen by controlled start task U7-A01 before downstream evidence collection | Outstanding |
 | SP-3 | Controlled governed Lighthouse reference environment provisioned, capacity-identified, and bound to the candidate | **Blocked — provisioning required outside U7** |
-| SP-4 | Evidence locations, schemas, checklists, retention rules, operators, and D20-conformant measurement semantics are assigned | Schemas defined here; locations/operators and the known CLS comparator mismatch remain outstanding |
+| SP-4 | Evidence locations, schemas, checklists, retention rules, operators, and D20-conformant measurement semantics are assigned | Schemas defined and strict CLS comparator reconciled; remaining evidence locations/operators stay outstanding |
 | SP-5 | Manual accessibility target matches shipped v1: Markdown textarea and explicit save, not Tiptap/autosave | Satisfied in Central Docs D05-5 via PR #65 |
 
 SP-1, SP-3, SP-4, and SP-5 must pass before the controlled U7 start. U7-A01 is the sole start-control
