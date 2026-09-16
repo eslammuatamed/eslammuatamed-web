@@ -7225,3 +7225,91 @@ dependency will be introduced.
 1. Add the focused semantic workflow-contract test and capture its expected missing-gate failure against the unchanged workflow.
 2. Add only the blocking full-graph HIGH+ step to `.github/workflows/ci.yml`, prove the positive and weakening fixtures, then run focused/local regression.
 3. Obtain independent review, commit the implementation and evidence checkpoint, and only then begin publication/PR certification in a fresh phase.
+
+---
+
+## PRE-U7 HIGH+ CI enforcement — local pre-PR certification · 2026-09-16
+
+This checkpoint completes the local CI-contract implementation and certification only. Publication,
+PR CI, merge to `dev`, exact-SHA post-merge integration and final prerequisite closeout remain
+pending. FE5-U7 acceptance remains unstarted.
+
+### Negative control and implementation
+
+The new repository-owned contract is `scripts/ci-security-gate.spec.mjs`, using the already-locked
+YAML parser and Vitest convention. Before `.github/workflows/ci.yml` changed,
+`npx vitest run scripts/ci-security-gate.spec.mjs` exited 1: the real-workflow assertion alone failed
+with `required blocking HIGH+ audit step absent`; the initial five missing/weakening fixtures passed.
+No vulnerable package was introduced.
+
+Implementation commit `89ab5989c0e43b053ac74bc334be38ea795e91b5` changes exactly two files:
+
+- `.github/workflows/ci.yml`: immediately after the existing full `npm ci` in the unconditioned
+  `verify` job, add `Audit dependencies (HIGH+)` with the single exact command
+  `npm audit --audit-level=high`;
+- `scripts/ci-security-gate.spec.mjs`: parse the workflow semantically and require PR → `dev`/`main`
+  plus push → `dev` without path filters, exact unconditional/blocking `npm ci` before the audit,
+  and exact unconditional/blocking full-graph HIGH+ audit semantics.
+
+The final 12-test contract rejects: missing audit; `--omit=dev` on audit or install; inherited
+`NPM_CONFIG_OMIT=dev`; `NODE_ENV=production`; step- or job-level `continue-on-error`; weaker
+severity; inline `|| true`; step-level custom shells; and inherited workflow/job
+`defaults.run.shell`. It also rejects conditional install/audit execution and multiple audit steps.
+The unchanged live event coverage is PR to `dev`/`main` and push to `dev`. `deploy.yml`, Central
+Docs and every other CI job are unchanged.
+
+The first independent read-only review correctly demonstrated two validator bypass classes before
+approval: job-level `continue-on-error` / inherited omit configuration, then custom-shell exit
+masking. Both were corrected with discriminating fixtures. The final independent re-review returned
+**PASS** and independently ran the strengthened contract 12/12. It found no remaining non-blocking,
+omit-dev, condition, shell, event-coverage, deploy, override, package, product or scope defect.
+
+### Exact local security and regression evidence
+
+Fresh `npm ci` installed 1,601 packages, applied `postman-collection@4.5.0 ✔`, prepared Nuxt and
+left the lockfile unchanged. Lock SHA-256 remains
+`db9fa9be31bd5a487f099d595f040265751dee5d345dbd35e8cd52b65cf80c48`; blob remains
+`6044eebf5ef64f81e320d5806632fdb328c7b805`. Postman patch SHA-256 remains
+`6a628ef2c6a83bd227546d10ee1a31b9f122eb90c8a0521bbab48167494a2049`.
+
+The exact new CI command, `npm audit --audit-level=high`, exited 0 with 13 total: 0 critical,
+0 high, 12 moderate and 1 low. The separately classified production command,
+`npm audit --omit=dev --audit-level=high`, exited 0 with 1 total: 0 critical, 0 high, 0 moderate and
+1 low. No HIGH/CRITICAL remains.
+
+Compatibility state is unchanged and re-proven:
+
+- Postman/Faker passed 2/2, including the complete 118-generator register and real Prism EN/AR;
+  installed Faker is 10.6.0 under Postman Collection 4.5.0;
+- Puppeteer extraction passed 3/3; LHCI 0.15.1 → Lighthouse 12.6.1 → Puppeteer Core 24.43.1 →
+  browsers fork full SHA `9c87c39d0bbdb78499b204c39f66a4196939092f` → yauzl 3.4.0;
+- `extract-zip` is absent from manifest, lock and installed graph; all scoped overrides remain exact
+  and no global override exists.
+
+Repository validation on the accumulated candidate passed:
+
+- API type regeneration was a fixed point; typecheck and lint exited 0;
+- full Vitest passed 170 files / 2,619 tests; the isolated Lighthouse orchestrator rerun passed
+  28/28 after the sandbox-only listener denial was classified and localhost permission granted;
+- clean production build passed at exact implementation HEAD
+  `89ab5989c0e43b053ac74bc334be38ea795e91b5`, tree
+  `e7fa98fb946e8c4cad9ef5d4aa3cb8a500aeb463`, output hash
+  `7da3f1404ac68836a0675717b406f2df81b2070cdaeea6ad0392281a1098d8c2`, 1,799 files;
+- CSS size passed at 29.24 KB / 30 KB; bundle isolation scanned 150 public chunks with no
+  Tiptap/ProseMirror/Shiki/markdown-it identifiers; logical-property enforcement passed;
+- rebuilt Playwright contract/E2E/axe passed 153/153 in 1.5 minutes;
+- ordinary non-governed Lighthouse 12.6.1 smokes on that exact build passed: desktop `/resume`
+  100/100/100/100, LCP 699.79 ms, CLS 0.000622; mobile `/ar/resume` 86/100/100/100,
+  LCP 3140.25 ms, CLS 0.009605. These are regression evidence, not FE5-U7 acceptance.
+
+No PR has been opened and nothing has been pushed or merged by this phase. The overall PRE-U7
+security prerequisite remains open until the exact implementation head is published, PR CI actually
+executes the HIGH+ step and all required jobs, the certified candidate merges to `dev`, and the
+exact merge SHA's integration workflow executes and passes the same gate. Reference-environment,
+U7-A01, U7-G6/FE5-U7 acceptance, production, deployment, `main` and FE5-U8 remain untouched.
+
+**Next three actions.**
+
+1. Re-verify base drift and the clean accumulated branch, push the exact local head, and open the single focused PR to `dev` with the complete security evidence.
+2. Inspect PR identity/diff and wait for every required check, explicitly proving the HIGH+ step executed on the exact head SHA; do not merge stale, running or red CI.
+3. Recheck `dev` drift, squash-merge only the certified head, then certify the exact merge SHA's push CI before closing the SpecKit/ledger prerequisite.
