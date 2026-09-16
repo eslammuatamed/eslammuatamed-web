@@ -7313,3 +7313,49 @@ U7-A01, U7-G6/FE5-U7 acceptance, production, deployment, `main` and FE5-U8 remai
 1. Re-verify base drift and the clean accumulated branch, push the exact local head, and open the single focused PR to `dev` with the complete security evidence.
 2. Inspect PR identity/diff and wait for every required check, explicitly proving the HIGH+ step executed on the exact head SHA; do not merge stale, running or red CI.
 3. Recheck `dev` drift, squash-merge only the certified head, then certify the exact merge SHA's push CI before closing the SpecKit/ledger prerequisite.
+
+---
+
+## PRE-U7 security publication — zero-trust pre-push rebaseline · 2026-09-16
+
+Publication resumed from local-certification checkpoint
+`e22a9790db80bc26df1f43616d8bc1c8bbb67bee`. A fresh `git fetch origin --prune`
+preceded all remote readings. The durable worktree exists and was clean on
+`fix/frontend-v1-u7-security-gate`; Web `origin/dev` remained
+`7feee77d3fdd562bcecf5cd6cbe8e73d7644b3d7` and `origin/main` remained
+`40eb52c6470579c19131d3cede41ccc9b295bdf5`. The branch remained 0 commits behind
+and 18 ahead of `origin/dev`; all 18 commits exactly matched the previously certified lineage.
+
+The accumulated `origin/dev...HEAD` diff remained exactly nine classified files:
+`.github/workflows/ci.yml`, `.specify/specs/frontend-v1/ledger.md`, `CONTRIBUTING.md`,
+`package.json`, `package-lock.json`, `patches/postman-collection+4.5.0.patch`,
+`scripts/ci-security-gate.spec.mjs`, `scripts/postman-faker-compat.spec.mjs`, and
+`scripts/puppeteer-extraction-compat.spec.mjs`. Unexpected files: **zero**. `git diff --check`
+passed.
+
+Immutable identities remained exact:
+
+- `package.json`: SHA-256 `db45e89ae8f99e8f2e2689e018386a27edb50c3b15de3817e9d9756c282fe59f`,
+  blob `926c77cb6a3622cb9f9a0de55c6f57e23d2d7d71`;
+- `package-lock.json`: SHA-256 `db9fa9be31bd5a487f099d595f040265751dee5d345dbd35e8cd52b65cf80c48`,
+  blob `6044eebf5ef64f81e320d5806632fdb328c7b805`;
+- Postman patch: SHA-256 `6a628ef2c6a83bd227546d10ee1a31b9f122eb90c8a0521bbab48167494a2049`;
+- Puppeteer compatibility fork: full commit
+  `9c87c39d0bbdb78499b204c39f66a4196939092f` in manifest and lock;
+- `extract-zip`: absent from manifest and lock.
+
+The exact publication gate instruments were rerun against the unchanged candidate.
+`npm audit --audit-level=high` exited 0 with 13 total vulnerabilities: 0 critical, 0 high,
+12 moderate and 1 low. `npx vitest run scripts/ci-security-gate.spec.mjs` exited 0 with
+1 file and 12/12 tests passing. GitHub returned no existing open PR whose head is
+`fix/frontend-v1-u7-security-gate`.
+
+**Zero drift. The unchanged certified lineage may be published without history rewriting.**
+This rebaseline is evidence-only; it does not change the certified dependency graph, CI workflow,
+tests, product, deployment, `dev`, `main`, reference environment, production or FE5-U7 state.
+
+**Next three actions.**
+
+1. Push the existing branch without force and verify the remote head equals the local rebaseline head.
+2. Open the single focused PR to `dev`, then compare its base, head, lineage and nine-file diff with this certification.
+3. Certify every required remote check on the exact PR head, including direct evidence that `npm audit --audit-level=high` executed and passed.
