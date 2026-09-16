@@ -7153,3 +7153,75 @@ unprovisioned; U7-A01 and FE5-U7 acceptance remain closed; production and shared
 1. In a separately authorized phase, implement and prove the blocking HIGH+ CI gate without changing this certified dependency graph.
 2. Reconcile any GitHub Dependabot recalculation lag only after this branch is published through the normal review workflow.
 3. Keep U7-A01 and FE5-U7 acceptance closed until the full PRE-U7 security prerequisite, including CI enforcement, is certified.
+
+---
+
+## PRE-U7 HIGH+ CI enforcement — zero-trust rebaseline and pre-mutation scope · 2026-09-16
+
+The owner authorized the final PRE-U7 security-prerequisite task: deterministic CI-contract negative
+control, blocking Web PR/integration HIGH+ enforcement, local and remote certification, merge to
+`dev`, exact-SHA post-merge integration, and campaign closeout. FE5-U7 acceptance, the governed
+96-audit matrix, reference-environment provisioning, deployment, production, `main`, Central Docs,
+`deploy.yml` and FE5-U8 remain outside the boundary.
+
+`git fetch origin --prune` preceded all Web readings. The durable worktree exists and is clean on
+`fix/frontend-v1-u7-security-gate` at the certified checkpoint
+`604641e40b839504f67c164f4ec85f060ea33769`. It is 15 commits ahead and 0 behind
+`origin/dev`; history has not been rewritten.
+
+| Claim | Ledger/owner says | Fresh live state | Result |
+| --- | --- | --- | --- |
+| Web `origin/dev` | `7feee77d3fdd562bcecf5cd6cbe8e73d7644b3d7` | same after fetch | exact |
+| Web `origin/main` | `40eb52c6470579c19131d3cede41ccc9b295bdf5` | same after fetch | exact |
+| Security HEAD | `604641e40b839504f67c164f4ec85f060ea33769` | same; clean | exact |
+| Branch divergence | accumulated security lineage only | `origin/dev...HEAD = 0 behind / 15 ahead` | exact |
+| Lock identity | certified R1/R2 lock | SHA-256 `db9fa9be31bd5a487f099d595f040265751dee5d345dbd35e8cd52b65cf80c48`; blob `6044eebf5ef64f81e320d5806632fdb328c7b805` | exact |
+| Postman patch | `6a628ef2c6a83bd227546d10ee1a31b9f122eb90c8a0521bbab48167494a2049` | same | exact |
+| Puppeteer fork | immutable `9c87c39d0bbdb78499b204c39f66a4196939092f` | manifest and lock resolve same full SHA | exact |
+| `extract-zip` | absent | absent from manifest and lock | exact |
+| Full audit | exit 0; 0 critical / 0 high / 12 moderate / 1 low | same; 13 total | exact |
+| Production audit | exit 0; 0 critical / 0 high / 0 moderate / 1 low | same; 1 total | exact |
+| CI defect | full install but no blocking HIGH+ step | `.github/workflows/ci.yml` has `npm ci` and no audit command | confirmed |
+| Security PR | none | no open PR for this branch | exact |
+
+The 15 commits since `origin/dev` are the append-only authorization/evidence checkpoints plus three
+implementation commits already certified: Postman/Faker `6d037562…`, Puppeteer safe-extract
+`d3ca4ef3…`, and remaining R1/R2 remediation `f38249b3…`. The net seven-file diff is completely
+classified:
+
+| File | Classification |
+| --- | --- |
+| `.specify/specs/frontend-v1/ledger.md` | append-only security authorization and campaign evidence |
+| `CONTRIBUTING.md` | D19-11 Postman patch ownership/removal register |
+| `package.json`, `package-lock.json` | expected Postman/Faker, Puppeteer fork and R1/R2 manifest/lock graph |
+| `patches/postman-collection+4.5.0.patch` | Postman/Faker compatibility remediation |
+| `scripts/postman-faker-compat.spec.mjs` | Postman/Faker security regression test |
+| `scripts/puppeteer-extraction-compat.spec.mjs` | immutable safe-extract regression test |
+
+Unexpected files: **zero**. The six other open Web PRs are #74 `d1064da…`, #73 `f9be4b4…`, #72
+`9ea46aa…`, #69 `3d175fa…`, #68 `513defb…`, and #46 `016f0d9…`. Five touch dependencies but do
+not supply this complete remediation; #46 touches product surfaces only. None touches CI or this
+SpecKit lineage, and none is this branch.
+
+Central Docs was independently refreshed. Authoritative `origin/main` remains
+`5001ae62573ae488a16a552b1de9d7d1d03f72ab`. Reads came from `git show origin/main:…`, not the
+unrelated dirty local Docs checkout. D19-11 keeps the full `npm audit --audit-level=high` gate
+blocking and unmodified. Deployment §3 requires the same full-graph command on `pull_request` to
+`dev`/`main` and `push` to `dev`; it does not require changing `deploy.yml`.
+
+The bounded implementation write set is `.github/workflows/ci.yml`, one focused repository-owned
+`scripts/*.spec.mjs` workflow-contract test, and this append-only ledger. The test will parse YAML,
+locate a qualifying unconditioned CI job, prove full `npm ci` occurs before the audit, require the
+single exact non-comment command `npm audit --audit-level=high`, reject `--omit=dev`,
+`continue-on-error`, shell masking or weaker severity, and assert the required event branches.
+The same validator will run against fixtures for missing, omitted-dev, non-blocking and weakened
+forms. The real current workflow is the required missing-gate negative control; no vulnerable
+dependency will be introduced.
+
+**Zero drift. CI-contract implementation may proceed within the stated write set.**
+
+**Next three actions.**
+
+1. Add the focused semantic workflow-contract test and capture its expected missing-gate failure against the unchanged workflow.
+2. Add only the blocking full-graph HIGH+ step to `.github/workflows/ci.yml`, prove the positive and weakening fixtures, then run focused/local regression.
+3. Obtain independent review, commit the implementation and evidence checkpoint, and only then begin publication/PR certification in a fresh phase.
