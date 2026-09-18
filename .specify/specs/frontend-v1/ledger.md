@@ -7605,3 +7605,67 @@ U7-A01 remains unchecked; FE5-U7 acceptance has not started.
 1. Push and independently certify the two-file D20-43 Docs PR, then merge it through the normal Docs flow.
 2. Rebaseline Web against the merged Docs SHA and reconcile FE5-U7 `spec.md`, `plan.md`, and `tasks.md` to D20-43 before workflow implementation.
 3. Implement and prove the bounded manual calibration/provenance workflow; run calibration only after its instruments pass negative controls, closing only U7-PRE-001 if independently certified.
+
+---
+
+## PRE-U7 reference-execution handoff correction and forensic result · 2026-09-19
+
+The owner resolved the 2026-09-19 zero-trust stop in favor of live Git. Two prior commits were
+mischaracterized by a later handoff, not by their contents:
+
+- `f330b1254e85de5edfa42407feb3c38f26fc5ca4` is an append-only governance rebaseline/evidence
+  commit. It modifies only this ledger. It is **not** a reference-execution implementation.
+- `7b4eba72ce2be6e318d588d79a58f5c0124aa851` is the later append-only D20-43 governance
+  checkpoint. It also modifies only this ledger. It is **not** a reference-execution implementation.
+
+Historical entries remain unchanged. This correction is authoritative for all future handoffs.
+
+### Zero-trust baseline and bounded forensic search
+
+Fresh remote fetches retained Web `origin/dev`
+`175017024b24de3ab40b9e4935e76f49cc81ff73`, Web `origin/main`
+`40eb52c6470579c19131d3cede41ccc9b295bdf5`, and Central Docs `origin/main`
+`5001ae62573ae488a16a552b1de9d7d1d03f72ab`. Both checkpoint worktrees were clean. Central Docs
+D20-43 remained at local commit `8c6d269afb6795993db09ca695b130da5d2dcd04`, directly descended
+from that Docs main SHA and changing exactly `docs/20-performance.md` plus generated
+`docs/group/03-delivery-and-roadmap.md`. No Docs PR existed.
+
+The Web forensic search covered:
+
+- every local branch, fetched `origin/*` remote-tracking branch and tag;
+- every live GitHub branch returned by the repository API;
+- all registered worktree refs;
+- `git log --all --reflog` path/content searches under `.github/workflows/`, `scripts/`, `tests/`
+  and FE5-U7 SpecKit;
+- reflog history and recent unreachable commits reported by non-destructive `git fsck`;
+- exact indicators for calibration-only labeling, reference execution/calibration, environment or
+  runner manifests, same-runner execution, calibration artifacts, protocol proof and provenance.
+
+No workflow, tool, test or coherent partial implementation of Governed GitHub-Hosted Reference
+Execution was found. The only campaign-specific all-ref content match was this branch's ledger.
+Historical commit `b085d0b7f576f4a7081001beae7a9a57697ac305` briefly added diagnostic printing to the
+ordinary profile-sharded CI Lighthouse job, but supplied no manual reference workflow, manifest,
+same-runner calibration contract, bounded calibration route set, evidence package or contract tests;
+the diagnostics were subsequently removed. It is existing historical evidence/implementation
+input, not an abandoned Phase 1 reference implementation.
+
+**Forensic classification: F3 — REFERENCE EXECUTION IMPLEMENTATION NOT FOUND — FRESH PHASE 1
+REQUIRED.** No commit will be recovered, cherry-picked or revived.
+
+The open Web PR inventory remained unrelated and unchanged: #74
+`d1064da1e1ad309a558a3cf5a0e2b761e10a9e00`, #73
+`d551a7b6e5b457e100d836c6eec5e64feb2d5ab1`, #72
+`c834fc78be163b268f688c1d09879f9be49e8a7e`, #69
+`3d175fafccd39c094ec9d122e4c00f75e8a46a9a`, #68
+`513defb39a2594429eaa7dde31065ee707054b86`, and #46
+`016f0d9becfac34cc7e336b3fd2b784e71fec091`. No reference-execution PR exists.
+
+Campaign state is unchanged: `U7-PRE-001` open; `U7-PRE-002` closed; `U7-PRE-003` open; U7-A01
+unchecked; U7-G3 not passed; FE5-U7 acceptance not started; production untouched; no paid
+infrastructure created.
+
+**Next three actions.**
+
+1. Inventory the current CI/Lighthouse/Prism/Nitro/TLS/provenance tooling and write the minimal capability matrix against D20-43.
+2. Reconcile FE5-U7 SpecKit to the owner-approved GitHub-hosted reference model, then implement the bounded manual calibration workflow and focused discriminating tests.
+3. Independently review and locally certify the implementation, commit the real Phase 1 SHA, and leave publication/calibration for the subsequent governed phase.
