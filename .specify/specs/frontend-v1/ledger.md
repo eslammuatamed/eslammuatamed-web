@@ -7744,3 +7744,114 @@ U7-G3 not passed, FE5-U7 acceptance not started, production untouched and no pai
 1. Implement the bounded calibration mode and evidence pack strictly within the recorded boundary, proving each new instrument with a negative control.
 2. Run focused lint/typecheck/unit/workflow/lifecycle validation and obtain a separate read-only implementation review; correct every material finding.
 3. Commit the real Phase 1 implementation and a distinct ledger checkpoint, leaving D20/Web publication and GitHub calibration execution for the next governed phase.
+
+---
+
+## PRE-U7 GitHub-hosted reference implementation checkpoint · 2026-09-19
+
+U7-PRE-001b is complete in local Web implementation commit
+`d718530c3fa07b00d297d509f8b907cd5da05011`
+(`feat(performance): add governed reference calibration`), based on the certified SpecKit checkpoint
+`4df4dca6ca85e59c1b67ca64c0f319cb5fade357`. The implementation composes the existing governed
+Nitro/Prism/TLS/HTTP2/provenance/lifecycle stack; it does not introduce a second server or cleanup
+path.
+
+The new manual-only workflow has exactly one `ubuntu-latest` job and no matrix. It checks out the
+exact workflow SHA without persisted credentials, installs the lockfile, runs the blocking HIGH+
+audit, captures runner capacity before measurement, runs both profiles sequentially over the bounded
+four-route calibration population and uploads one SHA-bound checksummed package. The package and job
+summary carry the exact classification `CALIBRATION ONLY — NOT FE5-U7 ACCEPTANCE EVIDENCE`.
+
+The retained package contains:
+
+- a start-of-measurement GitHub/runner/capacity/toolchain/fixture snapshot including CPU steal, plus
+  a post-measurement capacity observation;
+- exact source/tree/lock/build provenance and raw-report content hashes;
+- 24 raw LHR JSON files: four EN/AR Home/Project paths × mobile/desktop × three runs;
+- EN/AR deterministic Prism fixture proof and direct preflight plus measured-session HTTP2 proof;
+- unfiltered category/LCP/CLS values with median/min/max/range/relative spread and a separately
+  labelled 96-audit feasibility projection;
+- a sorted `SHA256SUMS`, verified bidirectionally against every packaged file.
+
+The verifier fails closed on incomplete or mixed-version matrices, non-numeric metrics, summary/raw
+disagreement, unsafe/duplicate/missing/extra checksum entries, source/provenance/directory mismatch,
+unbound raw reports, non-calibration provenance, absent/distorted EN/AR fixtures, an empty or
+non-HTTP2 direct preflight, or non-HTTP2 measured sessions. The workflow semantic test rejects any
+non-manual trigger, runner matrix, self-hosted runner, acceptance-sized mode, deployment/SSH command
+or action, production environment, repository secret, tracked-state write, missing blocking command,
+or non-SHA-bound artifact upload.
+
+### Instrument proof and validation
+
+The workflow validator's negative control temporarily changed `LH_RUN_MODE: calibration` to
+`LH_RUN_MODE: governed`. The test failed on the intended signal:
+
+```text
+FAIL scripts/reference-calibration-workflow.spec.mjs
+Error: bounded calibration mode and both profiles must be explicit
+Test Files 1 failed
+Tests 2 failed | 4 passed
+```
+
+The source was restored before commit. Evidence tests independently corrupt checksums, remove a
+checksummed artifact, truncate the matrix and replace the direct protocol preflight with an empty
+array; each defect is rejected. Final evidence:
+
+```text
+npx eslint scripts/reference-calibration-evidence.mjs scripts/reference-calibration-evidence.spec.mjs scripts/reference-calibration-workflow.spec.mjs scripts/lighthouse-ci.mjs scripts/lighthouse-ci.spec.mjs scripts/lib/lighthouse-coverage.mjs scripts/lib/lighthouse-governed-urls.cjs lighthouserc.cjs
+<no output; exit 0>
+
+npx vitest run scripts/reference-calibration-workflow.spec.mjs \
+  scripts/reference-calibration-evidence.spec.mjs \
+  scripts/check-lighthouse-medians.spec.mjs \
+  scripts/lib/lighthouse-coverage.spec.mjs
+Test Files 4 passed (4)
+Tests 59 passed (59)
+
+npx vitest run scripts/lighthouse-ci.spec.mjs
+Test Files 1 passed (1)
+Tests 30 passed (30)
+
+npm test
+Test Files 172 passed (172)
+Tests 2637 passed (2637)
+
+npm audit --audit-level=high
+14 vulnerabilities (1 low, 13 moderate)
+<exit 0; no HIGH or CRITICAL finding>
+
+npm run reference:calibration:snapshot
+(instrument smoke only against the uncommitted implementation tree; not calibration evidence)
+sourceSha=4df4dca6ca85e59c1b67ca64c0f319cb5fade357
+Lighthouse=12.6.1; LHCI=0.15.1; Chrome=153.0.8010.36
+all required capacity fields present, including load and cpuStealJiffies
+
+git diff --check
+<no output; exit 0>
+```
+
+The lifecycle suite's first restricted-sandbox attempt was non-evidentiary: every `beforeEach`
+failed with `listen EPERM` because loopback binding was denied. The same isolated suite passed 30/30
+with loopback permission, and the final full suite passed 2637/2637. The dependency audit reported
+only existing LOW/MODERATE advisories and passed the governed HIGH+ threshold; no dependency or
+lockfile changed.
+
+An independent read-only reviewer found four initial contract/correctness issues and two further
+instrument gaps: non-exact artifact classification, post-measurement-only capacity/no CPU steal,
+insufficient secret/U7-mutation action checks, a top-level provenance schema mismatch plus missing
+raw-report binding, acceptance of an empty direct protocol proof and non-allowlisted action steps.
+All six were corrected. The reviewer re-read the final bounded diff, reran focused tests (16/16),
+found no remaining actionable issue and **approved the local implementation checkpoint only**. The
+review explicitly does not certify calibration results or remote execution.
+
+No workflow was dispatched. No branch was pushed, no PR created, no D20 source changed, no shared
+ref moved, and no production/deployment system or data was touched. `U7-PRE-001` remains open;
+U7-PRE-001c publication and U7-PRE-001d bounded calibration/certification remain open;
+`U7-PRE-003` remains open; U7-A01 remains unchecked; U7-G3 is not passed; FE5-U7 acceptance has not
+started. The existing Web Phase 1 checkpoint `f330b12` remains unchanged.
+
+**Next three actions.**
+
+1. Publish and merge the already-certified two-file D20-43 Docs change through its normal Docs PR flow, then publish the Web implementation through its normal PR/integration flow.
+2. Dispatch only the merged manual 24-audit calibration workflow and retain its single-runner artifact; do not run the 96-audit acceptance matrix.
+3. Independently review repeatability, provenance, protocol, checksums and feasibility, closing only U7-PRE-001d/U7-PRE-001 if every calibration contract passes; leave U7-PRE-003 and U7-A01 for their separately authorized phases.
