@@ -7855,3 +7855,39 @@ started. The existing Web Phase 1 checkpoint `f330b12` remains unchanged.
 1. Publish and merge the already-certified two-file D20-43 Docs change through its normal Docs PR flow, then publish the Web implementation through its normal PR/integration flow.
 2. Dispatch only the merged manual 24-audit calibration workflow and retain its single-runner artifact; do not run the 96-audit acceptance matrix.
 3. Independently review repeatability, provenance, protocol, checksums and feasibility, closing only U7-PRE-001d/U7-PRE-001 if every calibration contract passes; leave U7-PRE-003 and U7-A01 for their separately authorized phases.
+
+---
+
+## PRE-U7 governed publication zero-trust resume checkpoint · 2026-09-19
+
+Publication resumed from the locally certified reference-calibration implementation checkpoint only
+after fresh fetches and direct GitHub PR reads. The committed ledger was treated as a claim and
+reconciled independently before any branch push, PR creation or merge.
+
+| Claim | Checkpoint says | Fresh live state | Result |
+| --- | --- | --- | --- |
+| Web worktree | `chore/frontend-v1-u7-github-reference-execution` at `bf352f1dc8003811902b80e3a7fb14f93b5dc3cd`, clean | exact branch and HEAD; worktree exists; `git status --porcelain` empty | exact |
+| Web implementation | `d718530c3fa07b00d297d509f8b907cd5da05011` | commit resolves exactly in the resumed lineage | exact |
+| Web `origin/dev` | `175017024b24de3ab40b9e4935e76f49cc81ff73` | same after fresh fetch | exact |
+| Web `origin/main` | `40eb52c6470579c19131d3cede41ccc9b295bdf5` | same after fresh fetch | exact |
+| Web divergence | six local commits; reference workflow plus SpecKit/evidence only | `origin/dev...HEAD` = 0 behind / 6 ahead; 14 expected files | exact |
+| Web publication | no reference-execution branch or PR | no matching remote branch; six unrelated open PRs only | exact |
+| Docs worktree | `docs/d20-github-reference-execution` at `8c6d269afb6795993db09ca695b130da5d2dcd04`, clean | exact branch and HEAD; worktree exists; `git status --porcelain` empty | exact |
+| Docs `origin/main` | `5001ae62573ae488a16a552b1de9d7d1d03f72ab` | same after fresh fetch | exact |
+| D20-43 scope | exactly `docs/20-performance.md` plus generated `docs/group/03-delivery-and-roadmap.md` | `origin/main...HEAD` = 0 behind / 1 ahead; exactly those two modified files | exact |
+| D20-43 publication | no remote branch or PR | no matching remote branch; no open Docs PRs | exact |
+| PRE-U7 state | `U7-PRE-001c/d` open; `U7-PRE-003` open; U7-A01 unchecked | authoritative `tasks.md` still records those exact states | exact |
+
+No open Docs PR can overlap D20 governance because the open Docs PR set is empty. The existing D20-43
+source and generated-bundle occurrences are confined to the approved two-file change; fetched
+`origin/main` contains no D20-43 or equivalent GitHub-hosted reference-execution decision. No Web
+production deployment file, production SSH path, unrelated application behavior or dependency
+upgrade appears in the accumulated branch diff.
+
+**Zero drift. Governed publication may proceed.**
+
+**Next three actions.**
+
+1. Push the existing one-commit D20-43 branch, open the focused Docs PR to `main`, and certify its exact remote head and required checks.
+2. Perform the final read-only D20-43 uniqueness/generated-bundle review, squash merge the certified Docs PR, and record the authoritative merge SHA.
+3. Reconcile Web evidence to that merge SHA only if campaign convention requires it, then run the scoped local publication gate before opening the focused Web PR to `dev`.
