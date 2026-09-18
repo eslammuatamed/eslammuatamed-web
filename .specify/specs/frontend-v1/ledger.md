@@ -7475,3 +7475,66 @@ occurred.
 1. Certify and merge this documentation-only closeout through the normal Web PR/integration workflow.
 2. Separately provision and independently certify the governed non-production Lighthouse reference environment (`U7-PRE-001`).
 3. Only after every remaining start prerequisite passes, separately authorize U7-A01; do not treat this security closeout as FE5-U7 acceptance.
+
+---
+
+## PRE-U7 governed GitHub-hosted reference execution — zero-trust rebaseline and owner supersession · 2026-09-19
+
+The owner superseded the previously assumed dedicated reference-host requirement. This portfolio
+will not purchase or provision a Lighthouse VPS/VM. The authorized PRE-U7 design is **Governed
+GitHub-Hosted Reference Execution**: one acceptance attempt runs in one GitHub Actions job on one
+allocated GitHub-hosted Linux runner, captures that runner's observed environment, and never combines
+partial performance measurements across runner allocations. An infrastructure-interrupted attempt is
+invalidated and restarted from a fresh runner. GitHub-hosted capacity is shared/ephemeral and is not
+claimed to be dedicated, hardware-identical across jobs, or suitable for precise longitudinal
+hardware benchmarking.
+
+Fresh fetches and GitHub reads preceded this checkpoint:
+
+| Claim | Certified baseline | Fresh live state | Result |
+| --- | --- | --- | --- |
+| Web `origin/dev` | `175017024b24de3ab40b9e4935e76f49cc81ff73` | same | exact |
+| Web `origin/main` | `40eb52c6470579c19131d3cede41ccc9b295bdf5` | same | exact |
+| Docs `origin/main` | `5001ae62573ae488a16a552b1de9d7d1d03f72ab` | same | exact |
+| Security prerequisite | `U7-PRE-002` closed | PR #88 merged at `175017024…`; push run `35144344301` succeeded on that SHA | exact |
+| Reference execution | `U7-PRE-001` open | open | exact |
+| Evidence assignment | `U7-PRE-003` open | open | exact |
+| Controlled start | U7-A01 unchecked | unchecked; candidate not frozen | exact |
+| Acceptance | not started | U7-G3/U7-G6 not passed; acceptance not started | exact |
+
+The six unrelated open Web PRs remain #74 `d1064da…`, #73 `d551a7b…`, #72 `c834fc7…`,
+#69 `3d175fa…`, #68 `513defb…`, and #46 `016f0d9…`; none owns this governance or reference-execution
+work. The prior ledger ended immediately before the already-certified PR #88 documentation closeout;
+the owner-provided baseline and merged SpecKit state explicitly resolve that append-only lag in favor
+of live `dev` above.
+
+### Investigation result before mutation
+
+Central Docs needs one new performance decision, D20-43, because D20 currently makes ordinary
+GitHub-hosted PR threshold breaches advisory but does not define a release-acceptance execution
+platform. Web `spec.md`, `plan.md`, and `tasks.md` still say a hard/stable reference environment must
+be provisioned. Historical ledger statements are retained and superseded by this entry rather than
+rewritten. Deployment/testing documentation needs no change: a local-in-job Actions measurement is
+neither a deployment environment nor a public preview.
+
+One-runner feasibility is established without executing U7 acceptance. Current CI uses two
+`ubuntu-latest` profile shards, each 16 routes × 3 runs, under a 30-minute timeout. Across six recent
+`dev` runs, the Lighthouse step ranged 614–684 seconds mobile and 570–668 seconds desktop. Exact
+baseline run `35144344301` took 666 seconds mobile and 668 seconds desktop. The orchestrator already
+supports both profiles sequentially with one build; expected dedicated-job duration is about 21m55s.
+Historical unsharded run `31646141906` completed both matrices inside a 25m03s full verify job and
+uploaded a 37,014,448-byte artifact. A 45-minute manual reference job therefore has material margin.
+Latest sharded artifacts total 51,814,785 bytes. No calibration or 96-audit acceptance run occurred.
+
+The bounded first write set is Central Docs `docs/20-performance.md` plus this append-only ledger.
+No workflow, application/runtime file, package, lockfile, production resource, paid infrastructure,
+shared ref, U7 acceptance task, or evidence-operator/retention assignment is changed by this
+checkpoint.
+
+**Zero drift. Governance reconciliation may proceed under the explicit owner decision.**
+
+**Next three actions.**
+
+1. Add and independently certify minimal Central Docs D20-43 governance, then publish it through the normal Docs PR flow.
+2. Rebaseline Web on the merged Docs SHA; update FE5-U7 SpecKit and implement the bounded manual calibration/provenance workflow with discriminating negative controls.
+3. Run calibration on one GitHub-hosted runner, review repeatability/artifacts independently, and close only U7-PRE-001 if every contract requirement passes; leave U7-PRE-003 and U7-A01 open.
