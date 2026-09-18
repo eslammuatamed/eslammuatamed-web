@@ -45,7 +45,7 @@ export function pathOf(url, source = '<report>') {
  * @returns {{profile: string, paths: string[]}[]} the verified coverage, for logging
  * @throws {Error} listing every divergence in BOTH directions — not just the first
  */
-export function assertGovernedUrlCoverage(summaries, expectProfiles = PROFILES) {
+export function assertGovernedUrlCoverage(summaries, expectProfiles = PROFILES, expectedPaths = GOVERNED_PATHS, population = 'governed') {
   const unknownProfile = expectProfiles.find(p => !PROFILES.includes(p))
   if (unknownProfile !== undefined) {
     throw new Error(
@@ -57,7 +57,10 @@ export function assertGovernedUrlCoverage(summaries, expectProfiles = PROFILES) 
     throw new Error('no profiles to assert coverage for — an empty expectation is satisfied by an empty collection')
   }
 
-  const governed = new Set(GOVERNED_PATHS)
+  if (!Array.isArray(expectedPaths) || expectedPaths.length === 0 || new Set(expectedPaths).size !== expectedPaths.length) {
+    throw new Error('expected Lighthouse paths must be a non-empty, duplicate-free array')
+  }
+  const governed = new Set(expectedPaths)
   const collected = new Map(expectProfiles.map(p => [p, new Set()]))
   const problems = []
 
@@ -80,10 +83,10 @@ export function assertGovernedUrlCoverage(summaries, expectProfiles = PROFILES) 
 
   for (const profile of expectProfiles) {
     const seen = collected.get(profile)
-    const missing = GOVERNED_PATHS.filter(p => !seen.has(p))
+    const missing = expectedPaths.filter(p => !seen.has(p))
     if (missing.length > 0) {
       problems.push(
-        `MISSING: ${profile} collected ${seen.size}/${GOVERNED_PATHS.length} governed URLs — `
+        `MISSING: ${profile} collected ${seen.size}/${expectedPaths.length} ${population} URLs — `
         + `no runs for ${missing.join(', ')}`
       )
     }
@@ -102,8 +105,8 @@ export function assertGovernedUrlCoverage(summaries, expectProfiles = PROFILES) 
 }
 
 /** One line per profile, stating the count that was verified rather than merely that it passed. */
-export function describeCoverage(covered) {
+export function describeCoverage(covered, expectedCount = GOVERNED_PATHS.length, population = 'governed') {
   return covered
-    .map(({ profile, paths }) => `${profile}: all ${paths.length}/${GOVERNED_PATHS.length} governed URLs collected`)
+    .map(({ profile, paths }) => `${profile}: all ${paths.length}/${expectedCount} ${population} URLs collected`)
     .join('; ')
 }

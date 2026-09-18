@@ -22,7 +22,7 @@ reviews, and D16-8 closeout.
 
 - [ ] **U7-PRE-001** Implement, calibrate and independently certify Governed GitHub-Hosted Reference Execution satisfying `spec.md` §5.1 and D20-43; retain observed capacity, provenance, repeatability, protocol, feasibility and artifact proof. This task remains open until calibration certification, and never runs U7 acceptance.
   - [x] **U7-PRE-001a** Reconcile the dedicated-host assumption, certify D20-43 locally, and prove no prior implementation exists across reasonable Git refs.
-  - [ ] **U7-PRE-001b** Implement the manual, one-job GitHub-hosted calibration workflow plus environment/evidence packaging and focused discriminating tests.
+  - [x] **U7-PRE-001b** Implement the manual, one-job GitHub-hosted calibration workflow plus environment/evidence packaging and focused discriminating tests.
   - [ ] **U7-PRE-001c** Publish the D20-43 and Web implementation changes through their normal PR/integration workflows.
   - [ ] **U7-PRE-001d** Run bounded calibration only, certify same-runner repeatability, direct h2 proof, artifacts/checksums and 96-audit one-job feasibility, then independently review the result.
 - [x] **U7-PRE-002** Remediate the Web **CI SECURITY GATE DEFECT** so the D19-11 high+ audit blocks PR/integration CI; do not infer a `deploy.yml` requirement.

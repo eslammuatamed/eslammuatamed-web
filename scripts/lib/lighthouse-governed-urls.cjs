@@ -45,6 +45,19 @@ const GOVERNED_PATHS = [
   '/ar/contact'
 ]
 
+/**
+ * D20-43 reference-host calibration population. This is deliberately smaller than the governed
+ * acceptance population: it measures one stable Home and Project route in each locale, at both
+ * profiles and three runs, to establish runner repeatability and estimate the later 96-audit job.
+ * Calibration output is never acceptance evidence.
+ */
+const CALIBRATION_PATHS = [
+  '/',
+  '/ar',
+  '/projects/content-platform-api',
+  '/ar/projects/content-platform-api'
+]
+
 /** The two governed run configurations. Each is collected separately and asserted separately. */
 const PROFILES = ['mobile', 'desktop']
 
@@ -76,4 +89,13 @@ function resolveProfile(value) {
   )
 }
 
-module.exports = { GOVERNED_PATHS, PROFILES, resolveProfile }
+function resolveLighthousePaths(value = 'governed') {
+  if (value === 'governed') return GOVERNED_PATHS
+  if (value === 'calibration') return CALIBRATION_PATHS
+  throw new Error(
+    `LH_RUN_MODE is ${JSON.stringify(value)} — expected "governed" or "calibration". `
+    + 'Calibration must be selected explicitly and never silently replace the acceptance matrix.'
+  )
+}
+
+module.exports = { CALIBRATION_PATHS, GOVERNED_PATHS, PROFILES, resolveLighthousePaths, resolveProfile }

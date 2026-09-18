@@ -1,0 +1,89 @@
+name: Frontend V1 Reference Calibration
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  frontend-v1-reference-calibration:
+    name: Calibration only — not U7 acceptance
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      NUXT_PUBLIC_API_BASE: http://127.0.0.1:3001/api/v1
+      NUXT_PUBLIC_SITE_URL: https://example.invalid
+      NUXT_PUBLIC_GTM_ID: GTM-TEST
+      LIGHTHOUSE_ENFORCEMENT: advisory
+      LH_PROFILES: mobile,desktop
+      LH_RUN_MODE: calibration
+      REFERENCE_CALIBRATION_ONLY: "1"
+      REFERENCE_TIMEOUT_SECONDS: "2700"
+
+    steps:
+      - name: Record workflow start
+        shell: bash
+        run: echo "REFERENCE_WORKFLOW_STARTED_EPOCH=$(date +%s)" >> "$GITHUB_ENV"
+
+      - name: Check out exact source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install exact dependencies
+        run: npm ci
+
+      - name: Enforce high and critical dependency audit
+        run: npm audit --audit-level=high
+
+      - name: Record setup duration
+        shell: bash
+        run: |
+          now=$(date +%s)
+          echo "REFERENCE_SETUP_SECONDS=$((now - REFERENCE_WORKFLOW_STARTED_EPOCH))" >> "$GITHUB_ENV"
+          echo "REFERENCE_AUDIT_STARTED_EPOCH=$now" >> "$GITHUB_ENV"
+
+      - name: Capture runner capacity before measurement
+        run: npm run reference:calibration:snapshot
+
+      - name: Run bounded 24-audit reference calibration
+        run: npm run lighthouse:ci
+
+      - name: Record calibration duration
+        shell: bash
+        run: |
+          now=$(date +%s)
+          echo "REFERENCE_AUDIT_SECONDS=$((now - REFERENCE_AUDIT_STARTED_EPOCH))" >> "$GITHUB_ENV"
+
+      - name: Package calibration evidence
+        shell: bash
+        run: |
+          started=$(date +%s)
+          npm run reference:calibration:evidence
+          export REFERENCE_PACKAGING_SECONDS=$(($(date +%s) - started))
+          npm run reference:calibration:evidence
+
+      - name: Verify packaged checksums and completeness
+        run: npm run reference:calibration:verify
+
+      - name: Mark calibration scope
+        shell: bash
+        run: |
+          echo "## CALIBRATION ONLY — NOT FE5-U7 ACCEPTANCE EVIDENCE" >> "$GITHUB_STEP_SUMMARY"
+          echo "Bounded matrix: 4 paths × 2 profiles × 3 runs = 24 audits." >> "$GITHUB_STEP_SUMMARY"
+          echo "No deployment, publication, or U7-G3 acceptance action occurred." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload immutable calibration package
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-v1-reference-calibration-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .lighthouseci/reference-calibration/${{ github.sha }}
+          if-no-files-found: error
