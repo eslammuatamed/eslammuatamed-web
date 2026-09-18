@@ -7538,3 +7538,70 @@ checkpoint.
 1. Add and independently certify minimal Central Docs D20-43 governance, then publish it through the normal Docs PR flow.
 2. Rebaseline Web on the merged Docs SHA; update FE5-U7 SpecKit and implement the bounded manual calibration/provenance workflow with discriminating negative controls.
 3. Run calibration on one GitHub-hosted runner, review repeatability/artifacts independently, and close only U7-PRE-001 if every contract requirement passes; leave U7-PRE-003 and U7-A01 open.
+
+---
+
+## PRE-U7 D20-43 governance checkpoint · 2026-09-19
+
+Central Docs D20-43 is now locally committed on branch
+`docs/d20-github-reference-execution` at
+`8c6d269` (`docs(performance): govern GitHub reference execution`), based on certified Docs
+`origin/main` `5001ae62573ae488a16a552b1de9d7d1d03f72ab`. The commit contains exactly the approved
+authoritative source and its deterministic generated bundle:
+
+- `docs/20-performance.md`;
+- `docs/group/03-delivery-and-roadmap.md`.
+
+D20 advanced from v1.26.1 to v1.27.0 and records the owner-approved D20-43 contract: no separately
+purchased/provisioned Lighthouse VPS; one FE5-U7 attempt equals one GitHub Actions job, one runner
+allocation and one manifest; all 96 audits run sequentially within that boundary; infrastructure
+loss invalidates the partial attempt and requires a complete restart; observed capacity is provenance,
+not a dedicated-hardware promise; ordinary profile-sharded PR metrics remain advisory where already
+defined, while FE5-U7 thresholds remain hard. No threshold, route, profile, run count, median,
+protocol or budget changed.
+
+The source amendment received an independent substantive review before commit. The repository's
+authoritative generator produced all three grouped bundles but Git recorded a change only to the
+approved delivery bundle. Source and bundle each changed by the same deterministic count: 79
+insertions and 2 deletions. Verification evidence:
+
+```text
+npm run docs:group
+done — 25 sources across 3 bundles.
+
+npm run docs:group:check
+docs:group:check OK — 3 bundles, 25 sources, all current.
+
+node /tmp/d20-43-governance-audit.mjs <docs-worktree>
+D20-43 governance audit PASS
+
+git diff --check
+<no output; exit 0>
+```
+
+The new governance audit's negative control temporarily introduced a second active D20-43 heading.
+It failed as required with `active D20-43 definition: expected 1, found 2`; the temporary defect was
+removed, the real source passed, and no negative-control content entered the commit. Final pre-commit
+status contained only the two approved files. The Docs commit is local: it has not been pushed, opened
+as a PR, merged or published.
+
+Checkpoint repository state remains:
+
+| Repository/state | SHA or status |
+| --- | --- |
+| Web certified `origin/dev` | `175017024b24de3ab40b9e4935e76f49cc81ff73` |
+| Web `origin/main` | `40eb52c6470579c19131d3cede41ccc9b295bdf5` |
+| Docs certified `origin/main` | `5001ae62573ae488a16a552b1de9d7d1d03f72ab` |
+| Docs D20-43 local head | `8c6d269` |
+| Web Phase 1 checkpoint | `f330b12` (unchanged) |
+
+The unrelated open Web PR inventory remains #74 `d1064da…`, #73 `d551a7b…`, #72 `c834fc7…`,
+#69 `3d175fa…`, #68 `513defb…`, and #46 `016f0d9…`. No Docs or Web PR was created by this phase.
+`U7-PRE-001` remains open pending implementation and calibration; `U7-PRE-003` remains open;
+U7-A01 remains unchecked; FE5-U7 acceptance has not started.
+
+**Next three actions.**
+
+1. Push and independently certify the two-file D20-43 Docs PR, then merge it through the normal Docs flow.
+2. Rebaseline Web against the merged Docs SHA and reconcile FE5-U7 `spec.md`, `plan.md`, and `tasks.md` to D20-43 before workflow implementation.
+3. Implement and prove the bounded manual calibration/provenance workflow; run calibration only after its instruments pass negative controls, closing only U7-PRE-001 if independently certified.
