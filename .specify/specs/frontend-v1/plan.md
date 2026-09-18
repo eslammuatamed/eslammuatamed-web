@@ -1192,7 +1192,7 @@ evidence, not U7 requirements; the U7 manual journey is Markdown + explicit save
 
 ### 16.1 Operating strategy
 
-1. **Discharge pre-U7 work separately.** Provision the governed reference environment, repair the
+1. **Discharge pre-U7 work separately.** Implement and calibrate Governed GitHub-Hosted Reference Execution, repair the
    D19-11 Web PR/integration high+ CI gate, and align the Lighthouse CLS comparator with D20's strict
    `< 0.05` rule in separately authorized units. None is acceptance.
 2. **Freeze once, bind everything.** Select one candidate SHA/tree/lockfile after start prerequisites
@@ -1208,8 +1208,8 @@ evidence, not U7 requirements; the U7 manual journey is Markdown + explicit save
 
 `SP-1…SP-5 → U7-G1/G2 → U7-G3/G4/G5/G6/G7 → U7-G8 → CLOSED / READY FOR PROMOTION`
 
-- The current state is **DEFINED — NOT READY TO START GOVERNED ACCEPTANCE** until the controlled
-  reference environment exists and all other start prerequisites pass.
+- The current state is **DEFINED — NOT READY TO START GOVERNED ACCEPTANCE** until the governed
+  GitHub-hosted reference execution is certified and all other start prerequisites pass.
 - A measurement-infrastructure defect produces no threshold verdict; repair the instrument or
   environment separately and repeat the affected collection.
 - A genuine gate failure blocks that gate and opens separately authorized remediation. Do not code
@@ -1224,3 +1224,24 @@ development/demo seed work are N/A because no application module or data-backed 
 Validation requires `git diff --check`, stale-reference/boundary searches, ledger/spec/task
 consistency, and independent read-only review. Merging this definition establishes U7 but does not
 start acceptance.
+
+### 16.4 PRE-U7 GitHub-hosted reference capability matrix (D20-43)
+
+| Capability | Existing support | Missing work | Proposed file |
+| --- | --- | --- | --- |
+| Manual calibration workflow | CI has profile-sharded ordinary Lighthouse only | `workflow_dispatch`, one job/runner, 45-minute timeout, calibration label, exact checkout/install, HIGH+ audit and artifact upload | `.github/workflows/reference-calibration.yml` |
+| Same-runner execution | `lighthouse-ci.mjs` already runs selected profiles sequentially when unsharded | Pin both profiles and the bounded route set inside one job; reject any multi-job comparable set | workflow + `scripts/reference-calibration-workflow.spec.mjs` |
+| Environment manifest | Historical diagnostics identified useful fields but no durable manifest exists | Capture GitHub identity, runner/image/capacity, filesystem/load, toolchain and unavailable fields without secrets | `scripts/reference-calibration-evidence.mjs` |
+| Source/tree/lock/build provenance | `build-provenance.mjs` already binds clean HEAD/tree, lock SHA-256, build environment and output hash | Add lock Git blob, workflow/job identity, Prism/OpenAPI/fixture identities and final artifact hashes | evidence script and tests |
+| Production Nitro + deterministic Prism | `ci-preview.mjs` already launches `.output/server/index.mjs`, committed OpenAPI Prism and locale proxy with observed teardown | Persist exact startup/preflight proof and EN/AR contract responses | `scripts/lighthouse-ci.mjs`, evidence script |
+| Ephemeral TLS/HTTP2 + direct proof | `h2-proxy.mjs` and `lh-protocol.mjs` prove preflight and Chrome-recorded document/asset h2 | Serialize the proof as a retained artifact rather than log-only evidence | orchestrator + evidence script |
+| Bounded representative calibration | Governed URL/profile modules enforce the 16-route acceptance population | Add an explicit calibration population (`/`, `/ar`, EN/AR project detail), both profiles, three runs, without weakening the acceptance population | `lighthouserc.cjs`, URL/coverage modules and tests |
+| Repeatability summary | Median tooling already parses raw LHR metrics and enforces exactly three runs | Produce raw values, median/min/max/range/relative spread without filtering unfavorable runs | evidence script and tests |
+| Reset/isolation | Lifecycle/process-tree guards already clean Chrome, Prism, Nitro, proxy, ports, certs and report dirs | Contract-test calibration mode and its output directories against stale-state leakage | existing lifecycle tests + focused additions |
+| Evidence package/checksums | Raw LHR and report provenance already exist under `.lighthouseci/` | Stable calibration-only layout containing manifest, raw LHR, protocol, provenance, summary and `SHA256SUMS` | evidence script + workflow upload |
+| Feasibility/runtime record | Historical job timings prove the topology is plausible | Record calibration phase timings and estimate 96-audit total/margin without running acceptance | evidence script summary |
+| Safety contract | Existing YAML semantic parsing pattern uses `yaml` | Prove GitHub-hosted/manual/one-job design, calibration label, no SSH/deploy/production secrets and no U7 state mutation; negative-control each new instrument | workflow/evidence tests |
+
+The implementation composes the existing governed lifecycle; it does not create a second Nitro,
+Prism, TLS or process-cleanup stack. D20-43 publication and calibration execution remain subsequent
+phases. The implementation checkpoint itself neither pushes nor runs the workflow.

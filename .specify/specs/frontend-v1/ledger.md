@@ -7669,3 +7669,78 @@ infrastructure created.
 1. Inventory the current CI/Lighthouse/Prism/Nitro/TLS/provenance tooling and write the minimal capability matrix against D20-43.
 2. Reconcile FE5-U7 SpecKit to the owner-approved GitHub-hosted reference model, then implement the bounded manual calibration workflow and focused discriminating tests.
 3. Independently review and locally certify the implementation, commit the real Phase 1 SHA, and leave publication/calibration for the subsequent governed phase.
+
+---
+
+## PRE-U7 GitHub-hosted reference SpecKit reconciliation checkpoint · 2026-09-19
+
+Starting from forensic correction commit `33f3077`, the existing Web measurement stack was inspected
+before design. The repository already owns the hard parts of the governed lifecycle:
+
+- `scripts/lighthouse-ci.mjs` owns clean-source gating, production build validation, sequential
+  profile execution, report-directory reset and complete teardown;
+- `scripts/ci-preview.mjs` owns deterministic committed Prism/OpenAPI plus the real Nitro production
+  server and observed process shutdown;
+- `scripts/lib/h2-proxy.mjs` and `scripts/lib/lh-protocol.mjs` prove the local TLS/HTTP2 path both
+  before collection and from Chrome's recorded network requests;
+- `scripts/lib/build-provenance.mjs` binds HEAD, tree, lockfile SHA-256, build environment and output
+  fingerprint to raw reports;
+- lifecycle, process-tree, coverage, protocol, provenance and median tests already exercise those
+  contracts; workflow tests already parse YAML semantically with the installed `yaml` package.
+
+No second orchestration stack is justified. The missing surface is a manual one-job wrapper, an
+explicit bounded calibration population, durable environment/protocol/summary evidence, checksums,
+runtime/feasibility reporting and semantic safety tests.
+
+The SpecKit specify/clarify/plan/tasks artifacts were reconciled accordingly:
+
+- `spec.md` replaces the obsolete dedicated-host provisioning premise with D20-43's shared,
+  ephemeral GitHub-hosted contract; one attempt equals one workflow job, runner allocation,
+  environment manifest and complete comparable set; profiles are sequential; an interrupted attempt
+  restarts whole; calibration is explicitly not acceptance;
+- `plan.md` records a reuse-first 12-capability matrix mapping existing support, exact gaps and the
+  smallest proposed workflow/script/test files;
+- `tasks.md` decomposes still-open U7-PRE-001 into reconciliation, implementation, publication and
+  bounded calibration/certification subtasks. Only reconciliation (`U7-PRE-001a`) is checked.
+
+The planned real implementation boundary for the next phase is deliberately narrow:
+
+```text
+.github/workflows/reference-calibration.yml
+package.json
+lighthouserc.cjs
+scripts/lighthouse-ci.mjs
+scripts/lib/lighthouse-governed-urls.cjs
+scripts/lib/lighthouse-coverage.mjs
+scripts/reference-calibration-evidence.mjs
+scripts/reference-calibration-workflow.spec.mjs
+scripts/reference-calibration-evidence.spec.mjs
+focused existing Lighthouse coverage/lifecycle tests only where the new calibration mode requires it
+.specify/specs/frontend-v1/{tasks.md,ledger.md}
+```
+
+No dependency or lockfile change is planned. No workflow was added or executed in this checkpoint.
+No D20 file, remote branch, PR, shared ref, production system or paid infrastructure changed.
+
+Validation at this boundary:
+
+```text
+git diff --check
+<no output; exit 0>
+
+stale authoritative phrase search
+<no remaining REFERENCE ENVIRONMENT PROVISIONING REQUIRED / provisioning-required plan text>
+```
+
+A separate read-only review was requested twice, but the agent runtime returned `workspace is out of
+credits` without reviewing or changing files. Therefore independent review is explicitly **pending**
+and must occur before the real implementation is certified; this checkpoint does not self-approve it.
+
+Campaign state remains `U7-PRE-001` open, `U7-PRE-002` closed, `U7-PRE-003` open, U7-A01 unchecked,
+U7-G3 not passed, FE5-U7 acceptance not started, production untouched and no paid infrastructure.
+
+**Next three actions.**
+
+1. Implement the bounded calibration mode and evidence pack strictly within the recorded boundary, proving each new instrument with a negative control.
+2. Run focused lint/typecheck/unit/workflow/lifecycle validation and obtain a separate read-only implementation review; correct every material finding.
+3. Commit the real Phase 1 implementation and a distinct ledger checkpoint, leaving D20/Web publication and GitHub calibration execution for the next governed phase.
