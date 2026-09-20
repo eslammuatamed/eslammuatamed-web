@@ -7954,3 +7954,44 @@ passed; FE5-U7 acceptance has not started; production and paid infrastructure re
 1. Inspect whether Web SpecKit/evidence convention requires the authoritative D20-43 merge SHA; if required, make only that smallest documentation/evidence update.
 2. Audit every `origin/dev...HEAD` Web file against the approved calibration/SpecKit categories and run the certification-sensitive local publication gate on the final exact head.
 3. Push the exact Web branch, open the focused calibration-infrastructure PR to `dev`, and certify all required PR CI before merge; do not dispatch calibration until exact merge-SHA integration CI passes.
+
+---
+
+## PRE-U7 Web publication zero-trust resume checkpoint · 2026-09-20
+
+Web publication resumed from the post-D20 checkpoint only after fresh remote fetches, direct GitHub
+PR reads, exact lineage checks and a complete accumulated-diff inventory. No branch push, PR,
+workflow dispatch or shared-ref mutation preceded this checkpoint.
+
+| Claim | Ledger/handoff says | Fresh live state | Result |
+| --- | --- | --- | --- |
+| Web branch and head | `chore/frontend-v1-u7-github-reference-execution` at `e9d8bd8487c08f76cadfad817f52677309203abb` | exact branch/head; worktree exists and `git status --porcelain` is empty | exact |
+| Certified lineage | contains `d718530c`, `bf352f1d` and `e9d8bd84` | all three are ancestors of live HEAD | exact |
+| Web `origin/dev` | `175017024b24de3ab40b9e4935e76f49cc81ff73` | same after fresh fetch | exact |
+| Web `origin/main` | `40eb52c6470579c19131d3cede41ccc9b295bdf5` | same after fresh fetch | exact |
+| Divergence | local publication lineage only | 0 behind / 8 ahead of `origin/dev` | exact |
+| Web publication | no reference-execution remote branch or PR | no matching remote branch; six unrelated open PRs only | exact |
+| Authoritative Docs | D20-43 merged at `eb8d25cdca1885b3601dc7b36d8a38172b0ccdcd` | Docs `origin/main` is exactly that merge after fresh fetch | exact |
+| PRE-U7 status | U7-PRE-001/c/d open; U7-PRE-003 open; U7-A01 unchecked | authoritative `tasks.md` records those exact states | exact |
+
+The 14-file `origin/dev...HEAD` diff is completely classified: one manual reference-calibration
+workflow; calibration commands and orchestration in `package.json`, `lighthouserc.cjs` and
+`scripts/lighthouse-ci.mjs`; bounded route/coverage helpers; the environment/provenance/evidence
+packager; three focused test files plus the focused existing Lighthouse test; and FE5-U7
+`spec.md`/`plan.md`/`tasks.md`/append-only ledger evidence. Unexpected files are zero. There is no
+`deploy.yml`, lockfile, application or server product file, production deployment/SSH change,
+unrelated dependency upgrade or U7 acceptance-state mutation.
+
+One factual provenance lag remains inside Web SpecKit: `spec.md` still describes local Docs commit
+`8c6d269` as pending publication, and `tasks.md` still names pre-merge Docs baseline `5001ae6` as its
+input. The append-only ledger already records authoritative merge `eb8d25c`. Campaign convention
+therefore requires the smallest source-of-truth update to those two metadata lines before Web
+publication; implementation logic remains unchanged.
+
+**Zero drift. Scoped Web publication work may proceed.**
+
+**Next three actions.**
+
+1. Update only the stale `spec.md` and `tasks.md` Docs-provenance metadata to authoritative merge `eb8d25cdca1885b3601dc7b36d8a38172b0ccdcd` and append the resulting exact evidence.
+2. Run the focused security, workflow-contract, reference-calibration and diff-hygiene publication gates on the final exact Web head.
+3. Push that exact branch without rewriting history, open the focused PR to `dev`, and certify its exact GitHub diff and required CI before any merge or calibration dispatch.
