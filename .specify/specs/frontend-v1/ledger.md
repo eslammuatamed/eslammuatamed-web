@@ -7891,3 +7891,66 @@ upgrade appears in the accumulated branch diff.
 1. Push the existing one-commit D20-43 branch, open the focused Docs PR to `main`, and certify its exact remote head and required checks.
 2. Perform the final read-only D20-43 uniqueness/generated-bundle review, squash merge the certified Docs PR, and record the authoritative merge SHA.
 3. Reconcile Web evidence to that merge SHA only if campaign convention requires it, then run the scoped local publication gate before opening the focused Web PR to `dev`.
+
+---
+
+## PRE-U7 D20-43 publication and merge checkpoint · 2026-09-20
+
+The already-certified D20-43 change was published without rewriting its local history as Central
+Docs PR [#66](https://github.com/eslammuatamed/eslammuatamed-docs/pull/66), titled
+`docs(performance): govern GitHub-hosted reference execution`.
+
+Exact PR identity and scope:
+
+| Field | Certified value |
+| --- | --- |
+| Base | Docs `main` at `5001ae62573ae488a16a552b1de9d7d1d03f72ab` |
+| Head | `8c6d269afb6795993db09ca695b130da5d2dcd04` |
+| Commits | one: `8c6d269` (`docs(performance): govern GitHub reference execution`) |
+| Changed files | `docs/20-performance.md`; `docs/group/03-delivery-and-roadmap.md` |
+| Diff size | 79 additions / 2 deletions in each file |
+| Mergeability before merge | `MERGEABLE` / `CLEAN` |
+| Attached GitHub checks | none; this Docs repository has no Actions workflow or PR check rollup |
+
+The applicable certification gates passed on that exact head:
+
+```text
+npm run docs:group:check
+docs:group:check OK — 3 bundles, 25 sources, all current.
+
+node /tmp/d20-43-governance-audit.mjs <docs-worktree>
+D20-43 governance audit PASS
+
+git diff --check origin/main...HEAD
+<no output; exit 0>
+```
+
+A separate read-only reviewer independently queried the live PR and re-ran the local review. It
+confirmed one commit, the exact two-file diff, one normative D20-43 source heading, no duplicate
+decision heading IDs, a current deterministic bundle, a clean worktree, and no modification of any
+existing Lighthouse threshold, route, profile, median, protocol, budget or unrelated governance.
+The review verdict was **PASS with zero material findings**.
+
+PR #66 was squash-merged only after that certification. The authoritative Docs merge commit and
+freshly fetched final Docs `origin/main` are both:
+
+```text
+eb8d25cdca1885b3601dc7b36d8a38172b0ccdcd
+```
+
+D20-43 is therefore authoritative. The local Docs topic branch remains clean at its original
+certified head `8c6d269`; its remote topic branch also remains at that head. No branch was force
+pushed or rewritten.
+
+Web remains unpublished at the pre-publication checkpoint lineage. At this boundary its pre-ledger
+HEAD was `ed249fcef605c1112f48922f4a7a72ddd21c8c24`, Web `origin/dev` remains
+`175017024b24de3ab40b9e4935e76f49cc81ff73`, and Web `origin/main` remains
+`40eb52c6470579c19131d3cede41ccc9b295bdf5`. No Web PR or workflow run was created. `U7-PRE-001c`
+and `U7-PRE-001d` remain open; `U7-PRE-003` remains open; U7-A01 remains unchecked; U7-G3 is not
+passed; FE5-U7 acceptance has not started; production and paid infrastructure remain untouched.
+
+**Next three actions.**
+
+1. Inspect whether Web SpecKit/evidence convention requires the authoritative D20-43 merge SHA; if required, make only that smallest documentation/evidence update.
+2. Audit every `origin/dev...HEAD` Web file against the approved calibration/SpecKit categories and run the certification-sensitive local publication gate on the final exact head.
+3. Push the exact Web branch, open the focused calibration-infrastructure PR to `dev`, and certify all required PR CI before merge; do not dispatch calibration until exact merge-SHA integration CI passes.
