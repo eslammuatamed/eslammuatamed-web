@@ -7475,3 +7475,561 @@ occurred.
 1. Certify and merge this documentation-only closeout through the normal Web PR/integration workflow.
 2. Separately provision and independently certify the governed non-production Lighthouse reference environment (`U7-PRE-001`).
 3. Only after every remaining start prerequisite passes, separately authorize U7-A01; do not treat this security closeout as FE5-U7 acceptance.
+
+---
+
+## PRE-U7 governed GitHub-hosted reference execution — zero-trust rebaseline and owner supersession · 2026-09-19
+
+The owner superseded the previously assumed dedicated reference-host requirement. This portfolio
+will not purchase or provision a Lighthouse VPS/VM. The authorized PRE-U7 design is **Governed
+GitHub-Hosted Reference Execution**: one acceptance attempt runs in one GitHub Actions job on one
+allocated GitHub-hosted Linux runner, captures that runner's observed environment, and never combines
+partial performance measurements across runner allocations. An infrastructure-interrupted attempt is
+invalidated and restarted from a fresh runner. GitHub-hosted capacity is shared/ephemeral and is not
+claimed to be dedicated, hardware-identical across jobs, or suitable for precise longitudinal
+hardware benchmarking.
+
+Fresh fetches and GitHub reads preceded this checkpoint:
+
+| Claim | Certified baseline | Fresh live state | Result |
+| --- | --- | --- | --- |
+| Web `origin/dev` | `175017024b24de3ab40b9e4935e76f49cc81ff73` | same | exact |
+| Web `origin/main` | `40eb52c6470579c19131d3cede41ccc9b295bdf5` | same | exact |
+| Docs `origin/main` | `5001ae62573ae488a16a552b1de9d7d1d03f72ab` | same | exact |
+| Security prerequisite | `U7-PRE-002` closed | PR #88 merged at `175017024…`; push run `35144344301` succeeded on that SHA | exact |
+| Reference execution | `U7-PRE-001` open | open | exact |
+| Evidence assignment | `U7-PRE-003` open | open | exact |
+| Controlled start | U7-A01 unchecked | unchecked; candidate not frozen | exact |
+| Acceptance | not started | U7-G3/U7-G6 not passed; acceptance not started | exact |
+
+The six unrelated open Web PRs remain #74 `d1064da…`, #73 `d551a7b…`, #72 `c834fc7…`,
+#69 `3d175fa…`, #68 `513defb…`, and #46 `016f0d9…`; none owns this governance or reference-execution
+work. The prior ledger ended immediately before the already-certified PR #88 documentation closeout;
+the owner-provided baseline and merged SpecKit state explicitly resolve that append-only lag in favor
+of live `dev` above.
+
+### Investigation result before mutation
+
+Central Docs needs one new performance decision, D20-43, because D20 currently makes ordinary
+GitHub-hosted PR threshold breaches advisory but does not define a release-acceptance execution
+platform. Web `spec.md`, `plan.md`, and `tasks.md` still say a hard/stable reference environment must
+be provisioned. Historical ledger statements are retained and superseded by this entry rather than
+rewritten. Deployment/testing documentation needs no change: a local-in-job Actions measurement is
+neither a deployment environment nor a public preview.
+
+One-runner feasibility is established without executing U7 acceptance. Current CI uses two
+`ubuntu-latest` profile shards, each 16 routes × 3 runs, under a 30-minute timeout. Across six recent
+`dev` runs, the Lighthouse step ranged 614–684 seconds mobile and 570–668 seconds desktop. Exact
+baseline run `35144344301` took 666 seconds mobile and 668 seconds desktop. The orchestrator already
+supports both profiles sequentially with one build; expected dedicated-job duration is about 21m55s.
+Historical unsharded run `31646141906` completed both matrices inside a 25m03s full verify job and
+uploaded a 37,014,448-byte artifact. A 45-minute manual reference job therefore has material margin.
+Latest sharded artifacts total 51,814,785 bytes. No calibration or 96-audit acceptance run occurred.
+
+The bounded first write set is Central Docs `docs/20-performance.md` plus this append-only ledger.
+No workflow, application/runtime file, package, lockfile, production resource, paid infrastructure,
+shared ref, U7 acceptance task, or evidence-operator/retention assignment is changed by this
+checkpoint.
+
+**Zero drift. Governance reconciliation may proceed under the explicit owner decision.**
+
+**Next three actions.**
+
+1. Add and independently certify minimal Central Docs D20-43 governance, then publish it through the normal Docs PR flow.
+2. Rebaseline Web on the merged Docs SHA; update FE5-U7 SpecKit and implement the bounded manual calibration/provenance workflow with discriminating negative controls.
+3. Run calibration on one GitHub-hosted runner, review repeatability/artifacts independently, and close only U7-PRE-001 if every contract requirement passes; leave U7-PRE-003 and U7-A01 open.
+
+---
+
+## PRE-U7 D20-43 governance checkpoint · 2026-09-19
+
+Central Docs D20-43 is now locally committed on branch
+`docs/d20-github-reference-execution` at
+`8c6d269` (`docs(performance): govern GitHub reference execution`), based on certified Docs
+`origin/main` `5001ae62573ae488a16a552b1de9d7d1d03f72ab`. The commit contains exactly the approved
+authoritative source and its deterministic generated bundle:
+
+- `docs/20-performance.md`;
+- `docs/group/03-delivery-and-roadmap.md`.
+
+D20 advanced from v1.26.1 to v1.27.0 and records the owner-approved D20-43 contract: no separately
+purchased/provisioned Lighthouse VPS; one FE5-U7 attempt equals one GitHub Actions job, one runner
+allocation and one manifest; all 96 audits run sequentially within that boundary; infrastructure
+loss invalidates the partial attempt and requires a complete restart; observed capacity is provenance,
+not a dedicated-hardware promise; ordinary profile-sharded PR metrics remain advisory where already
+defined, while FE5-U7 thresholds remain hard. No threshold, route, profile, run count, median,
+protocol or budget changed.
+
+The source amendment received an independent substantive review before commit. The repository's
+authoritative generator produced all three grouped bundles but Git recorded a change only to the
+approved delivery bundle. Source and bundle each changed by the same deterministic count: 79
+insertions and 2 deletions. Verification evidence:
+
+```text
+npm run docs:group
+done — 25 sources across 3 bundles.
+
+npm run docs:group:check
+docs:group:check OK — 3 bundles, 25 sources, all current.
+
+node /tmp/d20-43-governance-audit.mjs <docs-worktree>
+D20-43 governance audit PASS
+
+git diff --check
+<no output; exit 0>
+```
+
+The new governance audit's negative control temporarily introduced a second active D20-43 heading.
+It failed as required with `active D20-43 definition: expected 1, found 2`; the temporary defect was
+removed, the real source passed, and no negative-control content entered the commit. Final pre-commit
+status contained only the two approved files. The Docs commit is local: it has not been pushed, opened
+as a PR, merged or published.
+
+Checkpoint repository state remains:
+
+| Repository/state | SHA or status |
+| --- | --- |
+| Web certified `origin/dev` | `175017024b24de3ab40b9e4935e76f49cc81ff73` |
+| Web `origin/main` | `40eb52c6470579c19131d3cede41ccc9b295bdf5` |
+| Docs certified `origin/main` | `5001ae62573ae488a16a552b1de9d7d1d03f72ab` |
+| Docs D20-43 local head | `8c6d269` |
+| Web Phase 1 checkpoint | `f330b12` (unchanged) |
+
+The unrelated open Web PR inventory remains #74 `d1064da…`, #73 `d551a7b…`, #72 `c834fc7…`,
+#69 `3d175fa…`, #68 `513defb…`, and #46 `016f0d9…`. No Docs or Web PR was created by this phase.
+`U7-PRE-001` remains open pending implementation and calibration; `U7-PRE-003` remains open;
+U7-A01 remains unchecked; FE5-U7 acceptance has not started.
+
+**Next three actions.**
+
+1. Push and independently certify the two-file D20-43 Docs PR, then merge it through the normal Docs flow.
+2. Rebaseline Web against the merged Docs SHA and reconcile FE5-U7 `spec.md`, `plan.md`, and `tasks.md` to D20-43 before workflow implementation.
+3. Implement and prove the bounded manual calibration/provenance workflow; run calibration only after its instruments pass negative controls, closing only U7-PRE-001 if independently certified.
+
+---
+
+## PRE-U7 reference-execution handoff correction and forensic result · 2026-09-19
+
+The owner resolved the 2026-09-19 zero-trust stop in favor of live Git. Two prior commits were
+mischaracterized by a later handoff, not by their contents:
+
+- `f330b1254e85de5edfa42407feb3c38f26fc5ca4` is an append-only governance rebaseline/evidence
+  commit. It modifies only this ledger. It is **not** a reference-execution implementation.
+- `7b4eba72ce2be6e318d588d79a58f5c0124aa851` is the later append-only D20-43 governance
+  checkpoint. It also modifies only this ledger. It is **not** a reference-execution implementation.
+
+Historical entries remain unchanged. This correction is authoritative for all future handoffs.
+
+### Zero-trust baseline and bounded forensic search
+
+Fresh remote fetches retained Web `origin/dev`
+`175017024b24de3ab40b9e4935e76f49cc81ff73`, Web `origin/main`
+`40eb52c6470579c19131d3cede41ccc9b295bdf5`, and Central Docs `origin/main`
+`5001ae62573ae488a16a552b1de9d7d1d03f72ab`. Both checkpoint worktrees were clean. Central Docs
+D20-43 remained at local commit `8c6d269afb6795993db09ca695b130da5d2dcd04`, directly descended
+from that Docs main SHA and changing exactly `docs/20-performance.md` plus generated
+`docs/group/03-delivery-and-roadmap.md`. No Docs PR existed.
+
+The Web forensic search covered:
+
+- every local branch, fetched `origin/*` remote-tracking branch and tag;
+- every live GitHub branch returned by the repository API;
+- all registered worktree refs;
+- `git log --all --reflog` path/content searches under `.github/workflows/`, `scripts/`, `tests/`
+  and FE5-U7 SpecKit;
+- reflog history and recent unreachable commits reported by non-destructive `git fsck`;
+- exact indicators for calibration-only labeling, reference execution/calibration, environment or
+  runner manifests, same-runner execution, calibration artifacts, protocol proof and provenance.
+
+No workflow, tool, test or coherent partial implementation of Governed GitHub-Hosted Reference
+Execution was found. The only campaign-specific all-ref content match was this branch's ledger.
+Historical commit `b085d0b7f576f4a7081001beae7a9a57697ac305` briefly added diagnostic printing to the
+ordinary profile-sharded CI Lighthouse job, but supplied no manual reference workflow, manifest,
+same-runner calibration contract, bounded calibration route set, evidence package or contract tests;
+the diagnostics were subsequently removed. It is existing historical evidence/implementation
+input, not an abandoned Phase 1 reference implementation.
+
+**Forensic classification: F3 — REFERENCE EXECUTION IMPLEMENTATION NOT FOUND — FRESH PHASE 1
+REQUIRED.** No commit will be recovered, cherry-picked or revived.
+
+The open Web PR inventory remained unrelated and unchanged: #74
+`d1064da1e1ad309a558a3cf5a0e2b761e10a9e00`, #73
+`d551a7b6e5b457e100d836c6eec5e64feb2d5ab1`, #72
+`c834fc78be163b268f688c1d09879f9be49e8a7e`, #69
+`3d175fafccd39c094ec9d122e4c00f75e8a46a9a`, #68
+`513defb39a2594429eaa7dde31065ee707054b86`, and #46
+`016f0d9becfac34cc7e336b3fd2b784e71fec091`. No reference-execution PR exists.
+
+Campaign state is unchanged: `U7-PRE-001` open; `U7-PRE-002` closed; `U7-PRE-003` open; U7-A01
+unchecked; U7-G3 not passed; FE5-U7 acceptance not started; production untouched; no paid
+infrastructure created.
+
+**Next three actions.**
+
+1. Inventory the current CI/Lighthouse/Prism/Nitro/TLS/provenance tooling and write the minimal capability matrix against D20-43.
+2. Reconcile FE5-U7 SpecKit to the owner-approved GitHub-hosted reference model, then implement the bounded manual calibration workflow and focused discriminating tests.
+3. Independently review and locally certify the implementation, commit the real Phase 1 SHA, and leave publication/calibration for the subsequent governed phase.
+
+---
+
+## PRE-U7 GitHub-hosted reference SpecKit reconciliation checkpoint · 2026-09-19
+
+Starting from forensic correction commit `33f3077`, the existing Web measurement stack was inspected
+before design. The repository already owns the hard parts of the governed lifecycle:
+
+- `scripts/lighthouse-ci.mjs` owns clean-source gating, production build validation, sequential
+  profile execution, report-directory reset and complete teardown;
+- `scripts/ci-preview.mjs` owns deterministic committed Prism/OpenAPI plus the real Nitro production
+  server and observed process shutdown;
+- `scripts/lib/h2-proxy.mjs` and `scripts/lib/lh-protocol.mjs` prove the local TLS/HTTP2 path both
+  before collection and from Chrome's recorded network requests;
+- `scripts/lib/build-provenance.mjs` binds HEAD, tree, lockfile SHA-256, build environment and output
+  fingerprint to raw reports;
+- lifecycle, process-tree, coverage, protocol, provenance and median tests already exercise those
+  contracts; workflow tests already parse YAML semantically with the installed `yaml` package.
+
+No second orchestration stack is justified. The missing surface is a manual one-job wrapper, an
+explicit bounded calibration population, durable environment/protocol/summary evidence, checksums,
+runtime/feasibility reporting and semantic safety tests.
+
+The SpecKit specify/clarify/plan/tasks artifacts were reconciled accordingly:
+
+- `spec.md` replaces the obsolete dedicated-host provisioning premise with D20-43's shared,
+  ephemeral GitHub-hosted contract; one attempt equals one workflow job, runner allocation,
+  environment manifest and complete comparable set; profiles are sequential; an interrupted attempt
+  restarts whole; calibration is explicitly not acceptance;
+- `plan.md` records a reuse-first 12-capability matrix mapping existing support, exact gaps and the
+  smallest proposed workflow/script/test files;
+- `tasks.md` decomposes still-open U7-PRE-001 into reconciliation, implementation, publication and
+  bounded calibration/certification subtasks. Only reconciliation (`U7-PRE-001a`) is checked.
+
+The planned real implementation boundary for the next phase is deliberately narrow:
+
+```text
+.github/workflows/reference-calibration.yml
+package.json
+lighthouserc.cjs
+scripts/lighthouse-ci.mjs
+scripts/lib/lighthouse-governed-urls.cjs
+scripts/lib/lighthouse-coverage.mjs
+scripts/reference-calibration-evidence.mjs
+scripts/reference-calibration-workflow.spec.mjs
+scripts/reference-calibration-evidence.spec.mjs
+focused existing Lighthouse coverage/lifecycle tests only where the new calibration mode requires it
+.specify/specs/frontend-v1/{tasks.md,ledger.md}
+```
+
+No dependency or lockfile change is planned. No workflow was added or executed in this checkpoint.
+No D20 file, remote branch, PR, shared ref, production system or paid infrastructure changed.
+
+Validation at this boundary:
+
+```text
+git diff --check
+<no output; exit 0>
+
+stale authoritative phrase search
+<no remaining REFERENCE ENVIRONMENT PROVISIONING REQUIRED / provisioning-required plan text>
+```
+
+A separate read-only review was requested twice, but the agent runtime returned `workspace is out of
+credits` without reviewing or changing files. Therefore independent review is explicitly **pending**
+and must occur before the real implementation is certified; this checkpoint does not self-approve it.
+
+Campaign state remains `U7-PRE-001` open, `U7-PRE-002` closed, `U7-PRE-003` open, U7-A01 unchecked,
+U7-G3 not passed, FE5-U7 acceptance not started, production untouched and no paid infrastructure.
+
+**Next three actions.**
+
+1. Implement the bounded calibration mode and evidence pack strictly within the recorded boundary, proving each new instrument with a negative control.
+2. Run focused lint/typecheck/unit/workflow/lifecycle validation and obtain a separate read-only implementation review; correct every material finding.
+3. Commit the real Phase 1 implementation and a distinct ledger checkpoint, leaving D20/Web publication and GitHub calibration execution for the next governed phase.
+
+---
+
+## PRE-U7 GitHub-hosted reference implementation checkpoint · 2026-09-19
+
+U7-PRE-001b is complete in local Web implementation commit
+`d718530c3fa07b00d297d509f8b907cd5da05011`
+(`feat(performance): add governed reference calibration`), based on the certified SpecKit checkpoint
+`4df4dca6ca85e59c1b67ca64c0f319cb5fade357`. The implementation composes the existing governed
+Nitro/Prism/TLS/HTTP2/provenance/lifecycle stack; it does not introduce a second server or cleanup
+path.
+
+The new manual-only workflow has exactly one `ubuntu-latest` job and no matrix. It checks out the
+exact workflow SHA without persisted credentials, installs the lockfile, runs the blocking HIGH+
+audit, captures runner capacity before measurement, runs both profiles sequentially over the bounded
+four-route calibration population and uploads one SHA-bound checksummed package. The package and job
+summary carry the exact classification `CALIBRATION ONLY — NOT FE5-U7 ACCEPTANCE EVIDENCE`.
+
+The retained package contains:
+
+- a start-of-measurement GitHub/runner/capacity/toolchain/fixture snapshot including CPU steal, plus
+  a post-measurement capacity observation;
+- exact source/tree/lock/build provenance and raw-report content hashes;
+- 24 raw LHR JSON files: four EN/AR Home/Project paths × mobile/desktop × three runs;
+- EN/AR deterministic Prism fixture proof and direct preflight plus measured-session HTTP2 proof;
+- unfiltered category/LCP/CLS values with median/min/max/range/relative spread and a separately
+  labelled 96-audit feasibility projection;
+- a sorted `SHA256SUMS`, verified bidirectionally against every packaged file.
+
+The verifier fails closed on incomplete or mixed-version matrices, non-numeric metrics, summary/raw
+disagreement, unsafe/duplicate/missing/extra checksum entries, source/provenance/directory mismatch,
+unbound raw reports, non-calibration provenance, absent/distorted EN/AR fixtures, an empty or
+non-HTTP2 direct preflight, or non-HTTP2 measured sessions. The workflow semantic test rejects any
+non-manual trigger, runner matrix, self-hosted runner, acceptance-sized mode, deployment/SSH command
+or action, production environment, repository secret, tracked-state write, missing blocking command,
+or non-SHA-bound artifact upload.
+
+### Instrument proof and validation
+
+The workflow validator's negative control temporarily changed `LH_RUN_MODE: calibration` to
+`LH_RUN_MODE: governed`. The test failed on the intended signal:
+
+```text
+FAIL scripts/reference-calibration-workflow.spec.mjs
+Error: bounded calibration mode and both profiles must be explicit
+Test Files 1 failed
+Tests 2 failed | 4 passed
+```
+
+The source was restored before commit. Evidence tests independently corrupt checksums, remove a
+checksummed artifact, truncate the matrix and replace the direct protocol preflight with an empty
+array; each defect is rejected. Final evidence:
+
+```text
+npx eslint scripts/reference-calibration-evidence.mjs scripts/reference-calibration-evidence.spec.mjs scripts/reference-calibration-workflow.spec.mjs scripts/lighthouse-ci.mjs scripts/lighthouse-ci.spec.mjs scripts/lib/lighthouse-coverage.mjs scripts/lib/lighthouse-governed-urls.cjs lighthouserc.cjs
+<no output; exit 0>
+
+npx vitest run scripts/reference-calibration-workflow.spec.mjs \
+  scripts/reference-calibration-evidence.spec.mjs \
+  scripts/check-lighthouse-medians.spec.mjs \
+  scripts/lib/lighthouse-coverage.spec.mjs
+Test Files 4 passed (4)
+Tests 59 passed (59)
+
+npx vitest run scripts/lighthouse-ci.spec.mjs
+Test Files 1 passed (1)
+Tests 30 passed (30)
+
+npm test
+Test Files 172 passed (172)
+Tests 2637 passed (2637)
+
+npm audit --audit-level=high
+14 vulnerabilities (1 low, 13 moderate)
+<exit 0; no HIGH or CRITICAL finding>
+
+npm run reference:calibration:snapshot
+(instrument smoke only against the uncommitted implementation tree; not calibration evidence)
+sourceSha=4df4dca6ca85e59c1b67ca64c0f319cb5fade357
+Lighthouse=12.6.1; LHCI=0.15.1; Chrome=153.0.8010.36
+all required capacity fields present, including load and cpuStealJiffies
+
+git diff --check
+<no output; exit 0>
+```
+
+The lifecycle suite's first restricted-sandbox attempt was non-evidentiary: every `beforeEach`
+failed with `listen EPERM` because loopback binding was denied. The same isolated suite passed 30/30
+with loopback permission, and the final full suite passed 2637/2637. The dependency audit reported
+only existing LOW/MODERATE advisories and passed the governed HIGH+ threshold; no dependency or
+lockfile changed.
+
+An independent read-only reviewer found four initial contract/correctness issues and two further
+instrument gaps: non-exact artifact classification, post-measurement-only capacity/no CPU steal,
+insufficient secret/U7-mutation action checks, a top-level provenance schema mismatch plus missing
+raw-report binding, acceptance of an empty direct protocol proof and non-allowlisted action steps.
+All six were corrected. The reviewer re-read the final bounded diff, reran focused tests (16/16),
+found no remaining actionable issue and **approved the local implementation checkpoint only**. The
+review explicitly does not certify calibration results or remote execution.
+
+No workflow was dispatched. No branch was pushed, no PR created, no D20 source changed, no shared
+ref moved, and no production/deployment system or data was touched. `U7-PRE-001` remains open;
+U7-PRE-001c publication and U7-PRE-001d bounded calibration/certification remain open;
+`U7-PRE-003` remains open; U7-A01 remains unchecked; U7-G3 is not passed; FE5-U7 acceptance has not
+started. The existing Web Phase 1 checkpoint `f330b12` remains unchanged.
+
+**Next three actions.**
+
+1. Publish and merge the already-certified two-file D20-43 Docs change through its normal Docs PR flow, then publish the Web implementation through its normal PR/integration flow.
+2. Dispatch only the merged manual 24-audit calibration workflow and retain its single-runner artifact; do not run the 96-audit acceptance matrix.
+3. Independently review repeatability, provenance, protocol, checksums and feasibility, closing only U7-PRE-001d/U7-PRE-001 if every calibration contract passes; leave U7-PRE-003 and U7-A01 for their separately authorized phases.
+
+---
+
+## PRE-U7 governed publication zero-trust resume checkpoint · 2026-09-19
+
+Publication resumed from the locally certified reference-calibration implementation checkpoint only
+after fresh fetches and direct GitHub PR reads. The committed ledger was treated as a claim and
+reconciled independently before any branch push, PR creation or merge.
+
+| Claim | Checkpoint says | Fresh live state | Result |
+| --- | --- | --- | --- |
+| Web worktree | `chore/frontend-v1-u7-github-reference-execution` at `bf352f1dc8003811902b80e3a7fb14f93b5dc3cd`, clean | exact branch and HEAD; worktree exists; `git status --porcelain` empty | exact |
+| Web implementation | `d718530c3fa07b00d297d509f8b907cd5da05011` | commit resolves exactly in the resumed lineage | exact |
+| Web `origin/dev` | `175017024b24de3ab40b9e4935e76f49cc81ff73` | same after fresh fetch | exact |
+| Web `origin/main` | `40eb52c6470579c19131d3cede41ccc9b295bdf5` | same after fresh fetch | exact |
+| Web divergence | six local commits; reference workflow plus SpecKit/evidence only | `origin/dev...HEAD` = 0 behind / 6 ahead; 14 expected files | exact |
+| Web publication | no reference-execution branch or PR | no matching remote branch; six unrelated open PRs only | exact |
+| Docs worktree | `docs/d20-github-reference-execution` at `8c6d269afb6795993db09ca695b130da5d2dcd04`, clean | exact branch and HEAD; worktree exists; `git status --porcelain` empty | exact |
+| Docs `origin/main` | `5001ae62573ae488a16a552b1de9d7d1d03f72ab` | same after fresh fetch | exact |
+| D20-43 scope | exactly `docs/20-performance.md` plus generated `docs/group/03-delivery-and-roadmap.md` | `origin/main...HEAD` = 0 behind / 1 ahead; exactly those two modified files | exact |
+| D20-43 publication | no remote branch or PR | no matching remote branch; no open Docs PRs | exact |
+| PRE-U7 state | `U7-PRE-001c/d` open; `U7-PRE-003` open; U7-A01 unchecked | authoritative `tasks.md` still records those exact states | exact |
+
+No open Docs PR can overlap D20 governance because the open Docs PR set is empty. The existing D20-43
+source and generated-bundle occurrences are confined to the approved two-file change; fetched
+`origin/main` contains no D20-43 or equivalent GitHub-hosted reference-execution decision. No Web
+production deployment file, production SSH path, unrelated application behavior or dependency
+upgrade appears in the accumulated branch diff.
+
+**Zero drift. Governed publication may proceed.**
+
+**Next three actions.**
+
+1. Push the existing one-commit D20-43 branch, open the focused Docs PR to `main`, and certify its exact remote head and required checks.
+2. Perform the final read-only D20-43 uniqueness/generated-bundle review, squash merge the certified Docs PR, and record the authoritative merge SHA.
+3. Reconcile Web evidence to that merge SHA only if campaign convention requires it, then run the scoped local publication gate before opening the focused Web PR to `dev`.
+
+---
+
+## PRE-U7 D20-43 publication and merge checkpoint · 2026-09-20
+
+The already-certified D20-43 change was published without rewriting its local history as Central
+Docs PR [#66](https://github.com/eslammuatamed/eslammuatamed-docs/pull/66), titled
+`docs(performance): govern GitHub-hosted reference execution`.
+
+Exact PR identity and scope:
+
+| Field | Certified value |
+| --- | --- |
+| Base | Docs `main` at `5001ae62573ae488a16a552b1de9d7d1d03f72ab` |
+| Head | `8c6d269afb6795993db09ca695b130da5d2dcd04` |
+| Commits | one: `8c6d269` (`docs(performance): govern GitHub reference execution`) |
+| Changed files | `docs/20-performance.md`; `docs/group/03-delivery-and-roadmap.md` |
+| Diff size | 79 additions / 2 deletions in each file |
+| Mergeability before merge | `MERGEABLE` / `CLEAN` |
+| Attached GitHub checks | none; this Docs repository has no Actions workflow or PR check rollup |
+
+The applicable certification gates passed on that exact head:
+
+```text
+npm run docs:group:check
+docs:group:check OK — 3 bundles, 25 sources, all current.
+
+node /tmp/d20-43-governance-audit.mjs <docs-worktree>
+D20-43 governance audit PASS
+
+git diff --check origin/main...HEAD
+<no output; exit 0>
+```
+
+A separate read-only reviewer independently queried the live PR and re-ran the local review. It
+confirmed one commit, the exact two-file diff, one normative D20-43 source heading, no duplicate
+decision heading IDs, a current deterministic bundle, a clean worktree, and no modification of any
+existing Lighthouse threshold, route, profile, median, protocol, budget or unrelated governance.
+The review verdict was **PASS with zero material findings**.
+
+PR #66 was squash-merged only after that certification. The authoritative Docs merge commit and
+freshly fetched final Docs `origin/main` are both:
+
+```text
+eb8d25cdca1885b3601dc7b36d8a38172b0ccdcd
+```
+
+D20-43 is therefore authoritative. The local Docs topic branch remains clean at its original
+certified head `8c6d269`; its remote topic branch also remains at that head. No branch was force
+pushed or rewritten.
+
+Web remains unpublished at the pre-publication checkpoint lineage. At this boundary its pre-ledger
+HEAD was `ed249fcef605c1112f48922f4a7a72ddd21c8c24`, Web `origin/dev` remains
+`175017024b24de3ab40b9e4935e76f49cc81ff73`, and Web `origin/main` remains
+`40eb52c6470579c19131d3cede41ccc9b295bdf5`. No Web PR or workflow run was created. `U7-PRE-001c`
+and `U7-PRE-001d` remain open; `U7-PRE-003` remains open; U7-A01 remains unchecked; U7-G3 is not
+passed; FE5-U7 acceptance has not started; production and paid infrastructure remain untouched.
+
+**Next three actions.**
+
+1. Inspect whether Web SpecKit/evidence convention requires the authoritative D20-43 merge SHA; if required, make only that smallest documentation/evidence update.
+2. Audit every `origin/dev...HEAD` Web file against the approved calibration/SpecKit categories and run the certification-sensitive local publication gate on the final exact head.
+3. Push the exact Web branch, open the focused calibration-infrastructure PR to `dev`, and certify all required PR CI before merge; do not dispatch calibration until exact merge-SHA integration CI passes.
+
+---
+
+## PRE-U7 Web publication zero-trust resume checkpoint · 2026-09-20
+
+Web publication resumed from the post-D20 checkpoint only after fresh remote fetches, direct GitHub
+PR reads, exact lineage checks and a complete accumulated-diff inventory. No branch push, PR,
+workflow dispatch or shared-ref mutation preceded this checkpoint.
+
+| Claim | Ledger/handoff says | Fresh live state | Result |
+| --- | --- | --- | --- |
+| Web branch and head | `chore/frontend-v1-u7-github-reference-execution` at `e9d8bd8487c08f76cadfad817f52677309203abb` | exact branch/head; worktree exists and `git status --porcelain` is empty | exact |
+| Certified lineage | contains `d718530c`, `bf352f1d` and `e9d8bd84` | all three are ancestors of live HEAD | exact |
+| Web `origin/dev` | `175017024b24de3ab40b9e4935e76f49cc81ff73` | same after fresh fetch | exact |
+| Web `origin/main` | `40eb52c6470579c19131d3cede41ccc9b295bdf5` | same after fresh fetch | exact |
+| Divergence | local publication lineage only | 0 behind / 8 ahead of `origin/dev` | exact |
+| Web publication | no reference-execution remote branch or PR | no matching remote branch; six unrelated open PRs only | exact |
+| Authoritative Docs | D20-43 merged at `eb8d25cdca1885b3601dc7b36d8a38172b0ccdcd` | Docs `origin/main` is exactly that merge after fresh fetch | exact |
+| PRE-U7 status | U7-PRE-001/c/d open; U7-PRE-003 open; U7-A01 unchecked | authoritative `tasks.md` records those exact states | exact |
+
+The 14-file `origin/dev...HEAD` diff is completely classified: one manual reference-calibration
+workflow; calibration commands and orchestration in `package.json`, `lighthouserc.cjs` and
+`scripts/lighthouse-ci.mjs`; bounded route/coverage helpers; the environment/provenance/evidence
+packager; three focused test files plus the focused existing Lighthouse test; and FE5-U7
+`spec.md`/`plan.md`/`tasks.md`/append-only ledger evidence. Unexpected files are zero. There is no
+`deploy.yml`, lockfile, application or server product file, production deployment/SSH change,
+unrelated dependency upgrade or U7 acceptance-state mutation.
+
+One factual provenance lag remains inside Web SpecKit: `spec.md` still describes local Docs commit
+`8c6d269` as pending publication, and `tasks.md` still names pre-merge Docs baseline `5001ae6` as its
+input. The append-only ledger already records authoritative merge `eb8d25c`. Campaign convention
+therefore requires the smallest source-of-truth update to those two metadata lines before Web
+publication; implementation logic remains unchanged.
+
+**Zero drift. Scoped Web publication work may proceed.**
+
+**Next three actions.**
+
+1. Update only the stale `spec.md` and `tasks.md` Docs-provenance metadata to authoritative merge `eb8d25cdca1885b3601dc7b36d8a38172b0ccdcd` and append the resulting exact evidence.
+2. Run the focused security, workflow-contract, reference-calibration and diff-hygiene publication gates on the final exact Web head.
+3. Push that exact branch without rewriting history, open the focused PR to `dev`, and certify its exact GitHub diff and required CI before any merge or calibration dispatch.
+
+### D20-43 authoritative merge-provenance reconciliation
+
+The two stale Web SpecKit metadata lines now identify Central Docs
+`eb8d25cdca1885b3601dc7b36d8a38172b0ccdcd` as the authoritative baseline and retain
+`8c6d269afb6795993db09ca695b130da5d2dcd04` only as the source implementation commit behind merged
+Docs PR #66. No historical ledger entry was rewritten. No workflow, runtime, test, dependency,
+lockfile or acceptance-status byte changed in this reconciliation.
+
+### Focused local publication gate
+
+The first restricted-sandbox invocation of the 30-test Lighthouse lifecycle suite did not produce
+a verdict because its server lifecycle requires loopback binding; it was interrupted by the process
+that started it and is non-evidentiary. The same unchanged suite then ran with loopback permission
+and passed. The certification-sensitive results before this evidence-only checkpoint were:
+
+```text
+npm audit --audit-level=high
+14 vulnerabilities (1 low, 13 moderate)
+<exit 0; 0 high, 0 critical>
+
+npx vitest run scripts/reference-calibration-workflow.spec.mjs \
+  scripts/reference-calibration-evidence.spec.mjs \
+  scripts/check-lighthouse-medians.spec.mjs \
+  scripts/lib/lighthouse-coverage.spec.mjs
+Test Files 4 passed (4)
+Tests 59 passed (59)
+
+npx vitest run scripts/lighthouse-ci.spec.mjs
+Test Files 1 passed (1)
+Tests 30 passed (30)
+
+git diff --check origin/dev...HEAD
+<no output; exit 0>
+```
+
+Only this append-only evidence is added after those commands. The focused gates are rerun once on
+the resulting exact pre-push head and no further local commit is permitted before publication.

@@ -40,7 +40,8 @@
  * report file is bound to it by content hash. See `lib/build-provenance.mjs`.
  */
 import { execFileSync, spawn } from 'node:child_process'
-import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync } from 'node:fs'
+import { createHash } from 'node:crypto'
+import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import process from 'node:process'
@@ -50,7 +51,7 @@ import { assertCleanSourceState, governedBuildEnv, headSha, validateProvenance, 
 import { assertCollectionUsedH2, formatProtocolSummary } from './lib/lh-protocol.mjs'
 import { browserProfileDir, trackProcessTree } from './lib/process-tree.mjs'
 import { createResourceGuard } from './lib/lifecycle-guard.mjs'
-import { PROFILES, resolveProfile } from './lib/lighthouse-governed-urls.cjs'
+import { PROFILES, resolveLighthousePaths, resolveProfile } from './lib/lighthouse-governed-urls.cjs'
 import { assertGovernedUrlCoverage, describeCoverage } from './lib/lighthouse-coverage.mjs'
 
 /**
@@ -84,6 +85,15 @@ const SELECTED_PROFILES = (() => {
   }
   return names.map(resolveProfile)
 })()
+
+const RUN_MODE = process.env.LH_RUN_MODE ?? 'governed'
+const EXPECTED_PATHS = resolveLighthousePaths(RUN_MODE)
+if (RUN_MODE === 'calibration' && process.env.REFERENCE_CALIBRATION_ONLY !== '1') {
+  throw new Error(
+    'LH_RUN_MODE=calibration requires REFERENCE_CALIBRATION_ONLY=1. Calibration is a bounded '
+    + 'instrument run and must never be mistaken for the governed 96-audit acceptance matrix.'
+  )
+}
 
 const WEB_PORT = Number(process.env.CI_PREVIEW_PORT ?? 3000)
 const API_PORT = Number(process.env.CI_MOCK_PORT ?? 3001)
@@ -437,10 +447,39 @@ function assertProfileProtocol(reports, profile) {
 function assertProfileCoverage(reports, profile) {
   const covered = assertGovernedUrlCoverage(
     reports.map(lhr => ({ formFactor: lhr?.configSettings?.formFactor, url: lhr?.requestedUrl })),
-    [profile]
+    [profile],
+    EXPECTED_PATHS,
+    RUN_MODE
   )
-  console.log(`[lighthouse:ci] ${describeCoverage(covered)}`)
+  console.log(`[lighthouse:ci] ${describeCoverage(covered, EXPECTED_PATHS.length, RUN_MODE)}`)
   return covered
+}
+
+/** Prove both locale fixtures resolve from Prism before any reference measurement begins. */
+function assertPrismLocales() {
+  const expected = {
+    en: 'I’m a Full-Stack JavaScript Product Engineer',
+    ar: 'أحوّل متطلبات المنتج'
+  }
+  const result = {}
+  for (const [locale, fragment] of Object.entries(expected)) {
+    const raw = execFileSync('curl', ['-sf', `http://127.0.0.1:${API_PORT}/api/v1/settings/site?locale=${locale}`], {
+      encoding: 'utf8', maxBuffer: 4 * 1024 * 1024
+    })
+    const body = JSON.parse(raw)
+    const bio = body?.data?.aboutBio
+    if (typeof bio !== 'string' || !bio.includes(fragment)) {
+      throw new Error(`Prism ${locale} preflight did not return the governed locale fixture`)
+    }
+    result[locale] = { locale, aboutBioSha256: createHash('sha256').update(bio).digest('hex') }
+  }
+  if (result.en.aboutBioSha256 === result.ar.aboutBioSha256) {
+    throw new Error('Prism locale preflight returned identical EN and AR fixture content')
+  }
+  const proof = { schemaVersion: 1, endpoint: '/api/v1/settings/site', fixtures: result }
+  writeFileSync('.lighthouseci/prism-preflight.json', `${JSON.stringify(proof, null, 2)}\n`)
+  console.log('[lighthouse:ci] Prism EN/AR fixture preflight PASSED')
+  return proof
 }
 
 /**
@@ -500,6 +539,7 @@ async function primeSwrRoute(path) {
 }
 
 async function main() {
+  console.log(`[lighthouse:ci] mode=${RUN_MODE}; ${EXPECTED_PATHS.length} paths × ${SELECTED_PROFILES.length} profiles × 3 runs`)
   const marker = await ensureGovernedBuild()
 
   // Stale reports from an earlier run would be read back both by the protocol proof and by the
@@ -525,6 +565,8 @@ async function main() {
   const previewTracker = trackProcessTree(preview.pid)
   await guard.own('preview', preview, child => terminateTree(child, 'preview', previewTracker))
   await waitForPort(WEB_PORT, 'nitro preview')
+
+  const prismPreflight = RUN_MODE === 'calibration' ? assertPrismLocales() : null
 
   guard.assertRunning()
   console.log('[lighthouse:ci] generating ephemeral localhost certificate…')
@@ -582,6 +624,9 @@ async function main() {
 
   console.log(`\n[lighthouse:ci] browser-session protocol PROVEN h2 for every ${SELECTED_PROFILES.join(' + ')} report (D20-25)`)
 
+  const protocolProof = { schemaVersion: 1, mode: RUN_MODE, preflight: proto, measured: protocol }
+  writeFileSync('.lighthouseci/protocol-proof.json', `${JSON.stringify(protocolProof, null, 2)}\n`)
+
   // Nothing may have shifted underneath the collection either.
   assertProvenanceAtMeasurementTime(marker)
 
@@ -590,7 +635,7 @@ async function main() {
   // checked out at the time".
   const record = writeReportProvenance({
     marker,
-    extra: { protocol }
+    extra: { mode: RUN_MODE, expectedPaths: EXPECTED_PATHS, prismPreflight, protocol }
   })
   console.log(`[lighthouse:ci] ${record.reports.length} report files bound to HEAD ${record.identity.head} (tree ${record.identity.tree.slice(0, 12)}, output ${record.identity.outputHash.slice(0, 12)})`)
 

@@ -36,7 +36,7 @@
  *   No TBT threshold is asserted because doc 20 §1 does not state one — inventing budgets is
  *   forbidden.
  */
-const { GOVERNED_PATHS, resolveProfile } = require('./scripts/lib/lighthouse-governed-urls.cjs')
+const { resolveLighthousePaths, resolveProfile } = require('./scripts/lib/lighthouse-governed-urls.cjs')
 
 // D20-25: governed collection happens through the local HTTP/2 frontend that
 // `scripts/lighthouse-ci.mjs` owns. `LH_BASE_URL` is set by that orchestrator; running `lhci`
@@ -52,7 +52,7 @@ if (!BASE) {
 
 // The governed population lives in ONE place and is asserted back by the median gate; see
 // `scripts/lib/lighthouse-governed-urls.cjs`. Collection is the origin + each governed path.
-const urls = GOVERNED_PATHS.map(path => `${BASE}${path === '/' ? '/' : path}`)
+const urls = resolveLighthousePaths(process.env.LH_RUN_MODE).map(path => `${BASE}${path === '/' ? '/' : path}`)
 
 // Each profile writes to its OWN directory. A shared directory would let the assertion step read
 // desktop and mobile reports as one pool — and while the medians are grouped by each report's own

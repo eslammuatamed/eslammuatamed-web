@@ -10,7 +10,8 @@
 
 **Definition status:** Authoritative when merged to `dev`; acceptance not started
 
-**Authoritative Docs baseline:** Central Docs `5001ae62573ae488a16a552b1de9d7d1d03f72ab`
+**Authoritative Docs baseline:** Central Docs `eb8d25cdca1885b3601dc7b36d8a38172b0ccdcd`; D20-43 is
+authoritative through PR #66 (source commit `8c6d269afb6795993db09ca695b130da5d2dcd04`)
 
 **Definition base:** Web `e79d24beca25704c4643579c5e3a25c7f482f46d`
 
@@ -32,14 +33,14 @@ separate owner-governed lifecycle actions after U7.
 | --- | --- |
 | U7 definition | Complete on Web `dev` |
 | Candidate SHA/tree | Not frozen for U7 |
-| Governed reference environment | **BLOCKED — REFERENCE ENVIRONMENT PROVISIONING REQUIRED** |
+| Governed reference execution | **BLOCKED — GITHUB-HOSTED CALIBRATION INFRASTRUCTURE AND CERTIFICATION REQUIRED** |
 | Security remediation | **Complete — blocking full-graph HIGH+ PR/integration gate certified** |
 | Manual accessibility | Outstanding |
 | Canonical content reconciliation | Outstanding |
 | Production deployment | Not part of U7 |
 
 These conditions do not mean U7 acceptance failed: acceptance has not started. The missing governed
-reference environment prevents governed Lighthouse execution and therefore prevents the acceptance
+reference execution prerequisite prevents governed Lighthouse execution and therefore prevents the acceptance
 unit from being ready to start.
 
 ## 3. Prerequisites
@@ -50,13 +51,13 @@ unit from being ready to start.
 | --- | --- | --- |
 | SP-1 | Authoritative U7 definition merged to Web `dev` | Satisfied |
 | SP-2 | One exact candidate commit SHA, tree SHA, lockfile hash, branch/base, and relevant CI run selected and frozen by controlled start task U7-A01 before downstream evidence collection | Outstanding |
-| SP-3 | Controlled governed Lighthouse reference environment provisioned, capacity-identified, and bound to the candidate | **Blocked — provisioning required outside U7** |
+| SP-3 | Governed GitHub-hosted Lighthouse reference execution implemented and calibrated: one attempt is one Actions job, one allocated runner, one manifest, and one complete comparable measurement set | **Blocked — calibration infrastructure and certification required outside U7** |
 | SP-4 | Evidence locations, schemas, checklists, retention rules, operators, and D20-conformant measurement semantics are assigned | Schemas defined and strict CLS comparator reconciled; remaining evidence locations/operators stay outstanding |
 | SP-5 | Manual accessibility target matches shipped v1: Markdown textarea and explicit save, not Tiptap/autosave | Satisfied in Central Docs D05-5 via PR #65 |
 
 SP-1, SP-3, SP-4, and SP-5 must pass before the controlled U7 start. U7-A01 is the sole start-control
 task and immediately discharges SP-2; no downstream acceptance evidence may be collected until all
-five SP items pass. SP-3 provisioning and security-gate repair are pre-U7 prerequisite work, not
+five SP items pass. SP-3 reference-execution certification and security-gate repair are pre-U7 prerequisite work, not
 acceptance tasks.
 
 ### 3.2 Closure prerequisites
@@ -86,14 +87,24 @@ acceptance tasks.
 
 ### 5.1 Reference environment
 
-The hard reference must be non-production, controlled, isolated, repeatable, capacity-identified,
-production-mode built, bound to the exact SHA/tree/lockfile, use the approved deterministic
-upstream/data model, verify the browser-facing HTTP protocol, and retain artifacts. Record host and
-capacity identity sufficiently to judge comparability. Public production is diagnostic only; an
-arbitrary developer workstation is not governed evidence.
+The hard reference uses **Governed GitHub-Hosted Reference Execution** on a standard GitHub-hosted
+Linux runner. One acceptance attempt is one workflow job, one allocated runner, one captured
+environment manifest and one complete comparable measurement set. Mobile and desktop execute
+sequentially on that runner. Measurements from different jobs or runner allocations are never mixed;
+runner or orchestration loss invalidates the partial attempt and restarts the whole attempt.
 
-**Current status:** `REFERENCE ENVIRONMENT PROVISIONING REQUIRED`. This definition task does not
-provision it.
+The job checks out the exact SHA, performs `npm ci`, builds production Nuxt/Nitro output, uses the
+committed deterministic Prism/OpenAPI fixtures, starts the Nitro production server behind an
+ephemeral local TLS/HTTP2 proxy, and proves document plus representative first-party assets negotiated
+`h2` from Chrome's recorded network evidence. It retains raw reports, manifest, provenance, protocol
+proof, summaries and SHA-256 checksums. Runner capacity is observed per attempt — OS/image, architecture,
+CPU, logical cores, RAM, kernel, filesystem/disk and tool versions where available — and is never
+described as dedicated or hardware-identical across runs. Public production remains diagnostic only;
+an arbitrary developer workstation remains non-authoritative.
+
+**Current status:** `GITHUB-HOSTED CALIBRATION INFRASTRUCTURE REQUIRED`. A bounded calibration may
+characterize repeatability and one-job feasibility but is labelled `CALIBRATION ONLY — NOT FE5-U7
+ACCEPTANCE EVIDENCE`; it does not freeze a candidate, run the 96-audit matrix or pass U7-G3.
 
 ### 5.2 Matrix and thresholds
 
@@ -226,7 +237,7 @@ status, source-consistency review, D16-8 sign-off, operator/reviewer, and final 
 
 - Product feature implementation or unrelated refactors.
 - Dependency, lockfile, security, or CI-workflow remediation itself.
-- Reference-environment provisioning itself.
+- Purchasing or provisioning a dedicated reference VPS/VM; D20-43 explicitly requires neither.
 - Tiptap, autosave, `/uses`, RSS, generated-OG feature work, command palette, or ordering controls.
 - Issue #30, private Docs publication, API CJS→ESM migration, or FE5-U8/later implementation.
 - `content:sync` execution in this definition task.

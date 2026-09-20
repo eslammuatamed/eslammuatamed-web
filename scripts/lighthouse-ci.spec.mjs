@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { writeProvenance } from './lib/build-provenance.mjs'
-import { GOVERNED_PATHS } from './lib/lighthouse-governed-urls.cjs'
+import { CALIBRATION_PATHS, GOVERNED_PATHS } from './lib/lighthouse-governed-urls.cjs'
 
 /**
  * Lifecycle trust gate for the governed Lighthouse orchestrator (doc 20 §5.1, D20-25).
@@ -130,7 +130,13 @@ const web = http.createServer((req, res) => {
   res.writeHead(200, { 'content-type': 'text/html;charset=utf-8' }); res.end(homeDoc(req.url))
 })
 web.listen(Number(process.env.CI_PREVIEW_PORT), '127.0.0.1')
-const api = http.createServer((req, res) => { res.writeHead(200, { 'content-type': 'application/json' }); res.end('{}') })
+const api = http.createServer((req, res) => {
+  const locale = new URL(req.url, 'http://127.0.0.1').searchParams.get('locale')
+  const aboutBio = locale === 'ar'
+    ? 'أنا مهندس، أحوّل متطلبات المنتج إلى واقع.'
+    : 'I’m a Full-Stack JavaScript Product Engineer who ships products.'
+  res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify({ data: { aboutBio } }))
+})
 api.listen(Number(process.env.CI_MOCK_PORT), '127.0.0.1')
 `)
 
@@ -249,7 +255,9 @@ mkdirSync(dir, { recursive: true })
 const proto = mode === 'h1' ? 'http/1.1' : 'h2'
 // The GOVERNED population, injected from the real module rather than restated here, so this
 // fixture cannot drift out of agreement with the list the orchestrator asserts coverage against.
-const paths = ${JSON.stringify(GOVERNED_PATHS)}
+const paths = process.env.LH_RUN_MODE === 'calibration'
+  ? ${JSON.stringify(CALIBRATION_PATHS)}
+  : ${JSON.stringify(GOVERNED_PATHS)}
 paths.forEach((route, i) => {
   const url = base + route
   const lhr = {
@@ -486,6 +494,26 @@ describe('governed orchestrator — profile sharding (Stage 2B)', () => {
 
     expect(code).toBe(0)
     expect(out).toMatch(/desktop: all 16\/16 governed URLs collected/)
+  })
+
+  it('43 — calibration is explicit, bounded to 24 audits, and retains fixture/protocol proof', async () => {
+    const { done } = runOrchestrator({ LH_RUN_MODE: 'calibration', REFERENCE_CALIBRATION_ONLY: '1' })
+    const { code, out } = await done
+
+    expect(code).toBe(0)
+    expect(out).toMatch(/mode=calibration; 4 paths × 2 profiles × 3 runs/)
+    expect(out).toMatch(/Prism EN\/AR fixture preflight PASSED/)
+    expect(out).toMatch(/mobile: all 4\/4 calibration URLs collected/)
+    expect(out).toMatch(/desktop: all 4\/4 calibration URLs collected/)
+    expect(existsSync(join(sandbox, '.lighthouseci', 'prism-preflight.json'))).toBe(true)
+    expect(existsSync(join(sandbox, '.lighthouseci', 'protocol-proof.json'))).toBe(true)
+  })
+
+  it('44 — calibration mode refuses to run without the explicit non-acceptance marker', async () => {
+    const { done } = runOrchestrator({ LH_RUN_MODE: 'calibration' })
+    const { code, out } = await done
+    expect(code).not.toBe(0)
+    expect(out).toMatch(/requires REFERENCE_CALIBRATION_ONLY=1/)
   })
 
   // The failure mode sharding introduces: an unrecognised profile must STOP the run, not fall back.

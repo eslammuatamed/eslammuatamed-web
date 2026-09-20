@@ -1,8 +1,8 @@
 # Tasks: FE5-U7 — Frontend v1 Release Acceptance Evidence
 
-**Input:** `spec.md`, `plan.md`, Central Docs `5001ae62573ae488a16a552b1de9d7d1d03f72ab`
+**Input:** `spec.md`, `plan.md`, Central Docs `eb8d25cdca1885b3601dc7b36d8a38172b0ccdcd`
 
-**Status:** Definition complete; security and CLS prerequisites complete; governed reference environment pending; acceptance tasks unstarted
+**Status:** Definition complete; security and CLS prerequisites complete; governed GitHub-hosted reference execution pending; acceptance tasks unstarted
 
 **Rule:** A failed gate stops that gate and opens/authorizes separate remediation. Never prescribe or
 silently implement a fix inside acceptance.
@@ -20,7 +20,11 @@ silently implement a fix inside acceptance.
 These tasks are not U7 acceptance execution and require their own authorization, branches, tests,
 reviews, and D16-8 closeout.
 
-- [ ] **U7-PRE-001** Provision/identify the governed non-production Lighthouse reference environment satisfying `spec.md` §5.1; retain capacity and protocol proof.
+- [ ] **U7-PRE-001** Implement, calibrate and independently certify Governed GitHub-Hosted Reference Execution satisfying `spec.md` §5.1 and D20-43; retain observed capacity, provenance, repeatability, protocol, feasibility and artifact proof. This task remains open until calibration certification, and never runs U7 acceptance.
+  - [x] **U7-PRE-001a** Reconcile the dedicated-host assumption, certify D20-43 locally, and prove no prior implementation exists across reasonable Git refs.
+  - [x] **U7-PRE-001b** Implement the manual, one-job GitHub-hosted calibration workflow plus environment/evidence packaging and focused discriminating tests.
+  - [ ] **U7-PRE-001c** Publish the D20-43 and Web implementation changes through their normal PR/integration workflows.
+  - [ ] **U7-PRE-001d** Run bounded calibration only, certify same-runner repeatability, direct h2 proof, artifacts/checksums and 96-audit one-job feasibility, then independently review the result.
 - [x] **U7-PRE-002** Remediate the Web **CI SECURITY GATE DEFECT** so the D19-11 high+ audit blocks PR/integration CI; do not infer a `deploy.yml` requirement.
 - [ ] **U7-PRE-003** Certify prerequisite outputs independently and record their merged SHAs/evidence locations in the append-only ledger.
 - [x] **U7-PRE-004** Reconcile the current Lighthouse summarizer's `0.05`-passes comparator with authoritative D20 `CLS < 0.05`; prove the strict boundary with a negative control in a separately authorized instrumentation fix.
@@ -28,6 +32,7 @@ reviews, and D16-8 closeout.
 **Start checkpoint:** do not run U7-A01 until SP-1 and SP-3…SP-5 pass. U7-A01 is the controlled
 start that freezes the candidate and discharges SP-2 before any downstream evidence collection.
 Until U7-PRE-001 is complete, status is **DEFINED — NOT READY TO START GOVERNED ACCEPTANCE**.
+Calibration infrastructure and calibration results are not U7-A01 or U7-G3 evidence.
 
 ## Phase A — Controlled start: freeze and certify the candidate
 
