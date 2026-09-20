@@ -8003,3 +8003,33 @@ The two stale Web SpecKit metadata lines now identify Central Docs
 `8c6d269afb6795993db09ca695b130da5d2dcd04` only as the source implementation commit behind merged
 Docs PR #66. No historical ledger entry was rewritten. No workflow, runtime, test, dependency,
 lockfile or acceptance-status byte changed in this reconciliation.
+
+### Focused local publication gate
+
+The first restricted-sandbox invocation of the 30-test Lighthouse lifecycle suite did not produce
+a verdict because its server lifecycle requires loopback binding; it was interrupted by the process
+that started it and is non-evidentiary. The same unchanged suite then ran with loopback permission
+and passed. The certification-sensitive results before this evidence-only checkpoint were:
+
+```text
+npm audit --audit-level=high
+14 vulnerabilities (1 low, 13 moderate)
+<exit 0; 0 high, 0 critical>
+
+npx vitest run scripts/reference-calibration-workflow.spec.mjs \
+  scripts/reference-calibration-evidence.spec.mjs \
+  scripts/check-lighthouse-medians.spec.mjs \
+  scripts/lib/lighthouse-coverage.spec.mjs
+Test Files 4 passed (4)
+Tests 59 passed (59)
+
+npx vitest run scripts/lighthouse-ci.spec.mjs
+Test Files 1 passed (1)
+Tests 30 passed (30)
+
+git diff --check origin/dev...HEAD
+<no output; exit 0>
+```
+
+Only this append-only evidence is added after those commands. The focused gates are rerun once on
+the resulting exact pre-push head and no further local commit is permitted before publication.
