@@ -70,7 +70,7 @@
     "@tiptap/extension-horizontal-rule": "^3.30.5",
     "@tiptap/extension-image": "^3.30.5",
     "@tiptap/extension-mention": "^3.30.5",
-    "@tiptap/extension-node-range": "^3.30.5",
+    "@tiptap/extension-node-range": "^3.31.3",
     "@tiptap/extension-placeholder": "^3.30.5",
     "@tiptap/markdown": "^3.30.5",
     "@tiptap/pm": "^3.30.5",
