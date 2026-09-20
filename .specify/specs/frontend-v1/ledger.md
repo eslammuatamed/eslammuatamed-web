@@ -7995,3 +7995,11 @@ publication; implementation logic remains unchanged.
 1. Update only the stale `spec.md` and `tasks.md` Docs-provenance metadata to authoritative merge `eb8d25cdca1885b3601dc7b36d8a38172b0ccdcd` and append the resulting exact evidence.
 2. Run the focused security, workflow-contract, reference-calibration and diff-hygiene publication gates on the final exact Web head.
 3. Push that exact branch without rewriting history, open the focused PR to `dev`, and certify its exact GitHub diff and required CI before any merge or calibration dispatch.
+
+### D20-43 authoritative merge-provenance reconciliation
+
+The two stale Web SpecKit metadata lines now identify Central Docs
+`eb8d25cdca1885b3601dc7b36d8a38172b0ccdcd` as the authoritative baseline and retain
+`8c6d269afb6795993db09ca695b130da5d2dcd04` only as the source implementation commit behind merged
+Docs PR #66. No historical ledger entry was rewritten. No workflow, runtime, test, dependency,
+lockfile or acceptance-status byte changed in this reconciliation.

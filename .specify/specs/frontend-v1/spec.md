@@ -10,8 +10,8 @@
 
 **Definition status:** Authoritative when merged to `dev`; acceptance not started
 
-**Authoritative Docs baseline:** Central Docs `5001ae62573ae488a16a552b1de9d7d1d03f72ab`; owner-approved
-D20-43 is locally certified at `8c6d269afb6795993db09ca695b130da5d2dcd04` pending publication
+**Authoritative Docs baseline:** Central Docs `eb8d25cdca1885b3601dc7b36d8a38172b0ccdcd`; D20-43 is
+authoritative through PR #66 (source commit `8c6d269afb6795993db09ca695b130da5d2dcd04`)
 
 **Definition base:** Web `e79d24beca25704c4643579c5e3a25c7f482f46d`
 

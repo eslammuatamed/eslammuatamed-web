@@ -1,6 +1,6 @@
 # Tasks: FE5-U7 — Frontend v1 Release Acceptance Evidence
 
-**Input:** `spec.md`, `plan.md`, Central Docs `5001ae62573ae488a16a552b1de9d7d1d03f72ab`
+**Input:** `spec.md`, `plan.md`, Central Docs `eb8d25cdca1885b3601dc7b36d8a38172b0ccdcd`
 
 **Status:** Definition complete; security and CLS prerequisites complete; governed GitHub-hosted reference execution pending; acceptance tasks unstarted
 
